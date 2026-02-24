@@ -150,6 +150,17 @@
           <strong>Storage (Read &amp; Write)</strong> — Used to save recorded video files to your device
           and to access existing recordings for playback and highlight extraction.
         </li>
+        <li>
+          <strong>Location (Access Fine Location)</strong> — Required by Android solely to enable
+          Wi-Fi Direct device discovery. This permission is a system requirement for peer-to-peer
+          Wi-Fi features and is <em>not</em> used to determine, record, or transmit your physical
+          location. ScoreFrame never accesses or stores GPS or location data.
+        </li>
+        <li>
+          <strong>Wi-Fi Direct (Nearby Devices)</strong> — Used to allow a second device running
+          ScoreFrame to act as a remote scoring controller over a direct local Wi-Fi connection.
+          No internet connection is required or used. All communication stays between the two devices.
+        </li>
       </ul>
       <p>
         Permissions are requested only when you first use the relevant feature and are never used for any
@@ -187,6 +198,29 @@
       <p>
         You are in full control of your recordings. You may delete them at any time through the app or
         your device's file manager. We do not back up, sync, or upload your content to any server.
+      </p>
+    </section>
+
+    <!-- Wi-Fi Direct -->
+    <section>
+      <span class="badge">Wi-Fi Direct</span>
+      <h2>Remote Scoring via Wi-Fi Direct</h2>
+      <p>
+        ScoreFrame offers an optional remote scoring feature that uses Android's Wi-Fi Direct technology
+        to connect two devices running the app. This allows one device to act as a dedicated scoring
+        controller while the other records.
+      </p>
+      <p>
+        When this feature is used:
+      </p>
+      <ul>
+        <li>Communication occurs exclusively between the two devices over a direct local connection — no internet, no servers, and no third parties are involved.</li>
+        <li>Only scoreboard state data (scores, sport type, game events) is transmitted between devices. No video, audio, or personal data is sent.</li>
+        <li>The connection is initiated manually by the user on both devices and can be terminated at any time.</li>
+        <li>No data from Wi-Fi Direct sessions is stored, logged, or transmitted beyond the two connected devices.</li>
+      </ul>
+      <p>
+        This feature is entirely optional and off by default. The app functions fully without it.
       </p>
     </section>
 
