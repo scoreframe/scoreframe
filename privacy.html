@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy – ScoreFrame</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f9f9fb;
+      color: #1a1a2e;
+      line-height: 1.7;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      margin-top: 8px;
+      color: #a0a8c0;
+      font-size: 0.95rem;
+    }
+
+    main {
+      max-width: 780px;
+      margin: 48px auto;
+      padding: 0 24px 64px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      padding: 40px 48px;
+    }
+
+    section + section {
+      margin-top: 40px;
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #1a1a2e;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #FF9640;
+      background: rgba(255, 150, 64, 0.1);
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    p, li {
+      font-size: 0.95rem;
+      color: #3a3a5a;
+    }
+
+    p + p {
+      margin-top: 12px;
+    }
+
+    ul {
+      margin: 12px 0 12px 28px;
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    a {
+      color: #FF9640;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .highlight-box {
+      background: rgba(255, 150, 64, 0.08);
+      border-left: 4px solid #FF9640;
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+      font-weight: 500;
+      color: #1a1a2e;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: #888;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 600px) {
+      .card { padding: 28px 22px; }
+      header h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav style="position:fixed;top:0;width:100%;z-index:100;background:rgba(26,26,46,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,150,64,0.08);padding:0 24px;">
+  <div style="max-width:780px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px;">
+    <a href="index.html" style="font-family:Georgia,serif;font-size:1.4rem;font-weight:900;text-decoration:none;color:#fff;">Score<span style="color:#FF9640;">Frame</span></a>
+    <a href="index.html" style="color:#a0a8c0;text-decoration:none;font-size:0.9rem;">← Back to Home</a>
+  </div>
+</nav>
+<header style="padding-top:64px;">
+  <h1>ScoreFrame – Privacy Policy</h1>
+  <p>Effective date: March 5, 2026 &nbsp;|&nbsp; Last updated: March 5, 2026</p>
+</header>
+
+<main>
+  <div class="card">
+
+    <!-- Overview -->
+    <section>
+      <span class="badge">Overview</span>
+      <h2>Our Commitment to Your Privacy</h2>
+      <div class="highlight-box">
+        ScoreFrame does not collect, store, or share any personal information. All recordings stay on your device. There are no accounts, no cloud uploads, and no tracking.
+      </div>
+      <p>
+        This Privacy Policy describes how ScoreFrame ("we", "us", or "our") handles information when you use
+        our Android application. We built ScoreFrame to help you record sports video with professional
+        scoreboard overlays — your data stays yours.
+      </p>
+    </section>
+
+    <!-- Permissions -->
+    <section>
+      <span class="badge">Permissions</span>
+      <h2>Permissions We Request and Why</h2>
+      <p>ScoreFrame requests the following device permissions solely to provide its core functionality:</p>
+      <ul>
+        <li>
+          <strong>Camera</strong> — Used to record video footage and display a live viewfinder with
+          scoreboard overlay. Video is processed on-device using OpenGL ES and saved directly to your
+          local storage. Camera settings (focus, stabilization, white balance, exposure) are controlled
+          locally and never transmitted.
+        </li>
+        <li>
+          <strong>Microphone / Audio Recording</strong> — Used to capture game audio alongside video.
+          Audio is encoded locally into your recordings and is never transmitted externally. A mute
+          toggle is available to disable microphone capture.
+        </li>
+        <li>
+          <strong>Storage (Read &amp; Write)</strong> — Used to save recorded video files and highlight
+          clips to your device's Movies/ScoreFrame folder, and to access existing recordings for
+          highlight extraction and stats export (PDF).
+        </li>
+        <li>
+          <strong>Wi-Fi / Network State</strong> — Used for the remote scoring feature, which connects
+          two phones directly over Wi-Fi Direct. This is a peer-to-peer connection between your devices
+          — no internet, router, or external server is involved. Wi-Fi state is also checked to
+          facilitate Wi-Fi Direct peer discovery.
+        </li>
+        <li>
+          <strong>Nearby Devices / Wi-Fi Direct</strong> — Used to discover and connect to a second
+          phone running ScoreFrame for remote scoring. The connection is local and direct — no data
+          passes through any external server.
+        </li>
+        <li>
+          <strong>Modify Audio Settings</strong> — Used for the microphone mute feature during recording.
+        </li>
+        <li>
+          <strong>Internet Access</strong> — Used only for displaying advertisements (Google AdMob) on
+          the free tier and for processing in-app purchases (Google Play Billing). ScoreFrame does not
+          upload any of your content, recordings, or personal data to the internet.
+        </li>
+        <li>
+          <strong>Vibration</strong> — Used for haptic feedback on scoring actions and external button events.
+        </li>
+      </ul>
+      <p>
+        Permissions are requested only when you first use the relevant feature and are never used for any
+        purpose beyond what is described above.
+      </p>
+    </section>
+
+    <!-- Data We Do Not Collect -->
+    <section>
+      <span class="badge">Data Collection</span>
+      <h2>Information We Do Not Collect</h2>
+      <p>We do <strong>not</strong> collect, transmit, or store:</p>
+      <ul>
+        <li>Your name, email address, or any account information (ScoreFrame has no accounts)</li>
+        <li>Your location or GPS data</li>
+        <li>Device identifiers (IMEI, MAC address) — we do not read or store these</li>
+        <li>Usage analytics, crash reports, or diagnostic data</li>
+        <li>Any video, audio, or image content you record</li>
+        <li>Contacts, calendar, or any other personal data</li>
+        <li>Game scores, team names, player rosters, or any data you enter into the app</li>
+      </ul>
+      <p>
+        All game data (scores, team configurations, player rosters, sport settings) is stored locally
+        on your device in the app's private storage or SharedPreferences. This data is never transmitted
+        anywhere.
+      </p>
+    </section>
+
+    <!-- Local Storage -->
+    <section>
+      <span class="badge">Local Storage</span>
+      <h2>Video, Audio, and Game Data</h2>
+      <p>
+        All video recordings, audio tracks, extracted highlight clips, and exported stats PDFs are stored
+        exclusively on your device in your local media storage (Movies/ScoreFrame). We have no access to
+        these files.
+      </p>
+      <p>
+        Game scores, team names, team colors, player rosters, match history, and app settings are stored
+        locally on your device. Sport settings are stored as JSON files in the app's private directory.
+        Preferences are stored in Android SharedPreferences. None of this data leaves your device.
+      </p>
+      <p>
+        You are in full control of your data. You may delete recordings at any time through the app or
+        your device's file manager. Uninstalling the app removes all locally stored settings and game data.
+      </p>
+    </section>
+
+    <!-- Wi-Fi Direct -->
+    <section>
+      <span class="badge">Connectivity</span>
+      <h2>Wi-Fi Direct (Remote Scoring)</h2>
+      <p>
+        ScoreFrame's remote scoring feature allows two phones to connect directly over Wi-Fi Direct for
+        wireless score control. This connection is peer-to-peer — the phones communicate directly with
+        each other without any internet connection, router, or external server.
+      </p>
+      <p>
+        Data transmitted over Wi-Fi Direct includes only scoring commands, sport state updates, and
+        optionally a camera preview stream (Pro feature). No personal information is exchanged. The
+        connection is temporary and exists only while both phones are actively using the remote scoring
+        feature.
+      </p>
+      <p>
+        Network Service Discovery (NSD) is used to help the phones find each other on the local network.
+        This broadcasts only the app's service name — no personal or device-identifying information.
+      </p>
+    </section>
+
+    <!-- Bluetooth -->
+    <section>
+      <span class="badge">Connectivity</span>
+      <h2>Bluetooth (External Button)</h2>
+      <p>
+        ScoreFrame can optionally use a paired Bluetooth device (such as a shutter remote or clicker)
+        to control recording hands-free. The app listens for standard key events from Bluetooth HID
+        devices that are already paired through your phone's system settings.
+      </p>
+      <p>
+        ScoreFrame does not scan for, pair, or manage Bluetooth connections. It only receives button
+        press events from devices you have already connected to your phone. The registered button's
+        device name and key code are stored locally in app preferences. No Bluetooth data is transmitted
+        externally.
+      </p>
+    </section>
+
+    <!-- Advertising -->
+    <section>
+      <span class="badge">Advertising</span>
+      <h2>Google AdMob Ads</h2>
+      <p>
+        The free tier of ScoreFrame displays advertisements served by <strong>Google AdMob</strong>, a
+        third-party advertising platform operated by Google LLC. To serve ads, AdMob may collect and
+        use certain information from your device, which may include:
+      </p>
+      <ul>
+        <li>Advertising ID (Google Advertising ID / GAID)</li>
+        <li>Approximate location (country or region, derived from IP address)</li>
+        <li>Device type, operating system version, and language</li>
+        <li>Ad interaction data (impressions, clicks)</li>
+        <li>IP address</li>
+      </ul>
+      <p>
+        This data is collected and processed by Google under their own privacy policy. We do not receive
+        or have access to this data. ScoreFrame Pro subscribers do not see ads, and AdMob is not active
+        for Pro users.
+      </p>
+      <p>
+        You can opt out of personalized advertising through your device's
+        settings under <em>Google &gt; Ads &gt; Opt out of Ads Personalization</em>.
+      </p>
+      <p>
+        For more information, please review
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">
+          Google's Privacy Policy
+        </a> and
+        <a href="https://support.google.com/admob/answer/6128543" target="_blank" rel="noopener noreferrer">
+          How Google uses data when you use our partners' sites or apps
+        </a>.
+      </p>
+    </section>
+
+    <!-- In-App Purchases -->
+    <section>
+      <span class="badge">Purchases</span>
+      <h2>Google Play Billing</h2>
+      <p>
+        ScoreFrame offers an optional Pro subscription through <strong>Google Play Billing</strong>.
+        All purchase transactions are processed by Google Play. We do not collect or store any payment
+        information (credit card numbers, billing addresses, etc.).
+      </p>
+      <p>
+        Subscription status is managed by Google Play and queried locally by the app to determine which
+        features to unlock. Your purchase history is governed by
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">
+          Google's Privacy Policy
+        </a>.
+      </p>
+    </section>
+
+    <!-- Third-Party Services -->
+    <section>
+      <span class="badge">Third Parties</span>
+      <h2>Third-Party Services</h2>
+      <p>
+        ScoreFrame integrates with the following third-party services:
+      </p>
+      <ul>
+        <li><strong>Google AdMob</strong> — Advertising on the free tier (see Advertising section above)</li>
+        <li><strong>Google Play Billing</strong> — In-app purchase processing (see Purchases section above)</li>
+      </ul>
+      <p>
+        Beyond these two Google services, ScoreFrame does not integrate with any other third-party SDKs,
+        analytics services, crash reporting tools, social platforms, or data brokers. No data is shared
+        with or sold to any third party by us.
+      </p>
+    </section>
+
+    <!-- In-App Feedback -->
+    <section>
+      <span class="badge">Feedback</span>
+      <h2>In-App Feedback</h2>
+      <p>
+        ScoreFrame includes an optional feedback feature that opens your device's email app with a
+        pre-filled message addressed to our support email. We do not send feedback automatically — you
+        must choose to send the email yourself through your own email app.
+      </p>
+      <p>
+        If you opt to include device information with your feedback, basic details (device model, Android
+        version, app version) are appended to the email body. This information is only sent if you
+        explicitly check the "Include device info" option and then send the email.
+      </p>
+    </section>
+
+    <!-- Children -->
+    <section>
+      <span class="badge">Children</span>
+      <h2>Children's Privacy</h2>
+      <p>
+        ScoreFrame is not directed at children under the age of 13. We do not knowingly collect personal
+        information from children. Since ScoreFrame does not collect any personal information from any
+        user, there is no mechanism through which a child's data could be inadvertently gathered.
+      </p>
+      <p>
+        If you believe a child has provided personal information through our feedback email, please
+        contact us so we can address it promptly.
+      </p>
+    </section>
+
+    <!-- Data Retention -->
+    <section>
+      <span class="badge">Retention</span>
+      <h2>Data Retention</h2>
+      <p>
+        ScoreFrame does not retain any user data on external servers. All app data is stored locally
+        on your device. Uninstalling the app removes all app settings, game data, team configurations,
+        and rosters. Video recordings saved to your device's media storage are managed by you and are
+        not affected by uninstalling the app.
+      </p>
+    </section>
+
+    <!-- Changes -->
+    <section>
+      <span class="badge">Updates</span>
+      <h2>Changes to This Policy</h2>
+      <p>
+        We may update this Privacy Policy from time to time. When we do, we will revise the "Last updated"
+        date at the top of this page. We encourage you to review this policy periodically. Continued use of
+        the app after changes are posted constitutes your acceptance of the updated policy.
+      </p>
+    </section>
+
+    <!-- Contact -->
+    <section>
+      <span class="badge">Contact</span>
+      <h2>Contact Us</h2>
+      <p>
+        If you have any questions or concerns about this Privacy Policy, please contact us at:
+      </p>
+      <p>
+        <strong>ScoreFrame Support</strong><br />
+        Email: <a href="/cdn-cgi/l/email-protection#d2a1a7a2a2bda0a692a1b1bda0b7b4a0b3bfb7fcb3a2a2"><span class="__cf_email__" data-cfemail="83f0f6f3f3ecf1f7c3f0e0ecf1e6e5f1e2eee6ade2f3f3">[email&#160;protected
