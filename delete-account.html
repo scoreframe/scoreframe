@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+  <title>Delete Your Account - ScoreFrame</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0A0A0C;--card:#161618;--accent:#FF9640;--text:#F2F2F2;--text2:rgba(255,255,255,0.55);--text3:rgba(255,255,255,0.35)}
+    body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+    nav{position:fixed;top:0;width:100%;z-index:100;background:rgba(10,10,12,0.85);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,150,64,0.08);padding:0 24px}
+    .nav-inner{max-width:780px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px}
+    .nav-logo{font-family:'Playfair Display',Georgia,serif;font-size:1.4rem;font-weight:900;text-decoration:none;color:var(--text)}
+    .nav-logo span{color:var(--accent)}
+    .nav-back{color:var(--text2);text-decoration:none;font-size:0.9rem}
+    .nav-back:hover{color:var(--accent)}
+    main{max-width:780px;margin:0 auto;padding:100px 24px 64px}
+    .card{background:var(--card);border-radius:16px;border:1px solid rgba(255,255,255,0.04);padding:40px 48px}
+    h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;text-align:center;margin-bottom:8px}
+    .subtitle{text-align:center;color:var(--text2);font-size:0.95rem;margin-bottom:32px}
+    h2{font-size:1.2rem;font-weight:700;margin-bottom:12px;margin-top:32px}
+    h2:first-of-type{margin-top:0}
+    p,li{font-size:0.95rem;color:var(--text2)}
+    p+p{margin-top:12px}
+    ol{margin:16px 0 16px 28px}
+    li+li{margin-top:10px}
+    li strong{color:var(--text)}
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .highlight{background:rgba(255,150,64,0.08);border-left:4px solid var(--accent);padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;font-weight:500;color:var(--text)}
+    .warning{background:rgba(239,83,80,0.08);border-left:4px solid #EF5350;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;color:var(--text)}
+    .warning strong{color:#EF5350}
+    .data-table{width:100%;border-collapse:collapse;margin:16px 0}
+    .data-table th{text-align:left;font-size:0.85rem;font-weight:600;color:var(--text);padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.08)}
+    .data-table td{font-size:0.85rem;color:var(--text2);padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.04)}
+    .deleted{color:#EF5350}
+    .kept{color:#66BB6A}
+    .step-number{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#0A0A0C;font-weight:700;font-size:0.85rem;margin-right:10px;flex-shrink:0}
+    .step{display:flex;align-items:flex-start;margin-bottom:16px}
+    .step-text{padding-top:3px}
+    .contact{background:rgba(255,255,255,0.03);border-radius:12px;padding:20px 24px;margin-top:24px;text-align:center}
+    footer{text-align:center;padding:40px 24px;border-top:1px solid rgba(255,255,255,0.04)}
+    .footer-inner{max-width:780px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+    .footer-inner a{color:var(--text3);text-decoration:none;font-size:0.85rem}
+    .footer-inner a:hover{color:var(--accent)}
+    .footer-copy{color:var(--text3);font-size:0.85rem}
+    @media(max-width:600px){.card{padding:28px 22px}}
+  </style>
+</head>
+<body>
+<nav><div class="nav-inner"><a href="index.html" class="nav-logo">Score<span>Frame</span></a><a href="index.html" class="nav-back">Back to Home</a></div></nav>
+<main>
+<h1>Delete Your Account</h1>
+<p class="subtitle">How to permanently remove your ScoreFrame account and all associated cloud data.</p>
+<div class="card">
+
+<h2>Delete from within the app</h2>
+
+<div class="step"><span class="step-number">1</span><div class="step-text"><strong>Open ScoreFrame</strong> on your Android device.</div></div>
+<div class="step"><span class="step-number">2</span><div class="step-text"><strong>Open the menu</strong> by tapping the hamburger icon (top left).</div></div>
+<div class="step"><span class="step-number">3</span><div class="step-text"><strong>Tap "Account"</strong> in the Account section of the menu.</div></div>
+<div class="step"><span class="step-number">4</span><div class="step-text"><strong>Tap "Delete Account"</strong> at the bottom of the account dialog.</div></div>
+<div class="step"><span class="step-number">5</span><div class="step-text"><strong>Confirm twice</strong> when prompted. This action cannot be undone.</div></div>
+
+<div class="warning"><strong>This is permanent.</strong> Once deleted, your account and all cloud data cannot be recovered. Make sure you've exported any stats or scorebooks you want to keep before deleting.</div>
+
+<h2>What gets deleted</h2>
+
+<table class="data-table">
+  <tr><th>Data</th><th>Status</th></tr>
+  <tr><td>Your ScoreFrame account (email, name, profile)</td><td class="deleted">Permanently deleted</td></tr>
+  <tr><td>Saved teams and rosters</td><td class="deleted">Permanently deleted</td></tr>
+  <tr><td>Game history and scores</td><td class="deleted">Permanently deleted</td></tr>
+  <tr><td>Career stats (bowling averages, batting stats, W-L records)</td><td class="deleted">Permanently deleted</td></tr>
+  <tr><td>Baseball/softball scorebook data</td><td class="deleted">Permanently deleted</td></tr>
+  <tr><td>Sport configurations and preferences</td><td class="deleted">Permanently deleted</td></tr>
+  <tr><td>Email marketing preference</td><td class="deleted">Permanently deleted</td></tr>
+  <tr><td>Videos and photos on your device</td><td class="kept">Not affected — stays on your device</td></tr>
+  <tr><td>App settings (resolution, orientation)</td><td class="kept">Not affected — stays on your device</td></tr>
+</table>
+
+<div class="highlight">Videos recorded with ScoreFrame are saved to your device's local storage and are never uploaded to the cloud. Deleting your account does not remove any videos or photos from your phone.</div>
+
+<h2>Can't access the app?</h2>
+
+<p>If you've uninstalled ScoreFrame or can't sign in, you can request account deletion by emailing us directly. Include the email address associated with your ScoreFrame account so we can locate and delete your data.</p>
+
+<div class="contact">
+  <p><strong>Email us at:</strong></p>
+  <p><a href="mailto:support@scoreframe.app?subject=Account%20Deletion%20Request">support@scoreframe.app</a></p>
+  <p style="color:var(--text3);font-size:0.85rem;margin-top:8px;">We will process your request within 7 business days.</p>
+</div>
+
+</div>
+</main>
+<footer><div class="footer-inner"><span class="footer-copy">&copy; 2026 Glavin Labs LLC. All rights reserved.</span><div><a href="index.html">Home</a> &nbsp; <a href="privacy.html">Privacy Policy</a> &nbsp; <a href="mailto:support@scoreframe.app">Contact</a></div></div></footer>
+</body>
+</html>
