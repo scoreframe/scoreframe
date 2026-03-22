@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Watch Live — ScoreFrame</title>
+  <link rel="canonical" href="https://scoreframe.app/watch.html" />
   <meta name="description" content="Watch a live ScoreFrame game stream" />
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
@@ -287,12 +288,12 @@
     <div>
       <a href="index.html">Home</a> &nbsp;
       <a href="privacy.html">Privacy</a> &nbsp;
-      <a href="mailto:support@scoreframe.app">Contact</a>
+      <a href="/cdn-cgi/l/email-protection#91e2e4e1e1fee3e5d1e2f2fee3f4f7e3f0fcf4bff0e1e1">Contact</a>
     </div>
   </div>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
   const params = new URLSearchParams(window.location.search);
   const playbackUrl = params.get('playback');
@@ -422,13 +423,4 @@
     }
   });
 
-  // Init
-  if (playbackUrl) {
-    startPlayback(decodeURIComponent(playbackUrl));
-  } else {
-    showState('state-no-url');
-  }
-</script>
-
-</body>
-</html>
+  /
