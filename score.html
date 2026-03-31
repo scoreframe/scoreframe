@@ -71,6 +71,73 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
     background: rgba(244, 67, 54, 0.15); color: var(--error); font-size: 12px;
 }
 
+/* ── Recording Control Bar ────────────────────────────────── */
+#recordingBar {
+    display: none; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-deep);
+    border-bottom: 1px solid var(--bg-elevated);
+}
+#recordingBar.visible { display: flex; }
+.rec-status {
+    display: flex; align-items: center; gap: 6px; flex: 1;
+    font-size: 13px; font-weight: 600;
+}
+.rec-status .rec-live-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--recording-red); animation: pulse 1s ease-in-out infinite;
+}
+.rec-status .rec-pause-icon {
+    width: 10px; height: 10px; display: flex; gap: 2px;
+}
+.rec-status .rec-pause-icon span {
+    width: 3px; height: 10px; background: var(--warning); border-radius: 1px;
+}
+.rec-status .rec-timer { color: var(--recording-red); font-variant-numeric: tabular-nums; }
+.rec-status.paused .rec-timer { color: var(--warning); }
+.rec-status.idle .rec-timer { color: var(--text-muted); }
+.rec-controls { display: flex; gap: 6px; }
+.rec-btn {
+    width: 36px; height: 36px; border: none; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: transform 0.08s, filter 0.08s;
+    font-size: 16px;
+}
+.rec-btn:active { transform: scale(0.9); filter: brightness(0.8); }
+.rec-btn.rec-start { background: var(--recording-red); color: #fff; }
+.rec-btn.rec-start .rec-circle { width: 14px; height: 14px; border-radius: 50%; background: #fff; }
+.rec-btn.rec-pause { background: var(--warning); color: #1A1A1A; }
+.rec-btn.rec-stop { background: var(--bg-elevated); color: var(--error); }
+.rec-btn.rec-stop .rec-square { width: 12px; height: 12px; border-radius: 2px; background: var(--error); }
+.rec-btn.rec-highlight { background: var(--accent-dim); color: var(--accent); }
+.rec-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── Waiting for Game Screen ──────────────────────────────── */
+#waitingForGameScreen {
+    align-items: center; justify-content: center;
+    min-height: calc(100vh - 50px); min-height: calc(100dvh - 50px);
+    padding: 24px; text-align: center;
+}
+.connected-check {
+    font-size: 16px; color: var(--success); font-weight: 600; margin-bottom: 16px;
+}
+#waitingForGameText {
+    font-size: 18px; color: var(--text-secondary); margin-bottom: 20px;
+}
+#waitingForGameSport {
+    font-size: 14px; color: var(--text-muted); margin-bottom: 8px;
+}
+.waiting-game-spinner {
+    width: 40px; height: 40px; border: 3px solid var(--bg-elevated);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 20px;
+}
+#leaveGameBtn {
+    margin-top: 16px; padding: 10px 24px;
+    font-size: 14px; border: 1px solid var(--bg-elevated); border-radius: 8px;
+    background: transparent; color: var(--text-secondary); cursor: pointer;
+}
+
 /* ── Screens ────────────────────────────────────────────────── */
 .screen { display: none; }
 .screen.active { display: flex; flex-direction: column; }
@@ -376,6 +443,21 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
 </div>
 <div id="disconnectBanner">Connection lost. Reconnecting...</div>
 
+<!-- Recording Control Bar -->
+<div id="recordingBar">
+    <div class="rec-status" id="recStatus">
+        <span id="recStatusIcon"></span>
+        <span class="rec-timer" id="recTimer">00:00</span>
+    </div>
+    <div class="rec-controls">
+        <button class="rec-btn rec-start" id="recStartBtn" onclick="recCommand('START')" title="Record"><div class="rec-circle"></div></button>
+        <button class="rec-btn rec-pause" id="recPauseBtn" onclick="recCommand('PAUSE')" title="Pause" style="display:none;">&#9646;&#9646;</button>
+        <button class="rec-btn rec-start" id="recResumeBtn" onclick="recCommand('RESUME')" title="Resume" style="display:none;"><div class="rec-circle"></div></button>
+        <button class="rec-btn rec-stop" id="recStopBtn" onclick="recCommandStop()" title="Stop" style="display:none;"><div class="rec-square"></div></button>
+        <button class="rec-btn rec-highlight" id="recHighlightBtn" onclick="recCommand('CAPTURE_HIGHLIGHT')" title="Highlight" style="display:none;">&#9733;</button>
+    </div>
+</div>
+
 <!-- Join Screen -->
 <div id="joinScreen" class="screen active">
     <div class="logo">Score<span>Frame</span></div>
@@ -397,6 +479,15 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
     <button id="cancelJoinBtn" onclick="cancelJoin()">Cancel</button>
 </div>
 
+<!-- Waiting for Game Screen -->
+<div id="waitingForGameScreen" class="screen">
+    <div class="connected-check">Connected to camera phone &#10003;</div>
+    <div class="waiting-game-spinner"></div>
+    <div id="waitingForGameText">Waiting for game to start...</div>
+    <div id="waitingForGameSport"></div>
+    <button id="leaveGameBtn" onclick="cancelJoin()">Leave</button>
+</div>
+
 <!-- Scoring Screen -->
 <div id="scoringScreen" class="screen">
     <div id="sportHeader">
@@ -411,12 +502,11 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
 <!-- Undo Button -->
 <button id="undoBtn" onclick="performUndo()">Undo</button>
 
-<!-- Footer -->
+<!-- Footer (no game control buttons — phone controls the game) -->
 <div id="footer" style="display:none;">
     <div class="brand">Score<span>Frame</span></div>
     <div class="footer-actions">
-        <button class="footer-btn" onclick="showResetDialog()">Reset</button>
-        <button class="footer-btn danger" onclick="showEndDialog()">End Game</button>
+        <button class="footer-btn" onclick="showDisconnectDialog()">Disconnect</button>
     </div>
 </div>
 
@@ -454,6 +544,12 @@ let metaListener = null;
 let scorerListener = null;
 let undoStack = [];
 let connected = false;
+let recordingAllowed = false;
+let isRecording = false;
+let isPaused = false;
+let recordingElapsedMs = 0;
+let recTimerInterval = null;
+let gameState = null; // 'IDLE', 'ACTIVE', 'STARTING', 'ENDED'
 
 // ── Utility ───────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -461,6 +557,12 @@ function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     $(id).classList.add('active');
     $('footer').style.display = (id === 'scoringScreen') ? 'flex' : 'none';
+    // Show recording bar only on scoring screen if allowed
+    if (id === 'scoringScreen' && recordingAllowed) {
+        $('recordingBar').classList.add('visible');
+    } else {
+        $('recordingBar').classList.remove('visible');
+    }
 }
 
 function vibrate(ms = 15) {
@@ -652,7 +754,10 @@ window.joinGame = async function() {
         }
         const meta = snap.val();
         currentCode = code;
-        currentSport = meta.sport;
+        currentSport = meta.sport || 'GENERIC';
+        if (meta.recordingAllowed !== undefined) {
+            recordingAllowed = meta.recordingAllowed === true;
+        }
 
         // Write scorer request
         await set(ref(db, `sessions/${code}/scorerRequest`), {
@@ -684,7 +789,14 @@ function listenForApproval(code) {
     scorerListener = onValue(ref(db, `sessions/${code}/scorerRequest/status`), (snap) => {
         const status = snap.val();
         if (status === 'approved') {
-            enterScoringMode();
+            // Check if we already have state and it's an active game
+            // Only enter scoring if game is explicitly ACTIVE or STARTING
+            if (currentState && (gameState === 'ACTIVE' || gameState === 'STARTING')) {
+                enterScoringMode();
+            } else {
+                // Show waiting for game screen until state arrives
+                showWaitingForGame();
+            }
         } else if (status === 'denied') {
             $('waitingText').textContent = 'Request denied by camera phone.';
         }
@@ -693,30 +805,83 @@ function listenForApproval(code) {
 
 function listenForState(code) {
     stateListener = onValue(ref(db, `sessions/${code}/state`), (snap) => {
-        if (!snap.exists()) return;
+        if (!snap.exists()) {
+            // No state yet — show waiting for game screen if approved
+            if (document.querySelector('#waitingScreen.active') || document.querySelector('#waitingForGameScreen.active')) {
+                showWaitingForGame();
+            }
+            return;
+        }
         const data = snap.val();
         if (data.sport) currentSport = data.sport;
+
+        // Parse recordingAllowed from connectionAck or state
+        if (data.recordingAllowed !== undefined) {
+            recordingAllowed = data.recordingAllowed === true;
+        }
+
+        // Parse recording status
+        if (data.isRecording !== undefined) {
+            isRecording = data.isRecording === true;
+            $('recIndicator').style.display = isRecording ? 'flex' : 'none';
+        }
+        if (data.isPaused !== undefined) {
+            isPaused = data.isPaused === true;
+        }
+        if (data.recordingElapsedMs !== undefined) {
+            recordingElapsedMs = data.recordingElapsedMs || 0;
+        }
+
+        // Check gameState
+        const gs = data.gameState || null;
+        gameState = gs;
+
         if (data.stateJson) {
             const st = typeof data.stateJson === 'string' ? JSON.parse(data.stateJson) : data.stateJson;
             currentState = st;
             if (data.seq) lastSeq = Math.max(lastSeq, data.seq);
         }
-        if (data.isRecording !== undefined) {
-            $('recIndicator').style.display = data.isRecording ? 'flex' : 'none';
+
+        // Determine which screen to show
+        if (gs === 'IDLE' || gs === 'ENDED') {
+            // Game not active — show waiting screen
+            if (!document.querySelector('#waitingForGameScreen.active')) {
+                showWaitingForGame();
+            }
+            if (gs === 'ENDED') {
+                $('waitingForGameText').textContent = 'Game has ended. Waiting for next game...';
+            }
+            return;
         }
-        // If we get state, assume we're approved (for auto-approve flows)
-        if (currentState && !document.querySelector('#scoringScreen.active')) {
+
+        // Game is active — only enter scoring for ACTIVE or STARTING (never null/IDLE/ENDED)
+        if (currentState && (gs === 'ACTIVE' || gs === 'STARTING') && !document.querySelector('#scoringScreen.active')) {
             enterScoringMode();
         }
         if (document.querySelector('#scoringScreen.active')) {
             renderScoring();
+            updateRecordingBar();
         }
     });
 
-    // Also listen for meta changes (sport switch, game end)
+    // Listen for connectionAck (may contain recordingAllowed)
+    onValue(ref(db, `sessions/${code}/connectionAck`), (snap) => {
+        if (!snap.exists()) return;
+        const ack = snap.val();
+        if (ack.recordingAllowed !== undefined) {
+            recordingAllowed = ack.recordingAllowed === true;
+            updateRecordingBar();
+        }
+    });
+
+    // Also listen for meta changes (sport switch, game end, recordingAllowed)
     metaListener = onValue(ref(db, `sessions/${code}/meta`), (snap) => {
         if (!snap.exists()) return;
         const meta = snap.val();
+        if (meta.recordingAllowed !== undefined) {
+            recordingAllowed = meta.recordingAllowed === true;
+            updateRecordingBar();
+        }
         if (meta.sport && meta.sport !== currentSport) {
             currentSport = meta.sport;
             currentState = null; // Will be set by state listener
@@ -734,14 +899,105 @@ function listenForState(code) {
     });
 }
 
-function enterScoringMode() {
-    showScreen('scoringScreen');
-    $('sportEmoji').textContent = sportEmoji(currentSport);
-    $('sportLabel').textContent = sportDisplayName(currentSport);
-    if (!currentState) currentState = defaultState(currentSport);
-    renderScoring();
+function showWaitingForGame() {
+    showScreen('waitingForGameScreen');
+    if (currentSport) {
+        $('waitingForGameSport').textContent = sportEmoji(currentSport) + ' ' + sportDisplayName(currentSport);
+    } else {
+        $('waitingForGameSport').textContent = '';
+    }
     updateConnectionStatus();
 }
+
+function enterScoringMode() {
+    showScreen('scoringScreen');
+    updateSportHeader();
+    if (!currentState) currentState = defaultState(currentSport);
+    renderScoring();
+    updateRecordingBar();
+    updateConnectionStatus();
+}
+
+function updateSportHeader() {
+    $('sportEmoji').textContent = sportEmoji(currentSport);
+    $('sportLabel').textContent = sportDisplayName(currentSport);
+}
+
+// ── Recording Controls ───────────────────────────────────────────────
+function updateRecordingBar() {
+    if (!recordingAllowed) {
+        $('recordingBar').classList.remove('visible');
+        return;
+    }
+    $('recordingBar').classList.add('visible');
+
+    const statusEl = $('recStatus');
+    const iconEl = $('recStatusIcon');
+    const timerEl = $('recTimer');
+
+    // Update timer display
+    timerEl.textContent = formatRecTime(recordingElapsedMs);
+
+    // Update button visibility and status
+    if (isRecording && !isPaused) {
+        // Recording
+        statusEl.className = 'rec-status';
+        iconEl.innerHTML = '<div class="rec-live-dot"></div>';
+        timerEl.style.color = 'var(--recording-red)';
+        $('recStartBtn').style.display = 'none';
+        $('recPauseBtn').style.display = 'flex';
+        $('recResumeBtn').style.display = 'none';
+        $('recStopBtn').style.display = 'flex';
+        $('recHighlightBtn').style.display = 'flex';
+    } else if (isRecording && isPaused) {
+        // Paused
+        statusEl.className = 'rec-status paused';
+        iconEl.innerHTML = '<div class="rec-pause-icon"><span></span><span></span></div>';
+        timerEl.style.color = 'var(--warning)';
+        $('recStartBtn').style.display = 'none';
+        $('recPauseBtn').style.display = 'none';
+        $('recResumeBtn').style.display = 'flex';
+        $('recStopBtn').style.display = 'flex';
+        $('recHighlightBtn').style.display = 'none';
+    } else {
+        // Idle
+        statusEl.className = 'rec-status idle';
+        iconEl.innerHTML = '';
+        timerEl.style.color = 'var(--text-muted)';
+        $('recStartBtn').style.display = 'flex';
+        $('recPauseBtn').style.display = 'none';
+        $('recResumeBtn').style.display = 'none';
+        $('recStopBtn').style.display = 'none';
+        $('recHighlightBtn').style.display = 'none';
+    }
+}
+
+function formatRecTime(ms) {
+    const totalSec = Math.floor((ms || 0) / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    return String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
+window.recCommand = function(action) {
+    if (!currentCode) return;
+    const cmd = {
+        type: 'RECORDING_COMMAND',
+        action: action,
+        sentAt: Date.now()
+    };
+    if (action === 'CAPTURE_HIGHLIGHT') {
+        cmd.secondsBack = 10;
+    }
+    push(ref(db, `sessions/${currentCode}/commands`), cmd);
+    vibrate();
+};
+
+window.recCommandStop = function() {
+    if (confirm('Stop recording?')) {
+        recCommand('STOP');
+    }
+};
 
 function updateConnectionStatus() {
     const dot = $('statusDot');
@@ -768,26 +1024,16 @@ window.cancelJoin = function() {
 };
 
 // ── Reset / End ───────────────────────────────────────────────────────
-window.showResetDialog = function() {
-    if (confirm('Reset all scores to zero?')) {
-        currentState = defaultState(currentSport);
-        // Preserve team names/colors from current
-        sendCommand(currentState);
-        renderScoring();
-    }
-};
-
-window.showEndDialog = function() {
-    if (confirm('End this game?')) {
-        push(ref(db, `sessions/${currentCode}/commands`), {
-            type: 'GAME_LIFECYCLE', action: 'END', sentAt: Date.now()
-        });
+window.showDisconnectDialog = function() {
+    if (confirm('Disconnect from this game? The game will continue on the phone.')) {
+        location.reload();
     }
 };
 
 // ── Render Routing ────────────────────────────────────────────────────
 function renderScoring() {
     if (!currentState || !currentSport) return;
+    updateSportHeader();
     $('eventLabel').textContent = currentState.eventLabel || '';
     switch(currentSport) {
         case 'GENERIC': renderGeneric(); break;
