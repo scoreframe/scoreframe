@@ -1,426 +1,816 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Watch Live — ScoreFrame</title>
-  <link rel="canonical" href="https://scoreframe.app/watch.html" />
-  <meta name="description" content="Watch a live ScoreFrame game stream" />
-  <link rel="icon" type="image/x-icon" href="favicon.ico" />
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0A0A0C;
-      --bg-card: #161618;
-      --accent: #FF9640;
-      --accent-dim: rgba(255, 150, 64, 0.15);
-      --text: #F2F2F2;
-      --text2: rgba(255, 255, 255, 0.55);
-      --text3: rgba(255, 255, 255, 0.35);
-    }
-    body {
-      font-family: 'DM Sans', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0D0D0D">
+<title>ScoreFrame — Watch Game</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg-deepest: #0D0D0D;
+    --bg-deep: #141414;
+    --bg-surface: #1E1E1E;
+    --bg-elevated: #272727;
+    --accent: #FF9640;
+    --accent-dim: rgba(255, 150, 64, 0.15);
+    --text-primary: #E0E0E0;
+    --text-secondary: #999999;
+    --text-muted: #666666;
+    --success: #4CAF50;
+    --warning: #FF9800;
+    --error: #F44336;
+    --recording-red: #CC2222;
+    --blue-default: #1565C0;
+    --red-default: #C62828;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-deepest);
+    color: var(--text-primary);
+    min-height: 100vh; min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+}
+body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
 
-    /* Nav */
-    nav {
-      background: rgba(10, 10, 12, 0.85);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(255, 150, 64, 0.08);
-      padding: 0 24px;
-    }
-    .nav-inner {
-      max-width: 1000px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 56px;
-    }
-    .nav-logo {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 1.3rem;
-      font-weight: 900;
-      text-decoration: none;
-      color: var(--text);
-    }
-    .nav-logo span { color: var(--accent); }
-    .nav-back {
-      color: var(--text2);
-      text-decoration: none;
-      font-size: 0.85rem;
-    }
-    .nav-back:hover { color: var(--accent); }
+/* ── Status Bar ── */
+#statusBar {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-deep);
+    border-bottom: 1px solid var(--bg-elevated);
+    font-size: 13px;
+}
+.status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--success); flex-shrink: 0;
+}
+.status-dot.disconnected { background: var(--error); }
+.status-dot.waiting { background: var(--warning); animation: pulse 1.5s ease-in-out infinite; }
+.status-dot.live { background: var(--recording-red); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+#statusText { flex: 1; color: var(--text-secondary); }
+#viewerCount { color: var(--text-muted); font-size: 12px; }
 
-    /* Main */
-    main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
+/* ── Video Player ── */
+#videoContainer {
+    position: relative;
+    width: 100%; max-width: 800px; margin: 0 auto;
+    background: #000;
+    aspect-ratio: 16/9;
+}
+#videoContainer.fullscreen {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    max-width: none; z-index: 200; aspect-ratio: auto;
+}
+#videoPlayer {
+    width: 100%; height: 100%;
+    background: #000;
+}
+#videoOverlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.6); color: var(--text-primary);
+    font-size: 16px; pointer-events: none;
+}
+#videoControls {
+    position: absolute; bottom: 8px; right: 8px;
+    display: flex; gap: 8px;
+}
+.video-btn {
+    background: rgba(0,0,0,0.6); border: none; color: white;
+    width: 36px; height: 36px; border-radius: 50%;
+    font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+}
+.video-btn:active { background: rgba(255,150,64,0.4); }
+#liveIndicator {
+    position: absolute; top: 8px; left: 8px;
+    background: var(--recording-red); color: white;
+    padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 700;
+    animation: pulse 1s ease-in-out infinite;
+    display: none;
+}
 
-    /* Player container */
-    .player-wrap {
-      width: 100%;
-      max-width: 900px;
-      background: #000;
-      border-radius: 12px;
-      overflow: hidden;
-      position: relative;
-      aspect-ratio: 16/9;
-    }
-    .player-wrap video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      background: #000;
-    }
+/* ── Screens ── */
+.screen { display: none; }
+.screen.active { display: block; }
 
-    /* Status bar */
-    .status-bar {
-      max-width: 900px;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 0;
-    }
-    .live-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: #CC2020;
-      color: white;
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .live-badge .dot {
-      width: 8px;
-      height: 8px;
-      background: white;
-      border-radius: 50%;
-      animation: pulse 1.5s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-    .stream-info {
-      color: var(--text2);
-      font-size: 0.9rem;
-    }
+/* ── Join Screen ── */
+#joinScreen {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 80vh; padding: 32px 24px;
+}
+.logo { font-size: 28px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+.logo span { color: var(--text-primary); }
+.subtitle { color: var(--text-secondary); font-size: 14px; margin-bottom: 32px; }
+#codeInput {
+    width: 220px; padding: 14px 20px; font-size: 24px; text-align: center;
+    letter-spacing: 6px; text-transform: uppercase;
+    background: var(--bg-surface); border: 2px solid var(--bg-elevated);
+    border-radius: 12px; color: var(--text-primary);
+    font-family: 'SF Mono', 'Fira Code', monospace; font-weight: 700;
+}
+#codeInput:focus { border-color: var(--accent); outline: none; }
+#codeInput::placeholder { letter-spacing: 2px; font-size: 14px; color: var(--text-muted); }
+#joinBtn {
+    margin-top: 16px; padding: 12px 48px; font-size: 16px; font-weight: 700;
+    background: var(--accent); color: #1A1A1A; border: none;
+    border-radius: 10px; cursor: pointer;
+}
+#joinBtn:disabled { opacity: 0.5; }
+#joinError { color: var(--error); font-size: 13px; margin-top: 12px; min-height: 20px; }
 
-    /* Score ticker */
-    .score-ticker {
-      max-width: 900px;
-      width: 100%;
-      background: var(--bg-card);
-      border-radius: 10px;
-      padding: 14px 20px;
-      margin-top: 12px;
-      font-size: 1.1rem;
-      font-weight: 600;
-      display: none;
-    }
+/* ── Waiting Screen ── */
+#waitingScreen, #waitingForStreamScreen {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 60vh; padding: 32px;
+}
+.waiting-spinner {
+    width: 32px; height: 32px; border: 3px solid var(--bg-elevated);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin-bottom: 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#waitingText, #waitingStreamText {
+    color: var(--text-secondary); font-size: 15px; text-align: center;
+}
+#waitingSport { color: var(--accent); font-size: 18px; font-weight: 600; margin-top: 8px; }
 
-    /* No stream / loading states */
-    .message-card {
-      max-width: 500px;
-      text-align: center;
-      padding: 48px 32px;
-    }
-    .message-card h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.8rem;
-      margin-bottom: 12px;
-    }
-    .message-card p {
-      color: var(--text2);
-      font-size: 0.95rem;
-      margin-bottom: 24px;
-    }
-    .message-card .emoji { font-size: 3rem; margin-bottom: 16px; display: block; }
+/* ── Viewing Screen ── */
+#viewingScreen { padding-bottom: 80px; }
 
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--accent);
-      color: #1A1A1A;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      text-decoration: none;
-      border: none;
-      cursor: pointer;
-    }
-    .btn-primary:hover { background: #FFa855; }
-    .btn-outline {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: transparent;
-      color: var(--accent);
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      text-decoration: none;
-      border: 2px solid var(--accent);
-    }
-    .btn-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+/* ── Sport Header ── */
+#sportHeader {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    background: var(--bg-deep);
+    border-bottom: 1px solid var(--bg-elevated);
+}
+#sportEmoji { font-size: 22px; }
+#sportLabel { font-size: 15px; font-weight: 700; }
+#eventLabel { color: var(--accent); font-size: 12px; margin-left: auto; }
 
-    .loading-spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid var(--text3);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 16px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+/* ── Score Display (reused from score.html) ── */
+.score-display {
+    display: flex; gap: 0; padding: 0; margin: 0;
+}
+.team-score-block {
+    flex: 1; position: relative;
+    padding: 12px 16px; text-align: center;
+}
+.team-name { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+.team-score { font-size: 42px; font-weight: 800; line-height: 1; }
+.team-detail { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.score-divider {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 8px 12px; min-width: 60px;
+}
+.period-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+.period-value { font-size: 18px; font-weight: 700; color: var(--accent); }
+#scoreDisplay { padding: 0; }
 
-    /* Footer */
-    footer {
-      border-top: 1px solid rgba(255,255,255,0.04);
-      padding: 24px;
-      text-align: center;
-    }
-    .footer-inner {
-      max-width: 1000px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .footer-inner a { color: var(--text3); text-decoration: none; font-size: 0.8rem; }
-    .footer-inner a:hover { color: var(--accent); }
-    .footer-copy { color: var(--text3); font-size: 0.8rem; }
+/* ── Stats Panel (read-only) ── */
+#statsPanel {
+    padding: 12px 16px;
+}
+.stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px solid var(--bg-elevated);
+    font-size: 13px;
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-label { color: var(--text-secondary); }
+.stat-value { font-weight: 600; }
+.stat-section-title {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 12px 0 4px; margin-top: 4px;
+}
 
-    @media (max-width: 600px) {
-      .player-wrap { border-radius: 0; }
-      .status-bar, .score-ticker { padding-left: 12px; padding-right: 12px; }
-    }
-  </style>
+/* ── Bowling Scorecard ── */
+.bowling-scorecard { overflow-x: auto; padding: 8px 0; }
+.bowling-scorecard table {
+    width: 100%; border-collapse: collapse; font-size: 11px; text-align: center;
+}
+.bowling-scorecard th {
+    padding: 4px; background: var(--bg-elevated); color: var(--text-secondary);
+    border: 1px solid var(--bg-surface); font-weight: 600;
+}
+.bowling-scorecard td {
+    border: 1px solid var(--bg-elevated); padding: 2px 4px; min-width: 32px;
+}
+.frame-rolls { display: flex; justify-content: center; gap: 2px; }
+.roll-box { display: inline-block; min-width: 14px; font-weight: 600; }
+.roll-box.strike { color: var(--error); }
+.roll-box.spare { color: var(--accent); }
+.frame-score { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.total-cell { font-size: 16px; font-weight: 800; color: var(--accent); }
+
+/* ── Footer ── */
+#footer {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    display: none; align-items: center; justify-content: space-between;
+    padding: 10px 16px; padding-bottom: calc(10px + var(--safe-bottom));
+    background: var(--bg-deep); border-top: 1px solid var(--bg-elevated);
+    z-index: 50;
+}
+.brand { font-size: 14px; font-weight: 700; color: var(--text-muted); }
+.brand span { color: var(--accent); }
+</style>
 </head>
 <body>
 
-<nav>
-  <div class="nav-inner">
-    <a href="index.html" class="nav-logo">Score<span>Frame</span></a>
-    <a href="index.html" class="nav-back">← Home</a>
-  </div>
-</nav>
+<!-- Status Bar -->
+<div id="statusBar">
+    <div class="status-dot waiting" id="statusDot"></div>
+    <span id="statusText">Not connected</span>
+    <span id="viewerCount"></span>
+    <span id="liveLabel" style="display:none;color:var(--recording-red);font-weight:700;font-size:12px;">&#9679; LIVE</span>
+</div>
 
-<main>
-  <!-- State: Loading -->
-  <div id="state-loading" class="message-card" style="display:none;">
-    <div class="loading-spinner"></div>
-    <h1>Connecting to Stream...</h1>
-    <p>Loading the live video feed.</p>
-  </div>
+<!-- Join Screen -->
+<div id="joinScreen" class="screen active">
+    <div class="logo">Score<span>Frame</span></div>
+    <div class="subtitle">Watch a live game</div>
+    <input type="text" id="codeInput" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false">
+    <button id="joinBtn" onclick="joinStream()">Watch</button>
+    <div id="joinError"></div>
+</div>
 
-  <!-- State: No URL -->
-  <div id="state-no-url" class="message-card" style="display:none;">
-    <span class="emoji">📺</span>
-    <h1>Watch a Live Game</h1>
-    <p>To watch a live ScoreFrame stream, you need a share link from the person recording the game. Open the link on your phone to watch in the ScoreFrame app, or paste the playback URL below.</p>
-    <div style="margin-bottom: 20px;">
-      <input type="text" id="manual-url" placeholder="Paste HLS playback URL here..." style="width:100%;max-width:400px;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:var(--bg-card);color:var(--text);font-size:0.9rem;" />
-    </div>
-    <div class="btn-row">
-      <button class="btn-primary" onclick="playManualUrl()">Play</button>
-      <a href="beta.html" class="btn-outline">Get ScoreFrame</a>
-    </div>
-  </div>
+<!-- Waiting for Stream Screen -->
+<div id="waitingForStreamScreen" class="screen">
+    <div class="waiting-spinner"></div>
+    <div id="waitingStreamText">Waiting for stream to start...</div>
+    <div id="waitingSport"></div>
+</div>
 
-  <!-- State: Playing -->
-  <div id="state-playing" style="display:none; width:100%; max-width:900px;">
-    <div class="status-bar">
-      <div class="live-badge"><span class="dot"></span> LIVE</div>
-      <div class="stream-info" id="stream-info"></div>
+<!-- Viewing Screen -->
+<div id="viewingScreen" class="screen">
+    <div id="videoContainer">
+        <video id="videoPlayer" playsinline></video>
+        <div id="liveIndicator">LIVE</div>
+        <div id="videoOverlay">Connecting to stream...</div>
+        <div id="videoControls">
+            <button class="video-btn" id="muteBtn" onclick="toggleMute()">&#128264;</button>
+            <button class="video-btn" id="fullscreenBtn" onclick="toggleFullscreen()">&#9974;</button>
+        </div>
     </div>
-    <div class="player-wrap">
-      <video id="video-player" controls autoplay playsinline muted></video>
+    <div id="sportHeader">
+        <span id="sportEmoji"></span>
+        <span id="sportLabel"></span>
+        <span id="eventLabel"></span>
     </div>
-    <div class="score-ticker" id="score-ticker"></div>
-    <div style="text-align:center; margin-top:16px;">
-      <p style="color:var(--text3); font-size:0.85rem;">For the best experience with live score updates, <a href="beta.html" style="color:var(--accent);">download ScoreFrame</a></p>
-    </div>
-  </div>
+    <div id="scoreDisplay"></div>
+    <div id="statsPanel"></div>
+</div>
 
-  <!-- State: Error -->
-  <div id="state-error" class="message-card" style="display:none;">
-    <span class="emoji">😕</span>
-    <h1>Stream Unavailable</h1>
-    <p id="error-message">The stream may have ended or the URL is invalid. Check with the person who shared the link.</p>
-    <div class="btn-row">
-      <a href="index.html" class="btn-primary">Go to ScoreFrame</a>
-    </div>
-  </div>
-</main>
+<!-- Footer -->
+<div id="footer">
+    <div class="brand">Score<span>Frame</span></div>
+</div>
 
-<footer>
-  <div class="footer-inner">
-    <span class="footer-copy">&copy; 2026 Glavin Labs LLC. All rights reserved. ScoreFrame is a Glavin Labs product.</span>
-    <div>
-      <a href="index.html">Home</a> &nbsp;
-      <a href="privacy.html">Privacy</a> &nbsp;
-      <a href="/cdn-cgi/l/email-protection#91e2e4e1e1fee3e5d1e2f2fee3f4f7e3f0fcf4bff0e1e1">Contact</a>
-    </div>
-  </div>
-</footer>
+<script type="module">
+// ── Firebase SDK ──
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, onValue, off, get }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<script>
-  const params = new URLSearchParams(window.location.search);
-  const playbackUrl = params.get('playback');
-  const sport = params.get('sport') || '';
+const firebaseConfig = {
+    apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+    authDomain: "scoreframe-deploy.firebaseapp.com",
+    databaseURL: "https://scoreframe-deploy-default-rtdb.firebaseio.com",
+    projectId: "scoreframe-deploy",
+    storageBucket: "scoreframe-deploy.firebasestorage.app",
+    messagingSenderId: "728886280072",
+    appId: "1:728886280072:android:0050478669b89fc76b043d"
+};
 
-  function showState(id) {
-    ['state-loading', 'state-no-url', 'state-playing', 'state-error'].forEach(s => {
-      document.getElementById(s).style.display = 'none';
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ── State ──
+let currentCode = null;
+let currentSport = null;
+let currentState = null;
+let connected = false;
+let stateListener = null;
+let metaListener = null;
+let hlsPlayer = null;
+let isMuted = true;  // Start muted (autoplay policy)
+let isFullscreen = false;
+
+const $ = id => document.getElementById(id);
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(id).classList.add('active');
+    $('footer').style.display = (id === 'viewingScreen') ? 'flex' : 'none';
+}
+
+function esc(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+// ── Sport Helpers ──
+function sportEmoji(sport) {
+    const map = { GENERIC:'\u{1F3AF}', VOLLEYBALL:'\u{1F3D0}', BOWLING:'\u{1F3B3}',
+        BASKETBALL:'\u{1F3C0}', SOCCER:'\u26BD', FOOTBALL:'\u{1F3C8}',
+        BASEBALL:'\u26BE', SOFTBALL:'\u{1F94E}', TENNIS:'\u{1F3BE}',
+        PICKLEBALL:'\u{1F3D3}', HOCKEY:'\u{1F3D2}', LACROSSE:'\u{1F94D}' };
+    return map[sport] || '\u{1F3AF}';
+}
+function sportDisplayName(sport) {
+    const map = { GENERIC:'Game', VOLLEYBALL:'Volleyball', BOWLING:'Bowling',
+        BASKETBALL:'Basketball', SOCCER:'Soccer', FOOTBALL:'Football',
+        BASEBALL:'Baseball', SOFTBALL:'Softball', TENNIS:'Tennis',
+        PICKLEBALL:'Pickleball', HOCKEY:'Hockey', LACROSSE:'Lacrosse' };
+    return map[sport] || 'Game';
+}
+
+// ── Join Flow ──
+$('codeInput').addEventListener('keydown', e => { if (e.key === 'Enter') joinStream(); });
+// Auto-fill from URL params
+const urlCode = new URLSearchParams(location.search).get('code');
+if (urlCode) { $('codeInput').value = urlCode; joinStream(); }
+
+async function joinStream() {
+    const code = $('codeInput').value.trim().toUpperCase();
+    if (code.length < 4) { $('joinError').textContent = 'Enter a valid code'; return; }
+    $('joinBtn').disabled = true;
+    $('joinError').textContent = '';
+    currentCode = code;
+
+    try {
+        const snap = await get(ref(db, `streams/${code}/meta`));
+        if (!snap.exists()) {
+            $('joinError').textContent = 'Game not found. Check the code.';
+            $('joinBtn').disabled = false;
+            return;
+        }
+        const meta = snap.val();
+        if (meta.status === 'ended') {
+            $('joinError').textContent = 'This game has ended.';
+            $('joinBtn').disabled = false;
+            return;
+        }
+        currentSport = meta.sport || 'GENERIC';
+
+        // Start listening for state + meta changes
+        listenForUpdates(code);
+
+        if (meta.status === 'live' && meta.playbackUrl) {
+            // Stream is already live — go directly to viewer
+            startViewing(meta.playbackUrl);
+        } else {
+            // Waiting for stream to start
+            showScreen('waitingForStreamScreen');
+            $('waitingSport').textContent = sportEmoji(currentSport) + ' ' + sportDisplayName(currentSport);
+            updateConnectionStatus('waiting');
+        }
+    } catch (e) {
+        console.error('Join error:', e);
+        $('joinError').textContent = 'Connection error. Please try again.';
+        $('joinBtn').disabled = false;
+    }
+}
+
+function listenForUpdates(code) {
+    // State listener — score updates
+    stateListener = onValue(ref(db, `streams/${code}/state`), (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.val();
+        if (data.sport) currentSport = data.sport;
+        if (data.stateJson) {
+            currentState = typeof data.stateJson === 'string' ? JSON.parse(data.stateJson) : data.stateJson;
+        }
+        if (data.isRecording) {
+            $('liveLabel').style.display = 'inline';
+        }
+        // Update scoreboard if viewing
+        if (document.querySelector('#viewingScreen.active')) {
+            renderScoreboard();
+        }
     });
-    document.getElementById(id).style.display = id === 'state-playing' ? 'block' : '';
-    if (id !== 'state-playing') {
-      document.getElementById(id).style.display = 'flex';
-      document.getElementById(id).style.flexDirection = 'column';
-      document.getElementById(id).style.alignItems = 'center';
+
+    // Meta listener — status changes, playback URL
+    metaListener = onValue(ref(db, `streams/${code}/meta`), (snap) => {
+        if (!snap.exists()) return;
+        const meta = snap.val();
+        if (meta.sport) currentSport = meta.sport;
+
+        if (meta.status === 'live' && meta.playbackUrl && !document.querySelector('#viewingScreen.active')) {
+            // Stream just went live — start viewing
+            startViewing(meta.playbackUrl);
+        }
+        if (meta.status === 'ended') {
+            updateConnectionStatus('ended');
+            if (hlsPlayer) {
+                $('videoOverlay').style.display = 'flex';
+                $('videoOverlay').textContent = 'Stream has ended';
+            }
+        }
+    });
+
+    // Connection state
+    onValue(ref(db, '.info/connected'), (snap) => {
+        connected = snap.val() === true;
+        if (connected && document.querySelector('#viewingScreen.active')) {
+            updateConnectionStatus('live');
+        }
+    });
+}
+
+function startViewing(playbackUrl) {
+    showScreen('viewingScreen');
+    updateSportHeader();
+    updateConnectionStatus('live');
+    loadHlsPlayer(playbackUrl);
+    if (currentState) renderScoreboard();
+}
+
+// ── HLS Video Player ──
+function loadHlsPlayer(url) {
+    const video = $('videoPlayer');
+    video.muted = isMuted;
+
+    // Try native HLS first (Safari/iOS)
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
+        video.addEventListener('loadedmetadata', () => {
+            video.play().catch(() => {});
+            $('videoOverlay').style.display = 'none';
+            $('liveIndicator').style.display = 'block';
+        });
+        video.addEventListener('error', () => {
+            $('videoOverlay').textContent = 'Stream unavailable';
+        });
+        hlsPlayer = video;
+        return;
     }
-  }
 
-  function startPlayback(url) {
-    showState('state-loading');
-
-    const video = document.getElementById('video-player');
-    const info = document.getElementById('stream-info');
-
-    if (sport) {
-      info.textContent = decodeURIComponent(sport);
+    // Load hls.js for other browsers
+    if (!window.Hls) {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+        script.onload = () => initHls(url);
+        document.head.appendChild(script);
+    } else {
+        initHls(url);
     }
+}
 
-    if (Hls.isSupported()) {
-      const hls = new Hls({
+function initHls(url) {
+    if (!window.Hls || !Hls.isSupported()) {
+        $('videoOverlay').textContent = 'HLS not supported in this browser';
+        return;
+    }
+    const video = $('videoPlayer');
+    const hls = new Hls({
+        enableWorker: true,
         lowLatencyMode: true,
         liveSyncDurationCount: 3,
-        liveMaxLatencyDurationCount: 6,
-      });
-
-      hls.loadSource(url);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, function() {
-        showState('state-playing');
+        liveMaxLatencyDurationCount: 6
+    });
+    hls.loadSource(url);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
         video.play().catch(() => {});
-      });
-
-      hls.on(Hls.Events.ERROR, function(event, data) {
+        $('videoOverlay').style.display = 'none';
+        $('liveIndicator').style.display = 'block';
+    });
+    hls.on(Hls.Events.ERROR, (event, data) => {
         if (data.fatal) {
-          console.error('HLS fatal error:', data);
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            // Try to recover
-            setTimeout(() => hls.loadSource(url), 3000);
-          } else {
-            showState('state-error');
-          }
-        }
-      });
-
-      // Listen for ID3 timed metadata (score updates)
-      hls.on(Hls.Events.FRAG_PARSING_METADATA, function(event, data) {
-        if (data.samples) {
-          data.samples.forEach(sample => {
-            try {
-              // ID3 text frame — decode and display
-              const text = new TextDecoder().decode(sample.data);
-              // Try to parse as JSON score update
-              const json = JSON.parse(text.replace(/[^\x20-\x7E]/g, ''));
-              if (json.sport) {
-                updateScoreTicker(json);
-              }
-            } catch (e) {
-              // Not JSON or not parseable — ignore
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                // Retry after delay
+                setTimeout(() => hls.startLoad(), 3000);
+            } else {
+                $('videoOverlay').style.display = 'flex';
+                $('videoOverlay').textContent = 'Stream error — retrying...';
+                setTimeout(() => {
+                    hls.destroy();
+                    initHls(url);
+                }, 5000);
             }
-          });
         }
-      });
+    });
+    hlsPlayer = hls;
+}
 
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari native HLS
-      video.src = url;
-      video.addEventListener('loadedmetadata', function() {
-        showState('state-playing');
-        video.play().catch(() => {});
-      });
-      video.addEventListener('error', function() {
-        showState('state-error');
-      });
+window.toggleMute = function() {
+    const video = $('videoPlayer');
+    isMuted = !isMuted;
+    video.muted = isMuted;
+    $('muteBtn').innerHTML = isMuted ? '&#128264;' : '&#128266;';
+};
+
+window.toggleFullscreen = function() {
+    const container = $('videoContainer');
+    if (!isFullscreen) {
+        if (container.requestFullscreen) container.requestFullscreen();
+        else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+        container.classList.add('fullscreen');
+        isFullscreen = true;
     } else {
-      document.getElementById('error-message').textContent = 'Your browser does not support HLS video playback. Try Chrome, Safari, or Edge.';
-      showState('state-error');
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        container.classList.remove('fullscreen');
+        isFullscreen = false;
     }
-  }
+};
 
-  function updateScoreTicker(json) {
-    const ticker = document.getElementById('score-ticker');
-    ticker.style.display = 'block';
-
-    // Build a simple score display based on sport
-    let text = '';
-    const s = json.sport || '';
-
-    if (json.homeScore !== undefined && json.awayScore !== undefined) {
-      const home = json.homeName || 'Home';
-      const away = json.awayName || 'Away';
-      text = home + ' ' + json.homeScore + '  —  ' + json.awayScore + ' ' + away;
-      if (json.period) text += '  •  ' + json.period;
-    } else if (json.score !== undefined) {
-      text = 'Score: ' + json.score;
-      if (json.frame) text += '  •  Frame ' + json.frame;
-    } else {
-      text = JSON.stringify(json).substring(0, 100);
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+        $('videoContainer').classList.remove('fullscreen');
+        isFullscreen = false;
     }
+});
 
-    ticker.textContent = text;
-  }
-
-  function playManualUrl() {
-    const url = document.getElementById('manual-url').value.trim();
-    if (url) {
-      startPlayback(url);
+// ── Status ──
+function updateConnectionStatus(status) {
+    const dot = $('statusDot');
+    const text = $('statusText');
+    switch (status) {
+        case 'waiting':
+            dot.className = 'status-dot waiting';
+            text.textContent = 'Waiting for stream...';
+            break;
+        case 'live':
+            dot.className = 'status-dot live';
+            text.textContent = 'Live';
+            $('liveLabel').style.display = 'inline';
+            break;
+        case 'ended':
+            dot.className = 'status-dot disconnected';
+            text.textContent = 'Stream ended';
+            $('liveLabel').style.display = 'none';
+            break;
+        default:
+            dot.className = 'status-dot';
+            text.textContent = 'Connected';
     }
-  }
+}
 
-  // Check for Enter key on manual URL input
-  document.addEventListener('DOMContentLoaded', function() {
-    const input = document.getElementById('manual-url');
-    if (input) {
-      input.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') playManualUrl();
-      });
+function updateSportHeader() {
+    $('sportEmoji').textContent = sportEmoji(currentSport);
+    $('sportLabel').textContent = sportDisplayName(currentSport);
+}
+
+// ── Scoreboard Rendering (read-only, reused patterns from score.html) ──
+function renderScoreboard() {
+    if (!currentState || !currentSport) return;
+    updateSportHeader();
+    $('eventLabel').textContent = currentState.eventLabel || '';
+    switch(currentSport) {
+        case 'GENERIC': renderGeneric(); break;
+        case 'BASKETBALL': renderBasketball(); break;
+        case 'FOOTBALL': renderFootball(); break;
+        case 'VOLLEYBALL': renderVolleyball(); break;
+        case 'SOCCER': renderSoccer(); break;
+        case 'BOWLING': renderBowling(); break;
+        case 'BASEBALL': case 'SOFTBALL': renderBaseball(); break;
+        case 'TENNIS': renderTennis(); break;
+        case 'PICKLEBALL': renderPickleball(); break;
+        case 'HOCKEY': renderHockey(); break;
+        case 'LACROSSE': renderLacrosse(); break;
     }
-  });
+}
 
-  /
+function renderTeamScoreDisplay(s, periodLabel, periodValue, homeDetail, awayDetail) {
+    const hc = s.homeColor || '#1565C0';
+    const ac = s.awayColor || '#C62828';
+    $('scoreDisplay').innerHTML = `
+        <div class="score-display">
+            <div class="team-score-block" style="background:${hc}15;">
+                <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${hc};"></div>
+                <div class="team-name">${esc(s.homeName || 'HOME')}</div>
+                <div class="team-score" style="color:${hc}">${s.homeScore}</div>
+                ${homeDetail ? `<div class="team-detail">${homeDetail}</div>` : ''}
+            </div>
+            <div class="score-divider">
+                <div class="period-label">${periodLabel}</div>
+                <div class="period-value">${periodValue}</div>
+            </div>
+            <div class="team-score-block" style="background:${ac}15;">
+                <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${ac};"></div>
+                <div class="team-name">${esc(s.awayName || 'AWAY')}</div>
+                <div class="team-score" style="color:${ac}">${s.awayScore}</div>
+                ${awayDetail ? `<div class="team-detail">${awayDetail}</div>` : ''}
+            </div>
+        </div>`;
+}
+
+// ── Sport Renderers (read-only — scores + stats, no buttons) ──
+
+function renderGeneric() {
+    const s = currentState;
+    renderTeamScoreDisplay(s, s.periodLabel || 'PERIOD', s.currentPeriod);
+    $('statsPanel').innerHTML = '';
+}
+
+function renderBasketball() {
+    const s = currentState;
+    const q = s.currentQuarter || 1;
+    const qLabel = q <= 4 ? `Q${q}` : `OT${q-4}`;
+    const hDetail = s.homeFouls > 0 ? `${s.homeFouls} fouls` : '';
+    const aDetail = s.awayFouls > 0 ? `${s.awayFouls} fouls` : '';
+    renderTeamScoreDisplay(s, 'QUARTER', qLabel, hDetail, aDetail);
+    let stats = '';
+    if (s.homeScoreByPeriod && s.homeScoreByPeriod.length > 0) {
+        stats += '<div class="stat-section-title">Score by Quarter</div>';
+        const periods = s.homeScoreByPeriod.length;
+        for (let i = 0; i < periods; i++) {
+            const label = i < 4 ? `Q${i+1}` : `OT${i-3}`;
+            stats += `<div class="stat-row"><span class="stat-label">${label}</span><span class="stat-value">${s.homeScoreByPeriod[i] || 0} - ${(s.awayScoreByPeriod||[])[i] || 0}</span></div>`;
+        }
+    }
+    $('statsPanel').innerHTML = stats;
+}
+
+function renderFootball() {
+    const s = currentState;
+    const q = s.currentQuarter || 1;
+    const qLabel = q <= 4 ? `Q${q}` : `OT${q-4}`;
+    const down = s.currentDown || 1;
+    const dist = s.distance || 10;
+    const yard = s.yardLine || 50;
+    const downStr = `${down}${['st','nd','rd','th'][Math.min(down-1,3)]} & ${dist >= (100-yard) ? 'Goal' : dist}`;
+    renderTeamScoreDisplay(s, 'QUARTER', qLabel, downStr, `Ball on ${yard}`);
+    let stats = '';
+    if (s.homeScoreByQuarter && s.homeScoreByQuarter.length > 0) {
+        stats += '<div class="stat-section-title">Box Score</div>';
+        for (let i = 0; i < s.homeScoreByQuarter.length; i++) {
+            const label = i < 4 ? `Q${i+1}` : `OT${i-3}`;
+            stats += `<div class="stat-row"><span class="stat-label">${label}</span><span class="stat-value">${s.homeScoreByQuarter[i] || 0} - ${(s.awayScoreByQuarter||[])[i] || 0}</span></div>`;
+        }
+    }
+    $('statsPanel').innerHTML = stats;
+}
+
+function renderVolleyball() {
+    const s = currentState;
+    const setLabel = `Set ${s.currentSet || 1}`;
+    const setsStr = `${s.homeSets || 0}-${s.awaySets || 0}`;
+    renderTeamScoreDisplay(s, 'SETS', setsStr);
+    let stats = '<div class="stat-section-title">Set Scores</div>';
+    const hSets = s.homeScoreBySet || [];
+    const aSets = s.awayScoreBySet || [];
+    for (let i = 0; i < Math.max(hSets.length, aSets.length); i++) {
+        stats += `<div class="stat-row"><span class="stat-label">Set ${i+1}</span><span class="stat-value">${hSets[i] || 0} - ${aSets[i] || 0}</span></div>`;
+    }
+    $('statsPanel').innerHTML = stats;
+}
+
+function renderSoccer() {
+    const s = currentState;
+    const half = s.currentHalf || 1;
+    const halfLabel = half === 1 ? '1st' : half === 2 ? '2nd' : `ET${half-2}`;
+    const hDetail = s.homeShotsOnGoal > 0 ? `SOG: ${s.homeShotsOnGoal}` : '';
+    const aDetail = s.awayShotsOnGoal > 0 ? `SOG: ${s.awayShotsOnGoal}` : '';
+    renderTeamScoreDisplay(s, 'HALF', halfLabel, hDetail, aDetail);
+    let stats = '';
+    if (s.homePossession) {
+        stats += `<div class="stat-row"><span class="stat-label">Possession</span><span class="stat-value">${s.homePossession}% - ${100-s.homePossession}%</span></div>`;
+    }
+    if (s.homeYellowCards || s.awayYellowCards) {
+        stats += `<div class="stat-row"><span class="stat-label">Yellow Cards</span><span class="stat-value">${s.homeYellowCards||0} - ${s.awayYellowCards||0}</span></div>`;
+    }
+    if (s.homeRedCards || s.awayRedCards) {
+        stats += `<div class="stat-row"><span class="stat-label">Red Cards</span><span class="stat-value">${s.homeRedCards||0} - ${s.awayRedCards||0}</span></div>`;
+    }
+    $('statsPanel').innerHTML = stats;
+}
+
+function renderBowling() {
+    const s = currentState;
+    const frames = s.frames || [];
+    let cardHtml = '<table><tr>';
+    for (let i = 0; i < 10; i++) cardHtml += `<th>${i+1}</th>`;
+    cardHtml += '<th>TOT</th></tr><tr>';
+    for (let i = 0; i < 10; i++) {
+        const f = frames[i] || {roll1:'',roll2:'',roll3:'',score:0};
+        const r1cls = f.roll1 === 'X' ? ' strike' : '';
+        const r2cls = f.roll2 === '/' ? ' spare' : (f.roll2 === 'X' ? ' strike' : '');
+        const r3cls = f.roll3 === 'X' ? ' strike' : (f.roll3 === '/' ? ' spare' : '');
+        if (i < 9) {
+            cardHtml += `<td><div class="frame-rolls"><span class="roll-box${r1cls}">${f.roll1}</span><span class="roll-box${r2cls}">${f.roll2}</span></div><div class="frame-score">${f.score||''}</div></td>`;
+        } else {
+            cardHtml += `<td><div class="frame-rolls"><span class="roll-box${r1cls}">${f.roll1}</span><span class="roll-box${r2cls}">${f.roll2}</span><span class="roll-box${r3cls}">${f.roll3}</span></div><div class="frame-score">${f.score||''}</div></td>`;
+        }
+    }
+    const total = s.totalScore || 0;
+    cardHtml += `<td class="total-cell">${total}</td></tr></table>`;
+
+    $('scoreDisplay').innerHTML = `
+        <div style="text-align:center;padding:12px;">
+            <div style="font-size:13px;color:var(--text-secondary);">${esc(s.playerName||'PLAYER')} | Game ${s.currentGame||1}</div>
+            <div style="font-size:48px;font-weight:800;color:var(--accent);">${total}</div>
+            ${s.seriesTotal ? `<div style="font-size:12px;color:var(--text-muted);">Series: ${s.seriesTotal + total}</div>` : ''}
+        </div>`;
+    $('statsPanel').innerHTML = `<div class="bowling-scorecard">${cardHtml}</div>`;
+}
+
+function renderBaseball() {
+    const s = currentState;
+    const inn = s.currentInning || 1;
+    const innLabel = s.isTopOfInning ? '\u25B2' + inn : '\u25BC' + inn;
+    const hDetail = `${s.homeHits||0}H ${s.homeErrors||0}E`;
+    const aDetail = `${s.awayHits||0}H ${s.awayErrors||0}E`;
+    renderTeamScoreDisplay(s, 'INNING', innLabel, hDetail, aDetail);
+
+    let stats = `<div class="stat-row"><span class="stat-label">Count</span><span class="stat-value">${s.balls||0}-${s.strikes||0} | ${s.outs||0} Out</span></div>`;
+    // Bases
+    const bases = [];
+    if (s.runnerOnFirst) bases.push('1st');
+    if (s.runnerOnSecond) bases.push('2nd');
+    if (s.runnerOnThird) bases.push('3rd');
+    if (bases.length > 0) stats += `<div class="stat-row"><span class="stat-label">Runners</span><span class="stat-value">${bases.join(', ')}</span></div>`;
+
+    // Line score
+    const maxInn = Math.max((s.homeScoreByInning||[]).length, (s.awayScoreByInning||[]).length, inn);
+    if (maxInn > 0) {
+        stats += '<div class="stat-section-title">Line Score</div>';
+        let header = '<tr><th></th>';
+        let homeRow = `<tr><td style="font-weight:600;">${esc((s.homeName||'HOME').substring(0,4))}</td>`;
+        let awayRow = `<tr><td style="font-weight:600;">${esc((s.awayName||'AWAY').substring(0,4))}</td>`;
+        for (let i = 0; i < maxInn; i++) {
+            header += `<th>${i+1}</th>`;
+            const hs = (s.homeScoreByInning||[])[i];
+            const as2 = (s.awayScoreByInning||[])[i];
+            homeRow += `<td>${hs >= 0 ? hs : '-'}</td>`;
+            awayRow += `<td>${as2 >= 0 ? as2 : '-'}</td>`;
+        }
+        header += '<th>R</th><th>H</th><th>E</th></tr>';
+        homeRow += `<td style="font-weight:700;">${s.homeScore||0}</td><td>${s.homeHits||0}</td><td>${s.homeErrors||0}</td></tr>`;
+        awayRow += `<td style="font-weight:700;">${s.awayScore||0}</td><td>${s.awayHits||0}</td><td>${s.awayErrors||0}</td></tr>`;
+        stats += `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;text-align:center;">${header}${awayRow}${homeRow}</table></div>`;
+    }
+    $('statsPanel').innerHTML = stats;
+}
+
+function renderTennis() {
+    const s = currentState;
+    const setsStr = `${s.player1SetsWon||0}-${s.player2SetsWon||0}`;
+    const gameScore = `${s.player1GameScore||'0'}-${s.player2GameScore||'0'}`;
+    $('scoreDisplay').innerHTML = `
+        <div class="score-display">
+            <div class="team-score-block"><div class="team-name">${esc(s.player1Name||'P1')}</div><div class="team-score">${s.player1SetsWon||0}</div><div class="team-detail">Game: ${s.player1GameScore||'0'}</div></div>
+            <div class="score-divider"><div class="period-label">SETS</div><div class="period-value">${setsStr}</div></div>
+            <div class="team-score-block"><div class="team-name">${esc(s.player2Name||'P2')}</div><div class="team-score">${s.player2SetsWon||0}</div><div class="team-detail">Game: ${s.player2GameScore||'0'}</div></div>
+        </div>`;
+    let stats = '';
+    const p1Sets = s.player1SetScores || [];
+    const p2Sets = s.player2SetScores || [];
+    if (p1Sets.length > 0) {
+        stats += '<div class="stat-section-title">Set Scores</div>';
+        for (let i = 0; i < p1Sets.length; i++) {
+            stats += `<div class="stat-row"><span class="stat-label">Set ${i+1}</span><span class="stat-value">${p1Sets[i]}-${p2Sets[i]||0}</span></div>`;
+        }
+    }
+    $('statsPanel').innerHTML = stats;
+}
+
+function renderPickleball() {
+    const s = currentState;
+    const gamesStr = `${s.team1GamesWon||0}-${s.team2GamesWon||0}`;
+    $('scoreDisplay').innerHTML = `
+        <div class="score-display">
+            <div class="team-score-block"><div class="team-name">${esc(s.team1Name||'Team 1')}</div><div class="team-score">${s.team1Score||0}</div></div>
+            <div class="score-divider"><div class="period-label">GAMES</div><div class="period-value">${gamesStr}</div></div>
+            <div class="team-score-block"><div class="team-name">${esc(s.team2Name||'Team 2')}</div><div class="team-score">${s.team2Score||0}</div></div>
+        </div>`;
+    $('statsPanel').innerHTML = '';
+}
+
+function renderHockey() {
+    const s = currentState;
+    const per = s.currentPeriod || 1;
+    const perLabel = per <= 3 ? `P${per}` : per === 4 ? 'OT' : 'SO';
+    const hDetail = s.homeShotsOnGoal > 0 ? `SOG: ${s.homeShotsOnGoal}` : '';
+    const aDetail = s.awayShotsOnGoal > 0 ? `SOG: ${s.awayShotsOnGoal}` : '';
+    renderTeamScoreDisplay(s, 'PERIOD', perLabel, hDetail, aDetail);
+    let stats = '';
+    if (s.homePenaltyMinutes || s.awayPenaltyMinutes) {
+        stats += `<div class="stat-row"><span class="stat-label">PIM</span><span class="stat-value">${s.homePenaltyMinutes||0} - ${s.awayPenaltyMinutes||0}</span></div>`;
+    }
+    $('statsPanel').innerHTML = stats;
+}
+
+function renderLacrosse() {
+    const s = currentState;
+    const q = s.currentQuarter || 1;
+    const qLabel = q <= 4 ? `Q${q}` : `OT${q-4}`;
+    const hDetail = s.homeShotsOnGoal > 0 ? `SOG: ${s.homeShotsOnGoal}` : '';
+    const aDetail = s.awayShotsOnGoal > 0 ? `SOG: ${s.awayShotsOnGoal}` : '';
+    renderTeamScoreDisplay(s, 'QUARTER', qLabel, hDetail, aDetail);
+    $('statsPanel').innerHTML = '';
+}
+
+</script>
+</body>
+</html>
