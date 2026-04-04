@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D">
+<title>ScoreFrame — Team Hub</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg-deepest: #0D0D0D; --bg-deep: #141414; --bg-surface: #1E1E1E;
+    --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
+    --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
+    --success: #4CAF50; --error: #F44336; --recording-red: #CC2222;
+}
+html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-deepest); color: var(--text-primary);
+    min-height: 100vh; overflow-x: hidden;
+}
+
+/* Header */
+.team-header {
+    padding: 32px 24px 24px; text-align: center;
+    background: linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-deepest) 100%);
+    border-bottom: 1px solid var(--bg-elevated);
+}
+.team-color-bar { height: 4px; border-radius: 2px; margin-bottom: 16px; }
+.team-emoji { font-size: 36px; margin-bottom: 8px; }
+.team-name { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+.team-sport { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+.team-code { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+.live-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--recording-red); color: white; padding: 4px 12px;
+    border-radius: 12px; font-size: 12px; font-weight: 700; margin-top: 12px;
+    animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+
+/* Sections */
+.section { padding: 20px 24px; }
+.section-title {
+    font-size: 12px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 12px;
+}
+
+/* Game Cards */
+.game-card {
+    background: var(--bg-surface); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 10px;
+    border: 1px solid var(--bg-elevated);
+}
+.game-card.live { border-color: var(--recording-red); }
+.game-date { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.game-opponent { font-size: 16px; font-weight: 700; }
+.game-location { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.game-notes { font-size: 12px; color: var(--text-muted); font-style: italic; margin-top: 4px; }
+.game-score {
+    font-size: 20px; font-weight: 800; color: var(--accent); margin-top: 6px;
+}
+.game-status {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; margin-top: 6px;
+}
+.game-status.live { background: var(--recording-red); color: white; }
+.game-status.scheduled { background: var(--accent-dim); color: var(--accent); }
+.game-status.completed { background: rgba(76,175,80,0.15); color: var(--success); }
+.watch-btn {
+    display: inline-block; margin-top: 8px; padding: 8px 16px;
+    background: var(--recording-red); color: white; border: none;
+    border-radius: 8px; font-size: 13px; font-weight: 700;
+    cursor: pointer; text-decoration: none;
+}
+
+/* Access Request */
+.access-section { text-align: center; padding: 40px 24px; }
+.access-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.access-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; }
+.access-btn {
+    padding: 12px 32px; background: var(--accent); color: #1A1A1A;
+    border: none; border-radius: 10px; font-size: 16px; font-weight: 700;
+    cursor: pointer;
+}
+.access-btn:disabled { opacity: 0.5; }
+.access-status { margin-top: 12px; font-size: 13px; color: var(--text-secondary); }
+
+/* Past Games */
+.past-game { display: flex; justify-content: space-between; align-items: center; }
+.past-game .teams { flex: 1; }
+.past-game .score { font-size: 18px; font-weight: 800; color: var(--accent); }
+
+/* Empty */
+.empty { text-align: center; padding: 32px; color: var(--text-muted); font-size: 14px; }
+
+/* Loading */
+.loading { text-align: center; padding: 60px; }
+.spinner {
+    width: 32px; height: 32px; border: 3px solid var(--bg-elevated);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Footer */
+.footer {
+    text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px;
+    border-top: 1px solid var(--bg-elevated); margin-top: 20px;
+}
+.footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div id="loadingScreen" class="loading">
+    <div class="spinner"></div>
+    <div style="color:var(--text-secondary);">Loading team...</div>
+</div>
+
+<div id="notFoundScreen" style="display:none;" class="access-section">
+    <div style="font-size:48px;margin-bottom:16px;">🏟️</div>
+    <div class="access-title">Team Not Found</div>
+    <div class="access-desc">This team page doesn't exist or has been removed.</div>
+    <a href="https://scoreframe.app" style="color:var(--accent);">Go to ScoreFrame</a>
+</div>
+
+<div id="teamPage" style="display:none;">
+    <!-- Header -->
+    <div class="team-header">
+        <div class="team-color-bar" id="colorBar"></div>
+        <div class="team-emoji" id="teamEmoji"></div>
+        <div class="team-name" id="teamName"></div>
+        <div class="team-sport" id="teamSport"></div>
+        <div id="liveBadge" style="display:none;" class="live-badge">● LIVE NOW</div>
+        <div class="team-code" id="teamCode"></div>
+    </div>
+
+    <!-- Access Gate -->
+    <div id="accessGate" style="display:none;" class="access-section">
+        <div class="access-title">🔒 This team is private</div>
+        <div class="access-desc">Request access to see the schedule, live streams, and game history.</div>
+        <button class="access-btn" id="requestBtn" onclick="requestAccess()">Request Access</button>
+        <div class="access-status" id="accessStatus"></div>
+    </div>
+
+    <!-- Content (visible to approved subscribers + managers) -->
+    <div id="teamContent" style="display:none;">
+        <!-- Live Now -->
+        <div id="liveSection" style="display:none;" class="section">
+            <div class="section-title">🔴 Live Now</div>
+            <div id="liveGame"></div>
+        </div>
+
+        <!-- Upcoming Schedule -->
+        <div class="section">
+            <div class="section-title">📅 Upcoming Games</div>
+            <div id="upcomingGames"></div>
+        </div>
+
+        <!-- Past Games -->
+        <div class="section">
+            <div class="section-title">📊 Past Games</div>
+            <div id="pastGames"></div>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    <div>Powered by <a href="https://scoreframe.app">Score<strong>Frame</strong></a></div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, where, setDoc, limit as fbLimit }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getDatabase, ref, onValue }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getAuth, signInAnonymously }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+    authDomain: "scoreframe-deploy.firebaseapp.com",
+    databaseURL: "https://scoreframe-deploy-default-rtdb.firebaseio.com",
+    projectId: "scoreframe-deploy",
+    storageBucket: "scoreframe-deploy.firebasestorage.app",
+    messagingSenderId: "728886280072",
+    appId: "1:728886280072:android:0050478669b89fc76b043d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const rtdb = getDatabase(app);
+const auth = getAuth(app);
+
+let hubCode = null;
+let hubProfile = null;
+let uid = null;
+let isManager = false;
+let isSubscriber = false;
+
+const $ = id => document.getElementById(id);
+
+const sportEmoji = s => ({
+    GENERIC:'🎯', VOLLEYBALL:'🏐', BOWLING:'🎳', BASKETBALL:'🏀',
+    SOCCER:'⚽', FOOTBALL:'🏈', BASEBALL:'⚾', SOFTBALL:'🥎',
+    TENNIS:'🎾', PICKLEBALL:'🏓', HOCKEY:'🏒', LACROSSE:'🥍'
+}[s] || '🏟️');
+
+const sportName = s => ({
+    GENERIC:'Game', VOLLEYBALL:'Volleyball', BOWLING:'Bowling', BASKETBALL:'Basketball',
+    SOCCER:'Soccer', FOOTBALL:'Football', BASEBALL:'Baseball', SOFTBALL:'Softball',
+    TENNIS:'Tennis', PICKLEBALL:'Pickleball', HOCKEY:'Hockey', LACROSSE:'Lacrosse'
+}[s] || 'Sport');
+
+function formatDate(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+// ── Init ──
+hubCode = new URLSearchParams(location.search).get('code') || location.pathname.split('/').pop();
+if (!hubCode || hubCode.length < 4) {
+    $('loadingScreen').style.display = 'none';
+    $('notFoundScreen').style.display = 'block';
+} else {
+    loadTeam();
+}
+
+async function loadTeam() {
+    try {
+        // Auth (anonymous — for Firestore read access)
+        const cred = await signInAnonymously(auth);
+        uid = cred.user.uid;
+
+        // Load profile
+        const profileDoc = await getDoc(doc(db, 'teamHubs', hubCode));
+        if (!profileDoc.exists()) {
+            $('loadingScreen').style.display = 'none';
+            $('notFoundScreen').style.display = 'block';
+            return;
+        }
+
+        hubProfile = profileDoc.data();
+        renderHeader();
+
+        // Check access
+        const managerDoc = await getDoc(doc(db, 'teamHubs', hubCode, 'managers', uid));
+        isManager = managerDoc.exists();
+
+        const subDoc = await getDoc(doc(db, 'teamHubs', hubCode, 'subscribers', uid));
+        const subStatus = subDoc.exists() ? subDoc.data().status : null;
+        isSubscriber = subStatus === 'approved';
+
+        $('loadingScreen').style.display = 'none';
+        $('teamPage').style.display = 'block';
+
+        if (hubProfile.visibility === 'public' || isManager || isSubscriber) {
+            $('teamContent').style.display = 'block';
+            loadSchedule();
+            loadPastGames();
+            listenForLive();
+        } else {
+            $('accessGate').style.display = 'block';
+            if (subStatus === 'pending') {
+                $('requestBtn').disabled = true;
+                $('accessStatus').textContent = '⏳ Access request pending — waiting for team owner approval';
+            } else if (subStatus === 'blocked') {
+                $('requestBtn').style.display = 'none';
+                $('accessStatus').textContent = 'Access denied by team owner';
+            }
+        }
+    } catch (e) {
+        console.error('Load error:', e);
+        $('loadingScreen').style.display = 'none';
+        $('notFoundScreen').style.display = 'block';
+    }
+}
+
+function renderHeader() {
+    const p = hubProfile;
+    $('colorBar').style.background = `linear-gradient(90deg, ${p.color || '#1565C0'}, ${p.color2 || '#FFFFFF'})`;
+    $('teamEmoji').textContent = sportEmoji(p.sport);
+    $('teamName').textContent = p.teamName || 'Team';
+    $('teamSport').textContent = sportName(p.sport);
+    $('teamCode').textContent = hubCode;
+    document.title = `${p.teamName} — ScoreFrame`;
+}
+
+async function loadSchedule() {
+    try {
+        const q2 = query(collection(db, 'teamHubs', hubCode, 'schedule'), orderBy('date'));
+        const snap = await getDocs(q2);
+        const now = Date.now();
+        const upcoming = [];
+        snap.forEach(d => {
+            const game = { id: d.id, ...d.data() };
+            if (game.status !== 'cancelled' && (game.date >= now - 3600000 || game.status === 'live')) {
+                upcoming.push(game);
+            }
+        });
+
+        const container = $('upcomingGames');
+        if (upcoming.length === 0) {
+            container.innerHTML = '<div class="empty">No upcoming games scheduled</div>';
+            return;
+        }
+
+        container.innerHTML = upcoming.map(g => {
+            const isLive = g.status === 'live';
+            const statusClass = isLive ? 'live' : g.status === 'completed' ? 'completed' : 'scheduled';
+            const statusLabel = isLive ? '● LIVE' : g.status === 'completed' ? 'Final' : formatDate(g.date);
+            const watchBtn = isLive && g.streamCode ? `<a class="watch-btn" href="/watch?code=${g.streamCode}">▶ Watch Live</a>` : '';
+            const score = g.status === 'completed' ? `<div class="game-score">${g.homeScore} - ${g.awayScore}</div>` : '';
+            return `<div class="game-card ${isLive ? 'live' : ''}">
+                <div class="game-date"><span class="game-status ${statusClass}">${statusLabel}</span></div>
+                <div class="game-opponent">vs ${g.opponent || 'TBD'}</div>
+                ${g.location ? `<div class="game-location">📍 ${g.location}</div>` : ''}
+                ${g.notes ? `<div class="game-notes">${g.notes}</div>` : ''}
+                ${score}
+                ${watchBtn}
+            </div>`;
+        }).join('');
+    } catch (e) {
+        console.error('Schedule error:', e);
+        $('upcomingGames').innerHTML = '<div class="empty">Unable to load schedule</div>';
+    }
+}
+
+async function loadPastGames() {
+    try {
+        const q2 = query(collection(db, 'teamHubs', hubCode, 'games'), orderBy('date', 'desc'), fbLimit(20));
+        const snap = await getDocs(q2);
+        const container = $('pastGames');
+
+        if (snap.empty) {
+            container.innerHTML = '<div class="empty">No past games yet</div>';
+            return;
+        }
+
+        let html = '';
+        snap.forEach(d => {
+            const g = d.data();
+            html += `<div class="game-card">
+                <div class="past-game">
+                    <div class="teams">
+                        <div class="game-date">${formatDate(g.date)}</div>
+                        <div class="game-opponent">${g.homeTeam || 'Home'} vs ${g.awayTeam || 'Away'}</div>
+                    </div>
+                    <div class="score">${g.homeScore} - ${g.awayScore}</div>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    } catch (e) {
+        console.error('Past games error:', e);
+        $('pastGames').innerHTML = '<div class="empty">Unable to load past games</div>';
+    }
+}
+
+function listenForLive() {
+    // Check for active stream via RTDB
+    if (!hubProfile.activeStreamCode) return;
+    const code = hubProfile.activeStreamCode;
+    onValue(ref(rtdb, `streams/${code}/meta`), (snap) => {
+        if (!snap.exists()) return;
+        const meta = snap.val();
+        if (meta.status === 'live') {
+            $('liveBadge').style.display = 'inline-flex';
+            $('liveSection').style.display = 'block';
+            $('liveGame').innerHTML = `
+                <div class="game-card live">
+                    <div class="game-status live">● LIVE NOW</div>
+                    <div class="game-opponent" style="margin-top:8px;">${hubProfile.teamName} is streaming</div>
+                    <a class="watch-btn" href="/watch?code=${code}">▶ Watch Live</a>
+                </div>`;
+        } else {
+            $('liveBadge').style.display = 'none';
+            $('liveSection').style.display = 'none';
+        }
+    });
+}
+
+window.requestAccess = async function() {
+    $('requestBtn').disabled = true;
+    $('accessStatus').textContent = 'Sending request...';
+    try {
+        await setDoc(doc(db, 'teamHubs', hubCode, 'subscribers', uid), {
+            name: 'Web Viewer',
+            status: 'pending',
+            requestedAt: Date.now(),
+            approvedAt: 0
+        });
+        $('accessStatus').textContent = '⏳ Request sent! Waiting for team owner approval.';
+    } catch (e) {
+        $('accessStatus').textContent = 'Error sending request. Please try again.';
+        $('requestBtn').disabled = false;
+    }
+};
+</script>
+</body>
+</html>
