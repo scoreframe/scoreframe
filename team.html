@@ -311,6 +311,7 @@ const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
 let hubCode = null;
+let teamId = null;  // Resolved from hubIndex/{hubCode}
 let hubProfile = null;
 let currentUser = null;  // null = not signed in, object = signed in with Google
 let isManager = false;
@@ -354,15 +355,36 @@ if (!hubCode || hubCode.length < 4) {
 
 async function loadTeam() {
     try {
-        // Load profile (no auth required for read)
-        const profileDoc = await getDoc(doc(db, 'teamHubs', hubCode));
+        // Resolve hubCode → teamId via hubIndex, fallback to legacy teamHubs
+        const indexDoc = await getDoc(doc(db, 'hubIndex', hubCode));
+        if (indexDoc.exists()) {
+            teamId = indexDoc.data().teamId;
+        }
+
+        let profileDoc;
+        if (teamId) {
+            // New path: teams/{teamId}/
+            profileDoc = await getDoc(doc(db, 'teams', teamId));
+        } else {
+            // Fallback: legacy teamHubs/{hubCode}/ (pre-migration)
+            profileDoc = await getDoc(doc(db, 'teamHubs', hubCode));
+        }
         if (!profileDoc.exists()) {
             $('loadingScreen').style.display = 'none';
             $('notFoundScreen').style.display = 'block';
             return;
         }
 
-        hubProfile = profileDoc.data();
+        const raw = profileDoc.data();
+        // Normalize: new path stores hub fields in nested "hub" object
+        hubProfile = teamId ? {
+            ...raw,
+            teamName: raw.name || raw.teamName || '',
+            hubCode: raw.hub?.hubCode || hubCode,
+            visibility: raw.hub?.visibility || 'private',
+            activeStreamCode: raw.hub?.activeStreamCode || '',
+            activeStreamUrl: raw.hub?.activeStreamUrl || ''
+        } : raw;
         renderHeader();
 
         // Check access if user is signed in
@@ -385,9 +407,9 @@ async function checkAccess() {
     if (!currentUser) { isManager = false; isSubscriber = false; subStatus = null; return; }
     const uid = currentUser.uid;
     try {
-        const managerDoc = await getDoc(doc(db, 'teamHubs', hubCode, 'managers', uid));
+        const managerDoc = await getDoc(doc(db, teamId ? 'teams' : 'teamHubs', teamId || hubCode, 'managers', uid));
         isManager = managerDoc.exists();
-        const subDoc = await getDoc(doc(db, 'teamHubs', hubCode, 'subscribers', uid));
+        const subDoc = await getDoc(doc(db, teamId ? 'teams' : 'teamHubs', teamId || hubCode, 'subscribers', uid));
         subStatus = subDoc.exists() ? subDoc.data().status : null;
         isSubscriber = subStatus === 'approved';
     } catch (e) {
@@ -607,7 +629,7 @@ window.doFollow = async function() {
     if (!currentUser) { doSignIn(); return; }
     try {
         // Add to hub's subscriber list
-        await setDoc(doc(db, 'teamHubs', hubCode, 'subscribers', currentUser.uid), {
+        await setDoc(doc(db, teamId ? 'teams' : 'teamHubs', teamId || hubCode, 'subscribers', currentUser.uid), {
             uid: currentUser.uid,
             name: currentUser.displayName || 'User',
             email: currentUser.email || '',
@@ -631,7 +653,7 @@ window.doFollow = async function() {
 window.doUnfollow = async function() {
     if (!currentUser) return;
     try {
-        await deleteDoc(doc(db, 'teamHubs', hubCode, 'subscribers', currentUser.uid));
+        await deleteDoc(doc(db, teamId ? 'teams' : 'teamHubs', teamId || hubCode, 'subscribers', currentUser.uid));
         // Remove hub code from user's subscribed list
         await setDoc(doc(db, 'users', currentUser.uid), {
             subscribedHubs: arrayRemove(hubCode)
@@ -651,7 +673,7 @@ window.requestAccess = async function() {
     $('requestBtn').disabled = true;
     $('accessStatus').textContent = 'Sending request...';
     try {
-        await setDoc(doc(db, 'teamHubs', hubCode, 'subscribers', currentUser.uid), {
+        await setDoc(doc(db, teamId ? 'teams' : 'teamHubs', teamId || hubCode, 'subscribers', currentUser.uid), {
             uid: currentUser.uid,
             name: currentUser.displayName || 'User',
             email: currentUser.email || '',
@@ -672,7 +694,7 @@ window.requestAccess = async function() {
 
 async function loadSchedule() {
     try {
-        const q2 = query(collection(db, 'teamHubs', hubCode, 'schedule'), orderBy('date'));
+        const q2 = query(collection(db, teamId ? 'teams' : 'teamHubs', teamId || hubCode, 'schedule'), orderBy('date'));
         const snap = await getDocs(q2);
         const now = Date.now();
         const upcoming = [];
@@ -713,7 +735,7 @@ async function loadSchedule() {
 
 async function loadPastGames() {
     try {
-        const q2 = query(collection(db, 'teamHubs', hubCode, 'games'), orderBy('date', 'desc'), fbLimit(20));
+        const q2 = query(collection(db, teamId ? 'teams' : 'teamHubs', teamId || hubCode, 'games'), orderBy('date', 'desc'), fbLimit(20));
         const snap = await getDocs(q2);
         const container = $('pastGames');
 
