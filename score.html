@@ -565,6 +565,20 @@ function showScreen(id) {
     }
 }
 
+function showToast(msg) {
+    let t = document.getElementById('webToast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'webToast';
+        t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--bg-elevated);color:var(--accent);padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;';
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2000);
+}
+
 function vibrate(ms = 15) {
     try { navigator.vibrate && navigator.vibrate(ms); } catch(e) {}
 }
@@ -981,6 +995,14 @@ function formatRecTime(ms) {
 
 window.recCommand = function(action) {
     if (!currentCode) return;
+    // Visual feedback for highlight
+    if (action === 'CAPTURE_HIGHLIGHT') {
+        const btn = $('recHighlightBtn');
+        btn.style.background = 'var(--accent)';
+        btn.style.transform = 'scale(1.3)';
+        setTimeout(() => { btn.style.background = ''; btn.style.transform = ''; }, 600);
+        showToast('\u2B50 Highlight captured!');
+    }
     const cmd = {
         type: 'RECORDING_COMMAND',
         action: action,

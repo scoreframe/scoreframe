@@ -145,6 +145,49 @@ html, body {
     border-top: 1px solid var(--bg-elevated); margin-top: 20px;
 }
 .footer a { color: var(--accent); text-decoration: none; }
+
+/* Auth Modal */
+.auth-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 1000; align-items: center; justify-content: center;
+}
+.auth-overlay.show { display: flex; }
+.auth-modal {
+    background: var(--bg-surface); border-radius: 16px; padding: 28px 24px;
+    width: 90%; max-width: 360px; text-align: center;
+    border: 1px solid var(--bg-elevated);
+}
+.auth-modal h2 { font-size: 18px; margin-bottom: 4px; }
+.auth-modal .subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+.auth-divider {
+    display: flex; align-items: center; gap: 12px; margin: 16px 0;
+    font-size: 12px; color: var(--text-muted);
+}
+.auth-divider::before, .auth-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--bg-elevated);
+}
+.auth-input {
+    width: 100%; padding: 10px 14px; border-radius: 8px;
+    border: 1px solid var(--bg-elevated); background: var(--bg-deep);
+    color: var(--text-primary); font-size: 14px; margin-bottom: 10px;
+}
+.auth-input::placeholder { color: var(--text-muted); }
+.auth-input:focus { outline: none; border-color: var(--accent); }
+.auth-submit {
+    width: 100%; padding: 10px; background: var(--accent); color: #1A1A1A;
+    border: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    cursor: pointer; margin-top: 4px;
+}
+.auth-submit:disabled { opacity: 0.5; }
+.auth-toggle {
+    margin-top: 12px; font-size: 12px; color: var(--text-secondary);
+}
+.auth-toggle a { color: var(--accent); cursor: pointer; text-decoration: none; }
+.auth-error { color: var(--error); font-size: 12px; margin-top: 8px; min-height: 16px; }
+.auth-close {
+    position: absolute; top: 12px; right: 16px; background: none;
+    border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -173,10 +216,7 @@ html, body {
 
         <!-- User bar: sign-in / follow / account -->
         <div class="user-bar" id="userBar">
-            <button class="sign-in-btn" id="signInBtn" onclick="doSignIn()">
-                <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-                Sign in with Google
-            </button>
+            <button class="sign-in-btn" onclick="doSignIn()">Sign In</button>
         </div>
         <div class="follow-status" id="followStatus"></div>
     </div>
@@ -185,10 +225,7 @@ html, body {
     <div id="accessGate" style="display:none;" class="access-section">
         <div class="access-title">🔒 This team is private</div>
         <div class="access-desc" id="accessDesc">Sign in with your ScoreFrame account to request access.</div>
-        <button class="sign-in-btn" id="gateSignInBtn" onclick="doSignIn()" style="margin-bottom:12px;">
-            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-            Sign in with Google
-        </button>
+        <button class="sign-in-btn" id="gateSignInBtn" onclick="doSignIn()" style="margin-bottom:12px;">Sign In</button>
         <button class="access-btn" id="requestBtn" onclick="requestAccess()" style="display:none;">Request Access</button>
         <div class="access-status" id="accessStatus"></div>
     </div>
@@ -215,6 +252,33 @@ html, body {
     </div>
 </div>
 
+<!-- Auth Modal -->
+<div class="auth-overlay" id="authOverlay" onclick="if(event.target===this)closeAuth()">
+    <div class="auth-modal" style="position:relative;">
+        <button class="auth-close" onclick="closeAuth()">&times;</button>
+        <h2>Sign in to ScoreFrame</h2>
+        <div class="subtitle">Follow teams, get live notifications, and more</div>
+
+        <button class="sign-in-btn" style="width:100%;justify-content:center;margin-bottom:0;" onclick="doGoogleSignIn()">
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            Continue with Google
+        </button>
+
+        <div class="auth-divider">or</div>
+
+        <div id="emailForm">
+            <input class="auth-input" type="email" id="authEmail" placeholder="Email address" autocomplete="email">
+            <input class="auth-input" type="password" id="authPassword" placeholder="Password" autocomplete="current-password">
+            <input class="auth-input" type="text" id="authName" placeholder="Display name" style="display:none;" autocomplete="name">
+            <button class="auth-submit" id="authSubmit" onclick="doEmailSignIn()">Sign In</button>
+            <div class="auth-toggle" id="authToggle">
+                Don't have an account? <a onclick="toggleAuthMode()">Create one</a>
+            </div>
+        </div>
+        <div class="auth-error" id="authError"></div>
+    </div>
+</div>
+
 <div class="footer">
     <div>Powered by <a href="https://scoreframe.app">Score<strong>Frame</strong></a></div>
     <div style="margin-top:8px;"><a href="https://scoreframe.app">Get the app</a> to record games with live scoreboards</div>
@@ -222,11 +286,12 @@ html, body {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, where, setDoc, limit as fbLimit }
+import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, where, setDoc, deleteDoc, arrayUnion, arrayRemove, limit as fbLimit }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getDatabase, ref, onValue }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut }
+import { getAuth, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
@@ -386,11 +451,7 @@ function updateUserBar() {
 
     if (!currentUser) {
         // Show sign-in button (unless already shown in gate)
-        bar.innerHTML = `
-            <button class="sign-in-btn" onclick="doSignIn()">
-                <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-                Sign in
-            </button>`;
+        bar.innerHTML = `<button class="sign-in-btn" onclick="doSignIn()">Sign In</button>`;
         $('followStatus').textContent = isPublic ? '' : '';
         return;
     }
@@ -435,18 +496,96 @@ function renderHeader() {
 
 // ── Auth ──
 
-window.doSignIn = async function() {
+let isCreateMode = false;
+
+window.doSignIn = function() {
+    // Open auth modal
+    $('authOverlay').classList.add('show');
+    $('authError').textContent = '';
+    isCreateMode = false;
+    $('authSubmit').textContent = 'Sign In';
+    $('authName').style.display = 'none';
+    $('authToggle').innerHTML = 'Don\'t have an account? <a onclick="toggleAuthMode()">Create one</a>';
+};
+
+window.closeAuth = function() {
+    $('authOverlay').classList.remove('show');
+    $('authError').textContent = '';
+};
+
+window.toggleAuthMode = function() {
+    isCreateMode = !isCreateMode;
+    $('authError').textContent = '';
+    if (isCreateMode) {
+        $('authSubmit').textContent = 'Create Account';
+        $('authName').style.display = 'block';
+        $('authToggle').innerHTML = 'Already have an account? <a onclick="toggleAuthMode()">Sign in</a>';
+    } else {
+        $('authSubmit').textContent = 'Sign In';
+        $('authName').style.display = 'none';
+        $('authToggle').innerHTML = 'Don\'t have an account? <a onclick="toggleAuthMode()">Create one</a>';
+    }
+};
+
+window.doGoogleSignIn = async function() {
+    $('authError').textContent = '';
     try {
         const result = await signInWithPopup(auth, googleProvider);
         currentUser = result.user;
+        closeAuth();
         await checkAccess();
         showContent();
     } catch (e) {
-        if (e.code !== 'auth/popup-closed-by-user') {
-            console.error('Sign-in error:', e);
-            $('followStatus').textContent = 'Sign-in failed. Try again.';
-        }
+        if (e.code === 'auth/popup-closed-by-user') return;
+        console.error('Google sign-in error:', e);
+        $('authError').textContent = e.code === 'auth/unauthorized-domain'
+            ? 'This domain is not authorized. The team owner needs to add it in Firebase.'
+            : 'Google sign-in failed. Try email instead.';
     }
+};
+
+window.doEmailSignIn = async function() {
+    const email = $('authEmail').value.trim();
+    const password = $('authPassword').value;
+    const name = $('authName').value.trim();
+    $('authError').textContent = '';
+
+    if (!email || !password) {
+        $('authError').textContent = 'Enter email and password.';
+        return;
+    }
+    if (isCreateMode && password.length < 6) {
+        $('authError').textContent = 'Password must be at least 6 characters.';
+        return;
+    }
+
+    $('authSubmit').disabled = true;
+    try {
+        let result;
+        if (isCreateMode) {
+            result = await createUserWithEmailAndPassword(auth, email, password);
+            if (name) await updateProfile(result.user, { displayName: name });
+        } else {
+            result = await signInWithEmailAndPassword(auth, email, password);
+        }
+        currentUser = result.user;
+        closeAuth();
+        await checkAccess();
+        showContent();
+    } catch (e) {
+        console.error('Email auth error:', e);
+        const msg = {
+            'auth/user-not-found': 'No account with that email. Create one instead.',
+            'auth/wrong-password': 'Incorrect password.',
+            'auth/invalid-credential': 'Invalid email or password.',
+            'auth/email-already-in-use': 'Email already in use. Try signing in.',
+            'auth/weak-password': 'Password must be at least 6 characters.',
+            'auth/invalid-email': 'Invalid email address.',
+            'auth/too-many-requests': 'Too many attempts. Try again later.',
+        }[e.code] || `Error: ${e.message}`;
+        $('authError').textContent = msg;
+    }
+    $('authSubmit').disabled = false;
 };
 
 window.doSignOut = async function() {
@@ -467,13 +606,19 @@ window.doSignOut = async function() {
 window.doFollow = async function() {
     if (!currentUser) { doSignIn(); return; }
     try {
+        // Add to hub's subscriber list
         await setDoc(doc(db, 'teamHubs', hubCode, 'subscribers', currentUser.uid), {
+            uid: currentUser.uid,
             name: currentUser.displayName || 'User',
             email: currentUser.email || '',
             status: 'approved',  // Public hubs: auto-approve
             requestedAt: Date.now(),
             approvedAt: Date.now()
         });
+        // Add hub code to user's subscribed list (so the app can find it)
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            subscribedHubs: arrayUnion(hubCode)
+        }, { merge: true });
         subStatus = 'approved';
         isSubscriber = true;
         updateUserBar();
@@ -486,8 +631,11 @@ window.doFollow = async function() {
 window.doUnfollow = async function() {
     if (!currentUser) return;
     try {
-        const { deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
         await deleteDoc(doc(db, 'teamHubs', hubCode, 'subscribers', currentUser.uid));
+        // Remove hub code from user's subscribed list
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            subscribedHubs: arrayRemove(hubCode)
+        }, { merge: true });
         subStatus = null;
         isSubscriber = false;
         updateUserBar();
@@ -504,6 +652,7 @@ window.requestAccess = async function() {
     $('accessStatus').textContent = 'Sending request...';
     try {
         await setDoc(doc(db, 'teamHubs', hubCode, 'subscribers', currentUser.uid), {
+            uid: currentUser.uid,
             name: currentUser.displayName || 'User',
             email: currentUser.email || '',
             status: 'pending',
