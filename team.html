@@ -273,6 +273,7 @@ html, body {
         <div class="team-emoji" id="teamEmoji"></div>
         <div class="team-name" id="teamName"></div>
         <div class="team-sport" id="teamSport"></div>
+        <div id="teamRecord" style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:8px;"></div>
         <div id="liveBadge" style="display:none;" class="live-badge">● LIVE NOW</div>
         <div class="team-code" id="teamCode"></div>
 
@@ -911,12 +912,19 @@ let pastGamesCache = [];  // Cache for edit operations
 
 async function loadPastGames() {
     try {
-        const q2 = query(collection(db, 'teams', teamId, 'games'), orderBy('date', 'desc'), fbLimit(20));
-        const snap = await getDocs(q2);
+        let snap;
+        try {
+            snap = await getDocs(query(collection(db, 'teams', teamId, 'games'), orderBy('date', 'desc'), fbLimit(20)));
+        } catch (e) {
+            // orderBy may fail without index — fall back to unordered
+            console.warn('Past games orderBy failed, fallback:', e.message);
+            snap = await getDocs(query(collection(db, 'teams', teamId, 'games'), fbLimit(20)));
+        }
         const container = $('pastGames');
 
         if (snap.empty) {
             container.innerHTML = '<div class="empty">No past games yet</div>';
+            $('teamRecord').textContent = '';
             return;
         }
 
@@ -988,6 +996,37 @@ async function loadPastGames() {
             </div>`;
         });
         container.innerHTML = html;
+
+        // Calculate and display team record
+        const sport = (hubProfile?.sport || '').toUpperCase();
+        const isBowlingRecord = sport === 'BOWLING';
+        if (isBowlingRecord) {
+            let totalScore = 0, totalGames = 0, highGame = 0;
+            for (const g of pastGamesCache) {
+                const ps = g.playerScores || '';
+                if (ps) {
+                    for (const b of ps.split(';')) {
+                        const scores = (b.split(':')[1] || '').split(',').map(Number).filter(n => n > 0);
+                        totalScore += scores.reduce((a, b) => a + b, 0);
+                        totalGames += scores.length;
+                        highGame = Math.max(highGame, ...scores);
+                    }
+                } else if (g.homeScore > 0) {
+                    totalScore += g.homeScore; totalGames++; highGame = Math.max(highGame, g.homeScore);
+                }
+            }
+            const avg = totalGames > 0 ? Math.round(totalScore / totalGames) : 0;
+            $('teamRecord').textContent = `${pastGamesCache.length} session${pastGamesCache.length !== 1 ? 's' : ''} · ${totalGames} games · Avg: ${avg} · High: ${highGame}`;
+        } else {
+            let w = 0, l = 0, t = 0;
+            for (const g of pastGamesCache) {
+                const hs = g.homeScore || 0, as_ = g.awayScore || 0;
+                if (hs > as_) w++; else if (as_ > hs) l++; else if (hs > 0) t++;
+            }
+            let rec = `${w}W-${l}L`;
+            if (t > 0) rec += `-${t}T`;
+            $('teamRecord').textContent = `${rec} · ${pastGamesCache.length} game${pastGamesCache.length !== 1 ? 's' : ''}`;
+        }
     } catch (e) {
         console.error('Past games error:', e);
         $('pastGames').innerHTML = '<div class="empty">Unable to load past games</div>';
