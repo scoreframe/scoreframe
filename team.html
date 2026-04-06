@@ -369,8 +369,20 @@ if (!hubCode || hubCode.length < 4) {
     $('notFoundScreen').style.display = 'block';
 } else {
     // Listen for auth state — user may already be signed in from a previous visit
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         currentUser = user && !user.isAnonymous ? user : null;
+        // Create/update user doc on sign-in
+        if (currentUser) {
+            try {
+                const { setDoc, doc: fbDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+                await setDoc(fbDoc(db, 'users', currentUser.uid), {
+                    name: currentUser.displayName || '',
+                    email: currentUser.email || '',
+                    photoURL: currentUser.photoURL || '',
+                    lastSignIn: Date.now()
+                }, { merge: true });
+            } catch (e) { console.error('User doc error:', e); }
+        }
         // If page is already loaded, update the user bar
         if (hubProfile) updateUserBar();
     });
@@ -429,6 +441,23 @@ async function checkAccess() {
     try {
         const managerDoc = await getDoc(doc(db, 'teams', teamId, 'managers', uid));
         isManager = managerDoc.exists();
+        // Fallback: check by email (invited managers use email.hashCode() as doc ID)
+        if (!isManager && currentUser.email) {
+            try {
+                const { getDocs, query, collection, where, limit: fbLimit, setDoc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+                const q = query(collection(db, 'teams', teamId, 'managers'), where('email', '==', currentUser.email), fbLimit(1));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    isManager = true;
+                    // Migrate: replace email-hash doc with real UID doc
+                    const oldDoc = snap.docs[0];
+                    const data = { ...oldDoc.data(), migratedFrom: oldDoc.id };
+                    await setDoc(doc(db, 'teams', teamId, 'managers', uid), data);
+                    await deleteDoc(doc(db, 'teams', teamId, 'managers', oldDoc.id));
+                    console.log('Migrated manager doc from', oldDoc.id, 'to', uid);
+                }
+            } catch (e2) { console.error('Manager email check error:', e2); }
+        }
         const subDoc = await getDoc(doc(db, 'teams', teamId, 'subscribers', uid));
         subStatus = subDoc.exists() ? subDoc.data().status : null;
         isSubscriber = subStatus === 'approved';
@@ -832,11 +861,13 @@ async function loadPastGames() {
                 if (ps) {
                     // Parse "name:g1,g2,g3:series;..."
                     scoreLine = ps.split(';').map(b => {
-                        const [name, games, series] = b.split(':');
+                        const [name, games, storedSeries] = b.split(':');
                         const scores = (games || '').split(',').filter(s => s).map(Number);
+                        const calcSeries = scores.reduce((a, b) => a + b, 0);
+                        const series = calcSeries > 0 ? calcSeries : (parseInt(storedSeries) || 0);
                         const high = Math.max(...scores, 0);
                         const prefix = ps.includes(';') && name ? name + ': ' : '';
-                        return `${prefix}${series || 0} series · High: ${high} · ${scores.length} game${scores.length !== 1 ? 's' : ''}<br><span style="font-size:11px;color:var(--text-secondary);">${scores.join(' · ')}</span>`;
+                        return `${prefix}${series} series · High: ${high} · ${scores.length} game${scores.length !== 1 ? 's' : ''}<br><span style="font-size:11px;color:var(--text-secondary);">${scores.join(' · ')}</span>`;
                     }).join('<br>');
                 } else {
                     scoreLine = g.homeScore > 0 ? `${g.homeScore}` : '';

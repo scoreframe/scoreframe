@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D">
+<title>ScoreFrame — Dashboard</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg-deepest: #0D0D0D; --bg-deep: #141414; --bg-surface: #1E1E1E;
+    --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
+    --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
+    --success: #4CAF50; --error: #F44336; --recording-red: #CC2222;
+}
+html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-deepest); color: var(--text-primary);
+    min-height: 100vh; overflow-x: hidden;
+}
+.header {
+    padding: 32px 24px 24px; text-align: center;
+    background: linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-deepest) 100%);
+    border-bottom: 1px solid var(--bg-elevated);
+}
+.logo { font-size: 28px; font-weight: 800; color: var(--accent); }
+.subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+/* Auth */
+.auth-area { text-align: center; margin-top: 16px; }
+.user-info {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 14px; color: var(--text-secondary);
+}
+.user-photo { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--bg-elevated); }
+.sign-in-btn {
+    padding: 10px 24px; background: white; color: #333;
+    border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+.sign-in-btn:hover { background: #f0f0f0; }
+.sign-out-btn {
+    padding: 4px 12px; background: transparent; color: var(--text-muted);
+    border: 1px solid var(--text-muted); border-radius: 6px; font-size: 11px;
+    cursor: pointer; margin-left: 8px;
+}
+.email-form { margin-top: 12px; display: none; }
+.email-form input {
+    padding: 8px 12px; background: var(--bg-surface); color: var(--text-primary);
+    border: 1px solid var(--bg-elevated); border-radius: 6px; font-size: 13px;
+    width: 220px; margin: 4px;
+}
+.email-form button {
+    padding: 8px 16px; background: var(--accent); color: #1A1A1A;
+    border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
+    cursor: pointer; margin: 4px;
+}
+.email-toggle {
+    font-size: 12px; color: var(--text-muted); cursor: pointer;
+    margin-top: 8px; text-decoration: underline;
+}
+
+/* Content */
+.container { max-width: 600px; margin: 0 auto; padding: 16px 20px 40px; }
+.sign-in-prompt {
+    text-align: center; padding: 60px 20px; color: var(--text-secondary); font-size: 15px;
+}
+.section-header {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin: 24px 0 12px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--bg-elevated);
+}
+.team-card {
+    background: var(--bg-surface); border-radius: 10px; padding: 14px 16px;
+    margin-bottom: 10px; cursor: pointer; transition: background 0.15s;
+    border: 1px solid var(--bg-elevated);
+}
+.team-card:hover { background: var(--bg-elevated); }
+.team-card-row { display: flex; align-items: center; gap: 12px; }
+.team-emoji { font-size: 28px; }
+.team-info { flex: 1; }
+.team-name { font-size: 16px; font-weight: 700; }
+.team-sport { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.team-record { font-size: 12px; color: var(--accent); font-weight: 600; margin-top: 2px; }
+.team-role {
+    font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+}
+.role-owner { background: var(--accent); color: #1A1A1A; }
+.role-manager { background: var(--accent-dim); color: var(--accent); }
+.role-follower { background: var(--bg-elevated); color: var(--text-secondary); }
+.color-bar { width: 4px; height: 36px; border-radius: 2px; flex-shrink: 0; }
+.empty-state {
+    text-align: center; padding: 32px; color: var(--text-muted); font-size: 13px;
+    background: var(--bg-surface); border-radius: 10px;
+}
+.app-promo {
+    text-align: center; margin-top: 32px; padding: 20px;
+    background: var(--bg-surface); border-radius: 10px;
+}
+.app-promo a {
+    color: var(--accent); text-decoration: none; font-weight: 600;
+}
+.loading { text-align: center; padding: 40px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo">ScoreFrame</div>
+    <div class="subtitle">Dashboard</div>
+    <div class="auth-area" id="authArea"></div>
+</div>
+
+<div class="container" id="content">
+    <div class="sign-in-prompt" id="signInPrompt">
+        Sign in to see your teams, hubs, and activity.
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc, collection, query, where, orderBy, limit as fbLimit, arrayUnion }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+    authDomain: "scoreframe-deploy.firebaseapp.com",
+    databaseURL: "https://scoreframe-deploy-default-rtdb.firebaseio.com",
+    projectId: "scoreframe-deploy",
+    storageBucket: "scoreframe-deploy.firebasestorage.app",
+    messagingSenderId: "728886280072",
+    appId: "1:728886280072:android:0050478669b89fc76b043d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
+let currentUser = null;
+
+const $ = id => document.getElementById(id);
+
+const sportEmoji = s => ({
+    GENERIC:'\u{1F3AF}', VOLLEYBALL:'\u{1F3D0}', BOWLING:'\u{1F3B3}', BASKETBALL:'\u{1F3C0}',
+    SOCCER:'\u26BD', FOOTBALL:'\u{1F3C8}', BASEBALL:'\u26BE', SOFTBALL:'\u{1F94E}',
+    TENNIS:'\u{1F3BE}', PICKLEBALL:'\u{1F3D3}', HOCKEY:'\u{1F3D2}', LACROSSE:'\u{1F94D}'
+}[s] || '\u{1F3DF}');
+
+const sportName = s => ({
+    GENERIC:'Game', VOLLEYBALL:'Volleyball', BOWLING:'Bowling', BASKETBALL:'Basketball',
+    SOCCER:'Soccer', FOOTBALL:'Football', BASEBALL:'Baseball', SOFTBALL:'Softball',
+    TENNIS:'Tennis', PICKLEBALL:'Pickleball', HOCKEY:'Hockey', LACROSSE:'Lacrosse'
+}[s] || 'Sport');
+
+// ── Auth UI ──
+
+function renderAuth() {
+    const area = $('authArea');
+    if (currentUser) {
+        const photo = currentUser.photoURL ? `<img class="user-photo" src="${currentUser.photoURL}" alt="">` : '';
+        const name = currentUser.displayName || currentUser.email || 'User';
+        area.innerHTML = `
+            <div class="user-info">
+                ${photo} ${name}
+                <button class="sign-out-btn" onclick="window._signOut()">Sign Out</button>
+            </div>`;
+    } else {
+        area.innerHTML = `
+            <button class="sign-in-btn" onclick="window._signInGoogle()">
+                <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#34A853" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.0 24.0 0 0 0 0 21.56l7.98-6.19z"/><path fill="#EA4335" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                Sign in with Google
+            </button>
+            <div class="email-toggle" onclick="window._toggleEmail()">or sign in with email</div>
+            <div class="email-form" id="emailForm">
+                <input type="email" id="emailInput" placeholder="Email"><br>
+                <input type="password" id="passInput" placeholder="Password"><br>
+                <button onclick="window._signInEmail()">Sign In</button>
+                <button onclick="window._createEmail()" style="background:var(--bg-elevated);color:var(--text-primary);">Create Account</button>
+            </div>`;
+    }
+}
+
+window._signInGoogle = async () => {
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        currentUser = result.user;
+    } catch (e) { console.error('Google sign-in error:', e); }
+};
+
+window._toggleEmail = () => {
+    const f = $('emailForm');
+    if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+};
+
+window._signInEmail = async () => {
+    const email = $('emailInput')?.value, pass = $('passInput')?.value;
+    if (!email || !pass) return;
+    try {
+        const result = await signInWithEmailAndPassword(auth, email, pass);
+        currentUser = result.user;
+    } catch (e) { alert(e.message); }
+};
+
+window._createEmail = async () => {
+    const email = $('emailInput')?.value, pass = $('passInput')?.value;
+    if (!email || !pass) return;
+    try {
+        const result = await createUserWithEmailAndPassword(auth, email, pass);
+        currentUser = result.user;
+    } catch (e) { alert(e.message); }
+};
+
+window._signOut = async () => {
+    await signOut(auth);
+    currentUser = null;
+};
+
+window._acceptInvite = async (invId, teamId, hubCode) => {
+    if (!currentUser) return;
+    try {
+        const uid = currentUser.uid;
+        const name = currentUser.displayName || 'User';
+        const email = currentUser.email || '';
+        // Add as manager
+        await setDoc(doc(db, 'teams', teamId, 'managers', uid), {
+            name, email, role: 'manager', addedAt: Date.now()
+        });
+        // Add to subscribedHubs
+        if (hubCode) {
+            await setDoc(doc(db, 'users', uid), { subscribedHubs: arrayUnion(hubCode) }, { merge: true });
+        }
+        // Mark invitation accepted
+        await updateDoc(doc(db, 'invitations', invId), { status: 'accepted' });
+        loadDashboard();
+    } catch (e) { console.error('Accept error:', e); alert('Failed to accept invitation'); }
+};
+
+window._declineInvite = async (invId) => {
+    try {
+        await deleteDoc(doc(db, 'invitations', invId));
+        loadDashboard();
+    } catch (e) { console.error('Decline error:', e); }
+};
+
+onAuthStateChanged(auth, async (user) => {
+    currentUser = user && !user.isAnonymous ? user : null;
+    renderAuth();
+    if (currentUser) {
+        // Create/update user doc on sign-in
+        try {
+            await setDoc(doc(db, 'users', currentUser.uid), {
+                name: currentUser.displayName || '',
+                email: currentUser.email || '',
+                photoURL: currentUser.photoURL || '',
+                lastSignIn: Date.now()
+            }, { merge: true });
+        } catch (e) { console.error('User doc error:', e); }
+        loadDashboard();
+    } else {
+        $('content').innerHTML = `<div class="sign-in-prompt">Sign in to see your teams, hubs, and activity.</div>`;
+    }
+});
+
+// ── Dashboard ──
+
+async function loadDashboard() {
+    const content = $('content');
+    content.innerHTML = '<div class="loading">Loading your teams...</div>';
+    const uid = currentUser.uid;
+    const email = currentUser.email || '';
+
+    try {
+        // Check for pending invitations
+        const invSnap = await getDocs(query(
+            collection(db, 'invitations'),
+            where('email', '==', email.toLowerCase().trim()),
+            where('status', '==', 'pending')
+        ));
+        const pendingInvitations = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Get subscribed hub codes
+        const userDoc = await getDoc(doc(db, 'users', uid));
+        const subscribedHubs = userDoc.exists() ? (userDoc.data().subscribedHubs || []) : [];
+
+        // Get teams user owns (from myTeams array)
+        const myTeamIds = userDoc.exists() ? (userDoc.data().myTeams || []) : [];
+
+        // Resolve all team data
+        const ownedTeams = [];
+        const managedTeams = [];
+        const followedTeams = [];
+
+        // Load owned teams
+        for (const teamId of myTeamIds) {
+            try {
+                const teamDoc = await getDoc(doc(db, 'teams', teamId));
+                if (!teamDoc.exists()) continue;
+                const data = teamDoc.data();
+                const pastGames = await getDocs(query(
+                    collection(db, 'teams', teamId, 'games'),
+                    orderBy('date', 'desc'), fbLimit(50)
+                ));
+                const record = calcRecord(data.sport || data.hub?.sport || '', pastGames.docs.map(d => d.data()));
+                ownedTeams.push({
+                    id: teamId,
+                    name: data.name || data.hub?.teamName || 'Team',
+                    sport: data.sport || data.hub?.sport || '',
+                    color: data.color || data.hub?.color || '#FF9640',
+                    hubCode: data.hub?.hubCode || '',
+                    record
+                });
+            } catch (e) { console.error('Error loading team', teamId, e); }
+        }
+
+        // Load followed hubs (not owned)
+        const ownedIds = new Set(myTeamIds);
+        for (const hubCode of subscribedHubs) {
+            try {
+                const indexDoc = await getDoc(doc(db, 'hubIndex', hubCode));
+                if (!indexDoc.exists()) continue;
+                const teamId = indexDoc.data().teamId;
+                if (ownedIds.has(teamId)) continue; // skip owned teams
+
+                const teamDoc = await getDoc(doc(db, 'teams', teamId));
+                if (!teamDoc.exists()) continue;
+                const data = teamDoc.data();
+
+                // Check if manager
+                let role = 'follower';
+                const mgrDoc = await getDoc(doc(db, 'teams', teamId, 'managers', uid));
+                if (mgrDoc.exists()) {
+                    role = 'manager';
+                } else if (email) {
+                    // Check by email (invited managers)
+                    const mgrQuery = await getDocs(query(
+                        collection(db, 'teams', teamId, 'managers'),
+                        where('email', '==', email), fbLimit(1)
+                    ));
+                    if (!mgrQuery.empty) role = 'manager';
+                }
+
+                const pastGames = await getDocs(query(
+                    collection(db, 'teams', teamId, 'games'),
+                    orderBy('date', 'desc'), fbLimit(50)
+                ));
+                const record = calcRecord(data.sport || data.hub?.sport || '', pastGames.docs.map(d => d.data()));
+
+                const team = {
+                    id: teamId,
+                    name: data.name || data.hub?.teamName || 'Team',
+                    sport: data.sport || data.hub?.sport || '',
+                    color: data.color || data.hub?.color || '#FF9640',
+                    hubCode,
+                    record
+                };
+                if (role === 'manager') managedTeams.push(team);
+                else followedTeams.push(team);
+            } catch (e) { console.error('Error loading hub', hubCode, e); }
+        }
+
+        // Render
+        let html = '';
+
+        // Pending invitations
+        if (pendingInvitations.length > 0) {
+            html += `<div class="section-header">Invitations</div>`;
+            for (const inv of pendingInvitations) {
+                const emoji = sportEmoji((inv.sport || '').toUpperCase());
+                html += `
+                <div class="team-card" style="border-color:var(--accent);">
+                    <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.08em;text-transform:uppercase;">INVITATION</div>
+                    <div style="font-size:15px;font-weight:700;margin:6px 0 4px;">
+                        ${emoji} ${inv.inviterName || 'Someone'} invited you to manage <strong>${inv.teamName || 'a team'}</strong>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:10px;">
+                        <button onclick="window._acceptInvite('${inv.id}','${inv.teamId}','${inv.hubCode}')" style="padding:8px 20px;background:var(--accent);color:#1A1A1A;border:none;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;">Accept</button>
+                        <button onclick="window._declineInvite('${inv.id}')" style="padding:8px 16px;background:transparent;color:var(--text-muted);border:1px solid var(--text-muted);border-radius:6px;font-size:14px;cursor:pointer;">Decline</button>
+                    </div>
+                </div>`;
+            }
+        }
+
+        if (ownedTeams.length > 0) {
+            html += `<div class="section-header">My Teams</div>`;
+            for (const t of ownedTeams) html += teamCard(t, 'owner');
+        }
+
+        if (managedTeams.length > 0) {
+            html += `<div class="section-header">Managing</div>`;
+            for (const t of managedTeams) html += teamCard(t, 'manager');
+        }
+
+        if (followedTeams.length > 0) {
+            html += `<div class="section-header">Following</div>`;
+            for (const t of followedTeams) html += teamCard(t, 'follower');
+        }
+
+        if (ownedTeams.length === 0 && managedTeams.length === 0 && followedTeams.length === 0) {
+            html += `<div class="empty-state">
+                No teams yet. Follow a team hub or create one in the ScoreFrame app.
+            </div>`;
+        }
+
+        html += `<div class="app-promo">
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
+                Record games with live scoreboards
+            </p>
+            <a href="https://play.google.com/store/apps/details?id=com.scoreframe.android" target="_blank">
+                Get ScoreFrame for Android
+            </a>
+        </div>`;
+
+        content.innerHTML = html;
+
+    } catch (e) {
+        console.error('Dashboard error:', e);
+        content.innerHTML = `<div class="empty-state">Error loading dashboard. Please try again.</div>`;
+    }
+}
+
+function calcRecord(sport, games) {
+    if (!games || games.length === 0) return '';
+    const isBowling = sport.toUpperCase() === 'BOWLING';
+    if (isBowling) {
+        let totalScore = 0, totalGames = 0, highGame = 0;
+        for (const g of games) {
+            const ps = g.playerScores || '';
+            if (ps) {
+                for (const b of ps.split(';')) {
+                    const parts = b.split(':');
+                    const scores = (parts[1] || '').split(',').map(Number).filter(n => n > 0);
+                    totalScore += scores.reduce((a, b) => a + b, 0);
+                    totalGames += scores.length;
+                    highGame = Math.max(highGame, ...scores);
+                }
+            } else if (g.homeScore > 0) {
+                totalScore += g.homeScore; totalGames++; highGame = Math.max(highGame, g.homeScore);
+            }
+        }
+        const avg = totalGames > 0 ? Math.round(totalScore / totalGames) : 0;
+        return `${totalGames} games \u00B7 Avg: ${avg} \u00B7 High: ${highGame}`;
+    } else {
+        let w = 0, l = 0, t = 0;
+        for (const g of games) {
+            const hs = g.homeScore || 0, as_ = g.awayScore || 0;
+            if (hs > as_) w++; else if (as_ > hs) l++; else if (hs > 0) t++;
+        }
+        let rec = `${w}W-${l}L`;
+        if (t > 0) rec += `-${t}T`;
+        return `${rec} \u00B7 ${games.length} game${games.length !== 1 ? 's' : ''}`;
+    }
+}
+
+function teamCard(team, role) {
+    const emoji = sportEmoji(team.sport.toUpperCase());
+    const sport = sportName(team.sport.toUpperCase());
+    const roleClass = role === 'owner' ? 'role-owner' : role === 'manager' ? 'role-manager' : 'role-follower';
+    const roleLabel = role === 'owner' ? 'Owner' : role === 'manager' ? 'Manager' : 'Following';
+    const href = team.hubCode ? `team.html?code=${team.hubCode}` : '#';
+    return `
+        <a href="${href}" style="text-decoration:none;color:inherit;">
+        <div class="team-card">
+            <div class="team-card-row">
+                <div class="color-bar" style="background:${team.color};"></div>
+                <div class="team-emoji">${emoji}</div>
+                <div class="team-info">
+                    <div class="team-name">${team.name}</div>
+                    <div class="team-sport">${sport}</div>
+                    ${team.record ? `<div class="team-record">${team.record}</div>` : ''}
+                </div>
+                <span class="team-role ${roleClass}">${roleLabel}</span>
+            </div>
+        </div>
+        </a>`;
+}
+</script>
+</body>
+</html>
