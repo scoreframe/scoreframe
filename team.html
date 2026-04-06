@@ -845,9 +845,7 @@ async function loadSchedule() {
         const upcoming = [];
         snap.forEach(d => {
             const game = { id: d.id, ...d.data() };
-            if (game.status === 'scheduled' || game.status === 'live') {
-                upcoming.push(game);
-            }
+            upcoming.push(game);
         });
 
         const container = $('upcomingGames');
