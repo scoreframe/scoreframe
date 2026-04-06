@@ -23,7 +23,7 @@ html, body {
     background: linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-deepest) 100%);
     border-bottom: 1px solid var(--bg-elevated);
 }
-.logo { font-size: 28px; font-weight: 800; color: var(--accent); }
+.logo { font-size: 28px; font-weight: 800; color: var(--text-primary); }
 .subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
 
 /* Auth */
@@ -108,7 +108,7 @@ html, body {
 <body>
 
 <div class="header">
-    <div class="logo">ScoreFrame</div>
+    <a href="/" style="text-decoration:none;"><div class="logo">Score<span style="color:var(--accent);">Frame</span></div></a>
     <div class="subtitle">Dashboard</div>
     <div class="auth-area" id="authArea"></div>
 </div>

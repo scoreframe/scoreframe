@@ -283,7 +283,8 @@ html, body {
     </div>
 
     <!-- Account bar (top of page, above team header) -->
-    <div id="accountBar" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:8px 16px;background:var(--bg-deep);border-bottom:1px solid var(--bg-elevated);flex-wrap:wrap;">
+    <div id="accountBar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg-deep);border-bottom:1px solid var(--bg-elevated);flex-wrap:wrap;">
+        <a href="/" style="text-decoration:none;font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-right:auto;">Score<span style="color:var(--accent);">Frame</span></a>
         <button class="sign-in-btn" onclick="doSignIn()" style="font-size:12px;padding:6px 14px;">Sign In</button>
     </div>
 
@@ -611,8 +612,10 @@ function updateUserBar() {
     const followArea = $('followArea');
     const isPublic = hubProfile && hubProfile.visibility === 'public';
 
+    const logo = `<a href="/" style="text-decoration:none;font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-right:auto;">Score<span style="color:var(--accent);">Frame</span></a>`;
+
     if (!currentUser) {
-        accountBar.innerHTML = `
+        accountBar.innerHTML = `${logo}
             <button class="sign-in-btn" onclick="doSignIn()" style="font-size:12px;padding:6px 14px;">Sign In</button>
             <button class="sign-in-btn" onclick="doSignIn()" style="font-size:12px;padding:6px 14px;background:var(--accent);color:#1A1A1A;">Sign Up</button>`;
         if (followArea) followArea.innerHTML = '';
@@ -623,8 +626,8 @@ function updateUserBar() {
     // Account bar — user info + dashboard + sign out
     const photo = currentUser.photoURL ? `<img class="user-photo" src="${currentUser.photoURL}" alt="">` : '';
     const name = currentUser.displayName || currentUser.email || 'User';
-    accountBar.innerHTML = `
-        <div class="user-info" style="flex:1;">${photo} ${name}</div>
+    accountBar.innerHTML = `${logo}
+        <div class="user-info">${photo} ${name}</div>
         <a href="dashboard.html" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none;">My Dashboard</a>
         <button class="sign-out-btn" onclick="doSignOut()">Sign out</button>`;
 

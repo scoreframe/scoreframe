@@ -910,4 +910,36 @@
     <div class="footer-links">
       <a href="privacy.html">Privacy Policy</a>
       <a href="/cdn-cgi/l/email-protection#c8bbbdb8b8a7babc88bbaba7baadaebaa9a5ade6a9b8b8">Contact</a>
-      <a href="https://www.
+      <a href="https://www.reddit.com/r/ScoreFrame/" target="_blank">Reddit</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signOut }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const app = initializeApp({
+    apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+    authDomain: "scoreframe-deploy.firebaseapp.com",
+    projectId: "scoreframe-deploy",
+    appId: "1:728886280072:android:0050478669b89fc76b043d"
+});
+const auth = getAuth(app);
+
+onAuthStateChanged(auth, (user) => {
+    const signInLink = document.querySelector('.nav-links a[href="dashboard.html"]');
+    const mobileSignIn = document.querySelector('#mobileMenu a[href="dashboard.html"]');
+    if (user && !user.isAnonymous) {
+        const name = user.displayName || user.email || 'Account';
+        if (signInLink) signInLink.textContent = name;
+        if (mobileSignIn) mobileSignIn.textContent = name;
+    } else {
+        if (signInLink) signInLink.textContent = 'Sign In';
+        if (mobileSignIn) mobileSignIn.textContent = 'Sign In';
+    }
+});
+</script>
+</body>
+</html>
