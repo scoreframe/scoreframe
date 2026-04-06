@@ -361,9 +361,13 @@ html, body {
             <input type="text" id="editAwayTeam" placeholder="Away team">
             <input type="number" id="editAwayScore" min="0" placeholder="0">
         </div>
-        <div class="edit-row">
-            <label>Stream</label>
-            <input type="url" id="editStreamUrl" placeholder="https://youtube.com/watch?v=...">
+        <div id="editStreamsSection">
+            <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">Streams / Video Links</label>
+            <div id="editStreamsList"></div>
+            <div class="edit-row" style="margin-top:6px;">
+                <input type="url" id="editNewStreamUrl" placeholder="Add YouTube, Google Photos, or other link" style="flex:1;">
+                <button onclick="addStreamToEdit()" style="padding:6px 12px;background:var(--accent);color:#1A1A1A;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:12px;">+ Add</button>
+            </div>
         </div>
         <div class="edit-actions">
             <button class="cancel-btn" onclick="closeEditModal()">Cancel</button>
@@ -989,6 +993,44 @@ async function loadPastGames() {
 // ── Manager: Edit Game ──
 
 let editingGameId = null;
+let editStreams = [];
+
+function detectPlatform(url) {
+    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+    if (url.includes('twitch.tv')) return 'twitch';
+    if (url.includes('facebook.com') || url.includes('fb.watch')) return 'facebook';
+    if (url.includes('photos.app.goo.gl') || url.includes('photos.google.com')) return 'google_photos';
+    return 'custom';
+}
+
+function platformLabel(p) {
+    return { youtube: 'YouTube', twitch: 'Twitch', facebook: 'Facebook', google_photos: 'Google Photos', ivs: 'ScoreFrame Live' }[p] || 'Link';
+}
+
+function renderEditStreams() {
+    const list = $('editStreamsList');
+    list.innerHTML = editStreams.map((s, i) => `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;padding:6px 8px;background:var(--bg-elevated);border-radius:6px;">
+            <span style="flex:1;font-size:12px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                ${platformLabel(s.platform)} — ${s.url.substring(0, 40)}${s.url.length > 40 ? '...' : ''}
+            </span>
+            <button onclick="removeStream(${i})" style="background:none;border:none;color:var(--error);font-size:14px;cursor:pointer;padding:2px 6px;">✕</button>
+        </div>
+    `).join('');
+}
+
+window.addStreamToEdit = function() {
+    const url = $('editNewStreamUrl').value.trim();
+    if (!url) return;
+    editStreams.push({ url, platform: detectPlatform(url), addedAt: Date.now() });
+    $('editNewStreamUrl').value = '';
+    renderEditStreams();
+};
+
+window.removeStream = function(idx) {
+    editStreams.splice(idx, 1);
+    renderEditStreams();
+};
 
 window.openEditGame = function(gameId, streamOnly = false) {
     const game = pastGamesCache.find(g => g.id === gameId);
@@ -1001,16 +1043,18 @@ window.openEditGame = function(gameId, streamOnly = false) {
     $('editAwayTeam').value = game.awayTeam || '';
     $('editAwayScore').value = game.awayScore || 0;
 
-    // Show existing stream URL if any
-    const streams = game.streams || [];
-    const existingUrl = streams.length > 0 ? streams[0].url : (game.streamUrl || '');
-    $('editStreamUrl').value = existingUrl;
+    // Show existing streams
+    editStreams = [...(game.streams || [])];
+    if (editStreams.length === 0 && game.streamUrl) {
+        editStreams.push({ url: game.streamUrl, platform: detectPlatform(game.streamUrl) });
+    }
+    renderEditStreams();
 
     // If stream-only, focus the stream field
     if (streamOnly) {
         $('editHomeTeam').parentElement.style.display = 'none';
         $('editAwayTeam').parentElement.style.display = 'none';
-        setTimeout(() => $('editStreamUrl').focus(), 100);
+        setTimeout(() => $('editNewStreamUrl').focus(), 100);
     } else {
         $('editHomeTeam').parentElement.style.display = '';
         $('editAwayTeam').parentElement.style.display = '';
@@ -1042,16 +1086,10 @@ window.saveGameEdit = async function() {
             updatedAt: Date.now()
         };
 
-        // Handle stream URL
-        const streamUrl = $('editStreamUrl').value.trim();
-        if (streamUrl) {
-            // Detect platform from URL
-            let platform = 'custom';
-            if (streamUrl.includes('youtube.com') || streamUrl.includes('youtu.be')) platform = 'youtube';
-            else if (streamUrl.includes('twitch.tv')) platform = 'twitch';
-            else if (streamUrl.includes('facebook.com')) platform = 'facebook';
-            updates.streams = [{ url: streamUrl, platform, addedAt: Date.now() }];
-            updates.streamUrl = streamUrl;  // Legacy field
+        // Handle streams (multiple)
+        updates.streams = editStreams;
+        if (editStreams.length > 0) {
+            updates.streamUrl = editStreams[0].url;  // Legacy field
         }
 
         await updateDoc(doc(db, 'teams', teamId, 'games', editingGameId), updates);
