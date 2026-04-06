@@ -638,6 +638,7 @@ function updateUserBar() {
     bar.innerHTML = `
         <div class="user-info">${photo} ${name}</div>
         ${followBtn}
+        <a href="dashboard.html" class="sign-out-btn" style="text-decoration:none;">My Dashboard</a>
         <button class="sign-out-btn" onclick="doSignOut()">Sign out</button>`;
     $('followStatus').textContent = statusText;
 }
