@@ -261,7 +261,7 @@ onAuthStateChanged(auth, async (user) => {
         // Create/update user doc on sign-in
         try {
             await setDoc(doc(db, 'users', currentUser.uid), {
-                name: currentUser.displayName || '',
+                displayName: currentUser.displayName || '',
                 email: currentUser.email || '',
                 photoURL: currentUser.photoURL || '',
                 lastSignIn: Date.now()
