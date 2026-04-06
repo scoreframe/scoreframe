@@ -883,12 +883,17 @@ async function loadRoster() {
             const num = p.number || '';
             const pos = p.position ? `<div class="player-position">${p.position}</div>` : '';
 
-            // Pick the most relevant stat to show
+            // Pick the most relevant stat to show based on sport
             let stat = '';
             if (p.gamesPlayed > 0) {
-                if (p.bowlingAverage || p.average > 0) stat = `Avg: ${(p.average || 0).toFixed(1)} · High: ${p.highScore || 0}`;
-                else if (p.battingAvg > 0) stat = `AVG: ${p.battingAvg.toFixed(3)} · ${p.totalHits || 0}H · ${p.totalRBI || 0}RBI`;
-                else if (p.totalKills > 0 || p.totalAces > 0) stat = `${p.totalKills || 0}K · ${p.totalAces || 0}A · ${p.totalAssists || 0}AST`;
+                const isVB = sport.toUpperCase() === 'VOLLEYBALL';
+                const isBowling = sport.toUpperCase() === 'BOWLING';
+                const isBaseball = sport.toUpperCase() === 'BASEBALL' || sport.toUpperCase() === 'SOFTBALL';
+                const isTennis = sport.toUpperCase() === 'TENNIS' || sport.toUpperCase() === 'PICKLEBALL';
+                if (isBowling && (p.average > 0 || p.highScore > 0)) stat = `Avg: ${(p.average || 0).toFixed(1)} · High: ${p.highScore || 0}`;
+                else if (isBaseball && p.battingAvg > 0) stat = `AVG: ${p.battingAvg.toFixed(3)} · ${p.totalHits || 0}H · ${p.totalRBI || 0}RBI`;
+                else if (isVB) stat = `${p.totalKills || 0}K · ${p.totalAces || 0}A · ${p.totalAssists || 0}AST`;
+                else if (isTennis && (p.wins > 0 || p.losses > 0)) stat = `${p.wins}W-${p.losses}L`;
                 else if (p.wins > 0 || p.losses > 0) stat = `${p.wins}W-${p.losses}L`;
                 else stat = `${p.gamesPlayed} games`;
             }
