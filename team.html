@@ -361,6 +361,10 @@ html, body {
             <input type="text" id="editAwayTeam" placeholder="Away team">
             <input type="number" id="editAwayScore" min="0" placeholder="0">
         </div>
+        <div class="edit-row">
+            <label>Date</label>
+            <input type="datetime-local" id="editDate" style="flex:1;background:var(--bg-surface);color:var(--text-primary);border:1px solid var(--bg-elevated);border-radius:6px;padding:8px;">
+        </div>
         <div id="editStreamsSection">
             <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:6px;">Streams / Video Links</label>
             <div id="editStreamsList"></div>
@@ -1043,6 +1047,15 @@ window.openEditGame = function(gameId, streamOnly = false) {
     $('editAwayTeam').value = game.awayTeam || '';
     $('editAwayScore').value = game.awayScore || 0;
 
+    // Date/time
+    if (game.date) {
+        const d = new Date(game.date);
+        const pad = n => String(n).padStart(2, '0');
+        $('editDate').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } else {
+        $('editDate').value = '';
+    }
+
     // Show existing streams
     editStreams = [...(game.streams || [])];
     if (editStreams.length === 0 && game.streamUrl) {
@@ -1085,6 +1098,10 @@ window.saveGameEdit = async function() {
             awayScore: parseInt($('editAwayScore').value) || 0,
             updatedAt: Date.now()
         };
+
+        // Date
+        const dateVal = $('editDate').value;
+        if (dateVal) updates.date = new Date(dateVal).getTime();
 
         // Handle streams (multiple)
         updates.streams = editStreams;
