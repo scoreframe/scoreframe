@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
   <title>ScoreFrame — Live Scoreboard on Your Sports Video</title>
   <link rel="canonical" href="https://scoreframe.app/" />
-  <meta name="description" content="Record sports video with professional scoreboards burned in live. 12 sports, remote scoring, live streaming, cloud sync, game history. Free on Android." />
+  <meta name="description" content="Record sports video with professional scoreboards burned in live. 12 sports, remote scoring, live streaming, team hubs, Wear OS. Free on Android." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
@@ -122,7 +122,6 @@
       pointer-events: none;
     }
 
-    /* Subtle grid */
     .hero::after {
       content: '';
       position: absolute;
@@ -154,7 +153,7 @@
     .hero-badge .dot {
       width: 8px;
       height: 8px;
-      background: var(--red);
+      background: #4CAF50;
       border-radius: 50%;
       animation: pulse 2s ease-in-out infinite;
     }
@@ -589,7 +588,6 @@
     }
 
     /* ── RESPONSIVE ───────────────────────────────────── */
-    /* Mobile menu button */
     .nav-menu-btn {
       display: none; background: none; border: none; color: var(--text-primary);
       font-size: 24px; cursor: pointer; padding: 8px; order: -1; margin-right: 12px;
@@ -630,9 +628,9 @@
       <a href="#pricing">Pricing</a>
       <a href="https://www.reddit.com/r/ScoreFrame/" target="_blank">Community</a>
       <a href="dashboard.html">Sign In</a>
-      <a href="beta.html" class="nav-cta">Join the Beta</a>
+      <a href="https://play.google.com/store/apps/details?id=com.scoreframe.android" class="nav-cta">Download Free</a>
     </div>
-    <button class="nav-menu-btn" onclick="document.getElementById('mobileMenu').classList.toggle('open');this.textContent=this.textContent==='☰'?'✕':'☰'" aria-label="Menu">☰</button>
+    <button class="nav-menu-btn" onclick="document.getElementById('mobileMenu').classList.toggle('open');this.textContent=this.textContent==='&#9776;'?'&#10005;':'&#9776;'" aria-label="Menu">&#9776;</button>
   </div>
 </nav>
 <div class="nav-mobile-overlay" id="mobileMenu">
@@ -641,7 +639,7 @@
   <a href="#pricing" onclick="document.getElementById('mobileMenu').classList.remove('open')">Pricing</a>
   <a href="https://www.reddit.com/r/ScoreFrame/" target="_blank">Community</a>
   <a href="dashboard.html">Sign In</a>
-  <a href="beta.html" class="nav-cta">Join the Beta</a>
+  <a href="https://play.google.com/store/apps/details?id=com.scoreframe.android" class="nav-cta">Download Free</a>
 </div>
 
 <!-- HERO -->
@@ -649,34 +647,34 @@
   <div class="hero-content">
     <div class="hero-badge">
       <span class="dot"></span>
-      Now in Beta — Join the Testing Program
+      Live on Google Play
     </div>
     <h1>Live Scoreboard.<br /><span class="accent">On Your Video.</span></h1>
     <p class="hero-sub">
       Record sports video with a broadcast-quality scoreboard burned directly into the footage.
-      12 sports. Remote scoring. Live streaming. No editing required.
+      12 sports. Remote scoring. Live streaming. Team hubs. No editing required.
     </p>
     <div class="hero-buttons">
       <a href="https://play.google.com/store/apps/details?id=com.scoreframe.android" class="btn-primary" id="download">
-        Get It on Google Play
+        Get It Free on Google Play
       </a>
       <a href="https://www.reddit.com/r/ScoreFrame/" class="btn-secondary">
         Join r/ScoreFrame
       </a>
     </div>
     <div class="hero-sports">
-      <span title="Basketball">🏀</span>
-      <span title="Football">🏈</span>
-      <span title="Baseball">⚾</span>
-      <span title="Softball">🥎</span>
-      <span title="Bowling">🎳</span>
-      <span title="Soccer">⚽</span>
-      <span title="Volleyball">🏐</span>
-      <span title="Tennis">🎾</span>
-      <span title="Pickleball">🏓</span>
-      <span title="Hockey">🏒</span>
-      <span title="Lacrosse">🥍</span>
-      <span title="Generic">🏅</span>
+      <span title="Basketball">&#x1F3C0;</span>
+      <span title="Football">&#x1F3C8;</span>
+      <span title="Baseball">&#x26BE;</span>
+      <span title="Softball">&#x1F94E;</span>
+      <span title="Bowling">&#x1F3B3;</span>
+      <span title="Soccer">&#x26BD;</span>
+      <span title="Volleyball">&#x1F3D0;</span>
+      <span title="Tennis">&#x1F3BE;</span>
+      <span title="Pickleball">&#x1F3D3;</span>
+      <span title="Hockey">&#x1F3D2;</span>
+      <span title="Lacrosse">&#x1F94D;</span>
+      <span title="Generic">&#x1F3C5;</span>
     </div>
   </div>
 </section>
@@ -690,44 +688,54 @@
 
     <div class="features-grid">
       <div class="feature-card">
-        <span class="feature-icon">🎥</span>
+        <span class="feature-icon">&#x1F3A5;</span>
         <h3>Live Scoreboard Overlay</h3>
-        <p>The scoreboard renders in real time using OpenGL ES compositing. It's part of the video frame from the moment you record — not added in post.</p>
+        <p>The scoreboard renders in real time using OpenGL ES compositing. It's part of the video frame from the moment you record &#8212; not added in post.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">📱</span>
+        <span class="feature-icon">&#x1F4F1;</span>
         <h3>Remote Scoring</h3>
-        <p>A second phone controls the score wirelessly over Wi-Fi Direct. No internet, no router needed. One person films, the other keeps score from the stands.</p>
+        <p>A second phone controls the score wirelessly via Wi-Fi, Wi-Fi Direct, Bluetooth, or over the internet. One person films, the other keeps score from anywhere.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">⭐</span>
-        <h3>Automatic Highlights</h3>
-        <p>Tap the star button during recording to mark a moment. ScoreFrame extracts a clip around it automatically — no scrubbing through hours of footage.</p>
+        <span class="feature-icon">&#x2B50;</span>
+        <h3>Highlights &amp; Buffer Mode</h3>
+        <p>Tap the star during recording to clip a highlight. Or use Buffer Mode &#8212; a rolling 60-second buffer that only saves the moments you choose. No full game video needed.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">🖥️</span>
-        <h3>Full-Screen Mode</h3>
-        <p>Expand the video to fill the entire screen. Scoring controls slide out from the right when you need them. Perfect for tripod setups.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">🎮</span>
-        <h3>Bluetooth Button Control</h3>
-        <p>Pair any Bluetooth clicker to start, pause, and capture highlights without touching the phone. Mount it and control from the sideline.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">📡</span>
+        <span class="feature-icon">&#x1F4FA;</span>
         <h3>Live Streaming</h3>
-        <p>Stream your game live to YouTube with one tap. Scoreboard included in the broadcast. Share a link with family who can't make it to the game.</p>
+        <p>Stream your game live to YouTube with the scoreboard burned into the broadcast. Share a link with family who can't make it. Score updates appear for viewers in real time.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">☁️</span>
-        <h3>Cloud Sync & Game History</h3>
-        <p>Create an optional account to save your teams, rosters, and game history across devices. Track career stats per player — bowling averages, batting stats, win-loss records.</p>
+        <span class="feature-icon">&#x1F3E0;</span>
+        <h3>Team Hubs</h3>
+        <p>Create a public or private team page with schedules, rosters, game history, and live stream links. Fans follow your team and get notified when you go live.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">🔒</span>
-        <h3>Your Data, Your Control</h3>
-        <p>Videos never leave your phone. Cloud accounts are optional — the app works fully offline. If you sign in, we store only your teams, rosters, and game stats. You can delete your account and all cloud data at any time.</p>
+        <span class="feature-icon">&#x231A;</span>
+        <h3>Wear OS Companion</h3>
+        <p>Score from your wrist. The watch app shows a live scoreboard, lets you enter scores, and control recording. Custom bowling scoreboard with frame-by-frame entry.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1F4F9;</span>
+        <h3>PiP Camera Overlay</h3>
+        <p>The controller phone's camera streams a live picture-in-picture overlay onto the recorded video. Point it at the venue scoreboard and it's burned right into the footage.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1F3AE;</span>
+        <h3>Bluetooth Button Control</h3>
+        <p>Pair any Bluetooth clicker to start, pause, and capture highlights without touching the phone. Mount it on a tripod and control from the sideline.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x2601;&#xFE0F;</span>
+        <h3>Cloud Sync &amp; Game History</h3>
+        <p>Create an optional account to save your teams, rosters, and game history across devices. Track career stats per player &#8212; bowling averages, batting stats, win-loss records.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">&#x1F50D;</span>
+        <h3>Quick Settings Panel</h3>
+        <p>One-tap access to all controls: resolution, HDR, stabilization, fullscreen mode, scoreboard visibility, score-only mode, and more. Android control-center style.</p>
       </div>
     </div>
   </div>
@@ -743,17 +751,17 @@
       <div class="step">
         <div class="step-number">1</div>
         <h3>Pick Your Sport</h3>
-        <p>Choose from 12 sports. Each has a purpose-built scoreboard with the right stats for that game.</p>
+        <p>Choose from 12 sports. Each has a purpose-built broadcast-style scoreboard with the right stats for that game.</p>
       </div>
       <div class="step">
         <div class="step-number">2</div>
-        <h3>Record & Score</h3>
-        <p>Hit record and tap to update the score. The scoreboard updates live on the video in real time.</p>
+        <h3>Record &amp; Score</h3>
+        <p>Hit record and tap to update the score. The scoreboard updates live on the video in real time. Or hand a second phone to someone else to keep score.</p>
       </div>
       <div class="step">
         <div class="step-number">3</div>
         <h3>Share</h3>
-        <p>Your video is done — scoreboard burned in, highlights clipped. Share straight from your gallery.</p>
+        <p>Your video is done &#8212; scoreboard burned in, highlights clipped. Share straight from your gallery or stream live to YouTube.</p>
       </div>
     </div>
   </div>
@@ -764,57 +772,21 @@
   <div class="section-inner">
     <span class="section-label">Sports Library</span>
     <h2 class="section-title">Built for How Each Sport Is Played</h2>
-    <p class="section-desc">Not generic timers — real scoreboards with sport-specific stats, periods, and scoring rules.</p>
+    <p class="section-desc">Not generic timers &#8212; real scoreboards with sport-specific stats, periods, and scoring rules.</p>
 
     <div class="sports-grid">
-      <div class="sport-card">
-        <span class="emoji">🏀</span>
-        <h3>Basketball</h3>
-      </div>
-      <div class="sport-card">
-        <span class="emoji">🏈</span>
-        <h3>Football</h3>
-      </div>
-      <div class="sport-card">
-        <span class="emoji">⚾</span>
-        <h3>Baseball</h3>
-      </div>
-      <div class="sport-card">
-        <span class="emoji">🥎</span>
-        <h3>Softball</h3>
-      </div>
-      <div class="sport-card">
-        <span class="emoji">🎳</span>
-        <h3>Bowling</h3>
-      </div>
-      <div class="sport-card">
-        <span class="emoji">⚽</span>
-        <h3>Soccer</h3>
-      </div>
-      <div class="sport-card">
-        <span class="emoji">🏐</span>
-        <h3>Volleyball</h3>
-      </div>
-      <div class="sport-card">
-        <span class="emoji">🎾</span>
-        <h3>Tennis</h3>
-      </div>
-      <div class="sport-card">
-        <span class="emoji">🏓</span>
-        <h3>Pickleball</h3>
-      </div>
-      <div class="sport-card">
-        <span class="emoji">🏒</span>
-        <h3>Hockey</h3>
-      </div>
-      <div class="sport-card">
-        <span class="emoji">🥍</span>
-        <h3>Lacrosse</h3>
-      </div>
-      <div class="sport-card">
-        <span class="emoji">🏅</span>
-        <h3>Generic</h3>
-      </div>
+      <div class="sport-card"><span class="emoji">&#x1F3C0;</span><h3>Basketball</h3></div>
+      <div class="sport-card"><span class="emoji">&#x1F3C8;</span><h3>Football</h3></div>
+      <div class="sport-card"><span class="emoji">&#x26BE;</span><h3>Baseball</h3></div>
+      <div class="sport-card"><span class="emoji">&#x1F94E;</span><h3>Softball</h3></div>
+      <div class="sport-card"><span class="emoji">&#x1F3B3;</span><h3>Bowling</h3></div>
+      <div class="sport-card"><span class="emoji">&#x26BD;</span><h3>Soccer</h3></div>
+      <div class="sport-card"><span class="emoji">&#x1F3D0;</span><h3>Volleyball</h3></div>
+      <div class="sport-card"><span class="emoji">&#x1F3BE;</span><h3>Tennis</h3></div>
+      <div class="sport-card"><span class="emoji">&#x1F3D3;</span><h3>Pickleball</h3></div>
+      <div class="sport-card"><span class="emoji">&#x1F3D2;</span><h3>Hockey</h3></div>
+      <div class="sport-card"><span class="emoji">&#x1F94D;</span><h3>Lacrosse</h3></div>
+      <div class="sport-card"><span class="emoji">&#x1F3C5;</span><h3>Generic</h3></div>
     </div>
   </div>
 </section>
@@ -825,19 +797,20 @@
     <div class="remote-layout">
       <div class="remote-visual">
         <div class="phone-pair">
-          📷 <span class="wifi">⟷</span> 🎮
+          &#x1F4F7; <span class="wifi">&#x27F7;</span> &#x1F3AE;
         </div>
-        <p style="color: var(--text-tertiary); margin-top: 24px; font-size: 0.9rem; position: relative; z-index: 1;">Camera Phone &nbsp;&nbsp;←→&nbsp;&nbsp; Controller Phone</p>
+        <p style="color: var(--text-tertiary); margin-top: 24px; font-size: 0.9rem; position: relative; z-index: 1;">Camera Phone &nbsp;&nbsp;&#x2194;&nbsp;&nbsp; Controller Phone</p>
       </div>
       <div class="remote-text">
         <span class="section-label">Remote Scoring</span>
-        <h3>Two Phones. No Internet.</h3>
-        <p>Hand a second phone to someone in the stands. They control the score wirelessly while you focus on filming. The phones connect directly over Wi-Fi Direct — works anywhere, even with no cell service.</p>
+        <h3>Two Phones. Four Ways to Connect.</h3>
+        <p>Hand a second phone to someone in the stands. They control the score wirelessly while you focus on filming. Connect however works best for your situation.</p>
         <ul class="check-list">
-          <li>No internet or router needed</li>
-          <li>No accounts on either phone</li>
+          <li>Wi-Fi &#8212; same network or mobile hotspot</li>
+          <li>Wi-Fi Direct &#8212; no router or internet needed</li>
+          <li>Bluetooth &#8212; works everywhere, even with no signal</li>
+          <li>Internet &#8212; score from anywhere via web browser</li>
           <li>Controller phone is always free</li>
-          <li>Works in gyms with no signal</li>
         </ul>
       </div>
     </div>
@@ -849,7 +822,7 @@
   <div class="section-inner" style="text-align: center;">
     <span class="section-label">Pricing</span>
     <h2 class="section-title">Free to Record. Pro to Go Further.</h2>
-    <p class="section-desc" style="margin: 0 auto 48px;">All the essentials are free — no paywalls on your own game footage.</p>
+    <p class="section-desc" style="margin: 0 auto 48px;">All the essentials are free &#8212; no paywalls on your own game footage.</p>
 
     <div class="pricing-grid">
       <div class="price-card">
@@ -859,29 +832,34 @@
         <ul>
           <li>All 12 sports with full scoring</li>
           <li>Live scoreboard on video</li>
-          <li>Remote scoring (both phones)</li>
-          <li>Scoring-only mode</li>
-          <li>1080p recording (10 min per session)</li>
+          <li>Remote scoring (all connection methods)</li>
+          <li>Scoring-only mode (no video)</li>
+          <li>1080p recording up to 45 minutes</li>
           <li>Cloud team &amp; roster sync</li>
           <li>3 highlight clips per recording</li>
+          <li>Live streaming (10 min)</li>
+          <li>1 team hub</li>
         </ul>
       </div>
       <div class="price-card pro">
         <h3>ScoreFrame Pro</h3>
         <div class="price-amount">$7.99<span class="period"> /mo</span></div>
-        <p class="price-desc">Or $59.99/year — 7-day free trial</p>
+        <p class="price-desc">Or $59.99/year &#8212; 7-day free trial</p>
         <ul>
           <li>Everything in Free, plus:</li>
           <li>4K 60fps recording</li>
           <li>No watermark</li>
           <li>Ad-free experience</li>
           <li>Unlimited recording time</li>
-          <li>Live streaming to YouTube</li>
+          <li>Unlimited live streaming</li>
+          <li>Highlight buffer mode</li>
           <li>Full baseball/softball scorebook</li>
-          <li>Cloud game history sync</li>
           <li>Full-screen recording mode</li>
-          <li>Custom team names &amp; colors</li>
+          <li>Wear OS companion app</li>
+          <li>Unlimited team hubs</li>
+          <li>HDR, tap-to-focus, sharpening</li>
           <li>Bluetooth button control</li>
+          <li>PiP camera overlay (crop &amp; move)</li>
           <li>Stats export (PDF)</li>
         </ul>
       </div>
@@ -898,7 +876,7 @@
       Get ScoreFrame on Google Play
     </a>
     <p style="margin-top: 16px; color: var(--text-tertiary); font-size: 0.85rem;">
-      Want to help test before public launch? <a href="beta.html" style="color: var(--accent);">Join the beta.</a>
+      iOS coming soon. <a href="https://www.reddit.com/r/ScoreFrame/" style="color: var(--accent);">Follow us on Reddit for updates.</a>
     </p>
   </div>
 </section>
@@ -909,7 +887,7 @@
     <span class="footer-copy">&copy; 2026 Glavin Labs LLC. All rights reserved. ScoreFrame is a Glavin Labs product.</span>
     <div class="footer-links">
       <a href="privacy.html">Privacy Policy</a>
-      <a href="/cdn-cgi/l/email-protection#c8bbbdb8b8a7babc88bbaba7baadaebaa9a5ade6a9b8b8">Contact</a>
+      <a href="mailto:support@scoreframe.app">Contact</a>
       <a href="https://www.reddit.com/r/ScoreFrame/" target="_blank">Reddit</a>
     </div>
   </div>
@@ -917,7 +895,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut }
+import { getAuth, onAuthStateChanged }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const app = initializeApp({
