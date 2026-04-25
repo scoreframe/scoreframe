@@ -187,6 +187,7 @@ function renderAuth() {
                 <div id="emailFormTitle" style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Sign In</div>
                 <input type="email" id="emailInput" placeholder="Email" autocomplete="email"><br>
                 <input type="password" id="passInput" placeholder="Password" autocomplete="current-password"><br>
+                <input type="password" id="confirmPassInput" placeholder="Confirm Password" autocomplete="new-password" style="display:none;"><br id="confirmBr" style="display:none;">
                 <input type="text" id="nameInput" placeholder="Display Name" autocomplete="off" data-lpignore="true" data-form-type="other" style="display:none;"><br id="nameBr" style="display:none;">
                 <button id="emailSubmitBtn" onclick="window._signInEmail()">Sign In</button>
                 <div id="forgotPassLink" style="font-size:12px;color:var(--accent);margin-top:6px;cursor:pointer;" onclick="window._forgotPassword()">Forgot password?</div>
@@ -205,6 +206,8 @@ window._showSignIn = () => {
     $('nameInput').style.display = 'none';
     if ($('nameBr')) $('nameBr').style.display = 'none';
     $('passInput').autocomplete = 'current-password';
+    $('confirmPassInput').style.display = 'none';
+    if ($('confirmBr')) $('confirmBr').style.display = 'none';
     $('emailSubmitBtn').textContent = 'Sign In';
     $('emailSubmitBtn').onclick = window._signInEmail;
     $('emailToggleLink').innerHTML = "Don't have an account? <strong>Sign Up</strong>";
@@ -219,6 +222,8 @@ window._showSignUp = () => {
     $('nameInput').style.display = '';
     if ($('nameBr')) $('nameBr').style.display = '';
     $('passInput').autocomplete = 'new-password';
+    $('confirmPassInput').style.display = '';
+    if ($('confirmBr')) $('confirmBr').style.display = '';
     $('emailSubmitBtn').textContent = 'Create Account';
     $('emailSubmitBtn').onclick = window._createEmail;
     $('emailToggleLink').innerHTML = "Already have an account? <strong>Sign In</strong>";
@@ -285,7 +290,16 @@ window._signInEmail = async () => {
 
 window._createEmail = async () => {
     const email = $('emailInput')?.value, pass = $('passInput')?.value;
+    const confirmPass = $('confirmPassInput')?.value;
     if (!email || !pass) return;
+    if (pass !== confirmPass) {
+        alert('Passwords do not match. Please try again.');
+        return;
+    }
+    if (pass.length < 6) {
+        alert('Password must be at least 6 characters.');
+        return;
+    }
     try {
         const result = await createUserWithEmailAndPassword(auth, email, pass);
         currentUser = result.user;
