@@ -184,12 +184,12 @@ function renderAuth() {
                 </button>
             </div>
             <div class="email-form" id="emailForm">
-                <div id="emailFormTitle" style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Sign In</div>
+                <div id="emailFormTitle" style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:8px;"></div>
                 <input type="email" id="emailInput" placeholder="Email" autocomplete="email"><br>
                 <input type="password" id="passInput" placeholder="Password" autocomplete="current-password"><br>
                 <input type="password" id="confirmPassInput" placeholder="Confirm Password" autocomplete="new-password" style="display:none;"><br id="confirmBr" style="display:none;">
                 <input type="text" id="nameInput" placeholder="Display Name" autocomplete="off" data-lpignore="true" data-form-type="other" style="display:none;"><br id="nameBr" style="display:none;">
-                <button id="emailSubmitBtn" onclick="window._signInEmail()">Sign In</button>
+                <button id="emailSubmitBtn">Sign In</button>
                 <div id="forgotPassLink" style="font-size:12px;color:var(--accent);margin-top:6px;cursor:pointer;" onclick="window._forgotPassword()">Forgot password?</div>
                 <div id="emailToggleLink" style="font-size:13px;color:var(--accent);margin-top:8px;cursor:pointer;font-weight:600;" onclick="window._switchAuthMode()">Don't have an account? <strong>Sign Up</strong></div>
             </div>`;
