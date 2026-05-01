@@ -923,10 +923,22 @@ async function loadSchedule() {
     try {
         const q2 = query(collection(db, 'teams', teamId, 'schedule'), orderBy('date'));
         const snap = await getDocs(q2);
-        const now = Date.now();
+        // 6-hour cutoff so a game that just started (or just ended) still
+        // shows in upcoming until it gets cleared, instead of disappearing
+        // the second it passes "now". Mirrors the app's tolerant grace
+        // window for hub-scheduled games.
+        const cutoff = Date.now() - (6 * 60 * 60 * 1000);
         const upcoming = [];
         snap.forEach(d => {
             const game = { id: d.id, ...d.data() };
+            // Skip games that have already been completed or cancelled —
+            // those belong in the past-games section. Without this filter,
+            // a hub-scheduled game that the app auto-marks as completed
+            // sticks around in upcoming forever.
+            if (game.status === 'completed' || game.status === 'cancelled') return;
+            // Skip games whose scheduled date is more than 6h in the past
+            // (and they're not live). They're effectively past.
+            if (game.status !== 'live' && typeof game.date === 'number' && game.date < cutoff) return;
             upcoming.push(game);
         });
 
