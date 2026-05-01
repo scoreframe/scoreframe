@@ -121,10 +121,13 @@ html, body {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc, collection, query, where, orderBy, limit as fbLimit, arrayUnion, arrayRemove }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getAuth, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-    GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, sendPasswordResetEmail }
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
+    signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile,
+    setPersistence, browserLocalPersistence }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
@@ -140,8 +143,28 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+// Persist auth state in localStorage. Default in v9+ but set explicitly because
+// Safari private mode / some in-app browsers fall back to in-memory persistence,
+// which signs the user out on every visit.
+setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence:', e));
+
+const functions = getFunctions(app);
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// Safari / iOS / in-app browsers enforce ITP / third-party cookie blocking
+// that breaks signInWithPopup. Use signInWithRedirect on those instead.
+const _ua = navigator.userAgent || '';
+const _useRedirectAuth = /iP(hone|ad|od)|Safari/i.test(_ua) && !/Chrome|CriOS|FxiOS/i.test(_ua);
+
+// Pick up the session after returning from a Google redirect sign-in.
+getRedirectResult(auth).then((result) => {
+    if (result && result.user) {
+        console.log('[auth] Returned from Google redirect sign-in:', result.user.email);
+    }
+}).catch(e => {
+    if (e && e.code !== 'auth/no-auth-event') console.warn('[auth] Redirect result:', e);
+});
 
 let currentUser = null;
 
@@ -169,7 +192,6 @@ function renderAuth() {
         area.innerHTML = `
             <div class="user-info">
                 ${photo} ${name}
-                <button class="sign-out-btn" onclick="window._changePassword()" style="background:var(--accent);color:#1A1A1A;">Change Password</button>
                 <button class="sign-out-btn" onclick="window._signOut()">Sign Out</button>
             </div>`;
     } else {
@@ -185,13 +207,11 @@ function renderAuth() {
                 </button>
             </div>
             <div class="email-form" id="emailForm">
-                <div id="emailFormTitle" style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:8px;"></div>
-                <input type="email" id="emailInput" placeholder="Email" autocomplete="email"><br>
-                <input type="password" id="passInput" placeholder="Password" autocomplete="current-password"><br>
-                <input type="password" id="confirmPassInput" placeholder="Confirm Password" autocomplete="new-password" style="display:none;"><br id="confirmBr" style="display:none;">
-                <input type="text" id="nameInput" placeholder="Display Name" autocomplete="off" data-lpignore="true" data-form-type="other" style="display:none;"><br id="nameBr" style="display:none;">
-                <button id="emailSubmitBtn">Sign In</button>
-                <div id="forgotPassLink" style="font-size:12px;color:var(--accent);margin-top:6px;cursor:pointer;" onclick="window._forgotPassword()">Forgot password?</div>
+                <div id="emailFormTitle" style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Sign In</div>
+                <input type="text" id="nameInput" placeholder="Display Name" style="display:none;"><br id="nameBr" style="display:none;">
+                <input type="email" id="emailInput" placeholder="Email"><br>
+                <input type="password" id="passInput" placeholder="Password"><br>
+                <button id="emailSubmitBtn" onclick="window._signInEmail()">Sign In</button>
                 <div id="emailToggleLink" style="font-size:13px;color:var(--accent);margin-top:8px;cursor:pointer;font-weight:600;" onclick="window._switchAuthMode()">Don't have an account? <strong>Sign Up</strong></div>
             </div>`;
     }
@@ -206,13 +226,9 @@ window._showSignIn = () => {
     $('emailFormTitle').textContent = 'Sign In';
     $('nameInput').style.display = 'none';
     if ($('nameBr')) $('nameBr').style.display = 'none';
-    $('passInput').autocomplete = 'current-password';
-    $('confirmPassInput').style.display = 'none';
-    if ($('confirmBr')) $('confirmBr').style.display = 'none';
     $('emailSubmitBtn').textContent = 'Sign In';
     $('emailSubmitBtn').onclick = window._signInEmail;
     $('emailToggleLink').innerHTML = "Don't have an account? <strong>Sign Up</strong>";
-    $('forgotPassLink').style.display = '';
 };
 
 window._showSignUp = () => {
@@ -222,13 +238,9 @@ window._showSignUp = () => {
     $('emailFormTitle').textContent = 'Create Account';
     $('nameInput').style.display = '';
     if ($('nameBr')) $('nameBr').style.display = '';
-    $('passInput').autocomplete = 'new-password';
-    $('confirmPassInput').style.display = '';
-    if ($('confirmBr')) $('confirmBr').style.display = '';
     $('emailSubmitBtn').textContent = 'Create Account';
     $('emailSubmitBtn').onclick = window._createEmail;
     $('emailToggleLink').innerHTML = "Already have an account? <strong>Sign In</strong>";
-    $('forgotPassLink').style.display = 'none';
 };
 
 window._switchAuthMode = () => {
@@ -236,29 +248,20 @@ window._switchAuthMode = () => {
     else window._showSignUp();
 };
 
-window._forgotPassword = async () => {
-    const email = $('emailInput').value.trim();
-    if (!email || !email.includes('@')) {
-        alert('Enter your email address first, then click "Forgot password?"');
-        return;
-    }
-    try {
-        await sendPasswordResetEmail(auth, email);
-        alert('Password reset email sent to ' + email + '. Check your inbox.');
-    } catch (e) {
-        if (e.message.includes('user-not-found')) {
-            alert('No account found with that email.');
-        } else {
-            alert('Error: ' + e.message);
-        }
-    }
-};
-
 window._signInGoogle = async () => {
     try {
+        if (_useRedirectAuth) {
+            await signInWithRedirect(auth, googleProvider);
+            return;
+        }
         const result = await signInWithPopup(auth, googleProvider);
         currentUser = result.user;
-    } catch (e) { console.error('Google sign-in error:', e); }
+    } catch (e) {
+        console.error('Google sign-in error:', e);
+        if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
+            try { await signInWithRedirect(auth, googleProvider); return; } catch (_) {}
+        }
+    }
 };
 
 window._toggleEmail = () => {
@@ -291,16 +294,7 @@ window._signInEmail = async () => {
 
 window._createEmail = async () => {
     const email = $('emailInput')?.value, pass = $('passInput')?.value;
-    const confirmPass = $('confirmPassInput')?.value;
     if (!email || !pass) return;
-    if (pass !== confirmPass) {
-        alert('Passwords do not match. Please try again.');
-        return;
-    }
-    if (pass.length < 6) {
-        alert('Password must be at least 6 characters.');
-        return;
-    }
     try {
         const result = await createUserWithEmailAndPassword(auth, email, pass);
         currentUser = result.user;
@@ -321,25 +315,6 @@ window._createEmail = async () => {
         } else {
             alert(e.message);
         }
-    }
-};
-
-window._changePassword = async () => {
-    if (!currentUser || !currentUser.email) {
-        alert('No email associated with this account. If you signed in with Google, your password is managed by Google.');
-        return;
-    }
-    // Check if user signed in with Google only (no password provider)
-    const hasPassword = currentUser.providerData.some(p => p.providerId === 'password');
-    if (!hasPassword) {
-        alert('Your account uses Google Sign-In. To set a password, click "Forgot password?" on the sign-in page and enter your email.');
-        return;
-    }
-    try {
-        await sendPasswordResetEmail(auth, currentUser.email);
-        alert('Password reset email sent to ' + currentUser.email + '. Check your inbox to set a new password.');
-    } catch (e) {
-        alert('Error: ' + e.message);
     }
 };
 
@@ -378,6 +353,49 @@ window._declineInvite = async (invId) => {
 // Check if auth is already resolved
 console.log('Auth initial state:', auth.currentUser?.email || 'not signed in');
 
+// Auto-accept any pending follower invitations addressed to the signed-in user's email.
+// Adds them to teams/{teamId}/subscribers as approved + marks invitation accepted.
+// Manager invites still require explicit Accept (they grant privileges) — only role="follower"
+// is processed here.
+async function autoAcceptFollowerInvitations() {
+    if (!currentUser?.email) return;
+    const email = currentUser.email.toLowerCase().trim();
+    try {
+        const snap = await getDocs(query(
+            collection(db, 'invitations'),
+            where('email', '==', email),
+            where('status', '==', 'pending')
+        ));
+        for (const inv of snap.docs) {
+            const data = inv.data();
+            if ((data.role || '') !== 'follower') continue;
+            const teamId = data.teamId;
+            const hubCode = data.hubCode || '';
+            if (!teamId) continue;
+            try {
+                await setDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid), {
+                    uid: currentUser.uid,
+                    name: currentUser.displayName || email.split('@')[0],
+                    email,
+                    status: 'approved',
+                    requestedAt: Date.now(),
+                    approvedAt: Date.now()
+                }, { merge: true });
+                if (hubCode) {
+                    await setDoc(doc(db, 'users', currentUser.uid),
+                        { subscribedHubs: arrayUnion(hubCode) }, { merge: true });
+                }
+                await updateDoc(doc(db, 'invitations', inv.id), { status: 'accepted' });
+                console.log('Auto-accepted follower invite for', email, '→ team', teamId);
+            } catch (e) {
+                console.error('Failed to auto-accept follower invite', inv.id, e);
+            }
+        }
+    } catch (e) {
+        console.error('autoAcceptFollowerInvitations failed:', e);
+    }
+}
+
 onAuthStateChanged(auth, async (user) => {
     console.log('onAuthStateChanged:', user?.email || 'null', user?.isAnonymous ? '(anon)' : '');
     currentUser = user && !user.isAnonymous ? user : null;
@@ -394,6 +412,7 @@ onAuthStateChanged(auth, async (user) => {
                 name: deleteField()
             }, { merge: true });
         } catch (e) { console.error('User doc error:', e); }
+        await autoAcceptFollowerInvitations();
         loadDashboard();
     } else {
         $('content').innerHTML = `<div class="sign-in-prompt">Sign in to see your teams, hubs, and activity.</div>`;
@@ -679,7 +698,14 @@ function teamCard(team, role) {
     const href = team.hubCode ? `team.html?code=${team.hubCode}` : '#';
 
     let actions = '';
-    if (role !== 'owner') {
+    if (role === 'owner' || role === 'manager') {
+        // Owners/managers get an "Invite Followers" action
+        if (team.hubCode) {
+            actions = `<div style="display:flex;gap:8px;margin-top:6px;">
+                <button onclick="event.preventDefault();window._inviteFollower('${team.id}')" style="padding:4px 10px;background:var(--accent);color:#1A1A1A;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">✉ Invite Follower</button>
+            </div>`;
+        }
+    } else {
         const followBtn = team.isFollowing
             ? `<button onclick="event.preventDefault();window._unfollow('${team.id}','${team.hubCode}')" style="padding:4px 10px;background:transparent;color:var(--text-muted);border:1px solid var(--text-muted);border-radius:4px;font-size:11px;cursor:pointer;">Unfollow</button>`
             : `<button onclick="event.preventDefault();window._follow('${team.id}','${team.hubCode}')" style="padding:4px 10px;background:var(--accent);color:#1A1A1A;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Follow</button>`;
@@ -733,6 +759,35 @@ window._unfollow = async (teamId, hubCode) => {
         // Keep in subscribedHubs so it stays on dashboard
         loadDashboard();
     } catch (e) { console.error('Unfollow error:', e); }
+};
+
+window._inviteFollower = async (teamId) => {
+    if (!currentUser) return;
+    const recipientEmail = (prompt('Enter the follower\'s email address:') || '').trim().toLowerCase();
+    if (!recipientEmail || !recipientEmail.includes('@') || !recipientEmail.includes('.')) {
+        if (recipientEmail) alert('Please enter a valid email.');
+        return;
+    }
+    try {
+        const teamDoc = await getDoc(doc(db, 'teams', teamId));
+        if (!teamDoc.exists()) { alert('Team not found.'); return; }
+        const data = teamDoc.data();
+        const hubCode = data.hub?.hubCode || '';
+        if (!hubCode) { alert('This team doesn\'t have a hub yet.'); return; }
+        const sendInvite = httpsCallable(functions, 'sendHubInvite');
+        await sendInvite({
+            teamId,
+            teamName: data.name || '',
+            hubCode,
+            sport: data.sport || '',
+            recipientEmail,
+            senderName: currentUser.displayName || ''
+        });
+        alert(`Invite sent to ${recipientEmail}`);
+    } catch (e) {
+        console.error('Invite error:', e);
+        alert('Failed to send invite: ' + (e.message || e));
+    }
 };
 
 window._removeTeam = async (hubCode) => {

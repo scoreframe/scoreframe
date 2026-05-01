@@ -342,10 +342,8 @@ html, body {
         <div id="emailForm">
             <input class="auth-input" type="email" id="authEmail" placeholder="Email address" autocomplete="email">
             <input class="auth-input" type="password" id="authPassword" placeholder="Password" autocomplete="current-password">
-            <input class="auth-input" type="password" id="authConfirmPassword" placeholder="Confirm password" autocomplete="new-password" style="display:none;">
-            <input class="auth-input" type="text" id="authName" placeholder="Display name" style="display:none;" autocomplete="off" data-lpignore="true">
+            <input class="auth-input" type="text" id="authName" placeholder="Display name" style="display:none;" autocomplete="name">
             <button class="auth-submit" id="authSubmit" onclick="doEmailSignIn()">Sign In</button>
-            <div id="forgotLink" style="font-size:12px;color:var(--accent,#FF9640);margin-top:6px;cursor:pointer;text-align:center;" onclick="doForgotPassword()">Forgot password?</div>
             <div class="auth-toggle" id="authToggle">
                 Don't have an account? <a onclick="toggleAuthMode()">Create one</a>
             </div>
@@ -398,8 +396,10 @@ import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, where, 
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getDatabase, ref, onValue }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
-import { getAuth, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-    GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile, sendPasswordResetEmail }
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
+    signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile,
+    setPersistence, browserLocalPersistence }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
@@ -416,8 +416,29 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const rtdb = getDatabase(app);
 const auth = getAuth(app);
+// Persist auth state in localStorage (survives browser close + tab refresh).
+// Default in v9+ but set explicitly because some Safari/private-mode contexts
+// fall back to in-memory persistence, signing the user out on every visit.
+setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence:', e));
+
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// Detect Safari / iOS / in-app browsers — these enforce ITP / third-party
+// cookie blocking that breaks signInWithPopup's auth-handler postMessage.
+// On those browsers we use signInWithRedirect, which keeps the auth flow
+// in the first-party context and reliably persists the session.
+const _ua = navigator.userAgent || '';
+const _useRedirectAuth = /iP(hone|ad|od)|Safari/i.test(_ua) && !/Chrome|CriOS|FxiOS/i.test(_ua);
+
+// Handle returning from a redirect sign-in (Safari/iOS path).
+getRedirectResult(auth).then((result) => {
+    if (result && result.user) {
+        console.log('[auth] Returned from Google redirect sign-in:', result.user.email);
+    }
+}).catch(e => {
+    if (e && e.code !== 'auth/no-auth-event') console.warn('[auth] Redirect result:', e);
+});
 
 let hubCode = null;
 let teamId = null;  // Resolved from hubIndex/{hubCode}
@@ -490,8 +511,6 @@ async function autoAcceptFollowerInvitations() {
     if (!currentUser?.email) return;
     const email = currentUser.email.toLowerCase().trim();
     try {
-        const { getDocs, query, collection, where, setDoc, doc: fbDoc, updateDoc, arrayUnion } =
-            await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
         const snap = await getDocs(query(
             collection(db, 'invitations'),
             where('email', '==', email),
@@ -504,7 +523,7 @@ async function autoAcceptFollowerInvitations() {
             const inviteHubCode = data.hubCode || '';
             if (!inviteTeamId) continue;
             try {
-                await setDoc(fbDoc(db, 'teams', inviteTeamId, 'subscribers', currentUser.uid), {
+                await setDoc(doc(db, 'teams', inviteTeamId, 'subscribers', currentUser.uid), {
                     uid: currentUser.uid,
                     name: currentUser.displayName || email.split('@')[0],
                     email,
@@ -513,10 +532,10 @@ async function autoAcceptFollowerInvitations() {
                     approvedAt: Date.now()
                 }, { merge: true });
                 if (inviteHubCode) {
-                    await setDoc(fbDoc(db, 'users', currentUser.uid),
+                    await setDoc(doc(db, 'users', currentUser.uid),
                         { subscribedHubs: arrayUnion(inviteHubCode) }, { merge: true });
                 }
-                await updateDoc(fbDoc(db, 'invitations', inv.id), { status: 'accepted' });
+                await updateDoc(doc(db, 'invitations', inv.id), { status: 'accepted' });
                 console.log('Auto-accepted follower invite for', email, '→ team', inviteTeamId);
             } catch (e) {
                 console.error('Failed to auto-accept follower invite', inv.id, e);
@@ -670,7 +689,7 @@ function updateUserBar() {
     if (!currentUser) {
         accountBar.innerHTML = `${logo}
             <button class="sign-in-btn" onclick="doSignIn()" style="font-size:12px;padding:6px 14px;">Sign In</button>
-            <button class="sign-in-btn" onclick="doSignUp()" style="font-size:12px;padding:6px 14px;background:var(--accent);color:#1A1A1A;">Sign Up</button>`;
+            <button class="sign-in-btn" onclick="doSignIn()" style="font-size:12px;padding:6px 14px;background:var(--accent);color:#1A1A1A;">Sign Up</button>`;
         if (followArea) followArea.innerHTML = '';
         $('followStatus').textContent = '';
         return;
@@ -719,27 +738,13 @@ function renderHeader() {
 let isCreateMode = false;
 
 window.doSignIn = function() {
+    // Open auth modal
     $('authOverlay').classList.add('show');
     $('authError').textContent = '';
     isCreateMode = false;
     $('authSubmit').textContent = 'Sign In';
     $('authName').style.display = 'none';
-    $('authConfirmPassword').style.display = 'none';
-    $('authPassword').autocomplete = 'current-password';
-    $('forgotLink').style.display = '';
     $('authToggle').innerHTML = 'Don\'t have an account? <a onclick="toggleAuthMode()">Create one</a>';
-};
-
-window.doSignUp = function() {
-    $('authOverlay').classList.add('show');
-    $('authError').textContent = '';
-    isCreateMode = true;
-    $('authSubmit').textContent = 'Create Account';
-    $('authName').style.display = 'block';
-    $('authConfirmPassword').style.display = 'block';
-    $('authPassword').autocomplete = 'new-password';
-    $('forgotLink').style.display = 'none';
-    $('authToggle').innerHTML = 'Already have an account? <a onclick="toggleAuthMode()">Sign in</a>';
 };
 
 window.closeAuth = function() {
@@ -753,38 +758,23 @@ window.toggleAuthMode = function() {
     if (isCreateMode) {
         $('authSubmit').textContent = 'Create Account';
         $('authName').style.display = 'block';
-        $('authConfirmPassword').style.display = 'block';
-        $('authPassword').autocomplete = 'new-password';
-        $('forgotLink').style.display = 'none';
         $('authToggle').innerHTML = 'Already have an account? <a onclick="toggleAuthMode()">Sign in</a>';
     } else {
         $('authSubmit').textContent = 'Sign In';
         $('authName').style.display = 'none';
-        $('authConfirmPassword').style.display = 'none';
-        $('authPassword').autocomplete = 'current-password';
-        $('forgotLink').style.display = '';
         $('authToggle').innerHTML = 'Don\'t have an account? <a onclick="toggleAuthMode()">Create one</a>';
-    }
-};
-
-window.doForgotPassword = async function() {
-    const email = $('authEmail').value.trim();
-    if (!email || !email.includes('@')) {
-        $('authError').textContent = 'Enter your email address first, then click "Forgot password?"';
-        return;
-    }
-    try {
-        await sendPasswordResetEmail(auth, email);
-        $('authError').textContent = '';
-        alert('Password reset email sent to ' + email + '. Check your inbox.');
-    } catch (e) {
-        $('authError').textContent = e.message.includes('user-not-found') ? 'No account found with that email.' : 'Error: ' + e.message;
     }
 };
 
 window.doGoogleSignIn = async function() {
     $('authError').textContent = '';
     try {
+        if (_useRedirectAuth) {
+            // Safari / iOS path — page reloads through Firebase's auth handler
+            // and back. `getRedirectResult` on next load picks up the session.
+            await signInWithRedirect(auth, googleProvider);
+            return; // page redirects; nothing else runs here
+        }
         const result = await signInWithPopup(auth, googleProvider);
         currentUser = result.user;
         closeAuth();
@@ -793,6 +783,10 @@ window.doGoogleSignIn = async function() {
     } catch (e) {
         if (e.code === 'auth/popup-closed-by-user') return;
         console.error('Google sign-in error:', e);
+        if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
+            // Browser blocked the popup — fall back to redirect.
+            try { await signInWithRedirect(auth, googleProvider); return; } catch (_) {}
+        }
         $('authError').textContent = e.code === 'auth/unauthorized-domain'
             ? 'This domain is not authorized. The team owner needs to add it in Firebase.'
             : 'Google sign-in failed. Try email instead.';
@@ -811,10 +805,6 @@ window.doEmailSignIn = async function() {
     }
     if (isCreateMode && password.length < 6) {
         $('authError').textContent = 'Password must be at least 6 characters.';
-        return;
-    }
-    if (isCreateMode && password !== $('authConfirmPassword').value) {
-        $('authError').textContent = 'Passwords do not match.';
         return;
     }
 
@@ -937,10 +927,7 @@ async function loadSchedule() {
         const upcoming = [];
         snap.forEach(d => {
             const game = { id: d.id, ...d.data() };
-            // Only show games that aren't completed or cancelled
-            if (game.status !== 'completed' && game.status !== 'cancelled') {
-                upcoming.push(game);
-            }
+            upcoming.push(game);
         });
 
         const container = $('upcomingGames');
@@ -955,10 +942,7 @@ async function loadSchedule() {
             const statusLabel = isLive ? '● LIVE' : g.status === 'completed' ? 'Final' : formatDate(g.date);
             const watchUrl = g.streamUrl || (g.streamCode ? `/watch.html?code=${g.streamCode}` : '');
             const watchBtn = isLive && watchUrl ? `<a class="watch-btn" href="${watchUrl}" target="_blank">▶ Watch Live</a>` : '';
-            const isBowling = (g.sport || '').toLowerCase().includes('bowling');
-            const score = g.status === 'completed' ? (isBowling && g.playerScores
-                ? `<div class="game-score">${g.playerScores}</div>`
-                : `<div class="game-score">${g.homeScore} - ${g.awayScore}</div>`) : '';
+            const score = g.status === 'completed' ? `<div class="game-score">${g.homeScore} - ${g.awayScore}</div>` : '';
             const managerActions = isManager ? `<div style="margin-top:8px;display:flex;gap:8px;">
                 <button onclick="window._deleteScheduleGame('${g.id}')" style="padding:4px 10px;background:transparent;color:var(--error);border:1px solid var(--error);border-radius:4px;font-size:11px;cursor:pointer;">Delete</button>
                 <button onclick="window._cancelScheduleGame('${g.id}')" style="padding:4px 10px;background:transparent;color:var(--text-muted);border:1px solid var(--text-muted);border-radius:4px;font-size:11px;cursor:pointer;">Cancel</button>
