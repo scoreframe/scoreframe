@@ -70,6 +70,86 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .alt-card a:hover { text-decoration: underline; }
 footer { padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 12px; }
 footer a { color: var(--text-secondary); text-decoration: none; }
+
+/* Auth bar + secondary buttons */
+.auth-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+    background: var(--bg-deep); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 16px;
+}
+.auth-bar .who { font-size: 13px; color: var(--text-secondary); }
+.auth-bar .who strong { color: var(--text-primary); font-weight: 600; }
+.btn-secondary {
+    background: transparent; color: var(--accent); border: 1px solid var(--accent);
+    padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    font-weight: 600; width: auto; margin: 0;
+}
+.btn-secondary:hover { background: var(--accent-dim); }
+.btn-google {
+    background: white; color: #1A1A1A; border: 0;
+    padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    font-weight: 600; display: inline-flex; align-items: center; gap: 8px;
+    width: auto; margin: 0;
+}
+
+/* Tickets list */
+.ticket-row {
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; cursor: pointer;
+    margin-bottom: 8px; transition: border-color 0.15s;
+}
+.ticket-row:hover { border-color: var(--accent); }
+.ticket-row .row-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.ticket-row .ticket-id { font-weight: 700; font-size: 13px; }
+.ticket-row[data-attn="attn"] .ticket-id::before {
+    content: "● "; color: #64B5F6; font-weight: 700;
+}
+.ticket-row .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+    color: white; white-space: nowrap; flex-shrink: 0;
+}
+.ticket-row .ticket-subject { font-size: 13px; margin-top: 2px; }
+.ticket-row .ticket-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* Modal — ticket detail */
+.modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100;
+    display: flex; align-items: flex-start; justify-content: center; padding: 16px; overflow-y: auto;
+}
+.modal {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; max-width: 600px; width: 100%;
+    max-height: 92vh; overflow-y: auto;
+}
+.modal h2 { font-size: 17px; margin-bottom: 4px; }
+.modal .meta { font-size: 12px; color: var(--text-secondary); }
+.modal .close-x {
+    background: transparent; color: var(--text-secondary); border: 0;
+    font-size: 24px; cursor: pointer; padding: 0 8px; width: auto; margin: 0;
+    float: right;
+}
+.thread-row {
+    padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;
+    white-space: pre-wrap; word-break: break-word;
+}
+.thread-row.customer { background: var(--bg-elevated); border-left: 3px solid #64B5F6; }
+.thread-row.admin { background: rgba(255,150,64,0.08); border-left: 3px solid var(--accent); }
+.thread-row .who {
+    font-size: 11px; color: var(--text-secondary); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 6px;
+}
+
+/* Sign-in modal */
+.signin-modal {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; max-width: 380px; width: 100%;
+}
+.signin-modal h2 { font-size: 18px; margin-bottom: 12px; }
+.signin-modal .err { color: var(--error); font-size: 13px; margin-top: 12px; }
+.signin-row { display: flex; gap: 8px; margin-top: 12px; }
+.signin-row input { flex: 1; }
 </style>
 </head>
 <body>
@@ -79,16 +159,35 @@ footer a { color: var(--text-secondary); text-decoration: none; }
 </header>
 
 <main>
+    <!-- Auth bar — shown only after we know auth state. Anonymous users
+         see a Sign In button; signed-in users see their name + Sign Out.
+         Sign-in unlocks the "Your tickets" list below. Anonymous can still
+         submit a new ticket via the form. -->
+    <div class="auth-bar" id="authBar" style="display: none;">
+        <div class="who" id="authWho"></div>
+        <div id="authActions"></div>
+    </div>
+
+    <!-- Your tickets — populated when signed in and they have any. -->
+    <div class="card" id="ticketsCard" style="display: none;">
+        <h1 style="margin-bottom: 12px;">Your tickets</h1>
+        <div id="ticketsList"></div>
+    </div>
+
     <div class="card" id="formCard">
         <h1>How can we help?</h1>
         <p class="lead">
             Fill out the form below and we'll get back to you within 48 hours.
             Replying to our email keeps the conversation on the same ticket.
+            <span id="signInHint" style="display: none;">
+                <a href="#" onclick="window.showSignIn(); return false;" style="color:var(--accent);">Sign in</a>
+                to view + reply to your existing tickets.
+            </span>
         </p>
 
         <form id="ticketForm" onsubmit="window.submitSupportTicket(event); return false;">
             <label for="name">Your name</label>
-            <input id="name" type="text" placeholder="Eric Bloomcamp" maxlength="80">
+            <input id="name" type="text" placeholder="John Smith" maxlength="80">
 
             <label for="email">Email <span style="color:var(--error)">*</span></label>
             <input id="email" type="email" placeholder="you@example.com" required maxlength="200">
@@ -106,7 +205,7 @@ footer a { color: var(--text-secondary); text-decoration: none; }
             <input id="subject" type="text" placeholder='e.g. "Stream cuts off after 10 minutes"' required maxlength="200">
 
             <label for="body">Tell us what's going on <span style="color:var(--error)">*</span></label>
-            <textarea id="body" placeholder='Steps to reproduce, what you expected, what actually happened. Screenshots help — you can paste them in your reply once we email you back.' required maxlength="8000"></textarea>
+            <textarea id="body" placeholder='Steps to reproduce, what you expected, what actually happened. The more detail the better.' required maxlength="8000"></textarea>
 
             <button type="submit" id="submitBtn">Send</button>
         </form>
@@ -129,6 +228,15 @@ footer a { color: var(--text-secondary); text-decoration: none; }
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFunctions, httpsCallable }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
+import {
+    getFirestore, collection, query, where, orderBy, limit,
+    getDocs, doc, getDoc
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+    getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    onAuthStateChanged, signOut, setPersistence, browserLocalPersistence
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
@@ -140,9 +248,267 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const fn = getFunctions(app);
+const db = getFirestore(app);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch((e) => console.warn('Persistence:', e));
 const submitTicket = httpsCallable(fn, "submitTicket");
+const customerReplyToTicket = httpsCallable(fn, "customerReplyToTicket");
+
+// Safari/iOS in-app browsers break signInWithPopup — use redirect there.
+const _ua = navigator.userAgent || '';
+const _useRedirectAuth = /iP(hone|ad|od)|Safari/i.test(_ua) && !/Chrome|CriOS|FxiOS/i.test(_ua);
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 const $ = (id) => document.getElementById(id);
+const escapeHtml = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// ── Status helpers (mirror admin.html / app conventions) ──────────────
+const STATUS_LABEL = {
+    open: 'Open',
+    awaiting_customer: 'Waiting on us',
+    response_received: 'Reply received',
+    in_progress: 'In progress',
+    resolved: 'Resolved',
+    closed: 'Closed',
+};
+const STATUS_COLOR = {
+    open: '#FFB74D',
+    awaiting_customer: '#64B5F6',
+    response_received: '#FFB74D',
+    in_progress: '#64B5F6',
+    resolved: '#999',
+    closed: '#999',
+};
+
+// ── Auth + tickets state ──────────────────────────────────────────────
+let currentUser = null;
+
+// Finish redirect-based sign-in if we're returning from Google.
+getRedirectResult(auth).catch((e) => console.warn('Redirect result:', e));
+
+onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    renderAuthBar();
+    if (user && user.email) {
+        // Pre-fill the form's email field for the new-ticket form too
+        if (!$('email').value) $('email').value = user.email;
+        if (user.displayName && !$('name').value) $('name').value = user.displayName;
+        loadMyTickets();
+    } else {
+        $('ticketsCard').style.display = 'none';
+    }
+});
+
+function renderAuthBar() {
+    const bar = $('authBar');
+    bar.style.display = '';
+    if (currentUser) {
+        $('authWho').innerHTML = `Signed in as <strong>${escapeHtml(currentUser.email)}</strong>`;
+        $('authActions').innerHTML = `<button class="btn-secondary" onclick="window.signOutNow()">Sign out</button>`;
+        $('signInHint').style.display = 'none';
+    } else {
+        $('authWho').innerHTML = `<span style="color:var(--text-muted);">Not signed in</span>`;
+        $('authActions').innerHTML = `<button class="btn-secondary" onclick="window.showSignIn()">Sign in to view your tickets</button>`;
+        $('signInHint').style.display = '';
+    }
+}
+
+async function loadMyTickets() {
+    if (!currentUser?.email) return;
+    try {
+        const q = query(
+            collection(db, 'tickets'),
+            where('submittedBy.email', '==', currentUser.email),
+            orderBy('updatedAt', 'desc'),
+            limit(50)
+        );
+        const snap = await getDocs(q);
+        if (snap.empty) {
+            $('ticketsCard').style.display = 'none';
+            return;
+        }
+        const rows = snap.docs.map(d => {
+            const t = d.data();
+            const id = t.id || d.id;
+            const status = t.status || 'open';
+            const badgeColor = STATUS_COLOR[status] || '#999';
+            const needsAttn = t.lastReplyFrom === 'admin' ? 'attn' : '';
+            const updated = t.updatedAt ? new Date(t.updatedAt).toLocaleString() : '—';
+            return `<div class="ticket-row" data-attn="${needsAttn}" onclick="window.openMyTicket('${d.id}')">
+                <div class="row-top">
+                    <span class="ticket-id">${escapeHtml(id)}</span>
+                    <span class="badge" style="background:${badgeColor};">${STATUS_LABEL[status] || status}</span>
+                </div>
+                <div class="ticket-subject">${escapeHtml(t.subject || '(no subject)')}</div>
+                <div class="ticket-time">${escapeHtml(updated)}</div>
+            </div>`;
+        }).join('');
+        $('ticketsList').innerHTML = rows;
+        $('ticketsCard').style.display = '';
+    } catch (e) {
+        console.warn('loadMyTickets failed:', e);
+        $('ticketsCard').style.display = 'none';
+    }
+}
+
+window.openMyTicket = async function(ticketId) {
+    try {
+        const tDoc = await getDoc(doc(db, 'tickets', ticketId));
+        if (!tDoc.exists()) {
+            alert('Ticket not found.');
+            return;
+        }
+        const t = tDoc.data();
+        const msgsSnap = await getDocs(query(
+            collection(db, 'tickets', ticketId, 'messages'),
+            orderBy('createdAt', 'asc')
+        ));
+        const threadHtml = msgsSnap.docs.map(d => {
+            const m = d.data();
+            const isAdmin = m.from === 'admin';
+            const who = isAdmin ? 'ScoreFrame Support' : 'You';
+            const when = m.createdAt ? new Date(m.createdAt).toLocaleString() : '';
+            return `<div class="thread-row ${isAdmin ? 'admin' : 'customer'}">
+                <div class="who">${who} · ${when}</div>
+                <div>${escapeHtml(m.body)}</div>
+            </div>`;
+        }).join('');
+        const status = t.status || 'open';
+        const statusColor = STATUS_COLOR[status] || '#999';
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-backdrop';
+        modal.id = 'ticketModal';
+        modal.onclick = (e) => { if (e.target === modal) closeMyTicket(); };
+        modal.innerHTML = `
+            <div class="modal">
+                <button class="close-x" onclick="window.closeMyTicket()">&times;</button>
+                <h2>${escapeHtml(t.id || ticketId)}</h2>
+                <div class="meta">${escapeHtml(t.subject || '')}</div>
+                <div style="margin-top:8px;">
+                    <span class="badge" style="background:${statusColor};display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;color:white;text-transform:uppercase;letter-spacing:0.4px;">${STATUS_LABEL[status] || status}</span>
+                </div>
+                <hr style="border:0;border-top:1px solid var(--border);margin:14px 0;">
+                <div>${threadHtml || '<div style="color:var(--text-muted);font-size:13px;">No messages yet.</div>'}</div>
+                <hr style="border:0;border-top:1px solid var(--border);margin:14px 0;">
+                <label style="margin-top:0;">Reply</label>
+                <textarea id="replyBody" placeholder="Type your reply…" style="min-height:100px;"></textarea>
+                <button id="replyBtn" onclick="window.sendMyReply('${ticketId}')">Send reply</button>
+                <div id="replyStatus_msg"></div>
+            </div>`;
+        document.body.appendChild(modal);
+    } catch (e) {
+        console.error(e);
+        alert('Failed to open ticket: ' + (e.message || e));
+    }
+};
+
+window.closeMyTicket = function() {
+    const m = $('ticketModal');
+    if (m) m.remove();
+};
+
+window.sendMyReply = async function(ticketId) {
+    const body = $('replyBody').value.trim();
+    const msg = $('replyStatus_msg');
+    const btn = $('replyBtn');
+    if (!body) {
+        msg.className = 'status error';
+        msg.textContent = 'Type a reply first.';
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+        await customerReplyToTicket({ ticketId, body });
+        msg.className = 'status success';
+        msg.textContent = 'Reply sent.';
+        setTimeout(() => {
+            closeMyTicket();
+            loadMyTickets();
+            window.openMyTicket(ticketId);
+        }, 600);
+    } catch (e) {
+        msg.className = 'status error';
+        msg.textContent = 'Failed: ' + (e.message || e);
+        btn.disabled = false;
+        btn.textContent = 'Send reply';
+    }
+};
+
+// ── Sign-in modal ─────────────────────────────────────────────────────
+window.showSignIn = function() {
+    if ($('signinModal')) return;
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop';
+    modal.id = 'signinModal';
+    modal.onclick = (e) => { if (e.target === modal) closeSignIn(); };
+    modal.innerHTML = `
+        <div class="signin-modal">
+            <button class="close-x" onclick="window.closeSignIn()" style="float:right;">&times;</button>
+            <h2>Sign in</h2>
+            <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">
+                Sign in with the same email you used in the app or for past tickets to view + reply to your tickets.
+            </p>
+            <button class="btn-google" style="width:100%;justify-content:center;" onclick="window.signInGoogle()">
+                Continue with Google
+            </button>
+            <hr style="border:0;border-top:1px solid var(--border);margin:16px 0 12px;">
+            <p style="color:var(--text-muted);font-size:11px;margin-bottom:8px;">Or sign in with email + password:</p>
+            <input id="signInEmail" type="email" placeholder="email@example.com" style="margin-bottom:8px;">
+            <input id="signInPassword" type="password" placeholder="password" style="margin-bottom:8px;">
+            <div class="signin-row">
+                <button class="btn-secondary" style="flex:1;" onclick="window.signInEmail()">Sign in</button>
+                <button class="btn-secondary" style="flex:1;" onclick="window.signUpEmail()">Create account</button>
+            </div>
+            <div class="err" id="signinErr"></div>
+        </div>`;
+    document.body.appendChild(modal);
+};
+
+window.closeSignIn = function() {
+    const m = $('signinModal');
+    if (m) m.remove();
+};
+
+window.signInGoogle = async function() {
+    try {
+        if (_useRedirectAuth) {
+            await signInWithRedirect(auth, googleProvider);
+        } else {
+            await signInWithPopup(auth, googleProvider);
+            closeSignIn();
+        }
+    } catch (e) {
+        const err = $('signinErr');
+        if (err) err.textContent = e.message || String(e);
+    }
+};
+
+window.signInEmail = async function() {
+    try {
+        await signInWithEmailAndPassword(auth, $('signInEmail').value, $('signInPassword').value);
+        closeSignIn();
+    } catch (e) {
+        $('signinErr').textContent = e.message || String(e);
+    }
+};
+
+window.signUpEmail = async function() {
+    try {
+        await createUserWithEmailAndPassword(auth, $('signInEmail').value, $('signInPassword').value);
+        closeSignIn();
+    } catch (e) {
+        $('signinErr').textContent = e.message || String(e);
+    }
+};
+
+window.signOutNow = async function() {
+    await signOut(auth);
+};
+
+// ── New-ticket form (existing flow) ───────────────────────────────────
 window.submitSupportTicket = async function(e) {
     if (e && e.preventDefault) e.preventDefault();
     const status = $('status');
@@ -174,9 +540,12 @@ window.submitSupportTicket = async function(e) {
             <div class="status success">
                 Your ticket reference:
                 <span class="ticket-id">${ticketId}</span>
-                Check your inbox for a confirmation. To add more detail, just reply to that email —
-                we'll attach it to the same ticket.
+                Check your inbox for a confirmation.
+                ${currentUser?.email
+                    ? "You can also view + reply to it above."
+                    : "Sign in with this email above to view + reply right here. Or just reply to the confirmation email."}
             </div>`;
+        if (currentUser) loadMyTickets();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
         console.error(err);
