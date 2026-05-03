@@ -86,7 +86,7 @@ footer a { color: var(--text-secondary); text-decoration: none; }
             Replying to our email keeps the conversation on the same ticket.
         </p>
 
-        <form id="ticketForm" onsubmit="submit(event)">
+        <form id="ticketForm" onsubmit="window.submitSupportTicket(event); return false;">
             <label for="name">Your name</label>
             <input id="name" type="text" placeholder="Eric Bloomcamp" maxlength="80">
 
@@ -143,8 +143,8 @@ const fn = getFunctions(app);
 const submitTicket = httpsCallable(fn, "submitTicket");
 
 const $ = (id) => document.getElementById(id);
-window.submit = async function(e) {
-    e.preventDefault();
+window.submitSupportTicket = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
     const status = $('status');
     const btn = $('submitBtn');
     btn.disabled = true;
