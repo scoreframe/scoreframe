@@ -152,6 +152,16 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;
     white-space: pre-wrap; word-break: break-word;
 }
+/* Row indicator for tickets where the customer was the last to reply
+   (i.e. waiting on us). Renders as a small blue dot before the ticket id
+   — uses a CSS pseudo-element so we don't have to inject HTML through
+   the html`` tagged template (which auto-escapes interpolations). */
+tr[data-attn="attn"] td:first-child strong::before {
+    content: "● ";
+    color: var(--info);
+    font-weight: 700;
+}
+
 .thread-row.customer { background: var(--bg-elevated); border-left: 3px solid var(--info); }
 .thread-row.admin { background: rgba(255,150,64,0.08); border-left: 3px solid var(--accent); }
 .thread-row .who { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -686,13 +696,16 @@ async function loadTickets() {
             const status = t.status || 'open';
             const badgeClass = STATUS_BADGE_CLASS[status] || 'pending';
             const updated = t.updatedAt ? new Date(t.updatedAt).toLocaleString() : '—';
-            const customerLast = t.lastReplyFrom === 'customer'
-                ? '<span style="color:var(--info);font-weight:700;">●</span> '
-                : '';
+            // Customer-replied-last gets a blue dot — that's the "needs your
+            // attention" signal. The dot itself is hard-coded HTML (the
+            // `html` tagged template escapes interpolations to prevent XSS,
+            // so we can't pass markup through a variable). Conditional on
+            // a flag we *can* interpolate.
+            const needsAttn = t.lastReplyFrom === 'customer' ? 'attn' : '';
             return html`
-                <tr style="cursor: pointer;" onclick="openTicket('${d.id}')">
+                <tr style="cursor: pointer;" data-attn="${needsAttn}" onclick="openTicket('${d.id}')">
                     <td>
-                        ${customerLast}<strong>${t.id || d.id}</strong>
+                        <strong>${t.id || d.id}</strong>
                         <div class="muted">${t.subject || ''}</div>
                     </td>
                     <td>${sub.name || '—'}<div class="muted">${sub.email || ''}</div></td>
