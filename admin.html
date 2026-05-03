@@ -366,6 +366,7 @@ window.openTicket = openTicket;
 window.closeTicketModal = closeTicketModal;
 window.sendTicketReply = sendTicketReply;
 window.copyMessageBody = copyMessageBody;
+window.copyDebugInfo = copyMessageBody;  // alias — same impl, different button
 
 // ── Auth flow ──
 
@@ -761,8 +762,18 @@ async function openTicket(ticketId) {
             </div>`;
         }).join('');
 
+        // Raw debug bundle (pre-escape) saved on the button so the Copy
+        // action emits the original text. The visible block stays escaped
+        // for safe rendering.
+        const debugRaw = debug
+            ? (typeof debug === 'string' ? debug : JSON.stringify(debug, null, 2))
+            : '';
+        const debugVisible = debugRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        const debugEncoded = debugRaw
+            .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const debugHtml = debug
-            ? `<div class="debug-block">${(typeof debug === 'string' ? debug : JSON.stringify(debug, null, 2)).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</div>`
+            ? `<div class="debug-block">${debugVisible}</div>`
             : '';
 
         const modal = document.createElement('div');
@@ -788,7 +799,15 @@ async function openTicket(ticketId) {
                     ${threadHtml}
                 </div>
 
-                ${debug ? `<details style="margin-bottom: 16px;"><summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);">Debug info</summary>${debugHtml}</details>` : ''}
+                ${debug ? `
+                    <details style="margin-bottom: 16px;">
+                        <summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <span>Debug info</span>
+                            <button class="copy-btn" onclick="event.preventDefault(); copyDebugInfo(this);" data-body="${debugEncoded}">Copy</button>
+                        </summary>
+                        ${debugHtml}
+                    </details>
+                ` : ''}
 
                 <div style="margin-top: 16px;">
                     <label>Reply</label>
