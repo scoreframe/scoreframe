@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0D0D0D">
+<title>ScoreFrame — Support</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg-deepest: #0D0D0D; --bg-deep: #141414; --bg-surface: #1E1E1E;
+    --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
+    --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
+    --success: #4CAF50; --error: #F44336;
+    --border: rgba(255,255,255,0.08);
+}
+html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-deepest); color: var(--text-primary); min-height: 100vh;
+}
+header {
+    padding: 24px 16px 16px; text-align: center;
+    background: linear-gradient(180deg, var(--bg-deep), var(--bg-deepest));
+    border-bottom: 1px solid var(--border);
+}
+.brand { font-size: 22px; font-weight: 700; }
+.brand .sf-orange { color: var(--accent); }
+.tagline { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+main { max-width: 600px; margin: 0 auto; padding: 24px 16px; }
+
+.card {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 24px; margin-bottom: 16px;
+}
+h1 { font-size: 22px; margin-bottom: 8px; }
+.lead { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
+
+label { display: block; font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; margin-top: 16px; }
+label:first-of-type { margin-top: 0; }
+input, textarea, select {
+    width: 100%; padding: 12px 14px; background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text-primary); font-size: 15px; font-family: inherit;
+}
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+textarea { resize: vertical; min-height: 140px; }
+
+button {
+    background: var(--accent); color: #1A1A1A; border: 0;
+    padding: 14px 28px; border-radius: 8px; font-size: 15px; font-weight: 700;
+    cursor: pointer; margin-top: 20px; width: 100%;
+}
+button:hover { opacity: 0.9; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.status { padding: 14px 16px; border-radius: 8px; font-size: 14px; margin-top: 16px; line-height: 1.5; }
+.status.success { background: rgba(76,175,80,0.15); color: var(--success); border-left: 3px solid var(--success); }
+.status.error   { background: rgba(244,67,54,0.15); color: var(--error); border-left: 3px solid var(--error); }
+.status .ticket-id {
+    display: block; font-family: ui-monospace, Menlo, monospace;
+    font-size: 18px; font-weight: 700; color: var(--text-primary);
+    margin-top: 8px; padding: 8px 12px; background: var(--bg-elevated); border-radius: 6px;
+}
+
+.alt-card {
+    background: var(--bg-deep); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; font-size: 13px; color: var(--text-secondary); line-height: 1.5;
+}
+.alt-card a { color: var(--accent); text-decoration: none; }
+.alt-card a:hover { text-decoration: underline; }
+footer { padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 12px; }
+footer a { color: var(--text-secondary); text-decoration: none; }
+</style>
+</head>
+<body>
+<header>
+    <div class="brand">Score<span class="sf-orange">Frame</span></div>
+    <div class="tagline">Support</div>
+</header>
+
+<main>
+    <div class="card" id="formCard">
+        <h1>How can we help?</h1>
+        <p class="lead">
+            Fill out the form below and we'll get back to you within 48 hours.
+            Replying to our email keeps the conversation on the same ticket.
+        </p>
+
+        <form id="ticketForm" onsubmit="submit(event)">
+            <label for="name">Your name</label>
+            <input id="name" type="text" placeholder="Eric Bloomcamp" maxlength="80">
+
+            <label for="email">Email <span style="color:var(--error)">*</span></label>
+            <input id="email" type="email" placeholder="you@example.com" required maxlength="200">
+
+            <label for="category">Category</label>
+            <select id="category">
+                <option value="bug">🐞 Bug or crash</option>
+                <option value="feature">✨ Feature request</option>
+                <option value="billing">💳 Billing / subscription</option>
+                <option value="account">🔑 Account or sign-in</option>
+                <option value="general" selected>💬 General question</option>
+            </select>
+
+            <label for="subject">Subject <span style="color:var(--error)">*</span></label>
+            <input id="subject" type="text" placeholder='e.g. "Stream cuts off after 10 minutes"' required maxlength="200">
+
+            <label for="body">Tell us what's going on <span style="color:var(--error)">*</span></label>
+            <textarea id="body" placeholder='Steps to reproduce, what you expected, what actually happened. Screenshots help — you can paste them in your reply once we email you back.' required maxlength="8000"></textarea>
+
+            <button type="submit" id="submitBtn">Send</button>
+        </form>
+
+        <div id="status"></div>
+    </div>
+
+    <div class="alt-card">
+        <strong>Other ways to reach us:</strong>
+        Tap "Send Feedback" inside the ScoreFrame app — bug reports include device info automatically.
+        Or email <a href="mailto:support@scoreframe.app">support@scoreframe.app</a> directly.
+    </div>
+</main>
+
+<footer>
+    <a href="/">← scoreframe.app</a> &middot; <a href="/privacy.html">Privacy</a> &middot; <a href="/terms.html">Terms</a>
+</footer>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFunctions, httpsCallable }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+    authDomain: "scoreframe-deploy.firebaseapp.com",
+    projectId: "scoreframe-deploy",
+    storageBucket: "scoreframe-deploy.firebasestorage.app",
+    messagingSenderId: "728886280072",
+    appId: "1:728886280072:android:0050478669b89fc76b043d"
+};
+const app = initializeApp(firebaseConfig);
+const fn = getFunctions(app);
+const submitTicket = httpsCallable(fn, "submitTicket");
+
+const $ = (id) => document.getElementById(id);
+window.submit = async function(e) {
+    e.preventDefault();
+    const status = $('status');
+    const btn = $('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    status.className = '';
+    status.textContent = '';
+
+    const payload = {
+        name: $('name').value.trim(),
+        email: $('email').value.trim(),
+        category: $('category').value,
+        subject: $('subject').value.trim(),
+        body: $('body').value.trim(),
+        platform: "web",
+        appVersion: "support.html",
+    };
+
+    try {
+        const result = await submitTicket(payload);
+        const ticketId = result.data.ticketId;
+        $('formCard').innerHTML = `
+            <h1 style="color:var(--success);">Got it! 📨</h1>
+            <p class="lead">
+                We've created a support ticket. A member of the team will reply within 48 hours
+                to the email address you provided.
+            </p>
+            <div class="status success">
+                Your ticket reference:
+                <span class="ticket-id">${ticketId}</span>
+                Check your inbox for a confirmation. To add more detail, just reply to that email —
+                we'll attach it to the same ticket.
+            </div>`;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+        console.error(err);
+        status.className = 'status error';
+        status.textContent = 'Sorry — couldn\'t submit your ticket. ' +
+            (err.message || 'Please try again, or email support@scoreframe.app directly.');
+        btn.disabled = false;
+        btn.textContent = 'Send';
+    }
+};
+</script>
+</body>
+</html>

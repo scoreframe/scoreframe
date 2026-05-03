@@ -126,6 +126,40 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .stat-card { background: var(--bg-elevated); padding: 16px; border-radius: 8px; }
 .stat-card .label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
 .stat-card .value { font-size: 24px; font-weight: 700; color: var(--accent); margin-top: 4px; }
+
+/* Tab badge for unread tickets count */
+.tab-badge {
+    display: inline-block; min-width: 18px; padding: 1px 6px; margin-left: 4px;
+    background: var(--error); color: white; border-radius: 9px;
+    font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
+}
+
+/* Ticket modal */
+.modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100;
+    display: flex; align-items: flex-start; justify-content: center; padding: 24px; overflow-y: auto;
+}
+.modal {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; max-width: 720px; width: 100%;
+    max-height: 90vh; overflow-y: auto;
+}
+.modal-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.modal-header h2 { font-size: 18px; }
+.modal-header .meta { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.modal .close-x { background: transparent; color: var(--text-secondary); border: 0; font-size: 22px; cursor: pointer; padding: 0 8px; margin-top: 0; width: auto; }
+.thread-row {
+    padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;
+    white-space: pre-wrap; word-break: break-word;
+}
+.thread-row.customer { background: var(--bg-elevated); border-left: 3px solid var(--info); }
+.thread-row.admin { background: rgba(255,150,64,0.08); border-left: 3px solid var(--accent); }
+.thread-row .who { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.debug-block {
+    background: var(--bg-elevated); padding: 10px 12px; border-radius: 6px;
+    font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--text-secondary);
+    margin-top: 12px; max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-all;
+}
 </style>
 </head>
 <body>
@@ -151,6 +185,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div class="tabs">
             <div class="tab active" data-tab="broadcast">Broadcast</div>
             <div class="tab" data-tab="active">Active Broadcasts</div>
+            <div class="tab" data-tab="tickets">Tickets <span id="ticketBadge" class="tab-badge" style="display:none;"></span></div>
             <div class="tab" data-tab="hubs">Hubs</div>
             <div class="tab" data-tab="health">Health</div>
         </div>
@@ -203,6 +238,32 @@ tr:hover td { background: rgba(255,255,255,0.02); }
             </div>
         </div>
 
+        <!-- Tab: Tickets -->
+        <div id="tab-tickets" class="tab-panel" style="display: none;">
+            <div class="card">
+                <h2>Support Tickets</h2>
+                <div class="hint">
+                    Tickets come in via /support.html, the in-app feedback flow, or direct email.
+                    Click a row to view the thread, reply, or change status. Customer replies arrive via
+                    the SendGrid Inbound webhook and append automatically — no action needed on your part.
+                </div>
+                <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
+                    <label style="margin: 0; font-size: 11px; color: var(--text-secondary);">Filter:</label>
+                    <select id="ticketFilter" style="width: auto; padding: 6px 10px;" onchange="loadTickets()">
+                        <option value="open" selected>Open + Awaiting</option>
+                        <option value="open_only">Open only</option>
+                        <option value="awaiting">Awaiting customer</option>
+                        <option value="in_progress">In progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                        <option value="all">All</option>
+                    </select>
+                    <button class="secondary" onclick="loadTickets()">Refresh</button>
+                </div>
+                <div id="ticketList"><div class="empty">Loading…</div></div>
+            </div>
+        </div>
+
         <!-- Tab: Hubs Overview -->
         <div id="tab-hubs" class="tab-panel" style="display: none;">
             <div class="card">
@@ -229,8 +290,11 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
     getFirestore, collection, query, orderBy, limit, where,
-    getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp
+    getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp,
+    onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFunctions, httpsCallable }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
 import {
     getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
     GoogleAuthProvider, signOut, onAuthStateChanged, setPersistence,
@@ -248,6 +312,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const fn = getFunctions(app);
+const replyToTicket = httpsCallable(fn, 'replyToTicket');
 setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence:', e));
 
 const googleProvider = new GoogleAuthProvider();
@@ -278,6 +344,10 @@ window.sendBroadcast = sendBroadcast;
 window.expireBroadcast = expireBroadcast;
 window.deleteBroadcast = deleteBroadcast;
 window.clearStuckHub = clearStuckHub;
+window.loadTickets = loadTickets;
+window.openTicket = openTicket;
+window.closeTicketModal = closeTicketModal;
+window.sendTicketReply = sendTicketReply;
 
 // ── Auth flow ──
 
@@ -331,6 +401,9 @@ onAuthStateChanged(auth, async (user) => {
     $('adminUI').style.display = 'block';
     $('userInfo').style.display = 'flex';
     $('userEmail').textContent = user.email;
+    // Live ticket badge — runs continuously so the count updates as new
+    // tickets land or get closed without a manual refresh.
+    startTicketBadgeListener();
 });
 
 // ── Tabs ──
@@ -344,6 +417,7 @@ document.querySelectorAll('.tab').forEach(t => {
         $(id).style.display = 'block';
         // Lazy-load tab content the first time it's shown.
         if (t.dataset.tab === 'active') loadActiveBroadcasts();
+        if (t.dataset.tab === 'tickets') loadTickets();
         if (t.dataset.tab === 'hubs') loadHubs();
         if (t.dataset.tab === 'health') loadHealth();
     });
@@ -527,6 +601,227 @@ async function clearStuckHub(teamId) {
 }
 
 // ── Health ──
+
+// ── Tickets ──
+
+const STATUS_LABEL = {
+    open: 'Open',
+    awaiting_customer: 'Awaiting customer',
+    in_progress: 'In progress',
+    resolved: 'Resolved',
+    closed: 'Closed',
+};
+const STATUS_BADGE_CLASS = {
+    open: 'pending',
+    awaiting_customer: 'sent',
+    in_progress: 'sent',
+    resolved: 'expired',
+    closed: 'expired',
+};
+
+let _ticketBadgeUnsub = null;
+
+function startTicketBadgeListener() {
+    if (_ticketBadgeUnsub) return;
+    // Live-update the tab badge with the count of tickets needing attention
+    // (status=open OR lastReplyFrom=customer in_progress / awaiting state).
+    // Listener runs as long as the page is open; cheap query, in-flight only.
+    const q = query(
+        collection(db, 'tickets'),
+        where('status', 'in', ['open', 'in_progress']),
+        limit(50)
+    );
+    _ticketBadgeUnsub = onSnapshot(q, (snap) => {
+        const count = snap.size;
+        const badge = $('ticketBadge');
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = '';
+        } else {
+            badge.style.display = 'none';
+        }
+    }, (err) => console.warn('ticket badge listener:', err.message));
+}
+
+async function loadTickets() {
+    const target = $('ticketList');
+    target.innerHTML = '<div class="empty">Loading…</div>';
+    try {
+        const filter = $('ticketFilter').value;
+        let statusFilter = null;
+        if (filter === 'open') statusFilter = ['open', 'awaiting_customer', 'in_progress'];
+        else if (filter === 'open_only') statusFilter = ['open'];
+        else if (filter === 'awaiting') statusFilter = ['awaiting_customer'];
+        else if (filter === 'in_progress') statusFilter = ['in_progress'];
+        else if (filter === 'resolved') statusFilter = ['resolved'];
+        else if (filter === 'closed') statusFilter = ['closed'];
+
+        let q;
+        if (statusFilter) {
+            q = query(
+                collection(db, 'tickets'),
+                where('status', 'in', statusFilter),
+                orderBy('updatedAt', 'desc'),
+                limit(100)
+            );
+        } else {
+            q = query(collection(db, 'tickets'), orderBy('updatedAt', 'desc'), limit(100));
+        }
+        const snap = await getDocs(q);
+        if (snap.empty) {
+            target.innerHTML = '<div class="empty">No tickets match this filter.</div>';
+            return;
+        }
+        const rows = snap.docs.map((d) => {
+            const t = d.data();
+            const sub = t.submittedBy || {};
+            const status = t.status || 'open';
+            const badgeClass = STATUS_BADGE_CLASS[status] || 'pending';
+            const updated = t.updatedAt ? new Date(t.updatedAt).toLocaleString() : '—';
+            const customerLast = t.lastReplyFrom === 'customer'
+                ? '<span style="color:var(--info);font-weight:700;">●</span> '
+                : '';
+            return html`
+                <tr style="cursor: pointer;" onclick="openTicket('${d.id}')">
+                    <td>
+                        ${customerLast}<strong>${t.id || d.id}</strong>
+                        <div class="muted">${t.subject || ''}</div>
+                    </td>
+                    <td>${sub.name || '—'}<div class="muted">${sub.email || ''}</div></td>
+                    <td><span class="badge ${badgeClass}">${STATUS_LABEL[status] || status}</span></td>
+                    <td><span class="muted">${t.category || '—'}</span></td>
+                    <td><span class="muted">${updated}</span></td>
+                </tr>`;
+        }).join('');
+        target.innerHTML = `
+            <table>
+                <thead><tr><th>Ticket</th><th>Customer</th><th>Status</th><th>Category</th><th>Updated</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+    } catch (e) {
+        target.innerHTML = `<div class="status error">Failed to load tickets: ${e.message || e}</div>`;
+    }
+}
+
+async function openTicket(ticketId) {
+    // Lazy fetch the ticket doc + thread, render in a modal.
+    try {
+        const tDoc = await getDoc(doc(db, 'tickets', ticketId));
+        if (!tDoc.exists()) {
+            alert('Ticket not found');
+            return;
+        }
+        const ticket = { id: ticketId, ...tDoc.data() };
+        const msgs = await getDocs(query(
+            collection(db, 'tickets', ticketId, 'messages'),
+            orderBy('createdAt', 'asc')
+        ));
+        const sub = ticket.submittedBy || {};
+        const debug = ticket.debugInfo || null;
+
+        const threadHtml = msgs.docs.map((d) => {
+            const m = d.data();
+            const who = m.from === 'admin' ? `${m.adminName || 'Admin'}` : (sub.name || sub.email || 'Customer');
+            const when = m.createdAt ? new Date(m.createdAt).toLocaleString() : '';
+            const safeBody = (m.body || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            return `<div class="thread-row ${m.from === 'admin' ? 'admin' : 'customer'}">
+                <div class="who">${who} &middot; ${when}</div>
+                <div>${safeBody}</div>
+            </div>`;
+        }).join('');
+
+        const debugHtml = debug
+            ? `<div class="debug-block">${(typeof debug === 'string' ? debug : JSON.stringify(debug, null, 2)).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</div>`
+            : '';
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-backdrop';
+        modal.id = 'ticketModal';
+        modal.onclick = (e) => { if (e.target === modal) closeTicketModal(); };
+        modal.innerHTML = `
+            <div class="modal">
+                <div class="modal-header">
+                    <div>
+                        <h2>${ticket.id}: ${(ticket.subject || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</h2>
+                        <div class="meta">
+                            ${(sub.name || '—').replace(/&/g, '&amp;').replace(/</g, '&lt;')}
+                            &middot; <a href="mailto:${sub.email || ''}" style="color: var(--accent);">${sub.email || ''}</a>
+                            &middot; ${ticket.category || '—'}
+                            ${sub.platform ? `&middot; ${sub.platform}${sub.appVersion ? ' v' + sub.appVersion : ''}` : ''}
+                        </div>
+                    </div>
+                    <button class="close-x" onclick="closeTicketModal()">&times;</button>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    ${threadHtml}
+                </div>
+
+                ${debug ? `<details style="margin-bottom: 16px;"><summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);">Debug info</summary>${debugHtml}</details>` : ''}
+
+                <div style="margin-top: 16px;">
+                    <label>Reply</label>
+                    <textarea id="replyBody" placeholder="Your reply to the customer…" rows="6"></textarea>
+                    <div class="form-row" style="margin-top: 12px; align-items: end;">
+                        <div>
+                            <label>Set status</label>
+                            <select id="replyStatus">
+                                <option value="">No change (auto)</option>
+                                <option value="awaiting_customer">Awaiting customer</option>
+                                <option value="in_progress">In progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button class="primary" onclick="sendTicketReply('${ticketId}')">Send reply + email customer</button>
+                        </div>
+                    </div>
+                    <div id="replyStatus_msg"></div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    } catch (e) {
+        alert('Failed to open ticket: ' + (e.message || e));
+    }
+}
+
+function closeTicketModal() {
+    const m = $('ticketModal');
+    if (m) m.remove();
+}
+
+async function sendTicketReply(ticketId) {
+    const body = $('replyBody').value.trim();
+    const status = $('replyStatus').value;
+    const statusMsg = $('replyStatus_msg');
+    if (!body) {
+        statusMsg.className = 'status error';
+        statusMsg.textContent = 'Reply body is required.';
+        return;
+    }
+    statusMsg.className = 'status info';
+    statusMsg.textContent = 'Sending…';
+    try {
+        const result = await replyToTicket({
+            ticketId,
+            body,
+            status: status || undefined,
+            adminName: auth.currentUser?.displayName || 'Eric',
+        });
+        statusMsg.className = 'status success';
+        statusMsg.textContent = `Sent. Status now: ${result.data.status}`;
+        // Reopen the ticket to show the appended reply.
+        setTimeout(() => {
+            closeTicketModal();
+            loadTickets();
+            openTicket(ticketId);
+        }, 600);
+    } catch (e) {
+        statusMsg.className = 'status error';
+        statusMsg.textContent = 'Failed: ' + (e.message || e);
+    }
+}
 
 async function loadHealth() {
     const stats = $('healthStats');
