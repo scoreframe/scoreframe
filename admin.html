@@ -107,9 +107,30 @@ button.danger {
 
 /* Tables */
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
 th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
 tr:hover td { background: rgba(255,255,255,0.02); }
+/* Tickets-specific responsive layout — under 720px the Category and
+   Updated columns fold into the first cell as inline metadata so the
+   table doesn't horizontally overflow. */
+@media (max-width: 720px) {
+    .tickets-table th.col-cat,
+    .tickets-table td.col-cat,
+    .tickets-table th.col-updated,
+    .tickets-table td.col-updated,
+    .tickets-table th.col-customer,
+    .tickets-table td.col-customer { display: none; }
+    .tickets-table .mobile-meta {
+        display: block; font-size: 11px; color: var(--text-secondary);
+        margin-top: 4px;
+    }
+    .tickets-table .mobile-meta a { color: var(--accent); text-decoration: none; }
+    .tickets-table td:first-child { max-width: 100%; }
+    .tickets-table .badge { white-space: nowrap; }
+}
+@media (min-width: 721px) {
+    .tickets-table .mobile-meta { display: none; }
+}
 .badge {
     display: inline-block; padding: 2px 8px; border-radius: 10px;
     font-size: 11px; font-weight: 600;
@@ -267,8 +288,9 @@ tr[data-attn="attn"] td:first-child strong::before {
                 <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
                     <label style="margin: 0; font-size: 11px; color: var(--text-secondary);">Filter:</label>
                     <select id="ticketFilter" style="width: auto; padding: 6px 10px;" onchange="loadTickets()">
-                        <option value="open" selected>Open + Awaiting</option>
+                        <option value="needs_attn" selected>Needs your attention</option>
                         <option value="open_only">Open only</option>
+                        <option value="response_received">Response received</option>
                         <option value="awaiting">Awaiting customer</option>
                         <option value="in_progress">In progress</option>
                         <option value="resolved">Resolved</option>
@@ -626,6 +648,7 @@ async function clearStuckHub(teamId) {
 const STATUS_LABEL = {
     open: 'Open',
     awaiting_customer: 'Awaiting customer',
+    response_received: 'Response received',
     in_progress: 'In progress',
     resolved: 'Resolved',
     closed: 'Closed',
@@ -633,6 +656,7 @@ const STATUS_LABEL = {
 const STATUS_BADGE_CLASS = {
     open: 'pending',
     awaiting_customer: 'sent',
+    response_received: 'pending',  // amber = needs your attention
     in_progress: 'sent',
     resolved: 'expired',
     closed: 'expired',
@@ -647,7 +671,7 @@ function startTicketBadgeListener() {
     // Listener runs as long as the page is open; cheap query, in-flight only.
     const q = query(
         collection(db, 'tickets'),
-        where('status', 'in', ['open', 'in_progress']),
+        where('status', 'in', ['open', 'response_received', 'in_progress']),
         limit(50)
     );
     _ticketBadgeUnsub = onSnapshot(q, (snap) => {
@@ -668,8 +692,9 @@ async function loadTickets() {
     try {
         const filter = $('ticketFilter').value;
         let statusFilter = null;
-        if (filter === 'open') statusFilter = ['open', 'awaiting_customer', 'in_progress'];
+        if (filter === 'needs_attn') statusFilter = ['open', 'response_received', 'in_progress'];
         else if (filter === 'open_only') statusFilter = ['open'];
+        else if (filter === 'response_received') statusFilter = ['response_received'];
         else if (filter === 'awaiting') statusFilter = ['awaiting_customer'];
         else if (filter === 'in_progress') statusFilter = ['in_progress'];
         else if (filter === 'resolved') statusFilter = ['resolved'];
@@ -708,16 +733,20 @@ async function loadTickets() {
                     <td>
                         <strong>${t.id || d.id}</strong>
                         <div class="muted">${t.subject || ''}</div>
+                        <div class="mobile-meta">
+                            ${sub.name || '—'}${sub.email ? ` · ${sub.email}` : ''}<br>
+                            ${t.category || '—'} · ${updated}
+                        </div>
                     </td>
-                    <td>${sub.name || '—'}<div class="muted">${sub.email || ''}</div></td>
+                    <td class="col-customer">${sub.name || '—'}<div class="muted">${sub.email || ''}</div></td>
                     <td><span class="badge ${badgeClass}">${STATUS_LABEL[status] || status}</span></td>
-                    <td><span class="muted">${t.category || '—'}</span></td>
-                    <td><span class="muted">${updated}</span></td>
+                    <td class="col-cat"><span class="muted">${t.category || '—'}</span></td>
+                    <td class="col-updated"><span class="muted">${updated}</span></td>
                 </tr>`;
         }).join('');
         target.innerHTML = `
-            <table>
-                <thead><tr><th>Ticket</th><th>Customer</th><th>Status</th><th>Category</th><th>Updated</th></tr></thead>
+            <table class="tickets-table">
+                <thead><tr><th>Ticket</th><th class="col-customer">Customer</th><th>Status</th><th class="col-cat">Category</th><th class="col-updated">Updated</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>`;
     } catch (e) {
@@ -882,7 +911,8 @@ async function sendTicketReply(ticketId) {
             ticketId,
             body,
             status: status || undefined,
-            adminName: auth.currentUser?.displayName || 'Eric',
+            // adminName intentionally not passed — Cloud Function hard-codes
+            // it to "ScoreFrame Support" so we have a single brand voice.
         });
         statusMsg.className = 'status success';
         statusMsg.textContent = `Sent. Status now: ${result.data.status}`;
