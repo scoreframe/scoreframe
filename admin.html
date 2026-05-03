@@ -154,7 +154,14 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 }
 .thread-row.customer { background: var(--bg-elevated); border-left: 3px solid var(--info); }
 .thread-row.admin { background: rgba(255,150,64,0.08); border-left: 3px solid var(--accent); }
-.thread-row .who { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.thread-row .who { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.thread-row .copy-btn {
+    background: transparent; color: var(--accent); border: 1px solid var(--border);
+    padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; letter-spacing: 0.5px; font-weight: 600;
+    text-transform: uppercase; flex-shrink: 0;
+}
+.thread-row .copy-btn:hover { background: var(--accent-dim); }
+.thread-row .copy-btn.copied { color: var(--success); border-color: var(--success); }
 .debug-block {
     background: var(--bg-elevated); padding: 10px 12px; border-radius: 6px;
     font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--text-secondary);
@@ -348,6 +355,7 @@ window.loadTickets = loadTickets;
 window.openTicket = openTicket;
 window.closeTicketModal = closeTicketModal;
 window.sendTicketReply = sendTicketReply;
+window.copyMessageBody = copyMessageBody;
 
 // ── Auth flow ──
 
@@ -724,8 +732,18 @@ async function openTicket(ticketId) {
             const who = m.from === 'admin' ? `${m.adminName || 'Admin'}` : (sub.name || sub.email || 'Customer');
             const when = m.createdAt ? new Date(m.createdAt).toLocaleString() : '';
             const safeBody = (m.body || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            // Stash the raw body on the button via data attribute. Encode
+            // it for HTML attribute safety; we decode on click before
+            // copying so the clipboard gets the original text (including
+            // any debug bundle footer).
+            const encodedBody = (m.body || '')
+                .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;').replace(/>/g, '&gt;');
             return `<div class="thread-row ${m.from === 'admin' ? 'admin' : 'customer'}">
-                <div class="who">${who} &middot; ${when}</div>
+                <div class="who">
+                    <span>${who} &middot; ${when}</span>
+                    <button class="copy-btn" onclick="copyMessageBody(this)" data-body="${encodedBody}">Copy</button>
+                </div>
                 <div>${safeBody}</div>
             </div>`;
         }).join('');
@@ -789,6 +807,31 @@ async function openTicket(ticketId) {
 function closeTicketModal() {
     const m = $('ticketModal');
     if (m) m.remove();
+}
+
+/** Copy a message body to the clipboard. The button stores the raw text
+ *  in its `data-body` attribute (HTML-decoded by the browser when read
+ *  back via .dataset). Flashes "Copied" briefly so the user sees feedback. */
+function copyMessageBody(btn) {
+    const text = btn.getAttribute('data-body') || '';
+    // The data-body attribute holds HTML-encoded text — decode entities
+    // back to the original by routing through a textarea.
+    const decoder = document.createElement('textarea');
+    decoder.innerHTML = text;
+    const decoded = decoder.value;
+    navigator.clipboard.writeText(decoded).then(() => {
+        const original = btn.textContent;
+        btn.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.textContent = original;
+            btn.classList.remove('copied');
+        }, 1200);
+    }).catch((e) => {
+        console.warn('Copy failed:', e);
+        // Fallback: select the text in the message body div as a last resort.
+        alert('Copy failed: ' + e.message);
+    });
 }
 
 async function sendTicketReply(ticketId) {
