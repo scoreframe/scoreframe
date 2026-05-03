@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0D0D0D">
+<title>ScoreFrame — Admin</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg-deepest: #0D0D0D; --bg-deep: #141414; --bg-surface: #1E1E1E;
+    --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
+    --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
+    --success: #4CAF50; --error: #F44336; --warning: #FFB74D; --info: #64B5F6;
+    --border: rgba(255,255,255,0.08);
+}
+html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-deepest); color: var(--text-primary);
+    min-height: 100vh;
+}
+header {
+    padding: 16px 24px; background: var(--bg-deep);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+.brand { font-size: 18px; font-weight: 700; }
+.brand .sf-orange { color: var(--accent); }
+.user-info { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 12px; }
+.user-info button {
+    background: transparent; color: var(--accent); border: 1px solid var(--accent);
+    padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;
+}
+main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+/* Sign-in gate */
+.gate {
+    max-width: 420px; margin: 80px auto; padding: 32px;
+    background: var(--bg-surface); border-radius: 12px;
+    border: 1px solid var(--border); text-align: center;
+}
+.gate h1 { font-size: 22px; margin-bottom: 8px; }
+.gate p { color: var(--text-secondary); margin-bottom: 24px; font-size: 14px; }
+.btn-google {
+    background: white; color: #1A1A1A; border: 0;
+    padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 600;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-google:hover { opacity: 0.9; }
+.gate-error { color: var(--error); margin-top: 16px; font-size: 13px; }
+
+/* Tabs */
+.tabs {
+    display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+    overflow-x: auto;
+}
+.tab {
+    padding: 10px 16px; cursor: pointer; color: var(--text-secondary);
+    border-bottom: 2px solid transparent; font-size: 13px; font-weight: 600;
+    white-space: nowrap;
+}
+.tab:hover { color: var(--text-primary); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Cards */
+.card {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; margin-bottom: 16px;
+}
+.card h2 { font-size: 16px; margin-bottom: 12px; }
+.card .hint { color: var(--text-secondary); font-size: 12px; margin-bottom: 16px; }
+
+/* Form */
+label { display: block; font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; margin-top: 12px; }
+input[type="text"], input[type="url"], textarea, select {
+    width: 100%; padding: 10px 12px; background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text-primary); font-size: 14px; font-family: inherit;
+}
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+textarea { resize: vertical; min-height: 80px; }
+.form-row { display: flex; gap: 12px; }
+.form-row > * { flex: 1; }
+
+button.primary {
+    background: var(--accent); color: #1A1A1A; border: 0;
+    padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 700;
+    cursor: pointer; margin-top: 16px;
+}
+button.primary:hover { opacity: 0.9; }
+button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+button.secondary {
+    background: transparent; color: var(--text-primary);
+    border: 1px solid var(--border); padding: 8px 14px; border-radius: 6px;
+    cursor: pointer; font-size: 12px;
+}
+button.danger {
+    background: var(--error); color: white; border: 0;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
+}
+
+/* Status messages */
+.status { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-top: 12px; }
+.status.success { background: rgba(76,175,80,0.15); color: var(--success); }
+.status.error   { background: rgba(244,67,54,0.15); color: var(--error); }
+.status.info    { background: rgba(100,181,246,0.15); color: var(--info); }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+.badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 600;
+}
+.badge.sent     { background: rgba(76,175,80,0.2); color: var(--success); }
+.badge.pending  { background: rgba(255,183,77,0.2); color: var(--warning); }
+.badge.expired  { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+.badge.error    { background: rgba(244,67,54,0.2); color: var(--error); }
+.muted { color: var(--text-muted); font-size: 11px; }
+.empty { text-align: center; color: var(--text-muted); padding: 32px; font-size: 13px; }
+
+/* Stat cards */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.stat-card { background: var(--bg-elevated); padding: 16px; border-radius: 8px; }
+.stat-card .label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card .value { font-size: 24px; font-weight: 700; color: var(--accent); margin-top: 4px; }
+</style>
+</head>
+<body>
+<header>
+    <div class="brand">Score<span class="sf-orange">Frame</span> · Admin</div>
+    <div class="user-info" id="userInfo" style="display: none;">
+        <span id="userEmail"></span>
+        <button onclick="signOutUser()">Sign out</button>
+    </div>
+</header>
+
+<main>
+    <!-- Sign-in gate (shown when not authed or not a super-user) -->
+    <div id="gate" class="gate" style="display: none;">
+        <h1>Admin Console</h1>
+        <p id="gateMessage">Sign in with Google to continue. Access is restricted to super-users.</p>
+        <button id="signInBtn" class="btn-google" onclick="signIn()">Sign in with Google</button>
+        <div id="gateError" class="gate-error"></div>
+    </div>
+
+    <!-- Authed admin UI -->
+    <div id="adminUI" style="display: none;">
+        <div class="tabs">
+            <div class="tab active" data-tab="broadcast">Broadcast</div>
+            <div class="tab" data-tab="active">Active Broadcasts</div>
+            <div class="tab" data-tab="hubs">Hubs</div>
+            <div class="tab" data-tab="health">Health</div>
+        </div>
+
+        <!-- Tab: Compose Broadcast -->
+        <div id="tab-broadcast" class="tab-panel">
+            <div class="card">
+                <h2>Send App-Wide Announcement</h2>
+                <div class="hint">
+                    Drops a doc into <code>broadcasts/</code>. The Cloud Function fires immediately and
+                    pushes FCM to topic <code>all_users</code>. Anyone with the app installed and notifications
+                    enabled gets the system push within a few seconds. Everyone else (no perm, signed out, app closed)
+                    sees the announcement in the in-app bell on next launch.
+                </div>
+
+                <label for="bTitle">Title</label>
+                <input id="bTitle" type="text" placeholder='e.g. "v1.1.107 is out"' maxlength="80">
+
+                <label for="bBody">Body</label>
+                <textarea id="bBody" placeholder='e.g. "Streaming UI got cleaned up — give it a try."' maxlength="280"></textarea>
+
+                <div class="form-row">
+                    <div>
+                        <label for="bExpires">Visible for</label>
+                        <select id="bExpires">
+                            <option value="86400000">24 hours</option>
+                            <option value="259200000">3 days</option>
+                            <option value="604800000">7 days</option>
+                            <option value="1209600000" selected>14 days</option>
+                            <option value="2592000000">30 days</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="bUrl">Action URL (optional)</label>
+                        <input id="bUrl" type="url" placeholder="https://scoreframe.app/whats-new">
+                    </div>
+                </div>
+
+                <button class="primary" onclick="sendBroadcast()">Send to all users</button>
+                <div id="bStatus"></div>
+            </div>
+        </div>
+
+        <!-- Tab: Active Broadcasts -->
+        <div id="tab-active" class="tab-panel" style="display: none;">
+            <div class="card">
+                <h2>Recent Broadcasts</h2>
+                <div class="hint">Last 25 entries. "Sent" means FCM fan-out completed; expired ones stop surfacing in the app's poll on next launch.</div>
+                <div id="activeList"><div class="empty">Loading…</div></div>
+            </div>
+        </div>
+
+        <!-- Tab: Hubs Overview -->
+        <div id="tab-hubs" class="tab-panel" style="display: none;">
+            <div class="card">
+                <h2>Hub Health</h2>
+                <div class="hint">Quick view of hubs with stuck live state — useful for support. Tap "Clear" to run forceClearLiveState remotely.</div>
+                <div id="hubsStats" class="stats-grid"></div>
+                <div style="margin-top: 16px;" id="stuckHubs"></div>
+            </div>
+        </div>
+
+        <!-- Tab: Health -->
+        <div id="tab-health" class="tab-panel" style="display: none;">
+            <div class="card">
+                <h2>System Health</h2>
+                <div id="healthStats" class="stats-grid"></div>
+                <h2 style="margin-top: 24px;">Recent Broadcast Errors</h2>
+                <div id="errorList"></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+    getFirestore, collection, query, orderBy, limit, where,
+    getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import {
+    getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
+    GoogleAuthProvider, signOut, onAuthStateChanged, setPersistence,
+    browserLocalPersistence
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+    authDomain: "scoreframe-deploy.firebaseapp.com",
+    projectId: "scoreframe-deploy",
+    storageBucket: "scoreframe-deploy.firebasestorage.app",
+    messagingSenderId: "728886280072",
+    appId: "1:728886280072:android:0050478669b89fc76b043d"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence:', e));
+
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+const _ua = navigator.userAgent || '';
+const _useRedirectAuth = /iP(hone|ad|od)|Safari/i.test(_ua) && !/Chrome|CriOS|FxiOS/i.test(_ua);
+
+const $ = (id) => document.getElementById(id);
+const html = (strings, ...values) => {
+    // Tagged template literal that escapes interpolated values to avoid XSS
+    // when we render Firestore-supplied strings into the table.
+    let out = strings[0];
+    for (let i = 0; i < values.length; i++) {
+        const v = values[i] == null ? '' : String(values[i]);
+        out += v
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        out += strings[i + 1];
+    }
+    return out;
+};
+
+// Expose UI handlers for inline onclick attributes.
+window.signIn = signIn;
+window.signOutUser = signOutUser;
+window.sendBroadcast = sendBroadcast;
+window.expireBroadcast = expireBroadcast;
+window.deleteBroadcast = deleteBroadcast;
+window.clearStuckHub = clearStuckHub;
+
+// ── Auth flow ──
+
+async function signIn() {
+    $('gateError').textContent = '';
+    try {
+        if (_useRedirectAuth) {
+            await signInWithRedirect(auth, googleProvider);
+        } else {
+            await signInWithPopup(auth, googleProvider);
+        }
+    } catch (e) {
+        $('gateError').textContent = e.message || String(e);
+    }
+}
+
+async function signOutUser() {
+    await signOut(auth);
+    location.reload();
+}
+
+// On Safari/iOS, signInWithRedirect bounces back here — finish the handshake.
+getRedirectResult(auth).catch(e => console.warn('Redirect result:', e));
+
+onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+        $('gate').style.display = 'block';
+        $('adminUI').style.display = 'none';
+        $('userInfo').style.display = 'none';
+        return;
+    }
+    // Check super-user list. Doc shape:
+    //   app_config/super_users { uids: ["abc...", ...] }
+    let isSuper = false;
+    try {
+        const snap = await getDoc(doc(db, 'app_config', 'super_users'));
+        const uids = snap.exists() ? (snap.data().uids || []) : [];
+        isSuper = Array.isArray(uids) && uids.includes(user.uid);
+    } catch (e) {
+        console.warn('super-user check failed:', e);
+    }
+    if (!isSuper) {
+        $('gate').style.display = 'block';
+        $('adminUI').style.display = 'none';
+        $('userInfo').style.display = 'none';
+        $('gateMessage').textContent = `Signed in as ${user.email}, but this account is not on the super-user list. Sign out and try a different account, or ask Eric to add this UID.`;
+        $('signInBtn').style.display = 'none';
+        return;
+    }
+    $('gate').style.display = 'none';
+    $('adminUI').style.display = 'block';
+    $('userInfo').style.display = 'flex';
+    $('userEmail').textContent = user.email;
+});
+
+// ── Tabs ──
+
+document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(x => x.style.display = 'none');
+        t.classList.add('active');
+        const id = 'tab-' + t.dataset.tab;
+        $(id).style.display = 'block';
+        // Lazy-load tab content the first time it's shown.
+        if (t.dataset.tab === 'active') loadActiveBroadcasts();
+        if (t.dataset.tab === 'hubs') loadHubs();
+        if (t.dataset.tab === 'health') loadHealth();
+    });
+});
+
+// ── Compose Broadcast ──
+
+async function sendBroadcast() {
+    const title = $('bTitle').value.trim();
+    const body = $('bBody').value.trim();
+    const url = $('bUrl').value.trim();
+    const expiresMs = parseInt($('bExpires').value, 10);
+    const status = $('bStatus');
+
+    if (!title || !body) {
+        status.className = 'status error';
+        status.textContent = 'Title and body are required.';
+        return;
+    }
+
+    if (!confirm(`Send "${title}" to every ScoreFrame user? This pushes immediately and cannot be unsent (only expired or deleted).`)) {
+        return;
+    }
+
+    status.className = 'status info';
+    status.textContent = 'Sending…';
+
+    try {
+        const now = Date.now();
+        const docData = {
+            title, body,
+            type: 'announcement',
+            createdAt: now,
+            expiresAt: now + expiresMs,
+        };
+        if (url) docData.actionUrl = url;
+        const ref = await addDoc(collection(db, 'broadcasts'), docData);
+        status.className = 'status success';
+        status.textContent = `Sent — broadcast ${ref.id}. The Cloud Function should fan-out within a few seconds.`;
+        $('bTitle').value = ''; $('bBody').value = ''; $('bUrl').value = '';
+    } catch (e) {
+        status.className = 'status error';
+        status.textContent = 'Failed: ' + (e.message || String(e));
+    }
+}
+
+// ── Active Broadcasts ──
+
+async function loadActiveBroadcasts() {
+    const target = $('activeList');
+    target.innerHTML = '<div class="empty">Loading…</div>';
+    try {
+        const q = query(collection(db, 'broadcasts'), orderBy('createdAt', 'desc'), limit(25));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+            target.innerHTML = '<div class="empty">No broadcasts yet.</div>';
+            return;
+        }
+        const now = Date.now();
+        const rows = snap.docs.map(d => {
+            const x = d.data();
+            const sent = !!x.sent;
+            const expired = x.expiresAt && now > x.expiresAt;
+            let badge = '';
+            if (x.error) badge = `<span class="badge error">error</span>`;
+            else if (expired) badge = `<span class="badge expired">expired</span>`;
+            else if (sent) badge = `<span class="badge sent">sent</span>`;
+            else badge = `<span class="badge pending">pending</span>`;
+
+            const created = x.createdAt ? new Date(x.createdAt).toLocaleString() : '—';
+            const expires = x.expiresAt ? new Date(x.expiresAt).toLocaleString() : '—';
+            return html`
+                <tr>
+                    <td>${x.title || '—'}<div class="muted">${x.body || ''}</div></td>
+                    <td>${badge}</td>
+                    <td><span class="muted">${created}</span></td>
+                    <td><span class="muted">${expires}</span></td>
+                    <td>
+                        ${expired ? '' : `<button class="secondary" onclick="expireBroadcast('${d.id}')">Expire now</button>`}
+                        <button class="danger" onclick="deleteBroadcast('${d.id}')">Delete</button>
+                    </td>
+                </tr>`;
+        }).join('');
+        target.innerHTML = `
+            <table>
+                <thead><tr><th>Title / Body</th><th>Status</th><th>Sent</th><th>Expires</th><th></th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+    } catch (e) {
+        target.innerHTML = `<div class="status error">Failed to load: ${e.message || e}</div>`;
+    }
+}
+
+async function expireBroadcast(id) {
+    if (!confirm('Expire this broadcast now? It will stop showing up in app launches but the FCM push already went out.')) return;
+    try {
+        await updateDoc(doc(db, 'broadcasts', id), { expiresAt: Date.now() - 1 });
+        loadActiveBroadcasts();
+    } catch (e) { alert('Failed: ' + e.message); }
+}
+
+async function deleteBroadcast(id) {
+    if (!confirm('Delete this broadcast doc? The FCM push (if it already went out) cannot be recalled — this only removes the doc.')) return;
+    try {
+        await deleteDoc(doc(db, 'broadcasts', id));
+        loadActiveBroadcasts();
+    } catch (e) { alert('Failed: ' + e.message); }
+}
+
+// ── Hubs ──
+
+async function loadHubs() {
+    const stats = $('hubsStats');
+    const stuck = $('stuckHubs');
+    stats.innerHTML = '<div class="empty">Loading…</div>';
+    stuck.innerHTML = '';
+    try {
+        const teams = await getDocs(collection(db, 'teams'));
+        let hubCount = 0;
+        let stuckCount = 0;
+        let stuckList = [];
+        const now = Date.now();
+        teams.forEach(t => {
+            const d = t.data();
+            const hub = d.hub;
+            if (!hub) return;
+            hubCount++;
+            // Stuck = activeStreamCode set AND updatedAt > 6h ago
+            const code = hub.activeStreamCode || '';
+            const url = hub.activeStreamUrl || '';
+            const updatedAt = d.updatedAt || 0;
+            if (code && (now - updatedAt > 6 * 3600_000)) {
+                stuckCount++;
+                stuckList.push({ teamId: t.id, teamName: d.teamName || '—', hubCode: hub.hubCode, code, url, updatedAt });
+            }
+        });
+        stats.innerHTML = `
+            <div class="stat-card"><div class="label">Hubs</div><div class="value">${hubCount}</div></div>
+            <div class="stat-card"><div class="label">Stuck Live</div><div class="value">${stuckCount}</div></div>
+        `;
+        if (stuckList.length === 0) {
+            stuck.innerHTML = '<div class="empty">No hubs are stuck.</div>';
+        } else {
+            const rows = stuckList.map(s => html`
+                <tr>
+                    <td>${s.teamName}<div class="muted">${s.hubCode || s.teamId}</div></td>
+                    <td><span class="muted">${new Date(s.updatedAt).toLocaleString()}</span></td>
+                    <td>${s.url ? `<a href="${s.url}" target="_blank" style="color: var(--accent);">watch</a>` : '<span class="muted">no url</span>'}</td>
+                    <td><button class="secondary" onclick="clearStuckHub('${s.teamId}')">Clear</button></td>
+                </tr>`).join('');
+            stuck.innerHTML = `
+                <h2 style="margin-top: 24px;">Stuck-Live Hubs</h2>
+                <table>
+                    <thead><tr><th>Team</th><th>Last update</th><th>Stream</th><th></th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>`;
+        }
+    } catch (e) {
+        stats.innerHTML = `<div class="status error">Failed: ${e.message}</div>`;
+    }
+}
+
+async function clearStuckHub(teamId) {
+    if (!confirm('Clear stuck live state on this hub? Equivalent to the Danger-Zone button in the app.')) return;
+    try {
+        // Mirror TeamHubManager.forceClearLiveState — clear hub.activeStream*
+        // and flip schedule entries stuck at status="live" back to "completed".
+        await updateDoc(doc(db, 'teams', teamId), {
+            'hub.activeStreamCode': '',
+            'hub.activeStreamUrl': '',
+            'updatedAt': Date.now(),
+        });
+        const sched = await getDocs(query(collection(db, 'teams', teamId, 'schedule'), where('status', '==', 'live')));
+        for (const s of sched.docs) {
+            await updateDoc(s.ref, { status: 'completed' });
+        }
+        loadHubs();
+    } catch (e) {
+        alert('Failed: ' + e.message);
+    }
+}
+
+// ── Health ──
+
+async function loadHealth() {
+    const stats = $('healthStats');
+    const errs = $('errorList');
+    stats.innerHTML = '<div class="empty">Loading…</div>';
+    errs.innerHTML = '';
+    try {
+        const broadcasts = await getDocs(query(collection(db, 'broadcasts'), orderBy('createdAt', 'desc'), limit(50)));
+        let total = 0, sent = 0, errored = 0, active = 0;
+        const now = Date.now();
+        const errors = [];
+        broadcasts.forEach(b => {
+            const x = b.data();
+            total++;
+            if (x.sent) sent++;
+            if (x.error) {
+                errored++;
+                errors.push({ id: b.id, title: x.title, error: x.error, when: x.createdAt });
+            }
+            if (x.expiresAt && now <= x.expiresAt) active++;
+        });
+        stats.innerHTML = `
+            <div class="stat-card"><div class="label">Total (50d)</div><div class="value">${total}</div></div>
+            <div class="stat-card"><div class="label">Active</div><div class="value">${active}</div></div>
+            <div class="stat-card"><div class="label">Sent</div><div class="value">${sent}</div></div>
+            <div class="stat-card"><div class="label">Errors</div><div class="value">${errored}</div></div>
+        `;
+        if (errors.length === 0) {
+            errs.innerHTML = '<div class="empty">No broadcast errors.</div>';
+        } else {
+            const rows = errors.map(e => html`
+                <tr>
+                    <td>${e.title || '—'}</td>
+                    <td><span class="muted">${e.when ? new Date(e.when).toLocaleString() : '—'}</span></td>
+                    <td><span class="badge error">${e.error}</span></td>
+                </tr>`).join('');
+            errs.innerHTML = `<table><thead><tr><th>Title</th><th>When</th><th>Error</th></tr></thead><tbody>${rows}</tbody></table>`;
+        }
+    } catch (e) {
+        stats.innerHTML = `<div class="status error">Failed: ${e.message}</div>`;
+    }
+}
+</script>
+</body>
+</html>
