@@ -175,8 +175,8 @@ footer a { color: var(--text-secondary); text-decoration: none; }
     </div>
 
     <div class="card" id="formCard">
-        <h1>How can we help?</h1>
-        <p class="lead">
+        <h1 id="formTitle">How can we help?</h1>
+        <p class="lead" id="formLead">
             Fill out the form below and we'll get back to you within 48 hours.
             Replying to our email keeps the conversation on the same ticket.
             <span id="signInHint" style="display: none;">
@@ -185,11 +185,25 @@ footer a { color: var(--text-secondary); text-decoration: none; }
             </span>
         </p>
 
+        <!-- Banner shown only to signed-out visitors. Real ticket creation
+             requires sign-in (cuts down on spam to support@); without sign-in
+             the form posts to the legacy Google Form as anonymous feedback. -->
+        <div id="signInGate" style="display:none; margin: 12px 0 16px; padding: 14px 16px; border: 1px solid var(--accent); background: rgba(255,150,64,0.08); border-radius: 10px;">
+            <div style="font-weight:700; margin-bottom:4px; color:var(--accent);">🔑 Sign in to create a real ticket</div>
+            <div style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;">
+                Tickets get a confirmation email, a tracking ID, and back-and-forth replies.
+                Without signing in your message goes to anonymous feedback — we still read it,
+                but you won't get a personal reply.
+            </div>
+            <button class="btn-secondary" onclick="window.showSignIn()" style="margin-right:6px;">Sign in</button>
+            <span style="font-size:11px; color:var(--text-muted);">or keep going to send anonymous feedback</span>
+        </div>
+
         <form id="ticketForm" onsubmit="window.submitSupportTicket(event); return false;">
             <label for="name">Your name</label>
             <input id="name" type="text" placeholder="John Smith" maxlength="80">
 
-            <label for="email">Email <span style="color:var(--error)">*</span></label>
+            <label for="email" id="emailLabel">Email <span style="color:var(--error)">*</span></label>
             <input id="email" type="email" placeholder="you@example.com" required maxlength="200">
 
             <label for="category">Category</label>
@@ -307,10 +321,25 @@ function renderAuthBar() {
         $('authWho').innerHTML = `Signed in as <strong>${escapeHtml(currentUser.email)}</strong>`;
         $('authActions').innerHTML = `<button class="btn-secondary" onclick="window.signOutNow()">Sign out</button>`;
         $('signInHint').style.display = 'none';
+        // Signed-in: full ticket flow. Hide the anonymous-feedback gate
+        // and label the submit button accordingly.
+        $('signInGate').style.display = 'none';
+        $('submitBtn').textContent = 'Send Ticket';
+        $('emailLabel').innerHTML = 'Email <span style="color:var(--error)">*</span>';
+        $('email').required = true;
+        $('formTitle').textContent = 'How can we help?';
     } else {
         $('authWho').innerHTML = `<span style="color:var(--text-muted);">Not signed in</span>`;
         $('authActions').innerHTML = `<button class="btn-secondary" onclick="window.showSignIn()">Sign in to view your tickets</button>`;
         $('signInHint').style.display = '';
+        // Signed-out: show the gate banner, the form posts to the legacy
+        // Google Form (anonymous feedback) — no Cloud Function call,
+        // no ticket created. Email becomes optional since we won't reply.
+        $('signInGate').style.display = '';
+        $('submitBtn').textContent = 'Send Feedback';
+        $('emailLabel').innerHTML = 'Email <span style="color:var(--text-muted);font-weight:400;">(optional)</span>';
+        $('email').required = false;
+        $('formTitle').textContent = 'Send feedback';
     }
 }
 
@@ -508,52 +537,114 @@ window.signOutNow = async function() {
     await signOut(auth);
 };
 
-// ── New-ticket form (existing flow) ───────────────────────────────────
+// ── Submit: branches on sign-in state ─────────────────────────────────
+//
+// Signed in → submitTicket Cloud Function (real ticket, confirmation
+// email, ID, replies). Signed out → silent POST to the legacy Google
+// Form (anonymous feedback only — no ticket, no reply guarantee).
+// Cuts down on spam to support@ since drive-by visitors can't generate
+// tickets without committing to an account.
+const LEGACY_FORM_ID = "1FAIpQLSczCYQgJQwY__vcL-mOLEtl8LSXvk1T6keopeZuyQezNMorWA";
+const LEGACY_FORM_URL = `https://docs.google.com/forms/d/e/${LEGACY_FORM_ID}/formResponse`;
+const LEGACY_FORM_ENTRIES = {
+    type:    "entry.1884706608",
+    subject: "entry.1764587319",
+    message: "entry.1491039244",
+    device:  "entry.1136448510",
+    name:    "entry.1197387115",
+    email:   "entry.2122405747",
+};
+
 window.submitSupportTicket = async function(e) {
     if (e && e.preventDefault) e.preventDefault();
     const status = $('status');
     const btn = $('submitBtn');
     btn.disabled = true;
+    const wasLabel = btn.textContent;
     btn.textContent = 'Sending…';
     status.className = '';
     status.textContent = '';
 
-    const payload = {
+    const trimmed = {
         name: $('name').value.trim(),
         email: $('email').value.trim(),
         category: $('category').value,
         subject: $('subject').value.trim(),
         body: $('body').value.trim(),
-        platform: "web",
-        appVersion: "support.html",
     };
 
+    // Signed in — real ticket flow.
+    if (currentUser) {
+        const payload = {
+            ...trimmed,
+            platform: "web",
+            appVersion: "support.html",
+        };
+        try {
+            const result = await submitTicket(payload);
+            const ticketId = result.data.ticketId;
+            $('formCard').innerHTML = `
+                <h1 style="color:var(--success);">Got it! 📨</h1>
+                <p class="lead">
+                    We've created a support ticket. A member of the team will reply within 48 hours
+                    to the email address on your account.
+                </p>
+                <div class="status success">
+                    Your ticket reference:
+                    <span class="ticket-id">${ticketId}</span>
+                    Check your inbox for a confirmation. You can also view + reply to it above.
+                </div>`;
+            loadMyTickets();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err) {
+            console.error(err);
+            status.className = 'status error';
+            status.textContent = 'Sorry — couldn\'t submit your ticket. ' +
+                (err.message || 'Please try again, or email support@scoreframe.app directly.');
+            btn.disabled = false;
+            btn.textContent = wasLabel;
+        }
+        return;
+    }
+
+    // Signed out — anonymous feedback path. Even if they typed an email
+    // in the form we don't create a ticket, so we don't promise a reply.
+    // Same Google Form the Android FeedbackActivity hits in its anon path.
     try {
-        const result = await submitTicket(payload);
-        const ticketId = result.data.ticketId;
+        const params = new URLSearchParams();
+        params.set(LEGACY_FORM_ENTRIES.type, trimmed.category);
+        params.set(LEGACY_FORM_ENTRIES.subject, trimmed.subject);
+        params.set(LEGACY_FORM_ENTRIES.message, trimmed.body);
+        params.set(LEGACY_FORM_ENTRIES.device, `web · ${navigator.userAgent.slice(0, 200)}`);
+        params.set(LEGACY_FORM_ENTRIES.name, trimmed.name);
+        params.set(LEGACY_FORM_ENTRIES.email, trimmed.email);
+        // Google Forms doesn't return a useful body / CORS-friendly response;
+        // mode=no-cors fire-and-forget is the standard pattern. We trust
+        // success when the network call resolves, which happens almost
+        // always — failures here are extremely rare.
+        await fetch(LEGACY_FORM_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString(),
+        });
         $('formCard').innerHTML = `
-            <h1 style="color:var(--success);">Got it! 📨</h1>
+            <h1 style="color:var(--success);">Thanks 🙏</h1>
             <p class="lead">
-                We've created a support ticket. A member of the team will reply within 48 hours
-                to the email address you provided.
+                Your feedback was sent anonymously. We read every note, but without an account
+                we can't reply directly.
             </p>
             <div class="status success">
-                Your ticket reference:
-                <span class="ticket-id">${ticketId}</span>
-                Check your inbox for a confirmation.
-                ${currentUser?.email
-                    ? "You can also view + reply to it above."
-                    : "Sign in with this email above to view + reply right here. Or just reply to the confirmation email."}
+                Want a personal reply within 48 hours?
+                <button class="btn-secondary" onclick="window.showSignIn()" style="margin-top:8px;">Sign in and submit a ticket</button>
             </div>`;
-        if (currentUser) loadMyTickets();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
         console.error(err);
         status.className = 'status error';
-        status.textContent = 'Sorry — couldn\'t submit your ticket. ' +
-            (err.message || 'Please try again, or email support@scoreframe.app directly.');
+        status.textContent = 'Sorry — couldn\'t send your feedback. Try again, or email support@scoreframe.app directly.';
         btn.disabled = false;
-        btn.textContent = 'Send';
+        btn.textContent = wasLabel;
     }
 };
 </script>
