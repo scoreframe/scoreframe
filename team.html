@@ -110,6 +110,37 @@ html, body {
     cursor: pointer; text-decoration: none;
 }
 
+/* Inline video embed — keeps viewers on the team hub instead of bouncing
+   to youtube.com. 16:9 responsive wrapper with rounded corners and a
+   subtle accent border so YouTube's player feels like part of ScoreFrame. */
+.video-embed-wrap {
+    position: relative; width: 100%; padding-bottom: 56.25%; /* 16:9 */
+    background: #000; border-radius: 12px; overflow: hidden;
+    margin-top: 10px; border: 1px solid var(--bg-elevated);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.video-embed-wrap iframe {
+    position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+}
+.video-embed-cap {
+    display: flex; align-items: center; gap: 8px; margin-top: 6px;
+    font-size: 11px; color: var(--text-muted);
+}
+.video-embed-cap .platform-pill {
+    padding: 2px 6px; border-radius: 4px; font-size: 10px;
+    background: var(--bg-elevated); color: var(--text-secondary); font-weight: 700;
+}
+/* Collapsible "Watch Replay" toggle on past-game cards. Click the button
+   and the embed expands inline — no new tab, no leaving the team hub. */
+.replay-toggle {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;
+    padding: 6px 12px; background: var(--accent-dim); color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 6px;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.replay-toggle:hover { background: rgba(255,150,64,0.25); }
+.replay-embed-slot { margin-top: 8px; }
+
 /* Access Gate (private hubs) */
 .access-section { text-align: center; padding: 40px 24px; }
 .access-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
@@ -388,7 +419,6 @@ html, body {
 <div class="footer">
     <div>Powered by <a href="https://scoreframe.app">Score<strong>Frame</strong></a></div>
     <div style="margin-top:8px;"><a href="https://scoreframe.app">Get the app</a> to record games with live scoreboards</div>
-    <div style="margin-top:8px;"><a href="/support.html">Support</a></div>
 </div>
 
 <script type="module">
@@ -1097,6 +1127,24 @@ async function loadPastGames() {
                 <button class="delete-btn" onclick="confirmDeleteGame('${g.id}')">🗑️ Delete</button>
             </div>` : '';
 
+            // First embeddable stream (YouTube preferred, then Twitch)
+            // gets an inline "Watch Replay" toggle. The icon links above
+            // stay so viewers can also bounce out to YouTube/Photos/Twitch
+            // if they prefer the native app.
+            let embedToggle = '';
+            const allStreams = streams.length > 0
+                ? streams
+                : (g.streamUrl ? [{ url: g.streamUrl, platform: detectPlatform(g.streamUrl) }] : []);
+            const embeddable = allStreams.find(s => s.url && canEmbedInline(s.url, s.platform));
+            if (embeddable) {
+                const platform = embeddable.platform || detectPlatform(embeddable.url);
+                embedToggle = `<button class="replay-toggle"
+                    onclick="toggleReplayEmbed('${g.id}', this, ${JSON.stringify(embeddable.url).replace(/"/g,'&quot;')}, '${platform}')">
+                    ▶ Watch Replay
+                </button>
+                <div class="replay-embed-slot" id="replay-${g.id}"></div>`;
+            }
+
             html += `<div class="game-card" id="game-${g.id}">
                 <div class="${isBowling ? '' : 'past-game'}">
                     <div class="${isBowling ? '' : 'teams'}">
@@ -1104,6 +1152,7 @@ async function loadPastGames() {
                         <div class="game-opponent">${titleLine}</div>
                         ${isBowling && scoreLine ? `<div style="margin-top:6px;color:var(--accent);font-weight:700;font-size:13px;">${scoreLine}</div>` : ''}
                         ${streamLinks ? `<div style="margin-top:6px;"><div style="font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:0.05em;margin-bottom:2px;">STREAMS</div>${streamLinks}</div>` : ''}
+                        ${embedToggle}
                     </div>
                     ${!isBowling ? `<div class="score">${scoreLine}</div>` : ''}
                 </div>
@@ -1165,6 +1214,106 @@ function platformLabel(p) {
     return { youtube: 'YouTube', twitch: 'Twitch', facebook: 'Facebook', google_photos: 'Google Photos', ivs: 'ScoreFrame Live' }[p] || 'Link';
 }
 
+// ── Inline video embed helpers ────────────────────────────────────────
+//
+// We embed YouTube and Twitch directly on the team hub so viewers never
+// leave ScoreFrame to watch a game. Brand-suppression flags strip as much
+// of the YouTube chrome as the iframe API allows (modestbranding hides the
+// big logo, rel=0 disables related-video carousels, color=white makes the
+// progress bar match our palette instead of YouTube red). Twitch requires
+// a `parent` host parameter that matches the page actually doing the embed.
+
+function extractYouTubeId(url) {
+    if (!url) return null;
+    // Order matters — match the longest patterns first so /live/ID isn't
+    // confused with a generic path segment.
+    const patterns = [
+        /[?&]v=([A-Za-z0-9_-]{11})/,                  // watch?v=ID
+        /youtu\.be\/([A-Za-z0-9_-]{11})/,             // youtu.be/ID
+        /youtube\.com\/live\/([A-Za-z0-9_-]{11})/,    // youtube.com/live/ID
+        /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/,   // already-embed URL
+        /youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/,  // shorts/ID
+    ];
+    for (const r of patterns) {
+        const m = url.match(r);
+        if (m) return m[1];
+    }
+    return null;
+}
+
+function extractTwitchTarget(url) {
+    if (!url) return null;
+    // /videos/123 → VOD; /CHANNEL/clip/SLUG → clip; /CHANNEL → live channel.
+    let m = url.match(/twitch\.tv\/videos\/(\d+)/);
+    if (m) return { type: 'video', id: m[1] };
+    m = url.match(/twitch\.tv\/[^/]+\/clip\/([A-Za-z0-9_-]+)/);
+    if (m) return { type: 'clip', id: m[1] };
+    m = url.match(/twitch\.tv\/([A-Za-z0-9_]+)\/?$/);
+    if (m) return { type: 'channel', id: m[1] };
+    return null;
+}
+
+// Hostname for Twitch's required `parent` param. Falls back to localhost
+// during local dev (file:// has no hostname; Twitch rejects empty).
+function embedParentHost() {
+    return window.location.hostname || 'scoreframe.app';
+}
+
+// True when the URL points at something we can embed inline. Anything
+// else (Facebook, Google Photos, custom links) stays as an external
+// link with an icon — embedding those is either policy-blocked or ugly.
+function canEmbedInline(url, platform) {
+    const p = platform || detectPlatform(url || '');
+    if (p === 'youtube') return !!extractYouTubeId(url);
+    if (p === 'twitch')  return !!extractTwitchTarget(url);
+    return false;
+}
+
+function buildEmbedSrc(url, platform) {
+    const p = platform || detectPlatform(url || '');
+    if (p === 'youtube') {
+        const id = extractYouTubeId(url);
+        if (!id) return null;
+        // autoplay=0 because Safari/iOS block autoplay-with-sound; controls
+        // stay on so viewers can hit play themselves. modestbranding+rel=0
+        // strip the visual cues that would yank them off the team hub.
+        const params = new URLSearchParams({
+            modestbranding: '1', rel: '0', playsinline: '1',
+            color: 'white', iv_load_policy: '3', enablejsapi: '1',
+        });
+        return `https://www.youtube.com/embed/${id}?${params.toString()}`;
+    }
+    if (p === 'twitch') {
+        const t = extractTwitchTarget(url);
+        if (!t) return null;
+        const parent = embedParentHost();
+        if (t.type === 'video')   return `https://player.twitch.tv/?video=${t.id}&parent=${parent}&autoplay=false`;
+        if (t.type === 'clip')    return `https://clips.twitch.tv/embed?clip=${t.id}&parent=${parent}`;
+        if (t.type === 'channel') return `https://player.twitch.tv/?channel=${t.id}&parent=${parent}&muted=true`;
+    }
+    return null;
+}
+
+// Renders a 16:9 inline embed wrapped in ScoreFrame chrome. `caption` is
+// the small text under the player ("Live now • YouTube" or "Replay •
+// Twitch"); platform shows up as a pill so viewers know where the bytes
+// come from without the source's logo hijacking the layout.
+function renderInlineEmbed(url, platform, caption) {
+    const src = buildEmbedSrc(url, platform);
+    if (!src) return '';
+    const p = platform || detectPlatform(url || '');
+    const allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+    return `
+        <div class="video-embed-wrap">
+            <iframe src="${src}" allow="${allow}" allowfullscreen loading="lazy"></iframe>
+        </div>
+        <div class="video-embed-cap">
+            <span class="platform-pill">${platformLabel(p).toUpperCase()}</span>
+            <span>${caption || ''}</span>
+        </div>
+    `;
+}
+
 function renderEditStreams() {
     const list = $('editStreamsList');
     list.innerHTML = editStreams.map((s, i) => `
@@ -1176,6 +1325,22 @@ function renderEditStreams() {
         </div>
     `).join('');
 }
+
+// Toggle the inline replay embed on a past-game card. We mount the iframe
+// lazily on first click — pages with dozens of games would otherwise pull
+// a YouTube player iframe per row and tank performance / quota. Second
+// click collapses it back to nothing.
+window.toggleReplayEmbed = function(gameId, btn, url, platform) {
+    const slot = document.getElementById('replay-' + gameId);
+    if (!slot) return;
+    if (slot.firstElementChild) {
+        slot.innerHTML = '';
+        btn.textContent = '▶ Watch Replay';
+    } else {
+        slot.innerHTML = renderInlineEmbed(url, platform, 'Replay');
+        btn.textContent = '✕ Hide Replay';
+    }
+};
 
 window.addStreamToEdit = function() {
     const url = $('editNewStreamUrl').value.trim();
@@ -1327,17 +1492,28 @@ function listenForLive() {
     const code = hubProfile.activeStreamCode || '';
     if (!code && !streamUrl) return;
 
-    const watchLink = streamUrl || `/watch.html?code=${code}`;
+    // Build the body once. When streamUrl is YouTube/Twitch we drop the
+    // iframe inline so viewers stay on the team hub. Otherwise we fall
+    // back to the legacy "open in new tab" button — that's the path for
+    // ScoreFrame Live (IVS via watch.html), Facebook, custom RTMP, etc.
+    const renderLiveBody = () => {
+        const watchLink = streamUrl || `/watch.html?code=${code}`;
+        const platform = streamUrl ? detectPlatform(streamUrl) : 'ivs';
+        const inline = streamUrl && canEmbedInline(streamUrl, platform)
+            ? renderInlineEmbed(streamUrl, platform, 'Live now')
+            : `<a class="watch-btn" href="${watchLink}" target="_blank">▶ Watch Live</a>`;
+        return `
+            <div class="game-card live">
+                <div class="game-status live">● LIVE NOW</div>
+                <div class="game-opponent" style="margin-top:8px;">${hubProfile.teamName} is streaming</div>
+                ${inline}
+            </div>`;
+    };
 
     if (streamUrl) {
         $('liveBadge').style.display = 'inline-flex';
         $('liveSection').style.display = 'block';
-        $('liveGame').innerHTML = `
-            <div class="game-card live">
-                <div class="game-status live">● LIVE NOW</div>
-                <div class="game-opponent" style="margin-top:8px;">${hubProfile.teamName} is streaming</div>
-                <a class="watch-btn" href="${watchLink}" target="_blank">▶ Watch Live</a>
-            </div>`;
+        $('liveGame').innerHTML = renderLiveBody();
     }
 
     if (code) {
@@ -1347,12 +1523,7 @@ function listenForLive() {
             if (meta.status === 'live') {
                 $('liveBadge').style.display = 'inline-flex';
                 $('liveSection').style.display = 'block';
-                $('liveGame').innerHTML = `
-                    <div class="game-card live">
-                        <div class="game-status live">● LIVE NOW</div>
-                        <div class="game-opponent" style="margin-top:8px;">${hubProfile.teamName} is streaming</div>
-                        <a class="watch-btn" href="${watchLink}" target="_blank">▶ Watch Live</a>
-                    </div>`;
+                $('liveGame').innerHTML = renderLiveBody();
             } else if (!streamUrl) {
                 $('liveBadge').style.display = 'none';
                 $('liveSection').style.display = 'none';
