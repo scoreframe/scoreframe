@@ -84,6 +84,45 @@ html, body {
 .no-stream-card .emoji { font-size: 36px; margin-bottom: 8px; }
 .no-stream-card .label { font-size: 14px; color: var(--text-secondary); }
 
+/* Upcoming-game pill in the hero (mirrors .live-pill but uses the
+   accent orange instead of recording red). Used when the page is
+   loaded for a future scheduled game that hasn't kicked off yet. */
+.upcoming-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent); color: #1A1A1A; padding: 3px 10px;
+    border-radius: 10px; font-size: 11px; font-weight: 700; margin-bottom: 8px;
+    letter-spacing: 0.04em;
+}
+
+/* Countdown card replacing the player when a game hasn't started yet. */
+.countdown-card {
+    width: 100%; padding: 36px 20px; text-align: center;
+    background: var(--bg-surface); border-radius: 14px;
+    border: 1px solid var(--bg-elevated);
+}
+.countdown-card .label-top {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px;
+}
+.countdown-card .matchup {
+    font-size: 18px; font-weight: 700; margin-bottom: 4px;
+}
+.countdown-card .when {
+    font-size: 13px; color: var(--text-secondary); margin-bottom: 18px;
+}
+.countdown-card .count {
+    display: flex; justify-content: center; gap: 18px; flex-wrap: wrap;
+}
+.countdown-card .count .seg { min-width: 64px; }
+.countdown-card .count .num {
+    font-size: 32px; font-weight: 800; color: var(--accent);
+    font-variant-numeric: tabular-nums; line-height: 1;
+}
+.countdown-card .count .unit {
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px;
+}
+
 /* Body — game summary + stats stacked under the player */
 .body {
     max-width: 1100px; margin: 0 auto; padding: 16px 16px 32px;
@@ -468,18 +507,99 @@ async function load() {
         return;
     }
 
+    // Look up the game two places: the completed-games collection first
+    // (most links point here), then the schedule subcollection as a
+    // fallback so /game.html?team=X&game=SCHEDULED_ID works for upcoming
+    // games before they kick off.
     let game = null;
+    let isScheduledOnly = false;
     try {
         const snap = await getDoc(doc(db, 'teams', teamId, 'games', gameId));
-        if (!snap.exists()) { showNotFound(); return; }
-        game = { id: snap.id, ...snap.data() };
+        if (snap.exists()) {
+            game = { id: snap.id, ...snap.data() };
+        } else {
+            const sched = await getDoc(doc(db, 'teams', teamId, 'schedule', gameId));
+            if (!sched.exists()) { showNotFound(); return; }
+            game = { id: sched.id, ...sched.data() };
+            isScheduledOnly = true;
+        }
     } catch (e) {
         console.error('Game load failed:', e);
         showNotFound();
         return;
     }
 
+    if (isScheduledOnly && (game.date || 0) > Date.now()) {
+        renderUpcomingGame(hubProfile, game);
+        return;
+    }
+
     renderGame(hubProfile, game);
+}
+
+// Pre-game render path. Shows the team header + a countdown card in the
+// player slot. No stream embed (none exists yet). The Game Info card
+// still renders so viewers see opponent / location / event name. Once
+// the broadcaster goes live, hub.activeStreamUrl flips and a fresh load
+// of the page picks the right path — we don't try to swap state in
+// place because YouTube/Twitch embeds don't materialize that gracefully.
+function renderUpcomingGame(hub, game) {
+    const sport = (game.sport || hub.sport || 'GENERIC').toUpperCase();
+    const opponent = game.opponent || '';
+    const eventName = game.eventName || '';
+    const title = opponent
+        ? `${hub.teamName} vs ${opponent}`
+        : (eventName || `${hub.teamName} — Upcoming`);
+    document.title = `${title} · Upcoming · ScoreFrame`;
+    $('liveSlot').innerHTML = `<div class="upcoming-pill">📅 UPCOMING</div>`;
+    $('heroTitle').textContent = title;
+    const metaBits = [];
+    if (game.date) metaBits.push(formatDate(game.date));
+    if (game.location) metaBits.push(`📍 ${game.location}`);
+    $('heroMeta').textContent = metaBits.join('  ·  ');
+
+    // Countdown card replacing the player. We tick once per second; the
+    // interval is harmless if the user navigates away because we never
+    // hold a reference outside this scope.
+    const countdownHtml = `
+        <div class="countdown-card">
+            <div class="label-top">Game Starts</div>
+            <div class="matchup">${escapeHtml(title)}</div>
+            <div class="when">${formatDate(game.date)}</div>
+            <div class="count" id="countdownNumbers"></div>
+        </div>`;
+    $('playerSlot').innerHTML = countdownHtml;
+    const tick = () => {
+        const ms = (game.date || 0) - Date.now();
+        if (ms <= 0) {
+            // The schedule entry's date passed but we still don't have a
+            // live stream or a completed game. Reload — by then either
+            // the live state or a games/{id} doc may exist.
+            window.location.reload();
+            return;
+        }
+        const totalSec = Math.floor(ms / 1000);
+        const days = Math.floor(totalSec / 86400);
+        const hours = Math.floor((totalSec % 86400) / 3600);
+        const mins = Math.floor((totalSec % 3600) / 60);
+        const secs = totalSec % 60;
+        const segs = days > 0
+            ? [['Days', days], ['Hours', hours], ['Min', mins]]
+            : [['Hours', hours], ['Min', mins], ['Sec', secs]];
+        const el = document.getElementById('countdownNumbers');
+        if (el) el.innerHTML = segs.map(([u, n]) =>
+            `<div class="seg"><div class="num">${String(n).padStart(2,'0')}</div><div class="unit">${u}</div></div>`
+        ).join('');
+    };
+    tick();
+    setInterval(tick, 1000);
+
+    renderMeta(game, sport);
+    $('streamPlatformPill').innerHTML = '';
+    $('streamCaption').textContent = '';
+
+    $('loadingState').style.display = 'none';
+    $('gameView').style.display = 'block';
 }
 
 // Render the page when we have no specific game record, only an
