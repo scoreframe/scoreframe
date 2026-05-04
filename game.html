@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D">
+<title>ScoreFrame — Game</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg-deepest: #0D0D0D; --bg-deep: #141414; --bg-surface: #1E1E1E;
+    --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
+    --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
+    --success: #4CAF50; --error: #F44336; --recording-red: #CC2222;
+}
+html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-deepest); color: var(--text-primary);
+    min-height: 100vh; overflow-x: hidden;
+}
+
+/* Top bar — slim brand + "Back to team" link */
+.top-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; background: var(--bg-deep);
+    border-bottom: 1px solid var(--bg-elevated);
+}
+.brand { text-decoration: none; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+.brand .accent { color: var(--accent); }
+.back-link {
+    margin-left: auto; font-size: 13px; color: var(--text-secondary);
+    text-decoration: none; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid var(--bg-elevated);
+}
+.back-link:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Hero — team identity + game title */
+.hero {
+    padding: 20px 24px; text-align: center;
+    background: linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-deepest) 100%);
+    border-bottom: 1px solid var(--bg-elevated);
+}
+.team-color-bar { height: 4px; border-radius: 2px; margin-bottom: 14px; max-width: 480px; margin-left: auto; margin-right: auto; }
+.hero-team { font-size: 13px; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+.hero-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+.hero-meta { font-size: 13px; color: var(--text-muted); }
+.live-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--recording-red); color: white; padding: 3px 10px;
+    border-radius: 10px; font-size: 11px; font-weight: 700; margin-bottom: 8px;
+    animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+
+/* Player stage — wraps the iframe with breathing room and a subtle accent.
+   Capped at 1100px so on big monitors the embed doesn't sprawl edge-to-edge
+   and lose its "broadcast" feel. */
+.stage {
+    max-width: 1100px; margin: 0 auto; padding: 20px 16px 0;
+}
+.video-embed-wrap {
+    position: relative; width: 100%; padding-bottom: 56.25%; /* 16:9 */
+    background: #000; border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--bg-elevated);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+}
+.video-embed-wrap iframe {
+    position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+}
+.video-cap {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    margin-top: 8px; padding: 0 4px; font-size: 12px; color: var(--text-secondary);
+}
+.platform-pill {
+    padding: 2px 8px; border-radius: 4px; font-size: 10px;
+    background: var(--bg-elevated); color: var(--text-secondary); font-weight: 700;
+    letter-spacing: 0.04em;
+}
+.no-stream-card {
+    width: 100%; padding: 48px 24px; text-align: center;
+    background: var(--bg-surface); border-radius: 14px;
+    border: 1px solid var(--bg-elevated);
+}
+.no-stream-card .emoji { font-size: 36px; margin-bottom: 8px; }
+.no-stream-card .label { font-size: 14px; color: var(--text-secondary); }
+
+/* Body — game summary + stats stacked under the player */
+.body {
+    max-width: 1100px; margin: 0 auto; padding: 16px 16px 32px;
+    display: grid; gap: 14px;
+}
+.card {
+    background: var(--bg-surface); border-radius: 12px;
+    padding: 16px 18px; border: 1px solid var(--bg-elevated);
+}
+.card .label {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px;
+}
+
+.scoreline { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.team-block { flex: 1; min-width: 140px; }
+.team-block .name { font-size: 16px; font-weight: 700; }
+.team-block .score { font-size: 38px; font-weight: 800; line-height: 1; margin-top: 4px; }
+.team-block .score.winner { color: var(--accent); }
+.team-block .score.loser { color: var(--text-muted); }
+.vs { font-size: 12px; color: var(--text-muted); padding: 0 8px; }
+
+.bowling-list { display: grid; gap: 10px; }
+.bowling-row {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: baseline;
+    padding: 8px 12px; background: var(--bg-elevated); border-radius: 8px;
+}
+.bowling-name { font-weight: 700; }
+.bowling-series { color: var(--accent); font-weight: 700; }
+.bowling-detail { font-size: 11px; color: var(--text-secondary); }
+
+.meta-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;
+}
+.meta-item { background: var(--bg-elevated); border-radius: 8px; padding: 10px 12px; }
+.meta-item .k { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.meta-item .v { font-size: 14px; color: var(--text-primary); margin-top: 2px; }
+
+.stream-grid {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+}
+.stream-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    text-decoration: none; padding: 8px 12px; border-radius: 8px;
+    background: var(--bg-elevated); color: var(--text-primary);
+    font-size: 12px; font-weight: 600;
+    border: 1px solid var(--bg-elevated);
+}
+.stream-link:hover { border-color: var(--accent); color: var(--accent); }
+.stream-link.primary { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+.share-row {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;
+}
+.share-btn {
+    flex: 1; min-width: 140px;
+    padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 700;
+    border: 1px solid var(--bg-elevated); background: var(--bg-elevated);
+    color: var(--text-primary); cursor: pointer;
+}
+.share-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.empty, .loading { text-align: center; padding: 60px 24px; color: var(--text-muted); font-size: 14px; }
+.spinner {
+    width: 32px; height: 32px; border: 3px solid var(--bg-elevated);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.footer {
+    text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px;
+    border-top: 1px solid var(--bg-elevated); margin-top: 12px;
+}
+.footer a { color: var(--accent); text-decoration: none; }
+
+/* Mobile tweaks — at narrow widths we lose the side-by-side scoreline
+   and stack everything vertically for thumb-readability. */
+@media (max-width: 540px) {
+    .hero-title { font-size: 19px; }
+    .scoreline { flex-direction: column; align-items: stretch; }
+    .vs { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+    <a class="brand" href="/">Score<span class="accent">Frame</span></a>
+    <a class="back-link" id="backLink" href="/">← Back</a>
+</div>
+
+<div id="loadingState" class="loading">
+    <div class="spinner"></div>
+    <div>Loading game...</div>
+</div>
+
+<div id="notFound" style="display:none;" class="loading">
+    <div style="font-size:36px;margin-bottom:8px;">🤷</div>
+    <div>We couldn't find this game.</div>
+    <div style="margin-top:12px;"><a id="notFoundBack" class="back-link" href="/">← Back to team hub</a></div>
+</div>
+
+<div id="gameView" style="display:none;">
+    <!-- Hero (team identity + game title) -->
+    <div class="hero">
+        <div id="liveSlot"></div>
+        <div class="team-color-bar" id="colorBar"></div>
+        <div class="hero-team" id="heroTeam"></div>
+        <div class="hero-title" id="heroTitle"></div>
+        <div class="hero-meta" id="heroMeta"></div>
+    </div>
+
+    <!-- Player stage -->
+    <div class="stage">
+        <div id="playerSlot"></div>
+        <div class="video-cap">
+            <div id="streamPlatformPill"></div>
+            <div id="streamCaption"></div>
+        </div>
+    </div>
+
+    <!-- Body -->
+    <div class="body">
+        <!-- Final score / scoreline -->
+        <div class="card" id="scoreCard" style="display:none;">
+            <div class="label">Final</div>
+            <div id="scoreContent"></div>
+        </div>
+
+        <!-- Game info -->
+        <div class="card" id="metaCard" style="display:none;">
+            <div class="label">Game Info</div>
+            <div class="meta-grid" id="metaGrid"></div>
+        </div>
+
+        <!-- Streams (all platforms) -->
+        <div class="card" id="streamsCard" style="display:none;">
+            <div class="label">Watch &amp; Replays</div>
+            <div class="stream-grid" id="streamGrid"></div>
+        </div>
+
+        <!-- Share -->
+        <div class="card">
+            <div class="label">Share This Game</div>
+            <div class="share-row">
+                <button class="share-btn" onclick="copyLink(this)">🔗 Copy Link</button>
+                <button class="share-btn" onclick="shareNative()">📤 Share</button>
+                <a class="share-btn" id="hubLink" href="/" style="text-align:center;text-decoration:none;line-height:1;">🏟️ View Team Hub</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    Powered by <a href="https://scoreframe.app">ScoreFrame</a>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// Same Firebase project as team.html / watch.html — single source of truth.
+const firebaseConfig = {
+    apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+    authDomain: "scoreframe-deploy.firebaseapp.com",
+    databaseURL: "https://scoreframe-deploy-default-rtdb.firebaseio.com",
+    projectId: "scoreframe-deploy",
+    storageBucket: "scoreframe-deploy.firebasestorage.app",
+    messagingSenderId: "728886280072",
+    appId: "1:728886280072:android:0050478669b89fc76b043d"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const hubCode = (params.get('team') || params.get('hub') || '').trim().toUpperCase();
+const gameId = (params.get('game') || params.get('id') || '').trim();
+
+const sportEmoji = s => ({
+    GENERIC:'🎯', VOLLEYBALL:'🏐', BOWLING:'🎳', BASKETBALL:'🏀',
+    SOCCER:'⚽', FOOTBALL:'🏈', BASEBALL:'⚾', SOFTBALL:'🥎',
+    TENNIS:'🎾', PICKLEBALL:'🏓', HOCKEY:'🏒', LACROSSE:'🥍'
+}[s] || '🏟️');
+
+const sportName = s => ({
+    GENERIC:'Game', VOLLEYBALL:'Volleyball', BOWLING:'Bowling', BASKETBALL:'Basketball',
+    SOCCER:'Soccer', FOOTBALL:'Football', BASEBALL:'Baseball', SOFTBALL:'Softball',
+    TENNIS:'Tennis', PICKLEBALL:'Pickleball', HOCKEY:'Hockey', LACROSSE:'Lacrosse'
+}[s] || 'Sport');
+
+function formatDate(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return d.toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit'
+    });
+}
+
+// ── Embed helpers ─────────────────────────────────────────────────────
+// Same shape as team.html so the experience is consistent. Extracted into
+// game.html so this page is self-contained and doesn't break if team.html
+// changes.
+
+function detectPlatform(url) {
+    if (!url) return 'custom';
+    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+    if (url.includes('twitch.tv')) return 'twitch';
+    if (url.includes('facebook.com') || url.includes('fb.watch')) return 'facebook';
+    if (url.includes('photos.app.goo.gl') || url.includes('photos.google.com')) return 'google_photos';
+    return 'custom';
+}
+
+function platformLabel(p) {
+    return { youtube: 'YouTube', twitch: 'Twitch', facebook: 'Facebook',
+             google_photos: 'Google Photos', ivs: 'ScoreFrame Live' }[p] || 'Link';
+}
+
+function extractYouTubeId(url) {
+    if (!url) return null;
+    const patterns = [
+        /[?&]v=([A-Za-z0-9_-]{11})/,
+        /youtu\.be\/([A-Za-z0-9_-]{11})/,
+        /youtube\.com\/live\/([A-Za-z0-9_-]{11})/,
+        /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/,
+        /youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/,
+    ];
+    for (const r of patterns) {
+        const m = url.match(r);
+        if (m) return m[1];
+    }
+    return null;
+}
+
+function extractTwitchTarget(url) {
+    if (!url) return null;
+    let m = url.match(/twitch\.tv\/videos\/(\d+)/);
+    if (m) return { type: 'video', id: m[1] };
+    m = url.match(/twitch\.tv\/[^/]+\/clip\/([A-Za-z0-9_-]+)/);
+    if (m) return { type: 'clip', id: m[1] };
+    m = url.match(/twitch\.tv\/([A-Za-z0-9_]+)\/?$/);
+    if (m) return { type: 'channel', id: m[1] };
+    return null;
+}
+
+function embedParentHost() { return window.location.hostname || 'scoreframe.app'; }
+
+function canEmbed(url, platform) {
+    const p = platform || detectPlatform(url || '');
+    if (p === 'youtube') return !!extractYouTubeId(url);
+    if (p === 'twitch')  return !!extractTwitchTarget(url);
+    return false;
+}
+
+function buildEmbedSrc(url, platform) {
+    const p = platform || detectPlatform(url || '');
+    if (p === 'youtube') {
+        const id = extractYouTubeId(url);
+        if (!id) return null;
+        const ps = new URLSearchParams({
+            modestbranding: '1', rel: '0', playsinline: '1',
+            color: 'white', iv_load_policy: '3', enablejsapi: '1',
+        });
+        return `https://www.youtube.com/embed/${id}?${ps.toString()}`;
+    }
+    if (p === 'twitch') {
+        const t = extractTwitchTarget(url);
+        if (!t) return null;
+        const parent = embedParentHost();
+        if (t.type === 'video')   return `https://player.twitch.tv/?video=${t.id}&parent=${parent}&autoplay=false`;
+        if (t.type === 'clip')    return `https://clips.twitch.tv/embed?clip=${t.id}&parent=${parent}`;
+        if (t.type === 'channel') return `https://player.twitch.tv/?channel=${t.id}&parent=${parent}&muted=true`;
+    }
+    return null;
+}
+
+// Pick which stream gets the big embed at the top of the page. Preference:
+// YouTube → Twitch → first embeddable. Anything else just shows up in the
+// "Watch & Replays" card as a link.
+function pickPrimaryStream(streams) {
+    const list = (streams || []).filter(s => s && s.url);
+    const yt = list.find(s => detectPlatform(s.url) === 'youtube');
+    if (yt) return yt;
+    const tw = list.find(s => detectPlatform(s.url) === 'twitch');
+    if (tw) return tw;
+    return list.find(s => canEmbed(s.url, s.platform)) || null;
+}
+
+function platformIcon(platform) {
+    if (platform === 'youtube') return '<svg width="18" height="13" viewBox="0 0 24 17" style="vertical-align:-2px;"><path fill="#FF0000" d="M23.5 2.5A3 3 0 0 0 21.4.4C19.5 0 12 0 12 0S4.5 0 2.6.4A3 3 0 0 0 .5 2.5 31 31 0 0 0 0 8.5a31 31 0 0 0 .5 6A3 3 0 0 0 2.6 16.6C4.5 17 12 17 12 17s7.5 0 9.4-.4a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-6 31 31 0 0 0-.5-6z"/><path fill="#FFF" d="M9.6 12.2l6.3-3.7-6.3-3.7z"/></svg>';
+    if (platform === 'twitch') return '<svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:-2px;"><path fill="#9146FF" d="M2 2v18h6v4l4-4h6l8-8V2H2zm20 9l-4 4h-6l-4 4v-4H4V4h18v7zm-5-7h-2v6h2V4zm-6 0h2v6h-2V4z"/></svg>';
+    if (platform === 'google_photos') return '🖼️';
+    if (platform === 'facebook') return '📘';
+    return '🔗';
+}
+
+// ── Load + render ─────────────────────────────────────────────────────
+
+async function load() {
+    if (!hubCode) {
+        showNotFound();
+        return;
+    }
+
+    let teamId = null;
+    let hubProfile = null;
+    try {
+        const idx = await getDoc(doc(db, 'hubIndex', hubCode));
+        if (!idx.exists()) { showNotFound(); return; }
+        teamId = idx.data().teamId;
+        const team = await getDoc(doc(db, 'teams', teamId));
+        if (!team.exists()) { showNotFound(); return; }
+        const t = team.data();
+        hubProfile = {
+            teamId,
+            teamName: t.name || 'Team',
+            sport: t.sport || 'GENERIC',
+            color: t.color || '#FF9640',
+            color2: t.color2 || '#FFFFFF',
+            hub: t.hub || {},
+        };
+    } catch (e) {
+        console.error('Hub load failed:', e);
+        showNotFound();
+        return;
+    }
+
+    // Set "back to hub" links + page chrome that doesn't depend on the game.
+    $('backLink').href = `/team.html?code=${encodeURIComponent(hubCode)}`;
+    $('hubLink').href = `/team.html?code=${encodeURIComponent(hubCode)}`;
+    $('notFoundBack').href = `/team.html?code=${encodeURIComponent(hubCode)}`;
+    $('colorBar').style.background = `linear-gradient(90deg, ${hubProfile.color}, ${hubProfile.color2})`;
+    $('heroTeam').textContent = `${sportEmoji(hubProfile.sport)} ${hubProfile.teamName} · ${sportName(hubProfile.sport)}`;
+
+    // If no gameId, treat the page as "the active live stream" for this team
+    // — useful for FCM links that point at /game.html?team=ABC without a
+    // specific game id. Falls back to a not-found if no live stream either.
+    if (!gameId) {
+        const liveUrl = (hubProfile.hub && hubProfile.hub.activeStreamUrl) || '';
+        if (liveUrl) {
+            renderLiveOnly(hubProfile, liveUrl);
+            return;
+        }
+        showNotFound();
+        return;
+    }
+
+    let game = null;
+    try {
+        const snap = await getDoc(doc(db, 'teams', teamId, 'games', gameId));
+        if (!snap.exists()) { showNotFound(); return; }
+        game = { id: snap.id, ...snap.data() };
+    } catch (e) {
+        console.error('Game load failed:', e);
+        showNotFound();
+        return;
+    }
+
+    renderGame(hubProfile, game);
+}
+
+// Render the page when we have no specific game record, only an
+// activeStreamUrl on the hub. Lets a generic "/game.html?team=X" link
+// land somewhere useful while the team is live.
+function renderLiveOnly(hub, url) {
+    document.title = `${hub.teamName} — Live · ScoreFrame`;
+    $('liveSlot').innerHTML = `<div class="live-pill">● LIVE NOW</div>`;
+    $('heroTitle').textContent = `${hub.teamName} is streaming`;
+    $('heroMeta').textContent = '';
+    mountPrimaryStream({ url, platform: detectPlatform(url) });
+    $('loadingState').style.display = 'none';
+    $('gameView').style.display = 'block';
+}
+
+function renderGame(hub, game) {
+    const sport = (game.sport || hub.sport || 'GENERIC').toUpperCase();
+    const isBowling = sport === 'BOWLING';
+
+    // Title + meta
+    let title;
+    if (isBowling) {
+        title = game.eventName || 'Bowling';
+    } else {
+        const home = game.homeTeam || hub.teamName || 'Home';
+        const away = game.awayTeam || 'Away';
+        title = `${home} vs ${away}`;
+    }
+    document.title = `${title} · ${hub.teamName} · ScoreFrame`;
+    $('heroTitle').textContent = title;
+
+    const metaBits = [];
+    if (game.date) metaBits.push(formatDate(game.date));
+    if (game.location) metaBits.push(`📍 ${game.location}`);
+    $('heroMeta').textContent = metaBits.join('  ·  ');
+
+    // LIVE pill if this game matches the hub's active stream.
+    const isLive = !!(hub.hub && hub.hub.activeStreamUrl &&
+        ((game.streams || []).some(s => s.url === hub.hub.activeStreamUrl) ||
+         game.streamUrl === hub.hub.activeStreamUrl));
+    if (isLive) {
+        $('liveSlot').innerHTML = `<div class="live-pill">● LIVE NOW</div>`;
+    }
+
+    // Player — pick the best stream to embed at the top.
+    const streams = (game.streams && game.streams.length > 0)
+        ? game.streams
+        : (game.streamUrl ? [{ url: game.streamUrl, platform: detectPlatform(game.streamUrl) }] : []);
+    const primary = pickPrimaryStream(streams);
+    if (primary) {
+        mountPrimaryStream(primary);
+    } else {
+        $('playerSlot').innerHTML = `
+            <div class="no-stream-card">
+                <div class="emoji">${sportEmoji(sport)}</div>
+                <div class="label" style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">No video available for this game</div>
+                <div>Final score and stats are below.</div>
+            </div>`;
+    }
+
+    // Score card
+    if (isBowling) {
+        renderBowlingScore(game);
+    } else {
+        renderTeamScore(hub, game);
+    }
+
+    // Game info card
+    renderMeta(game, sport);
+
+    // Streams card — list all platforms (the embedded one shows up as
+    // "Now Playing"; the others are direct-watch links).
+    if (streams.length > 0) {
+        const grid = $('streamGrid');
+        grid.innerHTML = streams.map(s => {
+            const p = s.platform || detectPlatform(s.url);
+            const isPrimary = primary && s.url === primary.url;
+            return `<a class="stream-link${isPrimary ? ' primary' : ''}" href="${s.url}" target="_blank" rel="noopener">
+                ${platformIcon(p)} ${platformLabel(p)}${isPrimary ? ' &mdash; Now Playing' : ''}
+            </a>`;
+        }).join('');
+        $('streamsCard').style.display = '';
+    }
+
+    $('loadingState').style.display = 'none';
+    $('gameView').style.display = 'block';
+}
+
+function mountPrimaryStream(stream) {
+    const url = stream.url;
+    const platform = stream.platform || detectPlatform(url);
+    const allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+    if (canEmbed(url, platform)) {
+        const src = buildEmbedSrc(url, platform);
+        $('playerSlot').innerHTML = `
+            <div class="video-embed-wrap">
+                <iframe src="${src}" allow="${allow}" allowfullscreen loading="eager"></iframe>
+            </div>`;
+        $('streamPlatformPill').innerHTML = `<span class="platform-pill">${platformLabel(platform).toUpperCase()}</span>`;
+        $('streamCaption').textContent = '';
+    } else {
+        // Non-embeddable — at least give a clean "Watch on …" call-to-action
+        // instead of a busted iframe.
+        $('playerSlot').innerHTML = `
+            <div class="no-stream-card">
+                <div class="emoji">📺</div>
+                <div style="margin-bottom:14px;color:var(--text-secondary);font-size:14px;">This stream plays on ${platformLabel(platform)}.</div>
+                <a class="stream-link primary" href="${url}" target="_blank" rel="noopener">${platformIcon(platform)} Open on ${platformLabel(platform)}</a>
+            </div>`;
+    }
+}
+
+function renderTeamScore(hub, game) {
+    const home = game.homeTeam || hub.teamName || 'Home';
+    const away = game.awayTeam || 'Away';
+    const hs = game.homeScore || 0;
+    const as = game.awayScore || 0;
+    const homeWin = hs > as, awayWin = as > hs;
+    $('scoreContent').innerHTML = `
+        <div class="scoreline">
+            <div class="team-block">
+                <div class="name">${home}</div>
+                <div class="score ${homeWin ? 'winner' : (awayWin ? 'loser' : '')}">${hs}</div>
+            </div>
+            <div class="vs">VS</div>
+            <div class="team-block" style="text-align:right;">
+                <div class="name">${away}</div>
+                <div class="score ${awayWin ? 'winner' : (homeWin ? 'loser' : '')}">${as}</div>
+            </div>
+        </div>
+    `;
+    $('scoreCard').style.display = '';
+}
+
+function renderBowlingScore(game) {
+    const ps = game.playerScores || '';
+    if (!ps) {
+        if (game.homeScore > 0) {
+            $('scoreContent').innerHTML = `<div style="font-size:32px;font-weight:800;color:var(--accent);">${game.homeScore}</div>`;
+            $('scoreCard').style.display = '';
+        }
+        return;
+    }
+    const rows = ps.split(';').filter(Boolean).map(b => {
+        const [name, gamesStr, storedSeries] = b.split(':');
+        const scores = (gamesStr || '').split(',').filter(s => s).map(Number);
+        const calcSeries = scores.reduce((a, x) => a + x, 0);
+        const series = calcSeries > 0 ? calcSeries : (parseInt(storedSeries) || 0);
+        const high = scores.length ? Math.max(...scores) : 0;
+        return { name: name || 'Bowler', scores, series, high };
+    });
+    $('scoreContent').innerHTML = `
+        <div class="bowling-list">
+            ${rows.map(r => `
+                <div class="bowling-row">
+                    <div>
+                        <div class="bowling-name">${r.name}</div>
+                        ${r.scores.length ? `<div class="bowling-detail">${r.scores.join(' · ')}</div>` : ''}
+                    </div>
+                    <div class="bowling-detail">High ${r.high}</div>
+                    <div class="bowling-series">${r.series}</div>
+                </div>
+            `).join('')}
+        </div>`;
+    $('scoreCard').style.display = '';
+}
+
+function renderMeta(game, sport) {
+    const items = [];
+    if (game.date)        items.push({ k: 'Date',    v: formatDate(game.date) });
+    if (game.location)    items.push({ k: 'Location', v: game.location });
+    if (game.eventName)   items.push({ k: 'Event',   v: game.eventName });
+    items.push({ k: 'Sport', v: sportName(sport) });
+    if (game.notes)       items.push({ k: 'Notes',   v: game.notes });
+    if (items.length === 0) return;
+    $('metaGrid').innerHTML = items.map(i =>
+        `<div class="meta-item"><div class="k">${i.k}</div><div class="v">${escapeHtml(i.v)}</div></div>`
+    ).join('');
+    $('metaCard').style.display = '';
+}
+
+function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+}
+
+function showNotFound() {
+    $('loadingState').style.display = 'none';
+    $('notFound').style.display = '';
+}
+
+// ── Share ──
+window.copyLink = function(btn) {
+    const url = window.location.href;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+            const old = btn.textContent;
+            btn.textContent = '✓ Copied';
+            setTimeout(() => btn.textContent = old, 1500);
+        });
+    }
+};
+
+window.shareNative = function() {
+    const title = document.title;
+    const url = window.location.href;
+    if (navigator.share) {
+        navigator.share({ title, url }).catch(() => {});
+    } else {
+        // Fallback — same as Copy Link.
+        if (navigator.clipboard) navigator.clipboard.writeText(url);
+        alert('Link copied — paste it anywhere.');
+    }
+};
+
+load();
+</script>
+</body>
+</html>

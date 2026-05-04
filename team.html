@@ -130,16 +130,21 @@ html, body {
     padding: 2px 6px; border-radius: 4px; font-size: 10px;
     background: var(--bg-elevated); color: var(--text-secondary); font-weight: 700;
 }
-/* Collapsible "Watch Replay" toggle on past-game cards. Click the button
-   and the embed expands inline — no new tab, no leaving the team hub. */
-.replay-toggle {
-    display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;
-    padding: 6px 12px; background: var(--accent-dim); color: var(--accent);
-    border: 1px solid var(--accent); border-radius: 6px;
-    font-size: 12px; font-weight: 700; cursor: pointer;
+/* Past-game cards are clickable — the whole row navigates to the
+   dedicated /game.html page with the bigger embed + summary. The chevron
+   on the right hints at navigability without yelling. Manager action
+   buttons (Edit/Stream/Delete) live below the link area and stop event
+   propagation so clicking them doesn't also navigate. */
+.game-card.linkable {
+    cursor: pointer; position: relative;
+    transition: border-color 120ms ease, transform 120ms ease;
 }
-.replay-toggle:hover { background: rgba(255,150,64,0.25); }
-.replay-embed-slot { margin-top: 8px; }
+.game-card.linkable:hover { border-color: var(--accent); }
+.game-card.linkable .open-chevron {
+    position: absolute; right: 14px; top: 14px;
+    color: var(--text-muted); font-size: 18px; pointer-events: none;
+}
+.game-card.linkable:hover .open-chevron { color: var(--accent); }
 
 /* Access Gate (private hubs) */
 .access-section { text-align: center; padding: 40px 24px; }
@@ -1120,39 +1125,32 @@ async function loadPastGames() {
                 scoreLine = `${g.homeScore} - ${g.awayScore}`;
             }
 
-            // Manager actions
-            const actions = isManager ? `<div class="game-actions">
-                <button class="edit-btn" onclick="openEditGame('${g.id}')">✏️ Edit</button>
-                <button class="stream-btn" onclick="openEditGame('${g.id}', true)">📺 Stream</button>
-                <button class="delete-btn" onclick="confirmDeleteGame('${g.id}')">🗑️ Delete</button>
+            // Manager actions — wrapped so clicks on these buttons don't
+            // also navigate the parent .game-card to /game.html.
+            const actions = isManager ? `<div class="game-actions" onclick="event.stopPropagation();">
+                <button class="edit-btn" onclick="event.stopPropagation();openEditGame('${g.id}')">✏️ Edit</button>
+                <button class="stream-btn" onclick="event.stopPropagation();openEditGame('${g.id}', true)">📺 Stream</button>
+                <button class="delete-btn" onclick="event.stopPropagation();confirmDeleteGame('${g.id}')">🗑️ Delete</button>
             </div>` : '';
 
-            // First embeddable stream (YouTube preferred, then Twitch)
-            // gets an inline "Watch Replay" toggle. The icon links above
-            // stay so viewers can also bounce out to YouTube/Photos/Twitch
-            // if they prefer the native app.
-            let embedToggle = '';
-            const allStreams = streams.length > 0
-                ? streams
-                : (g.streamUrl ? [{ url: g.streamUrl, platform: detectPlatform(g.streamUrl) }] : []);
-            const embeddable = allStreams.find(s => s.url && canEmbedInline(s.url, s.platform));
-            if (embeddable) {
-                const platform = embeddable.platform || detectPlatform(embeddable.url);
-                embedToggle = `<button class="replay-toggle"
-                    onclick="toggleReplayEmbed('${g.id}', this, ${JSON.stringify(embeddable.url).replace(/"/g,'&quot;')}, '${platform}')">
-                    ▶ Watch Replay
-                </button>
-                <div class="replay-embed-slot" id="replay-${g.id}"></div>`;
-            }
+            // The whole card navigates to /game.html for the dedicated big-
+            // embed view. Stream icons inside still link out to native
+            // platforms — they stop propagation so a "watch on YouTube"
+            // tap doesn't double-fire and navigate to game.html. Manager
+            // action buttons stop propagation for the same reason.
+            const gameHref = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}`;
 
-            html += `<div class="game-card" id="game-${g.id}">
+            html += `<div class="game-card linkable" id="game-${g.id}"
+                role="link" tabindex="0"
+                onclick="window.location.href='${gameHref}'"
+                onkeydown="if(event.key==='Enter'||event.key===' '){window.location.href='${gameHref}';}">
+                <div class="open-chevron">›</div>
                 <div class="${isBowling ? '' : 'past-game'}">
                     <div class="${isBowling ? '' : 'teams'}">
                         <div class="game-date">${formatDate(g.date)}</div>
                         <div class="game-opponent">${titleLine}</div>
                         ${isBowling && scoreLine ? `<div style="margin-top:6px;color:var(--accent);font-weight:700;font-size:13px;">${scoreLine}</div>` : ''}
-                        ${streamLinks ? `<div style="margin-top:6px;"><div style="font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:0.05em;margin-bottom:2px;">STREAMS</div>${streamLinks}</div>` : ''}
-                        ${embedToggle}
+                        ${streamLinks ? `<div style="margin-top:6px;" onclick="event.stopPropagation();"><div style="font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:0.05em;margin-bottom:2px;">STREAMS</div>${streamLinks}</div>` : ''}
                     </div>
                     ${!isBowling ? `<div class="score">${scoreLine}</div>` : ''}
                 </div>
@@ -1325,22 +1323,6 @@ function renderEditStreams() {
         </div>
     `).join('');
 }
-
-// Toggle the inline replay embed on a past-game card. We mount the iframe
-// lazily on first click — pages with dozens of games would otherwise pull
-// a YouTube player iframe per row and tank performance / quota. Second
-// click collapses it back to nothing.
-window.toggleReplayEmbed = function(gameId, btn, url, platform) {
-    const slot = document.getElementById('replay-' + gameId);
-    if (!slot) return;
-    if (slot.firstElementChild) {
-        slot.innerHTML = '';
-        btn.textContent = '▶ Watch Replay';
-    } else {
-        slot.innerHTML = renderInlineEmbed(url, platform, 'Replay');
-        btn.textContent = '✕ Hide Replay';
-    }
-};
 
 window.addStreamToEdit = function() {
     const url = $('editNewStreamUrl').value.trim();
