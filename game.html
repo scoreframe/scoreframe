@@ -122,6 +122,33 @@ html, body {
 .meta-item .k { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 .meta-item .v { font-size: 14px; color: var(--text-primary); margin-top: 2px; }
 
+/* Highlights — clickable chips that seek the YouTube/Twitch player to the
+   moment the broadcaster tagged. Each chip is a pill with description,
+   score-at-time, and a HH:MM:SS timestamp on the right. */
+.highlights-list { display: grid; gap: 8px; }
+.highlight-chip {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+    padding: 10px 14px; border-radius: 10px;
+    background: var(--bg-elevated); border: 1px solid var(--bg-elevated);
+    color: var(--text-primary); cursor: pointer;
+    text-align: left; font-size: 13px;
+    transition: border-color 120ms ease, transform 80ms ease;
+}
+.highlight-chip:hover { border-color: var(--accent); }
+.highlight-chip:active { transform: scale(0.99); }
+.highlight-chip .star { font-size: 18px; }
+.highlight-chip .body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.highlight-chip .desc { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.highlight-chip .score { color: var(--text-secondary); font-size: 11px; }
+.highlight-chip .time {
+    font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 700;
+    font-size: 12px; padding: 4px 8px; border-radius: 6px;
+    background: var(--accent-dim);
+}
+.highlights-empty {
+    color: var(--text-muted); font-size: 12px; padding: 8px 0;
+}
+
 .stream-grid {
     display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
 }
@@ -220,6 +247,13 @@ html, body {
             <div class="meta-grid" id="metaGrid"></div>
         </div>
 
+        <!-- Highlights — chips that seek the YouTube embed to the moment
+             the broadcaster tagged during the live stream. -->
+        <div class="card" id="highlightsCard" style="display:none;">
+            <div class="label">Highlights</div>
+            <div class="highlights-list" id="highlightsList"></div>
+        </div>
+
         <!-- Streams (all platforms) -->
         <div class="card" id="streamsCard" style="display:none;">
             <div class="label">Watch &amp; Replays</div>
@@ -244,7 +278,7 @@ html, body {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, getDoc }
+import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // Same Firebase project as team.html / watch.html — single source of truth.
@@ -516,6 +550,11 @@ function renderGame(hub, game) {
     // Game info card
     renderMeta(game, sport);
 
+    // Highlights — load the subcollection asynchronously so the rest of
+    // the page renders even if there's a brief Firestore delay or no
+    // highlights at all (most non-streamed games won't have any).
+    loadHighlights(hub.teamId, game.id, primary);
+
     // Streams card — list all platforms (the embedded one shows up as
     // "Now Playing"; the others are direct-watch links).
     if (streams.length > 0) {
@@ -534,16 +573,59 @@ function renderGame(hub, game) {
     $('gameView').style.display = 'block';
 }
 
+// Holds the active YouTube IFrame API player so highlight chips can call
+// `seekTo()` on it. null when the embed is non-YouTube or the API hasn't
+// loaded yet — in those cases highlight chips fall back to opening the
+// stream URL in a new tab with `?t=...`.
+let ytPlayer = null;
+let ytPlayerReady = false;
+let ytApiLoading = false;
+
+function ensureYouTubeApi(callback) {
+    // Idempotent loader. The IFrame API uses a single global callback
+    // (`onYouTubeIframeAPIReady`) that fires once when the script finishes
+    // initializing — we queue any waiting callbacks against that.
+    if (window.YT && window.YT.Player) { callback(); return; }
+    window.__ytApiQueue = window.__ytApiQueue || [];
+    window.__ytApiQueue.push(callback);
+    if (ytApiLoading) return;
+    ytApiLoading = true;
+    window.onYouTubeIframeAPIReady = () => {
+        const q = window.__ytApiQueue || [];
+        window.__ytApiQueue = [];
+        q.forEach(fn => { try { fn(); } catch (e) { console.error('YT API callback failed:', e); } });
+    };
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+}
+
 function mountPrimaryStream(stream) {
     const url = stream.url;
     const platform = stream.platform || detectPlatform(url);
     const allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
     if (canEmbed(url, platform)) {
         const src = buildEmbedSrc(url, platform);
+        // Use a known iframe id so the IFrame API can attach to it for
+        // YouTube embeds. enablejsapi=1 is already in the embed src.
+        const iframeId = 'sf-primary-player';
         $('playerSlot').innerHTML = `
             <div class="video-embed-wrap">
-                <iframe src="${src}" allow="${allow}" allowfullscreen loading="eager"></iframe>
+                <iframe id="${iframeId}" src="${src}" allow="${allow}" allowfullscreen loading="eager"></iframe>
             </div>`;
+        if (platform === 'youtube') {
+            ensureYouTubeApi(() => {
+                try {
+                    ytPlayer = new YT.Player(iframeId, {
+                        events: {
+                            onReady: () => { ytPlayerReady = true; },
+                        }
+                    });
+                } catch (e) {
+                    console.warn('YT.Player init failed:', e);
+                }
+            });
+        }
         $('streamPlatformPill').innerHTML = `<span class="platform-pill">${platformLabel(platform).toUpperCase()}</span>`;
         $('streamCaption').textContent = '';
     } else {
@@ -611,6 +693,98 @@ function renderBowlingScore(game) {
             `).join('')}
         </div>`;
     $('scoreCard').style.display = '';
+}
+
+// ── Highlights ────────────────────────────────────────────────────────
+//
+// During a YouTube/Twitch live stream the broadcaster can tap Highlight
+// to flag a moment, optionally with a quick description ("Audrey with
+// the Ace!"). The phone records the offset from broadcast start and the
+// score at that instant; on game end the buffer flushes to a subcollection
+// at teams/{teamId}/games/{gameId}/highlights. Here we read those docs
+// and render each as a chip — clicking a chip seeks the embed via the
+// YouTube IFrame API (or for non-YouTube embeds, opens a new tab with
+// `?t=...`).
+
+function formatTimestamp(seconds) {
+    const s = Math.max(0, Math.floor(Number(seconds) || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    return `${m}:${String(sec).padStart(2,'0')}`;
+}
+
+async function loadHighlights(teamId, gameId, primaryStream) {
+    if (!teamId || !gameId) return;
+    let docs = [];
+    try {
+        const snap = await getDocs(query(
+            collection(db, 'teams', teamId, 'games', gameId, 'highlights'),
+            orderBy('videoTimeSec', 'asc')
+        ));
+        snap.forEach(d => docs.push({ id: d.id, ...d.data() }));
+    } catch (e) {
+        // Most likely cause: no highlights subcollection yet for this game.
+        // Treat as empty rather than surfacing a console error to viewers.
+        console.debug('No highlights for this game:', e?.message);
+        return;
+    }
+    if (docs.length === 0) return;
+    renderHighlights(docs, primaryStream);
+}
+
+function renderHighlights(highlights, primaryStream) {
+    const list = $('highlightsList');
+    const platform = primaryStream ? (primaryStream.platform || detectPlatform(primaryStream.url)) : null;
+    const baseUrl = primaryStream ? primaryStream.url : null;
+    list.innerHTML = highlights.map((h, i) => {
+        const desc = h.description && h.description.trim()
+            ? escapeHtml(h.description.trim())
+            : `Highlight ${i + 1}`;
+        const score = h.scoreLabel ? escapeHtml(h.scoreLabel) : '';
+        const t = formatTimestamp(h.videoTimeSec);
+        const sec = Math.max(0, Math.floor(Number(h.videoTimeSec) || 0));
+        return `<button class="highlight-chip" data-time="${sec}" data-idx="${i}">
+            <span class="star">⭐</span>
+            <span class="body">
+                <span class="desc">${desc}</span>
+                ${score ? `<span class="score">${score}</span>` : ''}
+            </span>
+            <span class="time">${t}</span>
+        </button>`;
+    }).join('');
+    // Wire up click → seek (or fall back to opening in a new tab with
+    // `?t=` for non-IFrame-API embeds, e.g., Twitch or when YT API failed).
+    list.querySelectorAll('.highlight-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const sec = parseInt(btn.dataset.time, 10) || 0;
+            seekToHighlight(sec, platform, baseUrl);
+        });
+    });
+    $('highlightsCard').style.display = '';
+}
+
+function seekToHighlight(seconds, platform, baseUrl) {
+    if (platform === 'youtube' && ytPlayer && ytPlayerReady) {
+        try {
+            ytPlayer.seekTo(seconds, true);
+            ytPlayer.playVideo();
+            // Smooth-scroll the player back into view in case the user had
+            // scrolled down to the chip list before tapping.
+            document.querySelector('.video-embed-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        } catch (e) {
+            console.warn('YT seekTo failed, falling back to URL nav:', e);
+        }
+    }
+    // Fallback: deep-link with ?t=<seconds>. YouTube and Twitch both
+    // honor this pattern; opens in a new tab so the user doesn't lose
+    // their spot on the team hub.
+    if (baseUrl) {
+        const sep = baseUrl.includes('?') ? '&' : '?';
+        window.open(`${baseUrl}${sep}t=${seconds}`, '_blank', 'noopener');
+    }
 }
 
 function renderMeta(game, sport) {
