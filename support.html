@@ -168,10 +168,21 @@ footer a { color: var(--text-secondary); text-decoration: none; }
         <div id="authActions"></div>
     </div>
 
-    <!-- Your tickets — populated when signed in and they have any. -->
+    <!-- Your tickets — populated when signed in. Split into open + closed
+         so the page focuses on what needs attention. Closed tickets sit in
+         a collapsible archive at the bottom of the card. -->
     <div class="card" id="ticketsCard" style="display: none;">
-        <h1 style="margin-bottom: 12px;">Your tickets</h1>
+        <h1 id="ticketsHeading" style="margin-bottom: 12px;">Open tickets</h1>
         <div id="ticketsList"></div>
+        <div id="closedTicketsBlock" style="display: none; margin-top: 16px;">
+            <button type="button" id="closedTicketsToggle"
+                    onclick="window.toggleClosedTickets()"
+                    style="width: 100%; text-align: left; background: var(--surface-variant, #2a2a2a); color: var(--text); border: 0; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                <span id="closedTicketsChevron">▸</span>
+                <span id="closedTicketsLabel">Closed tickets</span>
+            </button>
+            <div id="closedTicketsList" style="display: none; margin-top: 8px;"></div>
+        </div>
     </div>
 
     <div class="card" id="formCard">
@@ -343,6 +354,27 @@ function renderAuthBar() {
     }
 }
 
+function isClosedStatus(status) {
+    return status === 'resolved' || status === 'closed';
+}
+
+function renderTicketRow(d) {
+    const t = d.data();
+    const id = t.id || d.id;
+    const status = t.status || 'open';
+    const badgeColor = STATUS_COLOR[status] || '#999';
+    const needsAttn = t.lastReplyFrom === 'admin' ? 'attn' : '';
+    const updated = t.updatedAt ? new Date(t.updatedAt).toLocaleString() : '—';
+    return `<div class="ticket-row" data-attn="${needsAttn}" onclick="window.openMyTicket('${d.id}')">
+        <div class="row-top">
+            <span class="ticket-id">${escapeHtml(id)}</span>
+            <span class="badge" style="background:${badgeColor};">${STATUS_LABEL[status] || status}</span>
+        </div>
+        <div class="ticket-subject">${escapeHtml(t.subject || '(no subject)')}</div>
+        <div class="ticket-time">${escapeHtml(updated)}</div>
+    </div>`;
+}
+
 async function loadMyTickets() {
     if (!currentUser?.email) return;
     try {
@@ -357,29 +389,43 @@ async function loadMyTickets() {
             $('ticketsCard').style.display = 'none';
             return;
         }
-        const rows = snap.docs.map(d => {
-            const t = d.data();
-            const id = t.id || d.id;
-            const status = t.status || 'open';
-            const badgeColor = STATUS_COLOR[status] || '#999';
-            const needsAttn = t.lastReplyFrom === 'admin' ? 'attn' : '';
-            const updated = t.updatedAt ? new Date(t.updatedAt).toLocaleString() : '—';
-            return `<div class="ticket-row" data-attn="${needsAttn}" onclick="window.openMyTicket('${d.id}')">
-                <div class="row-top">
-                    <span class="ticket-id">${escapeHtml(id)}</span>
-                    <span class="badge" style="background:${badgeColor};">${STATUS_LABEL[status] || status}</span>
-                </div>
-                <div class="ticket-subject">${escapeHtml(t.subject || '(no subject)')}</div>
-                <div class="ticket-time">${escapeHtml(updated)}</div>
-            </div>`;
-        }).join('');
-        $('ticketsList').innerHTML = rows;
+
+        // Partition into open + closed so the page focuses on what needs
+        // attention. Mirrors the Android + iOS support screens.
+        const openDocs = snap.docs.filter(d => !isClosedStatus(d.data().status || 'open'));
+        const closedDocs = snap.docs.filter(d => isClosedStatus(d.data().status || 'open'));
+
+        const unreadOpen = openDocs.filter(d => (d.data().lastReplyFrom || '') === 'admin').length;
+        $('ticketsHeading').textContent = unreadOpen > 0
+            ? `Open tickets (${unreadOpen} new)`
+            : 'Open tickets';
+
+        $('ticketsList').innerHTML = openDocs.length > 0
+            ? openDocs.map(renderTicketRow).join('')
+            : '<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">No open tickets. 🎉</div>';
+
+        if (closedDocs.length > 0) {
+            $('closedTicketsList').innerHTML = closedDocs.map(renderTicketRow).join('');
+            $('closedTicketsLabel').textContent = `Closed tickets (${closedDocs.length})`;
+            $('closedTicketsBlock').style.display = '';
+        } else {
+            $('closedTicketsBlock').style.display = 'none';
+        }
+
         $('ticketsCard').style.display = '';
     } catch (e) {
         console.warn('loadMyTickets failed:', e);
         $('ticketsCard').style.display = 'none';
     }
 }
+
+window.toggleClosedTickets = function() {
+    const list = $('closedTicketsList');
+    const chevron = $('closedTicketsChevron');
+    const expanded = list.style.display !== 'none';
+    list.style.display = expanded ? 'none' : '';
+    chevron.textContent = expanded ? '▸' : '▾';
+};
 
 window.openMyTicket = async function(ticketId) {
     try {
