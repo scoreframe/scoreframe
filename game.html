@@ -529,9 +529,31 @@ async function load() {
         return;
     }
 
-    if (isScheduledOnly && (game.date || 0) > Date.now()) {
-        renderUpcomingGame(hubProfile, game);
-        return;
+    // If this is still in the schedule (not yet ended into games/{id})
+    // but the broadcaster is already live AND that live stream is the
+    // one pre-created for this scheduled game, treat it as live. This
+    // is the "started early" path: fans tap the live notification, the
+    // game's `date` is still in the future, but we've actually gone
+    // live — show the embed, not a countdown.
+    if (isScheduledOnly) {
+        const liveUrl = (hubProfile.hub && hubProfile.hub.activeStreamUrl) || '';
+        const goneLive = !!(liveUrl && (
+            liveUrl === game.streamUrl ||
+            liveUrl === game.ytWatchUrl ||
+            (game.streams || []).some(s => s.url === liveUrl)
+        ));
+        if (goneLive) {
+            // Use the merged view (live pill + embed + meta) by faking the
+            // game into the live path. renderGame inspects game.streams /
+            // game.streamUrl to mount the player, so the schedule's own
+            // ytWatchUrl is enough.
+            renderGame(hubProfile, game);
+            return;
+        }
+        if ((game.date || 0) > Date.now()) {
+            renderUpcomingGame(hubProfile, game);
+            return;
+        }
     }
 
     renderGame(hubProfile, game);
@@ -556,6 +578,11 @@ function renderUpcomingGame(hub, game) {
     const metaBits = [];
     if (game.date) metaBits.push(formatDate(game.date));
     if (game.location) metaBits.push(`📍 ${game.location}`);
+    // Show the event name (league / tournament / "vs Cardinals" label)
+    // here too — Eric called this out: the hero meta is the only place
+    // upcoming context surfaces above the fold, and dropping the event
+    // makes the page feel anonymous.
+    if (eventName && opponent) metaBits.push(`🏷️ ${eventName}`);
     $('heroMeta').textContent = metaBits.join('  ·  ');
 
     // Countdown card replacing the player. We tick once per second; the
