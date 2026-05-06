@@ -1170,6 +1170,13 @@ window.cancelJoin = function() {
 // ── Reset / End ───────────────────────────────────────────────────────
 window.showDisconnectDialog = function() {
     if (confirm('Disconnect from this game? The game will continue on the phone.')) {
+        // Tell the host phone we're leaving BEFORE we reload — otherwise
+        // the relay's scorerRequest stays in place and the phone keeps
+        // showing "Web scorer connected". Same fix as cancelJoin().
+        const codeToClear = currentCode;
+        if (codeToClear) {
+            try { remove(ref(db, `sessions/${codeToClear}/scorerRequest`)); } catch(_) {}
+        }
         location.reload();
     }
 };
