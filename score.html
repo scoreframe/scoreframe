@@ -513,7 +513,7 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
 <script type="module">
 // ── Firebase SDK (v9+ modular, from CDN) ──────────────────────────────
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, set, push, onValue, off, get, onDisconnect, serverTimestamp }
+import { getDatabase, ref, set, push, onValue, off, get, onDisconnect, serverTimestamp, remove }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 import { getAuth, signInAnonymously }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1046,6 +1046,13 @@ function updateConnectionStatus() {
 }
 
 window.cancelJoin = function() {
+    // Tell the host we're leaving so the on-phone "web scorer connected"
+    // banner flips back to "waiting for scorer". Best-effort — even if the
+    // remove fails (offline, permissions) we still tear down local listeners.
+    const codeToClear = currentCode;
+    if (codeToClear) {
+        try { remove(ref(db, `sessions/${codeToClear}/scorerRequest`)); } catch(_) {}
+    }
     if (stateListener) off(ref(db, `sessions/${currentCode}/state`));
     if (metaListener) off(ref(db, `sessions/${currentCode}/meta`));
     if (scorerListener) off(ref(db, `sessions/${currentCode}/scorerRequest/status`));
