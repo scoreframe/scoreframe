@@ -1001,13 +1001,13 @@ async function loadSchedule() {
             // status keeps its existing "Watch Live" button as a
             // shortcut to the raw stream URL.
             const gameHref = g.id ? `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}` : null;
-            // Opponent is the primary line. If an Event Label was set on
+            // Opponent is the primary line. If an Event Name was set on
             // the schedule (league / tournament name), surface it as a
-            // secondary line — used to be shown only when no opponent
-            // existed, but Eric wants it visible alongside the opponent
-            // so fans see "Tigers vs Cardinals" + "Spring Tournament".
-            const headlineText = g.opponent ? `vs ${g.opponent}` : (g.eventName || 'TBD');
-            const eventLine = (g.opponent && g.eventName) ? `<div class="game-notes">🏷️ ${g.eventName}</div>` : '';
+            // secondary line. Read from `eventLabel` first (current field)
+            // and fall back to legacy `eventName` for older docs.
+            const evtName = g.eventLabel || g.eventName || '';
+            const headlineText = g.opponent ? `vs ${g.opponent}` : (evtName || 'TBD');
+            const eventLine = (g.opponent && evtName) ? `<div class="game-notes">🏷️ ${evtName}</div>` : '';
             const inner = `
                 <div class="game-date"><span class="game-status ${statusClass}">${statusLabel}</span></div>
                 <div class="game-opponent">${headlineText}</div>
@@ -1159,6 +1159,10 @@ async function loadPastGames() {
             // tap doesn't double-fire and navigate to game.html. Manager
             // action buttons stop propagation for the same reason.
             const gameHref = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}`;
+            // Event name on past games — eventName field on the past-game doc
+            // is populated by pushGameToTeamHubs (prefers eventLabel for team
+            // sports). Skip when it duplicates the bowling title.
+            const pastEvt = !isBowling && g.eventName ? g.eventName : '';
 
             html += `<div class="game-card linkable" id="game-${g.id}"
                 role="link" tabindex="0"
@@ -1169,6 +1173,8 @@ async function loadPastGames() {
                     <div class="${isBowling ? '' : 'teams'}">
                         <div class="game-date">${formatDate(g.date)}</div>
                         <div class="game-opponent">${titleLine}</div>
+                        ${pastEvt ? `<div style="color:var(--accent);font-weight:700;font-size:12px;margin-top:2px;">${pastEvt}</div>` : ''}
+                        ${g.location ? `<div style="color:var(--text-secondary);font-size:11px;margin-top:2px;">📍 ${g.location}</div>` : ''}
                         ${isBowling && scoreLine ? `<div style="margin-top:6px;color:var(--accent);font-weight:700;font-size:13px;">${scoreLine}</div>` : ''}
                         ${streamLinks ? `<div style="margin-top:6px;" onclick="event.stopPropagation();"><div style="font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:0.05em;margin-bottom:2px;">STREAMS</div>${streamLinks}</div>` : ''}
                     </div>
