@@ -661,6 +661,13 @@ function renderGame(hub, game) {
     const metaBits = [];
     if (game.date) metaBits.push(formatDate(game.date));
     if (game.location) metaBits.push(`📍 ${game.location}`);
+    // Surface the scoreboard Event Label (e.g. "Conference Game",
+    // "Spring Tournament") here too. eventLabel is the new Pro field;
+    // eventName is the legacy bowling-only field — fall back so older
+    // data still shows up. Skip duplicating when the title already
+    // contains it (bowling games use eventName as the title).
+    const evt = (game.eventLabel || game.eventName || '').trim();
+    if (evt && evt !== title) metaBits.push(`🏷️ ${evt}`);
     $('heroMeta').textContent = metaBits.join('  ·  ');
 
     // LIVE pill if this game matches the hub's active stream.
