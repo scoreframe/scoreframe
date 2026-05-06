@@ -110,7 +110,40 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
 .rec-btn.rec-stop { background: var(--bg-elevated); color: var(--error); }
 .rec-btn.rec-stop .rec-square { width: 12px; height: 12px; border-radius: 2px; background: var(--error); }
 .rec-btn.rec-highlight { background: var(--accent-dim); color: var(--accent); }
+.rec-btn.rec-buffer { background: var(--bg-elevated); color: var(--accent); border: 1px dashed var(--accent); font-size: 14px; }
 .rec-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.rec-mode-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    color: var(--accent); text-transform: uppercase;
+    margin-left: 6px;
+}
+
+/* Highlight duration picker overlay (buffer mode) */
+#highlightDurationOverlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 200; display: flex; align-items: center; justify-content: center;
+}
+#highlightDurationCard {
+    background: var(--bg-elevated); border-radius: 14px;
+    padding: 24px 20px; min-width: 240px; max-width: 90vw;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; gap: 10px;
+}
+#highlightDurationTitle {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    text-align: center; margin-bottom: 4px;
+}
+.hl-dur-btn {
+    background: var(--accent); color: #1A1A1A;
+    font-weight: 700; font-size: 15px;
+    padding: 12px 16px; border-radius: 10px; border: 0;
+    cursor: pointer;
+}
+.hl-dur-btn:active { transform: scale(0.97); }
+.hl-dur-cancel {
+    background: transparent; color: var(--text-muted);
+    padding: 10px; border: 0; cursor: pointer; font-size: 13px;
+}
 
 /* ── Waiting for Game Screen ──────────────────────────────── */
 #waitingForGameScreen {
@@ -448,13 +481,28 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
     <div class="rec-status" id="recStatus">
         <span id="recStatusIcon"></span>
         <span class="rec-timer" id="recTimer">00:00</span>
+        <span class="rec-mode-label" id="recModeLabel"></span>
     </div>
     <div class="rec-controls">
         <button class="rec-btn rec-start" id="recStartBtn" onclick="recCommand('START')" title="Record"><div class="rec-circle"></div></button>
+        <button class="rec-btn rec-buffer" id="recBufferBtn" onclick="recCommand('START_BUFFER')" title="Start buffer mode" style="display:none;">&#11096;</button>
         <button class="rec-btn rec-pause" id="recPauseBtn" onclick="recCommand('PAUSE')" title="Pause" style="display:none;">&#9646;&#9646;</button>
         <button class="rec-btn rec-start" id="recResumeBtn" onclick="recCommand('RESUME')" title="Resume" style="display:none;"><div class="rec-circle"></div></button>
         <button class="rec-btn rec-stop" id="recStopBtn" onclick="recCommandStop()" title="Stop" style="display:none;"><div class="rec-square"></div></button>
-        <button class="rec-btn rec-highlight" id="recHighlightBtn" onclick="recCommand('CAPTURE_HIGHLIGHT')" title="Highlight" style="display:none;">&#9733;</button>
+        <button class="rec-btn rec-highlight" id="recHighlightBtn" onclick="onHighlightClicked()" title="Highlight" style="display:none;">&#9733;</button>
+    </div>
+</div>
+
+<!-- Highlight duration picker (buffer mode only) -->
+<div id="highlightDurationOverlay" style="display:none;">
+    <div id="highlightDurationCard">
+        <div id="highlightDurationTitle">Capture how many seconds back?</div>
+        <button class="hl-dur-btn" onclick="captureHighlightDuration(5)">5 seconds</button>
+        <button class="hl-dur-btn" onclick="captureHighlightDuration(10)">10 seconds</button>
+        <button class="hl-dur-btn" onclick="captureHighlightDuration(20)">20 seconds</button>
+        <button class="hl-dur-btn" onclick="captureHighlightDuration(30)">30 seconds</button>
+        <button class="hl-dur-btn" onclick="captureHighlightDuration(60)">60 seconds</button>
+        <button class="hl-dur-cancel" onclick="closeHighlightPicker()">Cancel</button>
     </div>
 </div>
 
@@ -547,6 +595,8 @@ let connected = false;
 let recordingAllowed = false;
 let isRecording = false;
 let isPaused = false;
+let isBufferMode = false;
+let bufferHighlightCount = 0;
 let recordingElapsedMs = 0;
 let recTimerInterval = null;
 let gameState = null; // 'IDLE', 'ACTIVE', 'STARTING', 'ENDED'
@@ -848,6 +898,12 @@ function listenForState(code) {
         if (data.isPaused !== undefined) {
             isPaused = data.isPaused === true;
         }
+        // Buffer mode + highlight count come from the phone in the
+        // stateJson payload (added in iOS broadcastStateToRelay /
+        // Android writeState).
+        const sj = data.stateJson || {};
+        if (sj.isBufferMode !== undefined) isBufferMode = sj.isBufferMode === true;
+        if (sj.bufferHighlightCount !== undefined) bufferHighlightCount = sj.bufferHighlightCount | 0;
         if (data.recordingElapsedMs !== undefined) {
             recordingElapsedMs = data.recordingElapsedMs || 0;
         }
@@ -961,13 +1017,38 @@ function updateRecordingBar() {
     // Update timer display
     timerEl.textContent = formatRecTime(recordingElapsedMs);
 
+    // Update mode label
+    const modeLabel = $('recModeLabel');
+    if (isBufferMode) {
+        modeLabel.textContent = bufferHighlightCount > 0
+            ? `BUFFER · ${bufferHighlightCount} HL`
+            : 'BUFFER';
+    } else if (isRecording) {
+        modeLabel.textContent = '';
+    } else {
+        modeLabel.textContent = '';
+    }
+
     // Update button visibility and status
-    if (isRecording && !isPaused) {
+    if (isBufferMode) {
+        // Buffer mode — phone is rolling buffer, not saving full game.
+        // Stop tears down the buffer; Highlight prompts the duration picker.
+        statusEl.className = 'rec-status';
+        iconEl.innerHTML = '<div class="rec-live-dot" style="background:var(--accent);"></div>';
+        timerEl.style.color = 'var(--accent)';
+        $('recStartBtn').style.display = 'none';
+        $('recBufferBtn').style.display = 'none';
+        $('recPauseBtn').style.display = 'none';
+        $('recResumeBtn').style.display = 'none';
+        $('recStopBtn').style.display = 'flex';
+        $('recHighlightBtn').style.display = 'flex';
+    } else if (isRecording && !isPaused) {
         // Recording
         statusEl.className = 'rec-status';
         iconEl.innerHTML = '<div class="rec-live-dot"></div>';
         timerEl.style.color = 'var(--recording-red)';
         $('recStartBtn').style.display = 'none';
+        $('recBufferBtn').style.display = 'none';
         $('recPauseBtn').style.display = 'flex';
         $('recResumeBtn').style.display = 'none';
         $('recStopBtn').style.display = 'flex';
@@ -978,16 +1059,18 @@ function updateRecordingBar() {
         iconEl.innerHTML = '<div class="rec-pause-icon"><span></span><span></span></div>';
         timerEl.style.color = 'var(--warning)';
         $('recStartBtn').style.display = 'none';
+        $('recBufferBtn').style.display = 'none';
         $('recPauseBtn').style.display = 'none';
         $('recResumeBtn').style.display = 'flex';
         $('recStopBtn').style.display = 'flex';
         $('recHighlightBtn').style.display = 'none';
     } else {
-        // Idle
+        // Idle — show both Start (continuous) and Buffer entry-points.
         statusEl.className = 'rec-status idle';
         iconEl.innerHTML = '';
         timerEl.style.color = 'var(--text-muted)';
         $('recStartBtn').style.display = 'flex';
+        $('recBufferBtn').style.display = 'flex';
         $('recPauseBtn').style.display = 'none';
         $('recResumeBtn').style.display = 'none';
         $('recStopBtn').style.display = 'none';
@@ -1002,7 +1085,7 @@ function formatRecTime(ms) {
     return String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
 }
 
-window.recCommand = function(action) {
+window.recCommand = function(action, secondsBack) {
     if (!currentCode) return;
     // Visual feedback for highlight
     if (action === 'CAPTURE_HIGHLIGHT') {
@@ -1018,15 +1101,38 @@ window.recCommand = function(action) {
         sentAt: Date.now()
     };
     if (action === 'CAPTURE_HIGHLIGHT') {
-        cmd.secondsBack = 10;
+        cmd.secondsBack = (secondsBack && secondsBack > 0) ? secondsBack : 10;
     }
     push(ref(db, `sessions/${currentCode}/commands`), cmd);
     vibrate();
 };
 
+// Highlight button on the web: in continuous-recording mode this fires
+// straight away with the default 10s lookback, in buffer mode we open
+// the duration picker (mirrors the on-phone behaviour).
+window.onHighlightClicked = function() {
+    if (isBufferMode) {
+        $('highlightDurationOverlay').style.display = 'flex';
+    } else {
+        recCommand('CAPTURE_HIGHLIGHT');
+    }
+};
+
+window.captureHighlightDuration = function(seconds) {
+    closeHighlightPicker();
+    recCommand('CAPTURE_HIGHLIGHT', seconds);
+};
+
+window.closeHighlightPicker = function() {
+    $('highlightDurationOverlay').style.display = 'none';
+};
+
 window.recCommandStop = function() {
-    if (confirm('Stop recording?')) {
-        recCommand('STOP');
+    const msg = isBufferMode
+        ? 'Stop buffer mode? Captured highlights will be saved.'
+        : 'Stop recording?';
+    if (confirm(msg)) {
+        recCommand(isBufferMode ? 'STOP_BUFFER' : 'STOP');
     }
 };
 
