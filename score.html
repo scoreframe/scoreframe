@@ -784,7 +784,13 @@ window.joinGame = async function() {
         // Show waiting screen
         showScreen('waitingScreen');
         $('waitingText').textContent = 'Waiting for approval...';
-        $('waitingSport').textContent = sportEmoji(currentSport) + ' ' + sportDisplayName(currentSport);
+        // Same rule as the post-approval waiting screen: don't pretend
+        // GENERIC is a sport — host hasn't picked one yet.
+        if (currentSport && currentSport !== 'GENERIC') {
+            $('waitingSport').textContent = sportEmoji(currentSport) + ' ' + sportDisplayName(currentSport);
+        } else {
+            $('waitingSport').textContent = '';
+        }
 
         // Listen for approval
         listenForApproval(code);
@@ -915,7 +921,10 @@ function listenForState(code) {
 
 function showWaitingForGame() {
     showScreen('waitingForGameScreen');
-    if (currentSport) {
+    // Only show the sport once the host has actually committed to one.
+    // GENERIC is the placeholder we open the session with — don't display
+    // it as if it were a real sport choice.
+    if (currentSport && currentSport !== 'GENERIC') {
         $('waitingForGameSport').textContent = sportEmoji(currentSport) + ' ' + sportDisplayName(currentSport);
     } else {
         $('waitingForGameSport').textContent = '';
