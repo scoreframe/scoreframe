@@ -28,6 +28,7 @@
     --danger: #EF4444;
     --danger-dim: rgba(239,68,68,0.15);
     --info: #60A5FA;
+    --purple: #B69CFF;
 }
 html, body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -71,6 +72,30 @@ a:hover { text-decoration: underline; }
 .meta .meta-item { white-space: nowrap; }
 .meta b { color: var(--text-secondary); font-weight: 600; }
 
+.public-banner {
+    display: none;
+    margin: 12px auto 0;
+    max-width: 360px;
+    padding: 7px 14px;
+    background: rgba(255,150,64,0.13);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+body.public-mode .public-banner { display: inline-block; }
+body.public-mode .internal-only { display: none !important; }
+
+.public-link-row {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.public-link-row a { color: var(--text-muted); }
+.public-link-row a:hover { color: var(--accent); }
+
 /* Container */
 .container {
     max-width: 1200px;
@@ -78,12 +103,53 @@ a:hover { text-decoration: underline; }
     padding: 0 16px 60px;
 }
 
+/* Deployment Status Cards */
+.deploy-section {
+    margin: 22px 0 8px;
+}
+.deploy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+}
+.deploy-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--bg-elevated);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+.deploy-card.android-prod { border-left-color: var(--info); }
+.deploy-card.android-fad { border-left-color: var(--info); }
+.deploy-card.ios-tf { border-left-color: var(--purple); }
+.deploy-card.ios-as { border-left-color: var(--purple); }
+.deploy-card.web { border-left-color: var(--success); }
+.deploy-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+.deploy-version {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-top: 4px;
+    line-height: 1.2;
+}
+.deploy-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
 /* Stats panel */
 .stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 10px;
-    margin: 24px 0 18px;
+    margin: 22px 0 18px;
 }
 .stat {
     background: var(--bg-surface);
@@ -108,8 +174,10 @@ a:hover { text-decoration: underline; }
 }
 .stat.parity .stat-value { color: var(--success); }
 .stat.android .stat-value { color: var(--info); }
-.stat.ios .stat-value { color: #B69CFF; }
+.stat.ios .stat-value { color: var(--purple); }
+.stat.web .stat-value { color: var(--success); }
 .stat.bugs .stat-value { color: var(--danger); }
+.stat.pro .stat-value { color: var(--accent); }
 
 /* Controls */
 .controls {
@@ -175,6 +243,11 @@ a:hover { text-decoration: underline; }
     color: var(--accent);
     margin: 28px 0 10px;
 }
+.section-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: -6px 0 10px;
+}
 .parity-table {
     width: 100%;
     border-collapse: collapse;
@@ -197,10 +270,14 @@ a:hover { text-decoration: underline; }
 }
 .parity-table th.col-status, .parity-table td.col-status {
     text-align: center;
-    width: 110px;
+    width: 96px;
     white-space: nowrap;
 }
-.parity-table th.col-feature { width: 30%; }
+.parity-table th.col-effort, .parity-table td.col-effort {
+    text-align: center;
+    width: 60px;
+}
+.parity-table th.col-feature { width: 28%; }
 .parity-table th.col-notes { width: auto; }
 .parity-table tbody tr.cat-header td {
     background: linear-gradient(90deg, var(--accent-dim), transparent 60%);
@@ -221,7 +298,7 @@ a:hover { text-decoration: underline; }
 }
 .parity-table tbody tr.row:nth-child(even) td { background: var(--bg-row-alt); }
 .parity-table tbody tr.row:hover td { background: var(--bg-elevated); }
-.feature-name { font-weight: 600; color: var(--text-primary); }
+.feature-name { font-weight: 600; color: var(--text-primary); display: inline; }
 .feature-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .notes { color: var(--text-secondary); font-size: 12px; }
 .notes b { color: var(--text-primary); font-weight: 600; }
@@ -230,8 +307,8 @@ a:hover { text-decoration: underline; }
 .status {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 3px 9px;
+    gap: 4px;
+    padding: 3px 8px;
     border-radius: 999px;
     font-size: 11px;
     font-weight: 700;
@@ -245,6 +322,31 @@ a:hover { text-decoration: underline; }
 .status.stub { background: rgba(255,150,64,0.13); color: var(--accent); }
 .status.missing { background: rgba(239,68,68,0.13); color: var(--danger); }
 .status.na { background: rgba(160,160,160,0.10); color: var(--text-muted); }
+
+.pro-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    vertical-align: middle;
+}
+
+.effort-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+}
+.effort-S { background: rgba(74,222,128,0.18); color: var(--success); }
+.effort-M { background: rgba(251,191,36,0.18); color: var(--warning); }
+.effort-L { background: rgba(239,68,68,0.18); color: var(--danger); }
 
 /* Bugs table */
 .bug-status {
@@ -270,8 +372,149 @@ a:hover { text-decoration: underline; }
     color: var(--text-secondary);
 }
 .bug-platform.android { background: rgba(96,165,250,0.15); color: var(--info); }
-.bug-platform.ios { background: rgba(182,156,255,0.15); color: #B69CFF; }
+.bug-platform.ios { background: rgba(182,156,255,0.15); color: var(--purple); }
+.bug-platform.web { background: rgba(74,222,128,0.15); color: var(--success); }
 .bug-platform.both { background: var(--accent-dim); color: var(--accent); }
+
+/* Sport coverage matrix */
+.matrix {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-surface);
+    border: 1px solid var(--bg-elevated);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 12px;
+}
+.matrix thead th {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 8px;
+    text-align: center;
+    border-bottom: 1px solid #333;
+}
+.matrix thead th.sport-col { text-align: left; }
+.matrix tbody td {
+    padding: 8px 8px;
+    text-align: center;
+    border-bottom: 1px solid #1a1a1a;
+    line-height: 1.3;
+}
+.matrix tbody td.sport-name {
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.matrix tbody tr:nth-child(even) td { background: var(--bg-row-alt); }
+.matrix tbody tr:hover td { background: var(--bg-elevated); }
+.matrix .cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+}
+.cell.both { background: rgba(74,222,128,0.13); color: var(--success); }
+.cell.android-only { background: rgba(96,165,250,0.13); color: var(--info); }
+.cell.ios-only { background: rgba(182,156,255,0.13); color: var(--purple); }
+.cell.none { background: rgba(239,68,68,0.13); color: var(--danger); }
+
+/* Side-by-side commit columns */
+.commits-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-top: 6px;
+}
+.commit-col {
+    background: var(--bg-surface);
+    border: 1px solid var(--bg-elevated);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.commit-col h4 {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 12px;
+    margin: 0;
+}
+.commit-col h4.android-h { color: var(--info); }
+.commit-col h4.ios-h { color: var(--purple); }
+.commit-col h4.web-h { color: var(--success); }
+.commit-row {
+    padding: 8px 12px;
+    font-size: 12px;
+    border-bottom: 1px solid #1a1a1a;
+    line-height: 1.4;
+}
+.commit-row:last-child { border-bottom: 0; }
+.commit-meta {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.commit-msg {
+    color: var(--text-primary);
+    margin-top: 2px;
+}
+.commit-ver {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* Permissions table cells */
+.perm-cell {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+.perm-purpose {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-style: italic;
+    margin-top: 3px;
+}
+
+/* Cloud functions */
+.fn-type {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.fn-type.callable { background: rgba(96,165,250,0.15); color: var(--info); }
+.fn-type.http { background: rgba(74,222,128,0.15); color: var(--success); }
+.fn-type.scheduled { background: rgba(251,191,36,0.15); color: var(--warning); }
+.fn-type.firestore { background: var(--accent-dim); color: var(--accent); }
+.fn-type.auth { background: rgba(182,156,255,0.15); color: var(--purple); }
+
+.platform-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    margin-right: 3px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+.platform-tag.android { background: rgba(96,165,250,0.15); color: var(--info); }
+.platform-tag.ios { background: rgba(182,156,255,0.15); color: var(--purple); }
+.platform-tag.web { background: rgba(74,222,128,0.15); color: var(--success); }
+.platform-tag.unused { background: rgba(239,68,68,0.13); color: var(--danger); }
 
 /* Footer */
 .footer {
@@ -296,6 +539,39 @@ a:hover { text-decoration: underline; }
 }
 .footnote b { color: var(--text-secondary); }
 
+/* Details/Summary collapsibles */
+details.collapsible {
+    margin-top: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--bg-elevated);
+    border-radius: 10px;
+    overflow: hidden;
+}
+details.collapsible[open] { background: var(--bg-surface); }
+details.collapsible summary {
+    cursor: pointer;
+    padding: 11px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    list-style: none;
+    user-select: none;
+}
+details.collapsible summary::-webkit-details-marker { display: none; }
+details.collapsible summary::before {
+    content: '▸ ';
+    color: var(--accent);
+    margin-right: 4px;
+    transition: transform 0.15s;
+}
+details.collapsible[open] summary::before { content: '▾ '; }
+details.collapsible summary:hover { color: var(--text-primary); }
+details.collapsible > .inner {
+    padding: 0 14px 14px;
+}
+
 /* Mobile */
 @media (max-width: 720px) {
     .header { padding: 24px 16px 18px; }
@@ -304,11 +580,11 @@ a:hover { text-decoration: underline; }
     .container { padding: 0 10px 50px; }
     .stat-value { font-size: 22px; }
     .stat-label { font-size: 9px; }
+    .deploy-version { font-size: 16px; }
+    .commits-grid { grid-template-columns: 1fr; }
     .parity-table { font-size: 12px; border-radius: 8px; }
     .parity-table thead { display: none; }
-    .parity-table tbody tr.cat-header td {
-        font-size: 11px;
-    }
+    .parity-table tbody tr.cat-header td { font-size: 11px; }
     .parity-table tbody tr.row { display: block; padding: 10px 12px; border-bottom: 1px solid #1a1a1a; }
     .parity-table tbody tr.row td {
         display: block;
@@ -316,8 +592,12 @@ a:hover { text-decoration: underline; }
         border: 0;
         background: transparent !important;
     }
-    .parity-table tbody tr.row td.col-status { display: inline-block; margin-right: 6px; padding: 3px 0; width: auto; text-align: left; }
-    .parity-table tbody tr.row td.col-status::before {
+    .parity-table tbody tr.row td.col-status,
+    .parity-table tbody tr.row td.col-effort {
+        display: inline-block; margin-right: 6px; padding: 3px 0; width: auto; text-align: left;
+    }
+    .parity-table tbody tr.row td.col-status::before,
+    .parity-table tbody tr.row td.col-effort::before {
         content: attr(data-label);
         font-size: 10px;
         color: var(--text-muted);
@@ -330,6 +610,10 @@ a:hover { text-decoration: underline; }
     .parity-table tbody tr.row:nth-child(even) td { background: transparent !important; }
     .parity-table tbody tr.row:nth-child(even) { background: var(--bg-row-alt); }
     .parity-table tbody tr.row:hover { background: var(--bg-elevated); }
+    .matrix { font-size: 10px; }
+    .matrix thead th { padding: 6px 4px; font-size: 9px; }
+    .matrix tbody td { padding: 6px 4px; }
+    .matrix .cell { min-width: 20px; padding: 1px 4px; font-size: 9px; }
 }
 </style>
 </head>
@@ -338,28 +622,67 @@ a:hover { text-decoration: underline; }
 <div class="header">
     <div class="logo">Score<span class="frame">Frame</span></div>
     <div class="subtitle">Feature Parity Dashboard</div>
+    <div class="public-banner">👁️ Public Mode</div>
     <div class="meta">
         <span class="meta-item"><b>Updated:</b> 2026-05-07</span>
         <span class="meta-item"><b>Android:</b> v1.1.183</span>
-        <span class="meta-item"><b>iOS:</b> build 95 (1.1)</span>
-        <span class="meta-item"><b>Source:</b> code audit (PARITY_AUDIT_2026-05-07.md)</span>
+        <span class="meta-item"><b>iOS:</b> build 98 (1.1)</span>
+        <span class="meta-item"><b>Source:</b> code audit</span>
+    </div>
+    <div class="public-link-row internal-only">
+        <a id="public-preview-link" href="?public=1">Public preview →</a>
     </div>
 </div>
 
 <div class="container">
 
+    <!-- 3. WHAT'S DEPLOYED WHERE -->
+    <div class="section-title">What's Deployed Where</div>
+    <div class="deploy-section">
+        <div class="deploy-grid">
+            <div class="deploy-card android-prod">
+                <div class="deploy-label">Android · Play Store</div>
+                <div class="deploy-version">v1.1.173</div>
+                <div class="deploy-meta">Production · 2026-05-06</div>
+            </div>
+            <div class="deploy-card android-fad">
+                <div class="deploy-label">Android · Firebase Distribution</div>
+                <div class="deploy-version">v1.1.183</div>
+                <div class="deploy-meta">Internal testers · 2026-05-07</div>
+            </div>
+            <div class="deploy-card ios-tf">
+                <div class="deploy-label">iOS · TestFlight</div>
+                <div class="deploy-version">build 95</div>
+                <div class="deploy-meta">96–98 sideloaded only · 2026-05-07</div>
+            </div>
+            <div class="deploy-card ios-as">
+                <div class="deploy-label">iOS · App Store</div>
+                <div class="deploy-version" style="color:var(--text-muted);">— not live —</div>
+                <div class="deploy-meta">No production release yet</div>
+            </div>
+            <div class="deploy-card web">
+                <div class="deploy-label">Web · scoreframe.app</div>
+                <div class="deploy-version">2026-05-07</div>
+                <div class="deploy-meta">GitHub Pages · last commit today</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
     <div class="stats" id="stats">
         <div class="stat"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total Features</div></div>
-        <div class="stat parity"><div class="stat-value" id="stat-parity">—</div><div class="stat-label">Parity %</div></div>
+        <div class="stat parity"><div class="stat-value" id="stat-parity">—</div><div class="stat-label">Parity (A+i)</div></div>
         <div class="stat android"><div class="stat-value" id="stat-android-only">—</div><div class="stat-label">Android Only</div></div>
         <div class="stat ios"><div class="stat-value" id="stat-ios-only">—</div><div class="stat-label">iOS Only</div></div>
         <div class="stat"><div class="stat-value" id="stat-stubbed">—</div><div class="stat-label">Stubbed / Partial</div></div>
-        <div class="stat bugs"><div class="stat-value" id="stat-bugs">—</div><div class="stat-label">Open Bugs</div></div>
+        <div class="stat pro"><div class="stat-value" id="stat-pro">—</div><div class="stat-label">Pro Features</div></div>
+        <div class="stat bugs internal-only"><div class="stat-value" id="stat-bugs">—</div><div class="stat-label">Open Bugs</div></div>
     </div>
 
+    <!-- Controls -->
     <div class="controls">
         <div class="search-row">
-            <input id="search" class="search-input" type="search" placeholder="Search feature, category, or note…" autocomplete="off">
+            <input id="search" class="search-input" type="search" placeholder="Search feature, category, web row, or note…" autocomplete="off">
         </div>
         <div class="chips" id="chips">
             <span class="chip active" data-filter="all">All</span>
@@ -368,36 +691,143 @@ a:hover { text-decoration: underline; }
             <span class="chip" data-filter="ios-only">iOS Only</span>
             <span class="chip" data-filter="stubbed">Stubbed / Partial</span>
             <span class="chip" data-filter="missing">Missing Either</span>
+            <span class="chip" data-filter="web">Web-relevant</span>
+            <span class="chip" data-filter="pro">🔒 Pro Features</span>
         </div>
     </div>
 
-    <div class="section-title">Feature Parity</div>
+    <!-- 1. FEATURE PARITY (now with Web column + effort) -->
+    <div class="section-title">Feature Parity (Android · iOS · Web)</div>
+    <div class="section-sub">Effort column shown for rows where iOS is missing/stubbed. S = &lt;4h, M = ½ day–2 days, L = &gt;2 days.</div>
     <table class="parity-table" id="parity-table">
         <thead>
             <tr>
                 <th class="col-feature">Feature</th>
                 <th class="col-status">Android</th>
                 <th class="col-status">iOS</th>
+                <th class="col-status">Web</th>
+                <th class="col-effort">iOS Effort</th>
                 <th class="col-notes">Notes</th>
             </tr>
         </thead>
-        <tbody id="parity-body">
-            <!-- populated by JS -->
-        </tbody>
+        <tbody id="parity-body"><!-- populated by JS --></tbody>
     </table>
 
-    <div class="section-title" style="margin-top: 36px;">Known Bugs</div>
-    <table class="parity-table">
-        <thead>
-            <tr>
-                <th>Bug</th>
-                <th class="col-status">Status</th>
-                <th class="col-status">Platform</th>
-                <th>Description</th>
-            </tr>
-        </thead>
-        <tbody id="bugs-body"></tbody>
-    </table>
+    <!-- 2. SPORT COVERAGE MATRIX -->
+    <div class="section-title">Sport Coverage Matrix</div>
+    <div class="section-sub">"Both" = on Android and iOS. Animations on iOS not implemented; full scorebook is baseball/softball-only on both.</div>
+    <details class="collapsible" open>
+        <summary>12 sports × 5 capabilities</summary>
+        <div class="inner">
+            <table class="matrix">
+                <thead>
+                    <tr>
+                        <th class="sport-col">Sport</th>
+                        <th>Scoring Panel</th>
+                        <th>Stat Tracking</th>
+                        <th>Scoreboard Renderer</th>
+                        <th>Full Scorebook</th>
+                        <th>Animations</th>
+                    </tr>
+                </thead>
+                <tbody id="matrix-body"></tbody>
+            </table>
+        </div>
+    </details>
+
+    <!-- 4. RECENT SHIPS -->
+    <div class="section-title">Recent Ships (Last 10 commits per platform)</div>
+    <div class="commits-grid">
+        <div class="commit-col">
+            <h4 class="android-h">Android</h4>
+            <div id="commits-android"></div>
+        </div>
+        <div class="commit-col">
+            <h4 class="ios-h">iOS</h4>
+            <div id="commits-ios"></div>
+        </div>
+        <div class="commit-col">
+            <h4 class="web-h">Web</h4>
+            <div id="commits-web"></div>
+        </div>
+    </div>
+
+    <!-- Open Bugs (internal only) -->
+    <div class="internal-only">
+        <div class="section-title">Open Bugs</div>
+        <table class="parity-table">
+            <thead>
+                <tr>
+                    <th>Bug</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-status">Platform</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody id="bugs-body"></tbody>
+        </table>
+    </div>
+
+    <!-- 6. RECENTLY FIXED (internal only) -->
+    <div class="internal-only">
+        <div class="section-title">Recently Fixed (last ~30 days)</div>
+        <details class="collapsible">
+            <summary>Mined from git log — fix:/fixed/bug commits</summary>
+            <div class="inner">
+                <table class="parity-table">
+                    <thead>
+                        <tr>
+                            <th>Fix</th>
+                            <th class="col-status">Version</th>
+                            <th class="col-status">Date</th>
+                            <th class="col-status">Platform</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fixed-body"></tbody>
+                </table>
+            </div>
+        </details>
+    </div>
+
+    <!-- 8. PERMISSIONS / PRIVACY COMPARISON -->
+    <div class="section-title">Permissions / Privacy Comparison</div>
+    <details class="collapsible">
+        <summary>Android Manifest vs iOS Info.plist</summary>
+        <div class="inner">
+            <table class="parity-table">
+                <thead>
+                    <tr>
+                        <th class="col-feature">Capability</th>
+                        <th>Android</th>
+                        <th>iOS</th>
+                        <th class="col-notes">Purpose / Drift</th>
+                    </tr>
+                </thead>
+                <tbody id="perms-body"></tbody>
+            </table>
+        </div>
+    </details>
+
+    <!-- 9. CLOUD FUNCTIONS INDEX (internal only) -->
+    <div class="internal-only">
+        <div class="section-title">Cloud Functions Index</div>
+        <details class="collapsible">
+            <summary>functions/index.js — 22 exports</summary>
+            <div class="inner">
+                <table class="parity-table">
+                    <thead>
+                        <tr>
+                            <th class="col-feature">Function</th>
+                            <th class="col-status">Type</th>
+                            <th>Called from</th>
+                            <th class="col-notes">Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fns-body"></tbody>
+                </table>
+            </div>
+        </details>
+    </div>
 
     <div class="footnote">
         <b>Out of scope:</b> Genealogy / Family Tree, Mess Hall, and Visitor role belong to Eric's other apps (Glavin family memory app and Lego BrickFlip respectively) — not present in either ScoreFrame codebase. They are intentionally omitted from this dashboard.
@@ -433,330 +863,452 @@ const STATUS = {
     na:       { ico: '—',  label: 'N/A' }
 };
 
-// FEATURES: 20 categories, ~210 rows. Status verified against
-// /Users/ericbloomcamp/Developer/ScoreFrameIOS/PARITY_AUDIT_2026-05-07.md
-// (line-by-line code audit) plus FeatureGate.kt / FeatureGate.swift / CLAUDE.md.
+// FEATURES: web column added; pro flag added; effort field for iOS gaps.
+// Verified against PARITY_AUDIT_2026-05-07 + FeatureGate.kt/swift + repo greps.
 const FEATURES = [
     /* ---------- Authentication & Account ---------- */
-    { cat: 'Authentication & Account', name: 'Firebase Auth — email + password', a: 'shipped', i: 'shipped' },
-    { cat: 'Authentication & Account', name: 'Google Sign-In', a: 'shipped', i: 'shipped', notes: 'Android: Credential Manager API. iOS: GoogleSignIn SDK.' },
-    { cat: 'Authentication & Account', name: 'Web OAuth fallback (different account)', a: 'shipped', i: 'partial', notes: 'Android: signInWithGoogleWeb via OAuthProvider. iOS uses standard provider only.' },
-    { cat: 'Authentication & Account', name: 'Sign-out with sync prompt', a: 'shipped', i: 'shipped' },
-    { cat: 'Authentication & Account', name: 'Account switch detection + local wipe', a: 'shipped', i: 'shipped', notes: 'last_signed_in_uid pref guard.' },
-    { cat: 'Authentication & Account', name: 'Account deletion (GDPR cascade)', a: 'shipped', i: 'shipped' },
-    { cat: 'Authentication & Account', name: 'Marketing opt-in checkbox', a: 'shipped', i: 'shipped' },
-    { cat: 'Authentication & Account', name: 'Per-team disposition on delete', a: 'shipped', i: 'shipped' },
-    { cat: 'Authentication & Account', name: 'Tier badge on Account screen', a: 'shipped', i: 'shipped' },
-    { cat: 'Authentication & Account', name: 'Super-user flag (debug tier switcher)', a: 'shipped', i: 'shipped' },
+    { cat: 'Authentication & Account', name: 'Firebase Auth — email + password', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Web auth on dashboard.html, support.html, team.html, beta.html, reset-password.html.' },
+    { cat: 'Authentication & Account', name: 'Google Sign-In', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Android: Credential Manager. iOS: GoogleSignIn SDK. Web: Firebase popup.' },
+    { cat: 'Authentication & Account', name: 'Web OAuth fallback (different account)', a: 'shipped', i: 'partial', w: 'na', notes: 'Android: signInWithGoogleWeb via OAuthProvider. iOS standard provider only.' },
+    { cat: 'Authentication & Account', name: 'Sign-out with sync prompt', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Authentication & Account', name: 'Account switch detection + local wipe', a: 'shipped', i: 'shipped', w: 'na', notes: 'last_signed_in_uid pref guard.' },
+    { cat: 'Authentication & Account', name: 'Account deletion (GDPR cascade)', a: 'shipped', i: 'shipped', w: 'partial', notes: 'Web: delete-account.html instructions only.' },
+    { cat: 'Authentication & Account', name: 'Marketing opt-in checkbox', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Authentication & Account', name: 'Per-team disposition on delete', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Authentication & Account', name: 'Tier badge on Account screen', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Authentication & Account', name: 'Super-user flag (debug tier switcher)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'admin.html gates on super-user uid.' },
+    { cat: 'Authentication & Account', name: 'Password reset (email link)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'reset-password.html handles the action link.' },
 
     /* ---------- Home / Dashboard ---------- */
-    { cat: 'Home/Dashboard', name: '6-tab bottom nav (Home/Teams/Hubs/History/Settings/Account)', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'HomeDataStore (snapshot listeners + cache)', a: 'shipped', i: 'partial', notes: 'Android persists Firestore snapshots to disk for instant cold start.' },
-    { cat: 'Home/Dashboard', name: 'Hero card / Resume game CTA', a: 'shipped', i: 'shipped', notes: 'Android: just fixed in v1.1.183 (hero box was hijacking New Game CTA on no-active-session).' },
-    { cat: 'Home/Dashboard', name: 'Default New Game / Quick Start hero', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'Connect Phones button', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'Quick Stats row (games / hours / highlights)', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'Recent Games section', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'My Teams + My Players sections', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'Team Hubs section (Managing / Following)', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'Upcoming Games (cross-hub aggregator)', a: 'shipped', i: 'partial', notes: 'iOS gatherHubRefs is local-only; missing cloud myTeams fallback.' },
-    { cat: 'Home/Dashboard', name: 'Unlinked videos with thumbnails', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'Tips section (rotating)', a: 'shipped', i: 'partial' },
-    { cat: 'Home/Dashboard', name: 'Pro upsell card', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'Pull-to-refresh cloud sync', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'Notification bell + center', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'Coach marks tutorial (5–6 step)', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'Onboarding flow (5 pages)', a: 'shipped', i: 'shipped' },
-    { cat: 'Home/Dashboard', name: 'SF watermark behind Home content', a: 'shipped', i: 'partial' },
+    { cat: 'Home/Dashboard', name: '6-tab bottom nav (Home/Teams/Hubs/History/Settings/Account)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'HomeDataStore (snapshot listeners + cache)', a: 'shipped', i: 'partial', w: 'na', notes: 'Android persists Firestore snapshots to disk for instant cold start.' },
+    { cat: 'Home/Dashboard', name: 'Hero card / Resume game CTA', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android: just fixed in v1.1.183 (hero box was hijacking New Game CTA).' },
+    { cat: 'Home/Dashboard', name: 'Default New Game / Quick Start hero', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'Connect Phones button', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'Quick Stats row (games / hours / highlights)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'Recent Games section', a: 'shipped', i: 'shipped', w: 'partial', notes: 'dashboard.html lists subscribed hubs but not personal recent games.' },
+    { cat: 'Home/Dashboard', name: 'My Teams + My Players sections', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'Team Hubs section (Managing / Following)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'dashboard.html shows owned + followed teams.' },
+    { cat: 'Home/Dashboard', name: 'Upcoming Games (cross-hub aggregator)', a: 'shipped', i: 'partial', w: 'na', notes: 'iOS gatherHubRefs is local-only; missing cloud myTeams fallback.' },
+    { cat: 'Home/Dashboard', name: 'Unlinked videos with thumbnails', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'Tips section (rotating)', a: 'shipped', i: 'partial', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'Pro upsell card', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'Pull-to-refresh cloud sync', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'Notification bell + center', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'Coach marks tutorial (5–6 step)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'Onboarding flow (5 pages)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'SF watermark behind Home content', a: 'shipped', i: 'partial', w: 'na' },
 
     /* ---------- Game Setup & Recording ---------- */
-    { cat: 'Game Setup & Recording', name: 'Sport picker (12 sports)', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Game Setup unified dialog', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Team assignment from saved teams', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Inline team color customization', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Event Label (Pro)', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Color swap button', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Basketball — +1/+2/+3, fouls, timeouts, bonus', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Football — TD/FG/XP, downs, possession, OT', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Bowling — multi-bowler 1–6 + auto-advance', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Bowling — end-of-game stacked overlay (burned in)', a: 'shipped', i: 'partial', notes: 'iOS has live multi-bowler overlay but not the end-game burn. (Tied to End-Game Overlay gap.)' },
-    { cat: 'Game Setup & Recording', name: 'Soccer — simple + advanced + match timer', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Volleyball — sets, per-player stats, fire icon', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Generic — home/away score, period label', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Baseball/Softball — basic line score', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Baseball Full Scorebook (Pro)', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Baseball — interactive diamond figurines', a: 'shipped', i: 'partial', notes: 'iOS diamond is simpler — no figurines, no fielder labels, no count strip.' },
-    { cat: 'Game Setup & Recording', name: 'Baseball — scorebook cell basepath notation', a: 'shipped', i: 'partial', notes: 'iOS cell shows result label only, no green/dashed advancement lines.' },
-    { cat: 'Game Setup & Recording', name: 'Baseball — fielding play picker (3×3 grid)', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Baseball scorebook PDF export', a: 'shipped', i: 'missing', notes: 'iOS has stats PDF only; no scorebook PDF.' },
-    { cat: 'Game Setup & Recording', name: 'Tennis — tiebreak (6-6 → 7, win by 2)', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Pickleball — side-out + server rotation', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Hockey — power play, SOG, PIM', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Lacrosse — goals, SOG, GB, faceoffs', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Football interactive field with draggable ball', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Field-goal / kickoff / punt return modes', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Penalty dialog (offense/defense + yards)', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'Volleyball pool play / Best-of-3/5', a: 'shipped', i: 'shipped' },
-    { cat: 'Game Setup & Recording', name: 'End Game universal dialog', a: 'shipped', i: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'Sport picker (12 sports)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'score.html supports all 12 sports.' },
+    { cat: 'Game Setup & Recording', name: 'Game Setup unified dialog', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game Setup & Recording', name: 'Team assignment from saved teams', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game Setup & Recording', name: 'Inline team color customization', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game Setup & Recording', name: 'Event Label', a: 'shipped', i: 'shipped', w: 'na', pro: true },
+    { cat: 'Game Setup & Recording', name: 'Color swap button', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game Setup & Recording', name: 'Basketball — +1/+2/+3, fouls, timeouts, bonus', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'Football — TD/FG/XP, downs, possession, OT', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'Bowling — multi-bowler 1–6 + auto-advance', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'Bowling — end-of-game stacked overlay (burned in)', a: 'shipped', i: 'partial', w: 'na', effort: 'M', notes: 'iOS has live multi-bowler overlay but not the end-game burn.' },
+    { cat: 'Game Setup & Recording', name: 'Soccer — simple + advanced + match timer', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'Volleyball — sets, per-player stats, fire icon', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'Generic — home/away score, period label', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'Baseball/Softball — basic line score', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'Baseball Full Scorebook', a: 'shipped', i: 'shipped', w: 'na', pro: true },
+    { cat: 'Game Setup & Recording', name: 'Baseball — interactive diamond figurines', a: 'shipped', i: 'partial', w: 'na', effort: 'L', notes: 'iOS diamond is simpler — no figurines, no fielder labels, no count strip.' },
+    { cat: 'Game Setup & Recording', name: 'Baseball — scorebook cell basepath notation', a: 'shipped', i: 'partial', w: 'na', effort: 'M', notes: 'iOS cell shows result label only, no green/dashed advancement lines.' },
+    { cat: 'Game Setup & Recording', name: 'Baseball — fielding play picker (3×3 grid)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game Setup & Recording', name: 'Baseball scorebook PDF export', a: 'shipped', i: 'missing', w: 'na', effort: 'L', notes: 'iOS has stats PDF only; no scorebook PDF.' },
+    { cat: 'Game Setup & Recording', name: 'Tennis — tiebreak (6-6 → 7, win by 2)', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'Pickleball — side-out + server rotation', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'Hockey — power play, SOG, PIM', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'Lacrosse — goals, SOG, GB, faceoffs', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'Football interactive field with draggable ball', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game Setup & Recording', name: 'Field-goal / kickoff / punt return modes', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game Setup & Recording', name: 'Penalty dialog (offense/defense + yards)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game Setup & Recording', name: 'Volleyball pool play / Best-of-3/5', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Game Setup & Recording', name: 'End Game universal dialog', a: 'shipped', i: 'shipped', w: 'na' },
 
     /* ---------- Video Recording ---------- */
-    { cat: 'Video Recording', name: 'Camera capture pipeline', a: 'shipped', i: 'shipped', notes: 'Android: Camera2 + OpenGL ES. iOS: AVCaptureSession + Metal.' },
-    { cat: 'Video Recording', name: 'Scoreboard burned into video at capture', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Resolution presets — 720p / 1080p / 4K', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: '4K (Pro-gated)', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Stabilization (OIS / EIS / cinematic)', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'White balance presets', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Exposure compensation', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'HDR (Pro)', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Tap-to-focus + dotted indicator (Pro)', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Edge enhancement / sharpening (Pro)', a: 'shipped', i: 'stub', notes: 'iOS UI tile + pref save, but no AVFoundation hook ("No live AVFoundation hook on iOS" comment in QuickSettingsOverlay.swift).' },
-    { cat: 'Video Recording', name: 'Watermark on free tier', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Highlight extraction (Pro: unlimited / Free: 3)', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Highlight buffer mode — rolling 60s (Pro)', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Recording cap free=20 min', a: 'shipped', i: 'shipped', notes: 'Both 20 min — verified in FeatureGate (last night\'s "45 vs 20" claim was wrong).' },
-    { cat: 'Video Recording', name: 'Direct-to-MediaStore / PHAsset save', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Mic mute toggle', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Camera snapshot (JPEG with overlay)', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Screen-dim mode (black + brightness 0)', a: 'shipped', i: 'partial' },
-    { cat: 'Video Recording', name: 'Storage warning system', a: 'shipped', i: 'partial', notes: 'iOS counterpart not verified at line level.' },
-    { cat: 'Video Recording', name: 'External BT button (Pro)', a: 'shipped', i: 'shipped', notes: 'iOS: MPRemoteCommandCenter + AVAudioSession volume KVO.' },
-    { cat: 'Video Recording', name: 'External BT zoom buttons (Pro)', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Portrait mode recording', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Fullscreen mode + right scoring drawer (Pro)', a: 'shipped', i: 'partial', notes: 'iOS fullscreen toggling is buggy (see Bugs).' },
-    { cat: 'Video Recording', name: 'Scoring-only mode (no video)', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Scoreboard zoom (tap to enlarge)', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Scoreboard visibility toggle (eye)', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'End-of-game stats overlay (burned in)', a: 'shipped', i: 'missing', notes: 'No setEndGameOverlay / createEndGameSummary on iOS (CameraRenderer / Compositor / Recording all checked).' },
-    { cat: 'Video Recording', name: 'Scoring animations (CONFETTI/STRIKE/GOAL/TOUCHDOWN/ACE)', a: 'shipped', i: 'missing', notes: 'No ScoringAnimationRenderer.swift, no triggerAnimation, no scoring_animations_enabled pref on iOS.' },
-    { cat: 'Video Recording', name: 'Per-game video folder + SF_{shortId} naming', a: 'shipped', i: 'shipped' },
-    { cat: 'Video Recording', name: 'Video repair tool (interrupted MP4)', a: 'partial', i: 'shipped', notes: 'iOS has explicit VideoRepairTool.swift; Android relies on graceful auto-save.' },
+    { cat: 'Video Recording', name: 'Camera capture pipeline', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android: Camera2 + OpenGL ES. iOS: AVCaptureSession + Metal.' },
+    { cat: 'Video Recording', name: 'Scoreboard burned into video at capture', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Video Recording', name: 'Resolution presets — 720p / 1080p / 4K', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Video Recording', name: '4K recording', a: 'shipped', i: 'shipped', w: 'na', pro: true },
+    { cat: 'Video Recording', name: 'Stabilization (OIS / EIS / cinematic)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Video Recording', name: 'White balance presets', a: 'shipped', i: 'shipped', w: 'na', pro: true },
+    { cat: 'Video Recording', name: 'Exposure compensation', a: 'shipped', i: 'shipped', w: 'na', pro: true },
+    { cat: 'Video Recording', name: 'HDR', a: 'shipped', i: 'shipped', w: 'na', pro: true },
+    { cat: 'Video Recording', name: 'Tap-to-focus + dotted indicator', a: 'shipped', i: 'shipped', w: 'na', pro: true },
+    { cat: 'Video Recording', name: 'Edge enhancement / sharpening', a: 'shipped', i: 'stub', w: 'na', pro: true, effort: 'S', notes: 'iOS UI tile + pref save, but no AVFoundation hook ("No live AVFoundation hook on iOS").' },
+    { cat: 'Video Recording', name: 'Watermark on free tier', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Video Recording', name: 'Highlight extraction (Pro: unlimited / Free: 3)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Video Recording', name: 'Highlight buffer mode — rolling 60s', a: 'shipped', i: 'shipped', w: 'na', pro: true },
+    { cat: 'Video Recording', name: 'Recording cap free=20 min', a: 'shipped', i: 'shipped', w: 'na', notes: 'Both 20 min — verified in FeatureGate.' },
+    { cat: 'Video Recording', name: 'Direct-to-MediaStore / PHAsset save', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Video Recording', name: 'Mic mute toggle', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Video Recording', name: 'Camera snapshot (JPEG with overlay)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Video Recording', name: 'Screen-dim mode (black + brightness 0)', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
+    { cat: 'Video Recording', name: 'Storage warning system', a: 'shipped', i: 'partial', w: 'na', effort: 'S', notes: 'iOS counterpart not verified at line level.' },
+    { cat: 'Video Recording', name: 'External BT button', a: 'shipped', i: 'shipped', w: 'na', pro: true, notes: 'iOS: MPRemoteCommandCenter + AVAudioSession volume KVO.' },
+    { cat: 'Video Recording', name: 'External BT zoom buttons', a: 'shipped', i: 'shipped', w: 'na', pro: true },
+    { cat: 'Video Recording', name: 'Portrait mode recording', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Video Recording', name: 'Fullscreen mode + right scoring drawer', a: 'shipped', i: 'partial', w: 'na', pro: true, effort: 'M', notes: 'iOS fullscreen toggling is buggy (see Bugs).' },
+    { cat: 'Video Recording', name: 'Scoring-only mode (no video)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'score.html is essentially scoring-only by design.' },
+    { cat: 'Video Recording', name: 'Scoreboard zoom (tap to enlarge)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Video Recording', name: 'Scoreboard visibility toggle (eye)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Video Recording', name: 'End-of-game stats overlay (burned in)', a: 'shipped', i: 'missing', w: 'na', effort: 'L', notes: 'No setEndGameOverlay / createEndGameSummary on iOS.' },
+    { cat: 'Video Recording', name: 'Scoring animations (CONFETTI/STRIKE/GOAL/TOUCHDOWN/ACE)', a: 'shipped', i: 'missing', w: 'na', effort: 'L', notes: '358-line ScoringAnimationRenderer.kt; no iOS equivalent + no animations pref.' },
+    { cat: 'Video Recording', name: 'Per-game video folder + SF_{shortId} naming', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Video Recording', name: 'Video repair tool (interrupted MP4)', a: 'partial', i: 'shipped', w: 'na', notes: 'iOS has explicit VideoRepairTool.swift; Android relies on graceful auto-save.' },
 
     /* ---------- Game History ---------- */
-    { cat: 'Game History', name: 'Game history CRUD (sport filter, drill-downs)', a: 'shipped', i: 'shipped' },
-    { cat: 'Game History', name: 'Career stats per player', a: 'shipped', i: 'shipped' },
-    { cat: 'Game History', name: 'Career stats per team (W/L/T/PF/PA)', a: 'shipped', i: 'shipped' },
-    { cat: 'Game History', name: 'Game detail screen (edit, move, delete)', a: 'shipped', i: 'shipped' },
-    { cat: 'Game History', name: 'Baseball scorebook viewer', a: 'shipped', i: 'shipped' },
-    { cat: 'Game History', name: 'Bowling per-game scores breakdown', a: 'shipped', i: 'shipped' },
-    { cat: 'Game History', name: 'Stream replay links (YouTube + Photos)', a: 'shipped', i: 'shipped' },
-    { cat: 'Game History', name: 'Video ↔ game bidirectional linking', a: 'shipped', i: 'shipped' },
-    { cat: 'Game History', name: 'Stats export PDF', a: 'shipped', i: 'shipped' },
-    { cat: 'Game History', name: 'Rebuild career stats from history', a: 'shipped', i: 'partial' },
-    { cat: 'Game History', name: 'Locked / archived games (free overflow)', a: 'shipped', i: 'missing', notes: 'maxSavedGames=10 declared on iOS but not enforced — Pro-tier leak.' },
+    { cat: 'Game History', name: 'Game history CRUD (sport filter, drill-downs)', a: 'shipped', i: 'shipped', w: 'partial', notes: 'team.html shows past games per hub; no personal history.' },
+    { cat: 'Game History', name: 'Career stats per player', a: 'shipped', i: 'shipped', w: 'partial', notes: 'team.html roster shows player stats.' },
+    { cat: 'Game History', name: 'Career stats per team (W/L/T/PF/PA)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Surfaced on team.html.' },
+    { cat: 'Game History', name: 'Game detail screen (edit, move, delete)', a: 'shipped', i: 'shipped', w: 'partial', notes: 'team.html allows manager edits; game.html for read.' },
+    { cat: 'Game History', name: 'Baseball scorebook viewer', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game History', name: 'Bowling per-game scores breakdown', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game History', name: 'Stream replay links (YouTube + Photos)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'team.html / game.html embed YouTube replays.' },
+    { cat: 'Game History', name: 'Video ↔ game bidirectional linking', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game History', name: 'Stats export PDF', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game History', name: 'Rebuild career stats from history', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
+    { cat: 'Game History', name: 'Locked / archived games (free overflow)', a: 'shipped', i: 'missing', w: 'na', effort: 'S', notes: 'maxSavedGames=10 declared on iOS but not enforced — Pro-tier leak.' },
 
     /* ---------- Schedule / Agenda ---------- */
-    { cat: 'Schedule/Agenda', name: 'Schedule add / edit / delete', a: 'shipped', i: 'shipped' },
-    { cat: 'Schedule/Agenda', name: 'Cross-hub Schedule aggregator', a: 'shipped', i: 'shipped', notes: 'iOS recently caught up via ScheduleAggregator.' },
-    { cat: 'Schedule/Agenda', name: 'Schedule cloud fallback (cloud-authoritative myTeams)', a: 'shipped', i: 'partial', notes: 'iOS gatherHubRefs is local-only — see Bugs.' },
-    { cat: 'Schedule/Agenda', name: 'Pre-created YouTube broadcast at schedule time', a: 'shipped', i: 'shipped' },
-    { cat: 'Schedule/Agenda', name: 'Schedule reminder bell routing', a: 'shipped', i: 'shipped' },
-    { cat: 'Schedule/Agenda', name: 'Single games-collection (status-based)', a: 'shipped', i: 'shipped', notes: 'May 06 cutover — teams/{id}/games/{id} with status field.' },
-    { cat: 'Schedule/Agenda', name: 'Auto-complete on End Game (opponent match)', a: 'shipped', i: 'shipped' },
+    { cat: 'Schedule/Agenda', name: 'Schedule add / edit / delete', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Manager edits schedule on team.html.' },
+    { cat: 'Schedule/Agenda', name: 'Cross-hub Schedule aggregator', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Schedule/Agenda', name: 'Schedule cloud fallback (cloud-authoritative myTeams)', a: 'shipped', i: 'partial', w: 'na', effort: 'S', notes: 'iOS gatherHubRefs is local-only.' },
+    { cat: 'Schedule/Agenda', name: 'Pre-created YouTube broadcast at schedule time', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Schedule/Agenda', name: 'Schedule reminder bell routing', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Schedule/Agenda', name: 'Single games-collection (status-based)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'May 06 cutover — teams/{id}/games/{id} with status field.' },
+    { cat: 'Schedule/Agenda', name: 'Auto-complete on End Game (opponent match)', a: 'shipped', i: 'shipped', w: 'na' },
 
     /* ---------- Team Hubs ---------- */
-    { cat: 'Team Hubs', name: 'Hub create / delete', a: 'shipped', i: 'shipped' },
-    { cat: 'Team Hubs', name: 'Hub limit (Free=1, Pro=∞)', a: 'shipped', i: 'shipped' },
-    { cat: 'Team Hubs', name: 'Subscriber approve / block / remove', a: 'shipped', i: 'shipped' },
-    { cat: 'Team Hubs', name: 'Manager invitations + accept/decline', a: 'shipped', i: 'shipped' },
-    { cat: 'Team Hubs', name: 'Public hub web page (team.html)', a: 'shipped', i: 'shipped', notes: 'Web page is platform-independent.' },
-    { cat: 'Team Hubs', name: 'Hub web index (hubIndex/{code})', a: 'shipped', i: 'shipped' },
-    { cat: 'Team Hubs', name: 'Live stream URL push to hub', a: 'shipped', i: 'shipped' },
-    { cat: 'Team Hubs', name: 'In-app team hub viewer', a: 'shipped', i: 'shipped' },
-    { cat: 'Team Hubs', name: 'Per-team logo upload (Firebase Storage)', a: 'shipped', i: 'shipped' },
+    { cat: 'Team Hubs', name: 'Hub create / delete', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Team Hubs', name: 'Hub limit (Free=1, Pro=∞)', a: 'shipped', i: 'shipped', w: 'na', pro: true },
+    { cat: 'Team Hubs', name: 'Subscriber approve / block / remove', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'team.html has manager controls.' },
+    { cat: 'Team Hubs', name: 'Manager invitations + accept/decline', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'dashboard.html has invitation list.' },
+    { cat: 'Team Hubs', name: 'Public hub web page (team.html)', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Team Hubs', name: 'Hub web index (hubIndex/{code})', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Team Hubs', name: 'Live stream URL push to hub', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Read by team.html / game.html / watch.html.' },
+    { cat: 'Team Hubs', name: 'In-app team hub viewer', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Team Hubs', name: 'Per-team logo upload (Firebase Storage)', a: 'shipped', i: 'shipped', w: 'na' },
 
     /* ---------- Reminders / Notifications ---------- */
-    { cat: 'Reminders', name: 'In-app schedule reminder routing', a: 'shipped', i: 'shipped' },
-    { cat: 'Reminders', name: 'Smart Reminders MVP framework', a: 'missing', i: 'missing', notes: 'Genealogy-app concept — never built into ScoreFrame.' },
+    { cat: 'Reminders', name: 'In-app schedule reminder routing', a: 'shipped', i: 'shipped', w: 'na' },
 
     /* ---------- Streaming / YouTube ---------- */
-    { cat: 'Streaming/YouTube', name: 'RTMP streaming', a: 'shipped', i: 'shipped', notes: 'Android: hand-rolled RtmpClient.kt. iOS: HaishinKit 1.9.x.' },
-    { cat: 'Streaming/YouTube', name: 'Stream encoder (H.264 + AAC)', a: 'shipped', i: 'shipped' },
-    { cat: 'Streaming/YouTube', name: 'YouTube OAuth one-tap', a: 'shipped', i: 'shipped' },
-    { cat: 'Streaming/YouTube', name: 'YouTube Live broadcast create / bind / start / stop', a: 'shipped', i: 'shipped' },
-    { cat: 'Streaming/YouTube', name: 'Manual stream key paste (any RTMP)', a: 'shipped', i: 'shipped' },
-    { cat: 'Streaming/YouTube', name: 'YouTube live chat polling + send', a: 'shipped', i: 'shipped' },
-    { cat: 'Streaming/YouTube', name: 'Stream quality presets (Std/High/Ultra)', a: 'shipped', i: 'stub', notes: 'iOS gate canSelectStreamQuality declared, no preset enum / UI.' },
-    { cat: 'Streaming/YouTube', name: 'Adaptive bitrate (Pro)', a: 'shipped', i: 'stub', notes: 'iOS gate canUseAdaptiveBitrate declared, no AdaptiveBitrateManager.swift.' },
-    { cat: 'Streaming/YouTube', name: 'Stream duration cap (Free=10 min)', a: 'shipped', i: 'shipped' },
-    { cat: 'Streaming/YouTube', name: 'Stream URL share / copy', a: 'shipped', i: 'shipped' },
-    { cat: 'Streaming/YouTube', name: 'Live chat overlay during stream', a: 'shipped', i: 'partial' },
-    { cat: 'Streaming/YouTube', name: 'Stream survives backgrounding', a: 'shipped', i: 'partial' },
-    { cat: 'Streaming/YouTube', name: 'Auto-thumbnail generation', a: 'shipped', i: 'partial' },
-    { cat: 'Streaming/YouTube', name: 'Amazon IVS streaming', a: 'shipped', i: 'missing', notes: 'Deliberately skipped on iOS per YouTube-invisible-plumbing strategy.' },
+    { cat: 'Streaming/YouTube', name: 'RTMP streaming', a: 'shipped', i: 'shipped', w: 'na', pro: true, notes: 'Android: hand-rolled RtmpClient.kt. iOS: HaishinKit 1.9.x.' },
+    { cat: 'Streaming/YouTube', name: 'Stream encoder (H.264 + AAC)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Streaming/YouTube', name: 'YouTube OAuth one-tap', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Streaming/YouTube', name: 'YouTube Live broadcast create / bind / start / stop', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Streaming/YouTube', name: 'Manual stream key paste (any RTMP)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Streaming/YouTube', name: 'YouTube live chat polling + send', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Streaming/YouTube', name: 'Stream quality presets (Std/High/Ultra)', a: 'shipped', i: 'stub', w: 'na', pro: true, effort: 'M', notes: 'iOS gate canSelectStreamQuality declared, no preset enum / UI.' },
+    { cat: 'Streaming/YouTube', name: 'Adaptive bitrate', a: 'shipped', i: 'stub', w: 'na', pro: true, effort: 'M', notes: 'iOS gate canUseAdaptiveBitrate declared, no AdaptiveBitrateManager.swift.' },
+    { cat: 'Streaming/YouTube', name: 'Stream duration cap (Free=10 min)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Streaming/YouTube', name: 'Stream URL share / copy', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Streaming/YouTube', name: 'Live chat overlay during stream', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
+    { cat: 'Streaming/YouTube', name: 'Stream survives backgrounding', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
+    { cat: 'Streaming/YouTube', name: 'Auto-thumbnail generation', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
+    { cat: 'Streaming/YouTube', name: 'Amazon IVS streaming', a: 'shipped', i: 'missing', w: 'na', effort: 'L', notes: 'Deliberately skipped on iOS per YouTube-invisible-plumbing strategy.' },
 
     /* ---------- Watch Page / Live Viewing ---------- */
-    { cat: 'Watch Page/Live Viewing', name: 'watch.html (HLS + Firebase scoreboard)', a: 'shipped', i: 'shipped', notes: 'Web page shared.' },
-    { cat: 'Watch Page/Live Viewing', name: 'In-app HLS viewer (StreamViewerActivity)', a: 'shipped', i: 'missing', notes: 'iOS users go via Safari to scoreframe.app/watch.' },
-    { cat: 'Watch Page/Live Viewing', name: 'Score timed metadata (ID3 ticker)', a: 'shipped', i: 'missing', notes: 'iOS does not push score state to a watch session (paired with IVS gap).' },
-    { cat: 'Watch Page/Live Viewing', name: 'game.html YouTube embed page', a: 'shipped', i: 'shipped' },
+    { cat: 'Watch Page/Live Viewing', name: 'watch.html (HLS + Firebase scoreboard)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Web page shared.' },
+    { cat: 'Watch Page/Live Viewing', name: 'In-app HLS viewer (StreamViewerActivity)', a: 'shipped', i: 'missing', w: 'na', effort: 'L', notes: 'iOS users go via Safari to scoreframe.app/watch.' },
+    { cat: 'Watch Page/Live Viewing', name: 'Score timed metadata (ID3 ticker)', a: 'shipped', i: 'missing', w: 'shipped', effort: 'M', notes: 'iOS does not push score state to a watch session.' },
+    { cat: 'Watch Page/Live Viewing', name: 'game.html YouTube embed page', a: 'shipped', i: 'shipped', w: 'shipped' },
 
     /* ---------- Notifications & Push ---------- */
-    { cat: 'Notifications & Push', name: 'FCM push notifications', a: 'shipped', i: 'shipped' },
-    { cat: 'Notifications & Push', name: 'Cloud Function FCM dispatcher', a: 'shipped', i: 'shipped', notes: 'Server-side, shared.' },
-    { cat: 'Notifications & Push', name: 'In-app notification center + JSON storage', a: 'shipped', i: 'shipped' },
-    { cat: 'Notifications & Push', name: 'Follow-request system notification (Approve/Block actions)', a: 'shipped', i: 'partial', notes: 'iOS approves via in-app — no system-notification action buttons (platform diff).' },
-    { cat: 'Notifications & Push', name: 'Schedule reminder notifications', a: 'shipped', i: 'shipped' },
-    { cat: 'Notifications & Push', name: 'Live-stream subscriber notifications', a: 'shipped', i: 'shipped' },
+    { cat: 'Notifications & Push', name: 'FCM push notifications', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Notifications & Push', name: 'Cloud Function FCM dispatcher', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Server-side, shared.' },
+    { cat: 'Notifications & Push', name: 'In-app notification center + JSON storage', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Notifications & Push', name: 'Follow-request system notification (Approve/Block actions)', a: 'shipped', i: 'partial', w: 'na', notes: 'iOS approves via in-app — no system-notification action buttons (platform diff).' },
+    { cat: 'Notifications & Push', name: 'Schedule reminder notifications', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Notifications & Push', name: 'Live-stream subscriber notifications', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Cloud Function emails approved subscribers too.' },
 
     /* ---------- Billing / Pricing ---------- */
-    { cat: 'Billing/Pricing', name: 'Subscription management', a: 'shipped', i: 'shipped', notes: 'Android: Google Play Billing. iOS: StoreKit 2.' },
-    { cat: 'Billing/Pricing', name: 'Pro upgrade sheet (annual-first)', a: 'shipped', i: 'partial', notes: 'iOS ProUpgradeScreen is smaller scope than Android UpgradeDialog.' },
-    { cat: 'Billing/Pricing', name: 'Banner ads (free tier)', a: 'shipped', i: 'shipped' },
-    { cat: 'Billing/Pricing', name: 'Interstitial ads on End Game', a: 'shipped', i: 'shipped' },
-    { cat: 'Billing/Pricing', name: 'Rewarded ad for stats export', a: 'shipped', i: 'shipped' },
-    { cat: 'Billing/Pricing', name: 'First-game Pro preview', a: 'shipped', i: 'partial' },
-    { cat: 'Billing/Pricing', name: 'Smart paywalls (post-share / post-game / team-create / remote-connect)', a: 'shipped', i: 'missing', notes: 'No ConversionManager.swift on iOS.' },
-    { cat: 'Billing/Pricing', name: 'Free / Pro tier toggle (debug super-user)', a: 'shipped', i: 'shipped' },
-    { cat: 'Billing/Pricing', name: 'Sticky banner across tab switches', a: 'shipped', i: 'shipped' },
-    { cat: 'Billing/Pricing', name: 'Free / Pro tier follows real billing in release', a: 'shipped', i: 'shipped' },
-
-    /* ---------- Visitor Role (out of scope — see footnote, but flagged here too for clarity) ---------- */
-    { cat: 'Visitor Role', name: 'Visitor MemberRole / claim-yourself flow', a: 'na', i: 'na', notes: 'Belongs to genealogy app, not ScoreFrame.' },
+    { cat: 'Billing/Pricing', name: 'Subscription management', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android: Google Play Billing. iOS: StoreKit 2.' },
+    { cat: 'Billing/Pricing', name: 'Pro upgrade sheet (annual-first)', a: 'shipped', i: 'partial', w: 'na', effort: 'S', notes: 'iOS ProUpgradeScreen is smaller scope than Android UpgradeDialog.' },
+    { cat: 'Billing/Pricing', name: 'Banner ads (free tier)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Billing/Pricing', name: 'Interstitial ads on End Game', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Billing/Pricing', name: 'Rewarded ad for stats export', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Billing/Pricing', name: 'First-game Pro preview', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
+    { cat: 'Billing/Pricing', name: 'Smart paywalls (post-share / post-game / team-create / remote-connect)', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'No ConversionManager.swift on iOS.' },
+    { cat: 'Billing/Pricing', name: 'Free / Pro tier toggle (debug super-user)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Billing/Pricing', name: 'Sticky banner across tab switches', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Billing/Pricing', name: 'Free / Pro tier follows real billing in release', a: 'shipped', i: 'shipped', w: 'na' },
 
     /* ---------- Widgets ---------- */
-    { cat: 'Widgets', name: 'Home-screen widget (next game / record button)', a: 'shipped', i: 'shipped', notes: 'iOS: ScoreFrameWidgets target.' },
+    { cat: 'Widgets', name: 'Home-screen widget (next game / record button)', a: 'shipped', i: 'shipped', w: 'na', notes: 'iOS: ScoreFrameWidgets target.' },
 
     /* ---------- Settings / Preferences ---------- */
-    { cat: 'Settings/Preferences', name: 'Settings screen card-style sections', a: 'shipped', i: 'shipped' },
-    { cat: 'Settings/Preferences', name: 'Account section in Settings', a: 'shipped', i: 'shipped' },
-    { cat: 'Settings/Preferences', name: 'Highlight duration picker (5/10/20s/since-pause)', a: 'shipped', i: 'shipped' },
-    { cat: 'Settings/Preferences', name: 'Camera section (stab/WB/exp/sharpen/HDR)', a: 'shipped', i: 'partial', notes: 'Sharpen tile no-op on iOS.' },
-    { cat: 'Settings/Preferences', name: 'External Buttons (Record / Zoom registration)', a: 'shipped', i: 'shipped' },
-    { cat: 'Settings/Preferences', name: 'Light / dark theme toggle', a: 'shipped', i: 'shipped' },
-    { cat: 'Settings/Preferences', name: 'Quick Settings panel — tile count', a: 'shipped', i: 'partial', notes: 'iOS has 16 tiles vs Android 22 — missing Fullscreen, Quality (Low/Auto/High), PiP, Go Live, Ext Button.' },
-    { cat: 'Settings/Preferences', name: 'About dialog with Privacy / Features links', a: 'shipped', i: 'shipped' },
-    { cat: 'Settings/Preferences', name: 'In-app feedback (Google Forms POST)', a: 'shipped', i: 'shipped' },
+    { cat: 'Settings/Preferences', name: 'Settings screen card-style sections', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Settings/Preferences', name: 'Account section in Settings', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Settings/Preferences', name: 'Highlight duration picker (5/10/20s/since-pause)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Settings/Preferences', name: 'Camera section (stab/WB/exp/sharpen/HDR)', a: 'shipped', i: 'partial', w: 'na', effort: 'S', notes: 'Sharpen tile no-op on iOS.' },
+    { cat: 'Settings/Preferences', name: 'External Buttons (Record / Zoom registration)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Settings/Preferences', name: 'Light / dark theme toggle', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Settings/Preferences', name: 'Quick Settings panel — tile count', a: 'shipped', i: 'partial', w: 'na', effort: 'M', notes: 'iOS has 16 tiles vs Android 22 — missing Fullscreen, Quality, PiP, Go Live, Ext Button.' },
+    { cat: 'Settings/Preferences', name: 'About dialog with Privacy / Features links', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Settings/Preferences', name: 'In-app feedback (submitTicket Cloud Function)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Web: support.html.' },
 
     /* ---------- Offline / Sync ---------- */
-    { cat: 'Offline/Sync', name: 'Offline-first JSON file storage', a: 'shipped', i: 'shipped' },
-    { cat: 'Offline/Sync', name: 'Bidirectional cloud sync (updatedAt)', a: 'shipped', i: 'shipped' },
-    { cat: 'Offline/Sync', name: 'Real-time Firestore snapshot listeners', a: 'shipped', i: 'shipped' },
-    { cat: 'Offline/Sync', name: 'Team migration (legacy users/{uid}/ → teams/{id})', a: 'shipped', i: 'shipped' },
-    { cat: 'Offline/Sync', name: 'Per-team Firebase Storage logos', a: 'shipped', i: 'shipped' },
-    { cat: 'Offline/Sync', name: 'Game / player / team delete syncs to cloud', a: 'shipped', i: 'shipped' },
-    { cat: 'Offline/Sync', name: 'Orphan team cleanup (myTeams diff)', a: 'shipped', i: 'shipped' },
+    { cat: 'Offline/Sync', name: 'Offline-first JSON file storage', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Offline/Sync', name: 'Bidirectional cloud sync (updatedAt)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Offline/Sync', name: 'Real-time Firestore snapshot listeners', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'team.html and dashboard.html use real-time listeners.' },
+    { cat: 'Offline/Sync', name: 'Team migration (legacy users/{uid}/ → teams/{id})', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Offline/Sync', name: 'Per-team Firebase Storage logos', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Offline/Sync', name: 'Game / player / team delete syncs to cloud', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Offline/Sync', name: 'Orphan team cleanup (myTeams diff)', a: 'shipped', i: 'shipped', w: 'na' },
 
     /* ---------- Cloud Functions hooks ---------- */
-    { cat: 'Cloud Functions hooks', name: 'pendingNotifications dispatcher', a: 'shipped', i: 'shipped', notes: 'Server-side function, both clients write same path.' },
-    { cat: 'Cloud Functions hooks', name: 'backfillScheduleToGames (callable + HTTP + scheduled)', a: 'shipped', i: 'shipped' },
-    { cat: 'Cloud Functions hooks', name: 'sweep_completed_schedule.py (server-side cleanup)', a: 'shipped', i: 'shipped' },
-    { cat: 'Cloud Functions hooks', name: 'Auto-create YouTube broadcast at schedule time', a: 'shipped', i: 'shipped' },
+    { cat: 'Cloud Functions hooks', name: 'pendingNotifications dispatcher', a: 'shipped', i: 'shipped', w: 'na', notes: 'Server-side function, both clients write same path.' },
+    { cat: 'Cloud Functions hooks', name: 'backfillScheduleToGames (callable + HTTP + scheduled)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Cloud Functions hooks', name: 'sweep_completed_schedule.py (server-side cleanup)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Cloud Functions hooks', name: 'Auto-create YouTube broadcast at schedule time', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Cloud Functions hooks', name: 'submitTicket / replyToTicket / customerReplyToTicket', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'support.html uses customerReplyToTicket.' },
+    { cat: 'Cloud Functions hooks', name: 'sendHubInvite (email invite to follow team)', a: 'shipped', i: 'shipped', w: 'na' },
 
-    /* ---------- Remote scoring / connection (under "Other/Misc" plus deserves its own coverage) ---------- */
-    { cat: 'Other/Misc — Remote scoring', name: 'TCP + JSON line protocol v2', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc — Remote scoring', name: 'NSD / Bonjour discovery', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc — Remote scoring', name: 'Wi-Fi Direct peer-to-peer', a: 'shipped', i: 'na', notes: 'iOS does not expose Wi-Fi Direct.' },
-    { cat: 'Other/Misc — Remote scoring', name: 'Bluetooth RFCOMM', a: 'shipped', i: 'na', notes: 'iOS does not expose RFCOMM.' },
-    { cat: 'Other/Misc — Remote scoring', name: 'MultipeerConnectivity (BT/Wi-Fi peer)', a: 'na', i: 'shipped', notes: 'iOS-only API; replaces RFCOMM.' },
-    { cat: 'Other/Misc — Remote scoring', name: 'Firebase Relay (internet remote scoring)', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc — Remote scoring', name: 'Firebase Relay client (web-scorer takeover)', a: 'shipped', i: 'shipped', notes: 'iOS FirebaseRelayClient.swift is 407 lines and fully implemented.' },
-    { cat: 'Other/Misc — Remote scoring', name: 'Live preview (camera→controller)', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc — Remote scoring', name: 'PiP overlay (controller-camera → recorded video)', a: 'shipped', i: 'missing', notes: 'iOS protocol parses PIP_FRAME but no Compositor texture / consumer. Explicit comment ContentView.swift:3031.' },
-    { cat: 'Other/Misc — Remote scoring', name: 'Auto-reconnect + heartbeat', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc — Remote scoring', name: 'Game ownership protocol (CAMERA / CONTROLLER)', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc — Remote scoring', name: 'Hotspot guidance UX (no-network fallback)', a: 'shipped', i: 'partial' },
-    { cat: 'Other/Misc — Remote scoring', name: 'Web scoring page (scoreframe.app/score)', a: 'shipped', i: 'shipped', notes: 'Shared web page.' },
+    /* ---------- Other/Misc — Remote scoring ---------- */
+    { cat: 'Other/Misc — Remote scoring', name: 'TCP + JSON line protocol v2', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc — Remote scoring', name: 'NSD / Bonjour discovery', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc — Remote scoring', name: 'Wi-Fi Direct peer-to-peer', a: 'shipped', i: 'na', w: 'na', notes: 'iOS does not expose Wi-Fi Direct.' },
+    { cat: 'Other/Misc — Remote scoring', name: 'Bluetooth RFCOMM', a: 'shipped', i: 'na', w: 'na', notes: 'iOS does not expose RFCOMM.' },
+    { cat: 'Other/Misc — Remote scoring', name: 'MultipeerConnectivity (BT/Wi-Fi peer)', a: 'na', i: 'shipped', w: 'na', notes: 'iOS-only API; replaces RFCOMM.' },
+    { cat: 'Other/Misc — Remote scoring', name: 'Firebase Relay (internet remote scoring)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'score.html joins via 6-char code.' },
+    { cat: 'Other/Misc — Remote scoring', name: 'Firebase Relay client (web-scorer takeover)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'iOS FirebaseRelayClient.swift is 407 lines and fully implemented.' },
+    { cat: 'Other/Misc — Remote scoring', name: 'Live preview (camera→controller)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc — Remote scoring', name: 'PiP overlay (controller-camera → recorded video)', a: 'shipped', i: 'missing', w: 'na', effort: 'L', notes: 'iOS protocol parses PIP_FRAME but no Compositor texture / consumer.' },
+    { cat: 'Other/Misc — Remote scoring', name: 'Auto-reconnect + heartbeat', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Other/Misc — Remote scoring', name: 'Game ownership protocol (CAMERA / CONTROLLER)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'score.html negotiates ownership.' },
+    { cat: 'Other/Misc — Remote scoring', name: 'Hotspot guidance UX (no-network fallback)', a: 'shipped', i: 'partial', w: 'na' },
+    { cat: 'Other/Misc — Remote scoring', name: 'Web scoring page (scoreframe.app/score)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Shared web page.' },
+
+    /* ---------- Web-only features ---------- */
+    { cat: 'Web Only', name: 'Marketing landing page (index.html)', a: 'na', i: 'na', w: 'shipped' },
+    { cat: 'Web Only', name: 'Beta signup page (beta.html)', a: 'na', i: 'na', w: 'shipped' },
+    { cat: 'Web Only', name: 'My Dashboard (dashboard.html)', a: 'na', i: 'na', w: 'shipped', notes: 'Personal teams + invitations + follow management.' },
+    { cat: 'Web Only', name: 'Privacy policy (privacy.html)', a: 'na', i: 'na', w: 'shipped' },
+    { cat: 'Web Only', name: 'Terms of service (terms.html)', a: 'na', i: 'na', w: 'shipped' },
+    { cat: 'Web Only', name: 'Account deletion instructions (delete-account.html)', a: 'na', i: 'na', w: 'shipped' },
+    { cat: 'Web Only', name: 'Architecture viewer (scoreframe_architecture.html)', a: 'na', i: 'na', w: 'shipped' },
+    { cat: 'Web Only', name: 'Web admin (admin.html — super-user only)', a: 'na', i: 'na', w: 'shipped', notes: 'Ticket management UI.' },
+    { cat: 'Web Only', name: 'President of the World concept', a: 'na', i: 'na', w: 'shipped', notes: 'Side project / concept page.' },
+    { cat: 'Web Only', name: 'Public team page (team.html)', a: 'na', i: 'na', w: 'shipped', notes: 'Schedule + roster + past games + live stream.' },
+    { cat: 'Web Only', name: 'Per-game page (game.html — countdown + replay)', a: 'na', i: 'na', w: 'shipped' },
 
     /* ---------- Other / Misc ---------- */
-    { cat: 'Other/Misc', name: 'Sport settings (per-sport defaults)', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'Saved teams + saved players (cross-sport aliases)', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'Roster editor with position pickers', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'Custom HSV color wheel picker', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'Dual team colors (primary + secondary)', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'Floating HUD (Pro)', a: 'shipped', i: 'stub', notes: 'iOS gate canUseFloatingHud declared but no FloatingHudView.swift.' },
-    { cat: 'Other/Misc', name: 'Wear OS / Apple Watch companion', a: 'shipped', i: 'missing', notes: 'Android wear/ module exists. No WatchConnectivity / Apple Watch target on iOS.' },
-    { cat: 'Other/Misc', name: 'Scoreboard rounded corners + 3% inset', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'Football field strip on overlay', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'Per-sport event labels', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'Stream-highlight bookmarks (per-team)', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'In-app update checker (Remote Config)', a: 'shipped', i: 'na', notes: 'iOS uses App Store TestFlight; no equivalent need.' },
-    { cat: 'Other/Misc', name: 'Privacy policy + terms / delete-account pages', a: 'shipped', i: 'shipped', notes: 'Web shared.' },
-    { cat: 'Other/Misc', name: 'Support / tickets archive (open vs closed split)', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'Foreground service for connection lifetime', a: 'shipped', i: 'na', notes: 'iOS uses background tasks instead.' },
-    { cat: 'Other/Misc', name: 'AppNotificationManager (badge + JSON cache)', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'Permissions flow (Camera/Mic/Photos/BT/Network)', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'Coach mark overlay (interactive guided tour)', a: 'shipped', i: 'shipped' },
-    { cat: 'Other/Misc', name: 'Ticket escalation / unread badge filter', a: 'shipped', i: 'shipped' }
+    { cat: 'Other/Misc', name: 'Sport settings (per-sport defaults)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc', name: 'Saved teams + saved players (cross-sport aliases)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc', name: 'Roster editor with position pickers', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc', name: 'Custom HSV color wheel picker', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc', name: 'Dual team colors (primary + secondary)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc', name: 'Floating HUD', a: 'shipped', i: 'stub', w: 'na', pro: true, effort: 'M', notes: 'iOS gate canUseFloatingHud declared but no FloatingHudView.swift.' },
+    { cat: 'Other/Misc', name: 'Wear OS / Apple Watch companion', a: 'shipped', i: 'missing', w: 'na', effort: 'L', notes: 'Android wear/ module exists. No WatchConnectivity / Apple Watch target on iOS.' },
+    { cat: 'Other/Misc', name: 'Scoreboard rounded corners + 3% inset', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc', name: 'Football field strip on overlay', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc', name: 'Per-sport event labels', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc', name: 'Stream-highlight bookmarks (per-team)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc', name: 'In-app update checker (Remote Config)', a: 'shipped', i: 'na', w: 'na', notes: 'iOS uses App Store TestFlight.' },
+    { cat: 'Other/Misc', name: 'Privacy policy + terms / delete-account pages', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Web shared.' },
+    { cat: 'Other/Misc', name: 'Support / tickets archive (open vs closed split)', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Other/Misc', name: 'Foreground service for connection lifetime', a: 'shipped', i: 'na', w: 'na', notes: 'iOS uses background tasks instead.' },
+    { cat: 'Other/Misc', name: 'AppNotificationManager (badge + JSON cache)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc', name: 'Permissions flow (Camera/Mic/Photos/BT/Network)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc', name: 'Coach mark overlay (interactive guided tour)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Other/Misc', name: 'Ticket escalation / unread badge filter', a: 'shipped', i: 'shipped', w: 'shipped' }
 ];
 
+// SPORT COVERAGE MATRIX — verified against repo and CLAUDE.md
+const SPORTS_MATRIX = [
+    // sport, panel, stats, scoreboard, full-scorebook, animations
+    { sport: '🏀 Basketball',  panel: 'both', stats: 'both', board: 'both', book: 'na',          anim: 'android-only' },
+    { sport: '🏈 Football',    panel: 'both', stats: 'both', board: 'both', book: 'na',          anim: 'android-only' },
+    { sport: '⚽ Soccer',      panel: 'both', stats: 'both', board: 'both', book: 'na',          anim: 'android-only' },
+    { sport: '🏐 Volleyball',  panel: 'both', stats: 'both', board: 'both', book: 'na',          anim: 'android-only' },
+    { sport: '⚾ Baseball',    panel: 'both', stats: 'both', board: 'both', book: 'both',        anim: 'none' },
+    { sport: '🥎 Softball',    panel: 'both', stats: 'both', board: 'both', book: 'both',        anim: 'none' },
+    { sport: '🏃 Generic',     panel: 'both', stats: 'both', board: 'both', book: 'na',          anim: 'android-only' },
+    { sport: '🎾 Tennis',      panel: 'both', stats: 'both', board: 'both', book: 'na',          anim: 'android-only' },
+    { sport: '🏓 Pickleball',  panel: 'both', stats: 'both', board: 'both', book: 'na',          anim: 'android-only' },
+    { sport: '🏒 Hockey',      panel: 'both', stats: 'both', board: 'both', book: 'na',          anim: 'android-only' },
+    { sport: '🥍 Lacrosse',    panel: 'both', stats: 'both', board: 'both', book: 'na',          anim: 'android-only' },
+    { sport: '🎳 Bowling',     panel: 'both', stats: 'both', board: 'both', book: 'na',          anim: 'android-only' }
+];
+
+const RECENT_COMMITS = {
+    android: [
+        { hash: 'bacad2f', date: '2026-05-05', ver: 'v1.1.161', msg: 'Home watermark uses next-game sport emoji' },
+        { hash: '3f8b23e', date: '2026-05-05', ver: 'v1.1.160', msg: 'SF watermark behind Home content' },
+        { hash: '0d49280', date: '2026-05-05', ver: 'v1.1.159', msg: 'fix phone back button on notification center + archive' },
+        { hash: 'f80084b', date: '2026-05-05', ver: 'v1.1.158', msg: 'restore notification archive UI lost in v1.1.156 revert' },
+        { hash: '8fb0431', date: '2026-05-05', ver: 'v1.1.156', msg: 'version bump on top of Home polish revert' },
+        { hash: 'b7eb74a', date: '2026-05-05', ver: 'v1.1.155', msg: 'Home polish: section cards + horizontal-scroll fade' },
+        { hash: 'f6fc835', date: '2026-05-05', ver: 'v1.1.152', msg: 'Go Live with pre-scheduled broadcast: banner + editable title/privacy' },
+        { hash: 'e36330d', date: '2026-05-05', ver: 'v1.1.151', msg: 'event label surfaced everywhere' },
+        { hash: '7baf986', date: '2026-05-05', ver: 'v1.1.150', msg: 'pre-created broadcast polish + early-live game.html' },
+        { hash: '93e0ef9', date: '2026-05-05', ver: 'v1.1.149', msg: 'stamp pre-created broadcast onto saved game card' }
+    ],
+    ios: [
+        { hash: '6ba43b7', date: '2026-05-06', ver: 'build 61', msg: 'heavy session: AdMob iOS, layout pass, simplifications' },
+        { hash: 'df88078', date: '2026-05-05', ver: 'build 60', msg: 'version bump on top of Home polish revert' },
+        { hash: 'ae251f6', date: '2026-05-05', ver: '—',        msg: 'Revert "build 59 — Home polish: section cards + horizontal-scroll fade"' },
+        { hash: '2e463fd', date: '2026-05-05', ver: 'build 59', msg: 'Home polish: section cards + horizontal-scroll fade' },
+        { hash: '2b00f14', date: '2026-05-05', ver: 'build 58', msg: 'Go Live with pre-scheduled broadcast: banner + editable title/privacy' },
+        { hash: 'd7b8c23', date: '2026-05-05', ver: 'build 57', msg: 'event label surfaced on splash + every schedule UI' },
+        { hash: 'e976964', date: '2026-05-05', ver: '—',        msg: 'iOS: scheduled-game launch flow + Go Live reuses pre-created broadcast' },
+        { hash: 'd7f2f07', date: '2026-05-05', ver: 'build 56', msg: 'schedule parity (event label + pre-created broadcast) + reminder routing' },
+        { hash: '5b58ab6', date: '2026-05-05', ver: 'build 55', msg: 'streaming refactor + 7 iOS parity fixes' },
+        { hash: '9167a49', date: '2026-05-04', ver: 'build 53', msg: 'pill-style section headers (parity with Android v1.1.142)' }
+    ],
+    web: [
+        { hash: '20b9f83', date: '2026-05-07', ver: '—', msg: 'parity.html: feature parity dashboard (Android vs iOS)' },
+        { hash: '8c32ee4', date: '2026-05-07', ver: '—', msg: 'v1.1.173 cutover: web pages read games/ with status filter' },
+        { hash: '13b16db', date: '2026-05-06', ver: '—', msg: 'score.html: clear scorerRequest on Disconnect dialog' },
+        { hash: '93c6d22', date: '2026-05-06', ver: '—', msg: 'score.html: full recording control parity (buffer mode, duration, STOP_BUFFER)' },
+        { hash: '78699a3', date: '2026-05-06', ver: '—', msg: 'score.html: clear scorerRequest on Leave so host sees disconnect' },
+        { hash: '2ead91e', date: '2026-05-06', ver: '—', msg: 'score.html: hide sport label when host has not picked one' },
+        { hash: '3f110ec', date: '2026-05-06', ver: '—', msg: 'Add app-ads.txt for AdMob domain verification' },
+        { hash: '05ec729', date: '2026-05-05', ver: '—', msg: 'team.html: surface event name on hub schedule + past games' },
+        { hash: '90bef06', date: '2026-05-05', ver: '—', msg: 'game.html: surface event label on post-game view' },
+        { hash: '24c4a22', date: '2026-05-05', ver: '—', msg: 'team + game pages: surface event label, detect early live state' }
+    ]
+};
+
 const BUGS = [
-    {
-        name: 'Hero box hijacking New Game CTA',
-        status: 'fixed',
-        platform: 'android',
-        desc: 'Home hero card was rendering hub-upcoming game in the active-session slot, hiding the New Game CTA. Fixed in HomeActivity.kt:924 (always show default hero when no active session). Originally introduced in fbbfae6 (v1.1.77). Fixed in v1.1.183 — pending Firebase App Distribution push today (2026-05-07).'
-    },
-    {
-        name: 'iOS preview using PIP_FRAME (wrong direction)',
-        status: 'open',
-        platform: 'ios',
-        desc: 'iOS controller is consuming PIP_FRAME (controller-camera → recorded video PiP overlay) when it should be using the live preview path (camera→controller). Result: preview shows wrong source. Should use CAMERA_CONTROL / PREVIEW_RESPONSE pattern that Android uses.'
-    },
-    {
-        name: 'iOS controller layout toggles full-screen-scoring vs split',
-        status: 'open',
-        platform: 'ios',
-        desc: 'Controller flips between two layouts depending on whether preview is on. Eric wants always-split (mirror local-recording shape), with the camera area showing preview when available and a placeholder otherwise.'
-    },
-    {
-        name: 'Android fullscreen overlap on controller connect',
-        status: 'open',
-        platform: 'android',
-        desc: 'Camera auto-enters fullscreen when controller connects; GO LIVE top bar overlaps top of video. Closing fullscreen leaves video drawn under top bar. "Rifle" sport-stat icon leaks from Quick Settings into score panel. (Tracked in v1.1.182 release notes — verify against current build.)'
-    },
-    {
-        name: 'iOS Home upcoming games — local-only fetch',
-        status: 'open',
-        platform: 'ios',
-        desc: 'ScheduleAggregator.gatherHubRefs() only consults local TeamManager / TeamHubManager. Missing the cloud fallback that Android added (HomeDataStore reads users/{uid}/myTeams). When local team list is stale or wiped, iOS Home shows no upcoming games even when cloud has them.'
-    },
-    {
-        name: 'iOS maxSavedGames cap not enforced (Pro-tier leak)',
-        status: 'open',
-        platform: 'ios',
-        desc: 'FeatureGate.swift:227 declares maxSavedGames=10 free / unlimited Pro, but zero call sites enforce it. Free iOS users keep unlimited games. Android enforces in 8 places (HomeActivity.kt:2407, MainActivity.kt:5560, GameHistoryManager.kt:215, GameHistoryActivity.kt:1570, etc.).'
-    },
-    {
-        name: 'iOS edge-enhancement tile is a no-op',
-        status: 'open',
-        platform: 'ios',
-        desc: 'Quick Settings sharpening tile saves the camera_edge_enhancement pref and BillingManager auto-sets it on Pro upgrade — but nothing in CameraSession or MetalCompositor reads it. Explicit "No live AVFoundation hook on iOS" comment at QuickSettingsOverlay.swift:230-232.'
-    },
-    {
-        name: 'iOS missing end-game stats overlay (burned in)',
-        status: 'open',
-        platform: 'ios',
-        desc: 'No setEndGameOverlay / clearEndGameOverlay / createEndGameSummary on iOS. "FINAL" badge appears only inline on per-sport scoreboards, not as a burned-in summary frame at end of recording. Major feature gap with Android.'
-    },
-    {
-        name: 'iOS missing scoring animations (P34)',
-        status: 'open',
-        platform: 'ios',
-        desc: 'No ScoringAnimationRenderer.swift, no triggerAnimation, no scoring_animations_enabled pref. Android ships particle CONFETTI/STRIKE/GOAL/TOUCHDOWN/ACE wired into 10 sport scoring flows (358 lines).'
-    },
-    {
-        name: 'TODO — FirebaseRelayServer scorer name placeholder',
-        status: 'open',
-        platform: 'android',
-        desc: 'FirebaseRelayServer.kt:231 — `val name = "Web Scorer" // TODO: read from scorerRequest`. Web scorer takeovers all show as the same placeholder name on the camera phone.'
-    },
-    {
-        name: 'TODO — iOS schedule routing to TeamHubScreen',
-        status: 'open',
-        platform: 'ios',
-        desc: 'ScheduleScreen.swift:488 — `// TODO route to TeamHubScreen for this teamId`. Tapping schedule rows does not deep-link into the matching hub screen.'
-    },
-    {
-        name: 'iOS does not push score state to watch sessions',
-        status: 'open',
-        platform: 'ios',
-        desc: 'When iOS hosts a stream, score state is not pushed to streams/{code} for watch.html. Paired with the IVS gap (no IvsManager / StreamSessionManager on iOS).'
-    }
+    { name: 'Hero box hijacking New Game CTA', status: 'fixed', platform: 'android',
+      desc: 'Home hero card was rendering hub-upcoming game in the active-session slot, hiding the New Game CTA. Fixed in HomeActivity.kt:924. Originally introduced in fbbfae6 (v1.1.77). Fixed in v1.1.183 — pending Firebase App Distribution push today.' },
+    { name: 'iOS preview using PIP_FRAME (wrong direction)', status: 'open', platform: 'ios',
+      desc: 'iOS controller is consuming PIP_FRAME (controller-camera → recorded video PiP overlay) when it should be using the live preview path (camera→controller). Result: preview shows wrong source.' },
+    { name: 'iOS controller layout toggles full-screen-scoring vs split', status: 'open', platform: 'ios',
+      desc: 'Controller flips between two layouts depending on whether preview is on. Eric wants always-split (mirror local-recording shape), camera area shows preview when available and a placeholder otherwise.' },
+    { name: 'Android fullscreen overlap on controller connect', status: 'open', platform: 'android',
+      desc: 'Camera auto-enters fullscreen when controller connects; GO LIVE top bar overlaps top of video. Closing fullscreen leaves video drawn under top bar. "Rifle" sport-stat icon leaks from Quick Settings into score panel.' },
+    { name: 'iOS Home upcoming games — local-only fetch', status: 'open', platform: 'ios',
+      desc: 'ScheduleAggregator.gatherHubRefs() only consults local TeamManager / TeamHubManager. Missing the cloud fallback Android added (HomeDataStore reads users/{uid}/myTeams).' },
+    { name: 'iOS maxSavedGames cap not enforced (Pro-tier leak)', status: 'open', platform: 'ios',
+      desc: 'FeatureGate.swift:227 declares maxSavedGames=10 free / unlimited Pro, but zero call sites enforce it. Free iOS users keep unlimited games. Android enforces in 8 places.' },
+    { name: 'iOS edge-enhancement tile is a no-op', status: 'open', platform: 'ios',
+      desc: 'Quick Settings sharpening tile saves the camera_edge_enhancement pref and BillingManager auto-sets it on Pro upgrade — but nothing in CameraSession or MetalCompositor reads it. Explicit "No live AVFoundation hook on iOS" comment at QuickSettingsOverlay.swift:230-232.' },
+    { name: 'iOS missing end-game stats overlay (burned in)', status: 'open', platform: 'ios',
+      desc: 'No setEndGameOverlay / clearEndGameOverlay / createEndGameSummary on iOS. Major feature gap with Android.' },
+    { name: 'iOS missing scoring animations (P34)', status: 'open', platform: 'ios',
+      desc: 'No ScoringAnimationRenderer.swift, no triggerAnimation, no scoring_animations_enabled pref. Android ships particle CONFETTI/STRIKE/GOAL/TOUCHDOWN/ACE wired into 10 sport scoring flows (358 lines).' },
+    { name: 'TODO — FirebaseRelayServer scorer name placeholder', status: 'open', platform: 'android',
+      desc: 'FirebaseRelayServer.kt:231 — `val name = "Web Scorer" // TODO: read from scorerRequest`. Web scorer takeovers all show as the same placeholder name.' },
+    { name: 'TODO — iOS schedule routing to TeamHubScreen', status: 'open', platform: 'ios',
+      desc: 'ScheduleScreen.swift:488 — `// TODO route to TeamHubScreen for this teamId`. Tapping schedule rows does not deep-link into the matching hub screen.' },
+    { name: 'iOS does not push score state to watch sessions', status: 'open', platform: 'ios',
+      desc: 'When iOS hosts a stream, score state is not pushed to streams/{code} for watch.html. Paired with the IVS gap.' }
+];
+
+// RECENTLY FIXED — last ~30 days, mined from git log
+const FIXED_BUGS = [
+    { ver: 'v1.1.183', date: '2026-05-07', plat: 'android', desc: 'fix hero box hijacking New Game CTA on no-active-session' },
+    { ver: 'v1.1.173', date: '2026-05-06', plat: 'web',     desc: 'cutover: web pages read games/ with status filter (not separate schedule/)' },
+    { ver: '—',        date: '2026-05-06', plat: 'web',     desc: 'score.html: clear scorerRequest on Disconnect dialog (parity with cancelJoin)' },
+    { ver: '—',        date: '2026-05-06', plat: 'web',     desc: 'score.html: clear scorerRequest on Leave so host sees disconnect' },
+    { ver: 'build 55', date: '2026-05-05', plat: 'ios',     desc: 'streaming refactor + 7 iOS parity fixes' },
+    { ver: 'v1.1.159', date: '2026-05-05', plat: 'android', desc: 'fix phone back button on notification center + archive' },
+    { ver: 'v1.1.158', date: '2026-05-05', plat: 'android', desc: 'restore notification archive UI lost in v1.1.156 revert' },
+    { ver: 'v1.1.141', date: '2026-05-04', plat: 'android', desc: 'HomeDataStore listeners — fixes Home re-render lag on resume' },
+    { ver: 'build 52', date: '2026-05-04', plat: 'ios',     desc: 'support: open vs closed ticket split + drop Home My Account section' }
+];
+
+// PERMISSIONS — Android Manifest vs iOS Info.plist / pbxproj keys
+const PERMISSIONS = [
+    { capability: 'Camera',
+      android: 'android.permission.CAMERA + uses-feature camera (required)',
+      ios: 'NSCameraUsageDescription (Info.plist + INFOPLIST_KEY)',
+      purpose: 'Record game video with live scoreboard overlay.' },
+    { capability: 'Microphone',
+      android: 'android.permission.RECORD_AUDIO + MODIFY_AUDIO_SETTINGS',
+      ios: 'NSMicrophoneUsageDescription (Info.plist + INFOPLIST_KEY)',
+      purpose: 'Capture game audio during recording.' },
+    { capability: 'Photos / Media library',
+      android: 'READ_MEDIA_VIDEO (API 33+) / READ_EXTERNAL_STORAGE (≤32)',
+      ios: 'NSPhotoLibraryAddUsageDescription + NSPhotoLibraryUsageDescription',
+      purpose: 'Save / retrieve / delete recorded games + highlights.' },
+    { capability: 'Local network (NSD/Bonjour)',
+      android: '— implicit via INTERNET + ACCESS_NETWORK_STATE',
+      ios: 'NSLocalNetworkUsageDescription + NSBonjourServices (_scoreframe._tcp, _sf-scoring._tcp/_udp)',
+      purpose: 'Discover nearby ScoreFrame device for remote scoring.' },
+    { capability: 'Bluetooth',
+      android: 'BLUETOOTH_CONNECT + BLUETOOTH_SCAN + BLUETOOTH_ADVERTISE (and legacy ≤30)',
+      ios: 'NSBluetoothAlwaysUsageDescription + NSBluetoothPeripheralUsageDescription',
+      purpose: 'BT remote scoring (Android RFCOMM) / iOS MultipeerConnectivity peer discovery.' },
+    { capability: 'Wi-Fi Direct / NEARBY_WIFI_DEVICES',
+      android: 'ACCESS_FINE_LOCATION + NEARBY_WIFI_DEVICES + ACCESS_WIFI_STATE + CHANGE_WIFI_STATE',
+      ios: '— (no Wi-Fi Direct on iOS; uses MultipeerConnectivity)',
+      purpose: 'Peer-to-peer remote scoring without router (Android only).' },
+    { capability: 'Push notifications',
+      android: 'POST_NOTIFICATIONS (API 33+)',
+      ios: 'Requested at runtime via UNUserNotificationCenter (no plist key required)',
+      purpose: 'Schedule reminders, hub follow requests, live-stream alerts.' },
+    { capability: 'Foreground service',
+      android: 'FOREGROUND_SERVICE + FOREGROUND_SERVICE_CONNECTED_DEVICE',
+      ios: '— (uses background tasks instead)',
+      purpose: 'Keep remote scoring connection alive in background.' },
+    { capability: 'Billing',
+      android: 'com.android.vending.BILLING',
+      ios: '— (StoreKit 2 — no plist key)',
+      purpose: 'Pro subscription purchase.' },
+    { capability: 'Internet',
+      android: 'INTERNET + ACCESS_NETWORK_STATE',
+      ios: '— (implicit on iOS)',
+      purpose: 'Cloud sync, streaming, ads, notifications.' },
+    { capability: 'AdMob app ID',
+      android: 'manifest meta-data: ca-app-pub-2938411523747267~1321702672',
+      ios: 'GADApplicationIdentifier: ca-app-pub-2938411523747267~7471410455',
+      purpose: 'Google AdMob initialization (different IDs per platform).' },
+    { capability: 'App Tracking Transparency (ATT)',
+      android: '— (no equivalent on Android)',
+      ios: 'NSUserTrackingUsageDescription',
+      purpose: 'iOS-only ATT prompt for personalized ads (eCPM impact).' },
+    { capability: 'Vibration',
+      android: 'VIBRATE',
+      ios: '— (haptics use Core Haptics, no plist key)',
+      purpose: 'UI haptic feedback.' },
+    { capability: 'Encryption export compliance',
+      android: '— (declared in Play Console)',
+      ios: 'ITSAppUsesNonExemptEncryption = false',
+      purpose: 'Apple export-compliance attestation.' }
+];
+
+// CLOUD FUNCTIONS — 22 exports from /Users/ericbloomcamp/Developer/ScoreFrameAndroid/functions/index.js
+const CLOUD_FUNCTIONS = [
+    { name: 'sendNotification',           type: 'firestore', platforms: ['android','ios','web'], purpose: 'On pendingNotifications/{id} create, dispatches FCM to topic + emails subscribers on stream-live events.' },
+    { name: 'sendBroadcast',              type: 'firestore', platforms: ['android','ios'],       purpose: 'On broadcasts/{id} create, fan-out FCM announcement to all_users topic.' },
+    { name: 'submitTicket',               type: 'callable',  platforms: ['android','ios','web'], purpose: 'Customer-side ticket creation for support feedback.' },
+    { name: 'replyToTicket',              type: 'callable',  platforms: ['web'],                 purpose: 'Admin/agent reply to a ticket (admin.html).' },
+    { name: 'customerReplyToTicket',      type: 'callable',  platforms: ['android','ios','web'], purpose: 'Customer-side reply to an existing ticket thread.' },
+    { name: 'onInboundEmail',             type: 'http',      platforms: ['unused'],              purpose: 'SendGrid Inbound Parse webhook — parses replies to inbound.scoreframe.app and threads them onto the ticket.' },
+    { name: 'cleanupNotifications',       type: 'scheduled', platforms: ['unused'],              purpose: 'Daily — deletes pendingNotifications older than 7 days.' },
+    { name: 'sendHubInvite',              type: 'callable',  platforms: ['android','ios'],       purpose: 'Email a fan an invite to follow a team hub.' },
+    { name: 'onInvitationAccepted',       type: 'firestore', platforms: ['unused'],              purpose: 'On invitations/{id} update to accepted, removes pending hubInvites docs.' },
+    { name: 'onUserCreated',              type: 'auth',      platforms: ['unused'],              purpose: 'Captures signup metadata + bumps cumulative usersTotal counter.' },
+    { name: 'dailyDigest',                type: 'scheduled', platforms: ['unused'],              purpose: '9am UTC — emails Eric daily signups + cumulative app stats.' },
+    { name: 'getRecentTickets',           type: 'http',      platforms: ['unused'],              purpose: 'Token-gated debug — list recent tickets + most-recent message JSON.' },
+    { name: 'getGameHighlights',          type: 'http',      platforms: ['unused'],              purpose: 'Token-gated debug — list recent games in a hub + their highlights subcollections.' },
+    { name: 'runDailyDigestManual',       type: 'http',      platforms: ['unused'],              purpose: 'Manual bearer-protected digest trigger for testing.' },
+    { name: 'backfillScheduleToGames',    type: 'callable',  platforms: ['unused'],              purpose: 'May 06 cutover migration — copies legacy schedule/ docs into games/ with status="scheduled".' },
+    { name: 'debugScheduleQuery',         type: 'http',      platforms: ['unused'],              purpose: 'Key-gated debug — inspects games/ + schedule/ subcollections for a hub.' },
+    { name: 'scheduledBackfill',          type: 'scheduled', platforms: ['unused'],              purpose: 'Hourly — sweeps any straggler schedule/ writes from old-version clients (<v1.1.169).' },
+    { name: 'backfillScheduleToGamesHttp',type: 'http',      platforms: ['unused'],              purpose: 'Key-gated HTTP version of the backfill (idempotent).' },
+    { name: 'purgeOrphanGames',           type: 'scheduled', platforms: ['unused'],              purpose: 'Daily 24h — deletes orphan game docs not under any user\'s myTeams.' },
+    { name: 'purgeOrphanGamesHttp',       type: 'http',      platforms: ['unused'],              purpose: 'Key-gated HTTP wrapper for purgeOrphanGames (testing).' },
+    { name: 'debugUserGames',             type: 'http',      platforms: ['unused'],              purpose: 'Key-gated — list a user\'s teams + games + orphans by email lookup.' },
+    { name: 'debugNukeGame',              type: 'http',      platforms: ['unused'],              purpose: 'Key-gated — nuke a specific game from any team subcollection by id.' }
 ];
 
 // ----------- Render -----------
 const tbody = document.getElementById('parity-body');
 const bugsBody = document.getElementById('bugs-body');
+const matrixBody = document.getElementById('matrix-body');
+const fixedBody = document.getElementById('fixed-body');
+const permsBody = document.getElementById('perms-body');
+const fnsBody = document.getElementById('fns-body');
 
 function renderTable(filterText, filterChip) {
     tbody.innerHTML = '';
@@ -766,28 +1318,34 @@ function renderTable(filterText, filterChip) {
         const matchText = !text ||
             f.name.toLowerCase().includes(text) ||
             f.cat.toLowerCase().includes(text) ||
-            (f.notes && f.notes.toLowerCase().includes(text));
+            (f.notes && f.notes.toLowerCase().includes(text)) ||
+            (f.w && f.w.toLowerCase().includes(text));
         if (!matchText) continue;
         if (!matchesChip(f, filterChip)) continue;
         (grouped[f.cat] = grouped[f.cat] || []).push(f);
     }
     const cats = Object.keys(grouped);
     if (cats.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text-muted);">No features match this filter.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);">No features match this filter.</td></tr>';
         return;
     }
     for (const cat of cats) {
         const head = document.createElement('tr');
         head.className = 'cat-header';
-        head.innerHTML = '<td colspan="4">' + escapeHtml(cat) + ' · ' + grouped[cat].length + '</td>';
+        head.innerHTML = '<td colspan="6">' + escapeHtml(cat) + ' · ' + grouped[cat].length + '</td>';
         tbody.appendChild(head);
         for (const f of grouped[cat]) {
             const tr = document.createElement('tr');
             tr.className = 'row';
+            if (f.pro) tr.dataset.pro = 'true';
+            const proBadge = f.pro ? '<span class="pro-badge">🔒 Pro</span>' : '';
+            const effortBadge = f.effort ? '<span class="effort-pill effort-' + f.effort + '">' + f.effort + '</span>' : '<span style="color:var(--text-muted)">—</span>';
             tr.innerHTML =
-                '<td class="col-feature" data-label="Feature"><div class="feature-name">' + escapeHtml(f.name) + '</div></td>' +
+                '<td class="col-feature" data-label="Feature"><div class="feature-name">' + escapeHtml(f.name) + '</div>' + proBadge + '</td>' +
                 '<td class="col-status" data-label="Android">' + statusBadge(f.a) + '</td>' +
                 '<td class="col-status" data-label="iOS">' + statusBadge(f.i) + '</td>' +
+                '<td class="col-status" data-label="Web">' + statusBadge(f.w || 'na') + '</td>' +
+                '<td class="col-effort" data-label="iOS Effort">' + effortBadge + '</td>' +
                 '<td class="col-notes" data-label="Notes">' + (f.notes ? escapeHtml(f.notes) : '<span style="color:var(--text-muted)">—</span>') + '</td>';
             tbody.appendChild(tr);
         }
@@ -801,6 +1359,8 @@ function matchesChip(f, chip) {
     if (chip === 'ios-only')     return f.i === 'shipped' && (f.a === 'missing' || f.a === 'stub');
     if (chip === 'stubbed')      return f.a === 'stub' || f.i === 'stub' || f.a === 'partial' || f.i === 'partial';
     if (chip === 'missing')      return f.a === 'missing' || f.i === 'missing';
+    if (chip === 'web')          return f.w && f.w !== 'na';
+    if (chip === 'pro')          return f.pro === true;
     return true;
 }
 
@@ -811,6 +1371,43 @@ function statusBadge(s) {
 
 function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderMatrix() {
+    matrixBody.innerHTML = '';
+    for (const s of SPORTS_MATRIX) {
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+            '<td class="sport-name">' + escapeHtml(s.sport) + '</td>' +
+            '<td>' + matrixCell(s.panel) + '</td>' +
+            '<td>' + matrixCell(s.stats) + '</td>' +
+            '<td>' + matrixCell(s.board) + '</td>' +
+            '<td>' + matrixCell(s.book) + '</td>' +
+            '<td>' + matrixCell(s.anim) + '</td>';
+        matrixBody.appendChild(tr);
+    }
+}
+
+function matrixCell(value) {
+    const labels = { 'both': '✅ Both', 'android-only': '🤖 Android', 'ios-only': '🍎 iOS', 'none': '❌ None', 'na': '—' };
+    if (value === 'na') return '<span style="color:var(--text-muted)">—</span>';
+    return '<span class="cell ' + value + '">' + labels[value] + '</span>';
+}
+
+function renderCommits() {
+    for (const platform of ['android','ios','web']) {
+        const target = document.getElementById('commits-' + platform);
+        target.innerHTML = '';
+        for (const c of RECENT_COMMITS[platform]) {
+            const div = document.createElement('div');
+            div.className = 'commit-row';
+            const ver = c.ver && c.ver !== '—' ? ' · <span class="commit-ver">' + escapeHtml(c.ver) + '</span>' : '';
+            div.innerHTML =
+                '<div class="commit-meta">' + escapeHtml(c.hash) + ' · ' + escapeHtml(c.date) + ver + '</div>' +
+                '<div class="commit-msg">' + escapeHtml(c.msg) + '</div>';
+            target.appendChild(div);
+        }
+    }
 }
 
 function renderBugs() {
@@ -827,12 +1424,58 @@ function renderBugs() {
     }
 }
 
+function renderFixed() {
+    fixedBody.innerHTML = '';
+    for (const f of FIXED_BUGS) {
+        const tr = document.createElement('tr');
+        tr.className = 'row';
+        tr.innerHTML =
+            '<td data-label="Fix"><div class="feature-name">' + escapeHtml(f.desc) + '</div></td>' +
+            '<td class="col-status" data-label="Version"><span class="commit-ver">' + escapeHtml(f.ver) + '</span></td>' +
+            '<td class="col-status" data-label="Date">' + escapeHtml(f.date) + '</td>' +
+            '<td class="col-status" data-label="Platform"><span class="bug-platform ' + f.plat + '">' + f.plat.toUpperCase() + '</span></td>';
+        fixedBody.appendChild(tr);
+    }
+}
+
+function renderPerms() {
+    permsBody.innerHTML = '';
+    for (const p of PERMISSIONS) {
+        const tr = document.createElement('tr');
+        tr.className = 'row';
+        tr.innerHTML =
+            '<td class="col-feature" data-label="Capability"><div class="feature-name">' + escapeHtml(p.capability) + '</div></td>' +
+            '<td data-label="Android"><div class="perm-cell">' + escapeHtml(p.android) + '</div></td>' +
+            '<td data-label="iOS"><div class="perm-cell">' + escapeHtml(p.ios) + '</div></td>' +
+            '<td data-label="Purpose"><span class="notes">' + escapeHtml(p.purpose) + '</span></td>';
+        permsBody.appendChild(tr);
+    }
+}
+
+function renderFns() {
+    fnsBody.innerHTML = '';
+    for (const fn of CLOUD_FUNCTIONS) {
+        const tr = document.createElement('tr');
+        tr.className = 'row';
+        const tags = fn.platforms.map(p =>
+            '<span class="platform-tag ' + p + '">' + (p === 'unused' ? 'UNUSED' : p.toUpperCase()) + '</span>'
+        ).join('');
+        tr.innerHTML =
+            '<td class="col-feature" data-label="Function"><div class="feature-name">' + escapeHtml(fn.name) + '</div></td>' +
+            '<td class="col-status" data-label="Type"><span class="fn-type ' + fn.type + '">' + fn.type + '</span></td>' +
+            '<td data-label="Called from">' + tags + '</td>' +
+            '<td data-label="Purpose"><span class="notes">' + escapeHtml(fn.purpose) + '</span></td>';
+        fnsBody.appendChild(tr);
+    }
+}
+
 function renderStats() {
     const total = FEATURES.length;
     const both = FEATURES.filter(f => f.a === 'shipped' && f.i === 'shipped').length;
     const aOnly = FEATURES.filter(f => f.a === 'shipped' && (f.i === 'missing' || f.i === 'stub')).length;
     const iOnly = FEATURES.filter(f => f.i === 'shipped' && (f.a === 'missing' || f.a === 'stub')).length;
     const stubbed = FEATURES.filter(f => f.a === 'stub' || f.i === 'stub' || f.a === 'partial' || f.i === 'partial').length;
+    const proCount = FEATURES.filter(f => f.pro === true).length;
     const openBugs = BUGS.filter(b => b.status === 'open').length;
     const parityPct = Math.round((both / total) * 100);
     document.getElementById('stat-total').textContent = total;
@@ -840,8 +1483,17 @@ function renderStats() {
     document.getElementById('stat-android-only').textContent = aOnly;
     document.getElementById('stat-ios-only').textContent = iOnly;
     document.getElementById('stat-stubbed').textContent = stubbed;
+    document.getElementById('stat-pro').textContent = proCount;
     document.getElementById('stat-bugs').textContent = openBugs;
 }
+
+// ──── Public Mode (10) ────
+(function publicMode() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('public') === '1') {
+        document.body.classList.add('public-mode');
+    }
+})();
 
 // Wire up controls
 let activeChip = 'all';
@@ -865,7 +1517,12 @@ chips.forEach(chip => {
 
 renderStats();
 renderTable('', 'all');
+renderMatrix();
+renderCommits();
 renderBugs();
+renderFixed();
+renderPerms();
+renderFns();
 </script>
 
 </body>
