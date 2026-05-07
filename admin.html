@@ -631,7 +631,7 @@ async function clearStuckHub(teamId) {
             'hub.activeStreamUrl': '',
             'updatedAt': Date.now(),
         });
-        const sched = await getDocs(query(collection(db, 'teams', teamId, 'schedule'), where('status', '==', 'live')));
+        const sched = await getDocs(query(collection(db, 'teams', teamId, 'games'), where('status', '==', 'live')));
         for (const s of sched.docs) {
             await updateDoc(s.ref, { status: 'completed' });
         }

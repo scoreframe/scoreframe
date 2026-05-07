@@ -957,7 +957,16 @@ window.requestAccess = async function() {
 
 async function loadSchedule() {
     try {
-        const q2 = query(collection(db, 'teams', teamId, 'schedule'), orderBy('date'));
+        // Post-cutover, scheduled games live in `games/` with status in
+        // {"scheduled","live","cancelled"}. A whereIn on those three statuses
+        // is the only safe filter (legacy completed docs lack a status field
+        // and would otherwise leak into Upcoming). Equality on "scheduled"
+        // would drop live + cancelled.
+        const q2 = query(
+            collection(db, 'teams', teamId, 'games'),
+            where('status', 'in', ['scheduled', 'live', 'cancelled']),
+            orderBy('date')
+        );
         const snap = await getDocs(q2);
         // 6-hour cutoff so a game that just started (or just ended) still
         // shows in upcoming until it gets cleared, instead of disappearing
@@ -967,11 +976,9 @@ async function loadSchedule() {
         const upcoming = [];
         snap.forEach(d => {
             const game = { id: d.id, ...d.data() };
-            // Skip games that have already been completed or cancelled —
-            // those belong in the past-games section. Without this filter,
-            // a hub-scheduled game that the app auto-marks as completed
-            // sticks around in upcoming forever.
-            if (game.status === 'completed' || game.status === 'cancelled') return;
+            // Belt-and-braces: cancelled is in the whereIn set but should
+            // not show in the upcoming section.
+            if (game.status === 'cancelled') return;
             // Skip games whose scheduled date is more than 6h in the past
             // (and they're not live). They're effectively past.
             if (game.status !== 'live' && typeof game.date === 'number' && game.date < cutoff) return;
@@ -1001,13 +1008,13 @@ async function loadSchedule() {
             // status keeps its existing "Watch Live" button as a
             // shortcut to the raw stream URL.
             const gameHref = g.id ? `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}` : null;
-            // Opponent is the primary line. If an Event Name was set on
+            // Opponent is the primary line. If an Event Label was set on
             // the schedule (league / tournament name), surface it as a
-            // secondary line. Read from `eventLabel` first (current field)
-            // and fall back to legacy `eventName` for older docs.
-            const evtName = g.eventLabel || g.eventName || '';
-            const headlineText = g.opponent ? `vs ${g.opponent}` : (evtName || 'TBD');
-            const eventLine = (g.opponent && evtName) ? `<div class="game-notes">🏷️ ${evtName}</div>` : '';
+            // secondary line — used to be shown only when no opponent
+            // existed, but Eric wants it visible alongside the opponent
+            // so fans see "Tigers vs Cardinals" + "Spring Tournament".
+            const headlineText = g.opponent ? `vs ${g.opponent}` : (g.eventName || 'TBD');
+            const eventLine = (g.opponent && g.eventName) ? `<div class="game-notes">🏷️ ${g.eventName}</div>` : '';
             const inner = `
                 <div class="game-date"><span class="game-status ${statusClass}">${statusLabel}</span></div>
                 <div class="game-opponent">${headlineText}</div>
@@ -1082,13 +1089,18 @@ let pastGamesCache = [];  // Cache for edit operations
 
 async function loadPastGames() {
     try {
+        // Pull a wider window so the client-side scheduled filter can still
+        // surface ~20 completed games when scheduled entries are interleaved
+        // post-cutover. Legacy completed docs lack a status field, so we
+        // filter client-side rather than via a where-clause (which would
+        // miss them).
         let snap;
         try {
-            snap = await getDocs(query(collection(db, 'teams', teamId, 'games'), orderBy('date', 'desc'), fbLimit(20)));
+            snap = await getDocs(query(collection(db, 'teams', teamId, 'games'), orderBy('date', 'desc'), fbLimit(40)));
         } catch (e) {
             // orderBy may fail without index — fall back to unordered
             console.warn('Past games orderBy failed, fallback:', e.message);
-            snap = await getDocs(query(collection(db, 'teams', teamId, 'games'), fbLimit(20)));
+            snap = await getDocs(query(collection(db, 'teams', teamId, 'games'), fbLimit(40)));
         }
         const container = $('pastGames');
 
@@ -1099,9 +1111,16 @@ async function loadPastGames() {
         }
 
         pastGamesCache = [];
+        let renderedCount = 0;
         let html = '';
         snap.forEach(d => {
+            if (renderedCount >= 20) return;
             const g = { id: d.id, ...d.data() };
+            // Skip scheduled/live/cancelled — those belong to the upcoming
+            // section. Legacy completed docs without a status field flow
+            // through unchanged.
+            if (g.status === 'scheduled' || g.status === 'live' || g.status === 'cancelled') return;
+            renderedCount++;
             pastGamesCache.push(g);
             // Collect stream links from streams array or legacy streamUrl/streamCode
             let streamLinks = '';
@@ -1159,10 +1178,6 @@ async function loadPastGames() {
             // tap doesn't double-fire and navigate to game.html. Manager
             // action buttons stop propagation for the same reason.
             const gameHref = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}`;
-            // Event name on past games — eventName field on the past-game doc
-            // is populated by pushGameToTeamHubs (prefers eventLabel for team
-            // sports). Skip when it duplicates the bowling title.
-            const pastEvt = !isBowling && g.eventName ? g.eventName : '';
 
             html += `<div class="game-card linkable" id="game-${g.id}"
                 role="link" tabindex="0"
@@ -1173,8 +1188,6 @@ async function loadPastGames() {
                     <div class="${isBowling ? '' : 'teams'}">
                         <div class="game-date">${formatDate(g.date)}</div>
                         <div class="game-opponent">${titleLine}</div>
-                        ${pastEvt ? `<div style="color:var(--accent);font-weight:700;font-size:12px;margin-top:2px;">${pastEvt}</div>` : ''}
-                        ${g.location ? `<div style="color:var(--text-secondary);font-size:11px;margin-top:2px;">📍 ${g.location}</div>` : ''}
                         ${isBowling && scoreLine ? `<div style="margin-top:6px;color:var(--accent);font-weight:700;font-size:13px;">${scoreLine}</div>` : ''}
                         ${streamLinks ? `<div style="margin-top:6px;" onclick="event.stopPropagation();"><div style="font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:0.05em;margin-bottom:2px;">STREAMS</div>${streamLinks}</div>` : ''}
                     </div>
@@ -1183,6 +1196,11 @@ async function loadPastGames() {
                 ${actions}
             </div>`;
         });
+        if (pastGamesCache.length === 0) {
+            container.innerHTML = '<div class="empty">No past games yet</div>';
+            $('teamRecord').textContent = '';
+            return;
+        }
         container.innerHTML = html;
 
         // Calculate and display team record
@@ -1365,15 +1383,16 @@ window.removeStream = function(idx) {
 
 window._deleteScheduleGame = async function(gameId) {
     if (!confirm('Delete this scheduled game?')) return;
+    // Cutover: scheduled games live in games/ post-cutover.
     try {
-        await deleteDoc(doc(db, 'teams', teamId, 'schedule', gameId));
+        await deleteDoc(doc(db, 'teams', teamId, 'games', gameId));
         loadSchedule();
     } catch (e) { console.error('Delete schedule game error:', e); alert('Failed: ' + e.message); }
 };
 
 window._cancelScheduleGame = async function(gameId) {
     try {
-        await updateDoc(doc(db, 'teams', teamId, 'schedule', gameId), { status: 'cancelled' });
+        await updateDoc(doc(db, 'teams', teamId, 'games', gameId), { status: 'cancelled' });
         loadSchedule();
     } catch (e) { console.error('Cancel schedule game error:', e); alert('Failed: ' + e.message); }
 };

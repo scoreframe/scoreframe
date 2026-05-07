@@ -192,7 +192,6 @@ function renderAuth() {
         area.innerHTML = `
             <div class="user-info">
                 ${photo} ${name}
-                <a href="/support.html" style="color:var(--accent);text-decoration:none;font-size:13px;margin-right:12px;">Support</a>
                 <button class="sign-out-btn" onclick="window._signOut()">Sign Out</button>
             </div>`;
     } else {
@@ -484,12 +483,14 @@ async function loadDashboard() {
                         record = calcRecord(data.sport || data.hub?.sport || '', pastGames.docs.map(d => d.data()));
                     } catch (_) {}
                 }
-                // Fetch next upcoming game
+                // Fetch next upcoming game — post-cutover from games/ with
+                // status in {scheduled,live,cancelled}, then filter cancelled
+                // and past-dated entries client-side.
                 let nextGame = null;
                 try {
                     const schedSnap = await getDocs(query(
-                        collection(db, 'teams', teamId, 'schedule'),
-                        where('status', '==', 'scheduled'),
+                        collection(db, 'teams', teamId, 'games'),
+                        where('status', 'in', ['scheduled', 'live']),
                         orderBy('date'), fbLimit(1)
                     ));
                     if (!schedSnap.empty) {
@@ -497,13 +498,13 @@ async function loadDashboard() {
                         nextGame = { opponent: g.opponent || g.eventName || '', date: g.date, location: g.location || '' };
                     }
                 } catch (e) {
-                    // Compound query may need index — try without orderBy
+                    // Compound query may need index — fall back to client-filtered scan.
                     try {
-                        const schedSnap = await getDocs(collection(db, 'teams', teamId, 'schedule'));
+                        const schedSnap = await getDocs(collection(db, 'teams', teamId, 'games'));
                         const now = Date.now();
                         const upcoming = schedSnap.docs
                             .map(d => d.data())
-                            .filter(g => g.status === 'scheduled' && g.date >= now)
+                            .filter(g => (g.status === 'scheduled' || g.status === 'live') && g.date >= now)
                             .sort((a, b) => a.date - b.date);
                         if (upcoming.length > 0) {
                             nextGame = { opponent: upcoming[0].opponent || upcoming[0].eventName || '', date: upcoming[0].date, location: upcoming[0].location || '' };
@@ -570,13 +571,14 @@ async function loadDashboard() {
                     isFollowing = subDoc.exists() && subDoc.data().status === 'approved';
                 } catch (_) {}
 
-                // Fetch next upcoming game
+                // Fetch next upcoming game — post-cutover, scheduled docs live
+                // in games/ alongside completed games.
                 let nextGame = null;
                 try {
-                    const schedSnap = await getDocs(collection(db, 'teams', teamId, 'schedule'));
+                    const schedSnap = await getDocs(collection(db, 'teams', teamId, 'games'));
                     const now = Date.now();
                     const upcoming = schedSnap.docs.map(d => d.data())
-                        .filter(g => g.status === 'scheduled' && g.date >= now)
+                        .filter(g => (g.status === 'scheduled' || g.status === 'live') && g.date >= now)
                         .sort((a, b) => a.date - b.date);
                     if (upcoming.length > 0) {
                         nextGame = { opponent: upcoming[0].opponent || upcoming[0].eventName || '', date: upcoming[0].date, location: upcoming[0].location || '' };
@@ -660,6 +662,13 @@ async function loadDashboard() {
 
 function calcRecord(sport, games) {
     if (!games || games.length === 0) return '';
+    // Post-cutover, the games/ collection holds both scheduled and completed
+    // entries. Drop scheduled/live/cancelled before computing the record.
+    games = games.filter(g => {
+        const s = g.status;
+        return s !== 'scheduled' && s !== 'live' && s !== 'cancelled';
+    });
+    if (games.length === 0) return '';
     const isBowling = sport.toUpperCase() === 'BOWLING';
     if (isBowling) {
         let totalScore = 0, totalGames = 0, highGame = 0;

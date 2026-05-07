@@ -507,20 +507,19 @@ async function load() {
         return;
     }
 
-    // Look up the game two places: the completed-games collection first
-    // (most links point here), then the schedule subcollection as a
-    // fallback so /game.html?team=X&game=SCHEDULED_ID works for upcoming
-    // games before they kick off.
+    // Post-cutover: scheduled and completed games share the games/ collection
+    // distinguished by `status`. A single get() fetches either; we then
+    // classify by status so the upcoming/countdown vs replay paths still
+    // diverge correctly. The legacy schedule/ fallback is no longer needed —
+    // backfill writes scheduled docs into games/ with status="scheduled".
     let game = null;
     let isScheduledOnly = false;
     try {
         const snap = await getDoc(doc(db, 'teams', teamId, 'games', gameId));
-        if (snap.exists()) {
-            game = { id: snap.id, ...snap.data() };
-        } else {
-            const sched = await getDoc(doc(db, 'teams', teamId, 'schedule', gameId));
-            if (!sched.exists()) { showNotFound(); return; }
-            game = { id: sched.id, ...sched.data() };
+        if (!snap.exists()) { showNotFound(); return; }
+        game = { id: snap.id, ...snap.data() };
+        const status = game.status || '';
+        if (status === 'scheduled' || status === 'live' || status === 'cancelled') {
             isScheduledOnly = true;
         }
     } catch (e) {
