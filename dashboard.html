@@ -127,7 +127,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc, colle
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
     signInWithEmailAndPassword, createUserWithEmailAndPassword,
     GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile,
-    setPersistence, browserLocalPersistence }
+    setPersistence, browserLocalPersistence, sendPasswordResetEmail }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
@@ -192,6 +192,7 @@ function renderAuth() {
         area.innerHTML = `
             <div class="user-info">
                 ${photo} ${name}
+                <button class="sign-out-btn" onclick="window._changePassword()" style="background:var(--accent);color:#1A1A1A;">Change Password</button>
                 <button class="sign-out-btn" onclick="window._signOut()">Sign Out</button>
             </div>`;
     } else {
@@ -212,6 +213,7 @@ function renderAuth() {
                 <input type="email" id="emailInput" placeholder="Email"><br>
                 <input type="password" id="passInput" placeholder="Password"><br>
                 <button id="emailSubmitBtn" onclick="window._signInEmail()">Sign In</button>
+                <div id="forgotPassLink" style="font-size:12px;color:var(--accent);margin-top:6px;cursor:pointer;" onclick="window._forgotPassword()">Forgot password?</div>
                 <div id="emailToggleLink" style="font-size:13px;color:var(--accent);margin-top:8px;cursor:pointer;font-weight:600;" onclick="window._switchAuthMode()">Don't have an account? <strong>Sign Up</strong></div>
             </div>`;
     }
@@ -229,6 +231,7 @@ window._showSignIn = () => {
     $('emailSubmitBtn').textContent = 'Sign In';
     $('emailSubmitBtn').onclick = window._signInEmail;
     $('emailToggleLink').innerHTML = "Don't have an account? <strong>Sign Up</strong>";
+    if ($('forgotPassLink')) $('forgotPassLink').style.display = '';
 };
 
 window._showSignUp = () => {
@@ -241,11 +244,48 @@ window._showSignUp = () => {
     $('emailSubmitBtn').textContent = 'Create Account';
     $('emailSubmitBtn').onclick = window._createEmail;
     $('emailToggleLink').innerHTML = "Already have an account? <strong>Sign In</strong>";
+    if ($('forgotPassLink')) $('forgotPassLink').style.display = 'none';
 };
 
 window._switchAuthMode = () => {
     if (isSignUpMode) window._showSignIn();
     else window._showSignUp();
+};
+
+window._forgotPassword = async () => {
+    const email = $('emailInput').value.trim();
+    if (!email || !email.includes('@')) {
+        alert('Enter your email address first, then click "Forgot password?"');
+        return;
+    }
+    try {
+        await sendPasswordResetEmail(auth, email);
+        alert('Password reset email sent to ' + email + '. Check your inbox.');
+    } catch (e) {
+        if (e.message.includes('user-not-found')) {
+            alert('No account found with that email.');
+        } else {
+            alert('Error: ' + e.message);
+        }
+    }
+};
+
+window._changePassword = async () => {
+    if (!currentUser || !currentUser.email) {
+        alert('No email associated with this account. If you signed in with Google, your password is managed by Google.');
+        return;
+    }
+    const hasPassword = currentUser.providerData.some(p => p.providerId === 'password');
+    if (!hasPassword) {
+        alert('Your account uses Google Sign-In. To set a password, click "Forgot password?" on the sign-in page and enter your email.');
+        return;
+    }
+    try {
+        await sendPasswordResetEmail(auth, currentUser.email);
+        alert('Password reset email sent to ' + currentUser.email + '. Check your inbox to set a new password.');
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
 };
 
 window._signInGoogle = async () => {
