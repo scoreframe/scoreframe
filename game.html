@@ -169,6 +169,21 @@ html, body {
 .team-block .score.loser { color: var(--text-muted); }
 .vs { font-size: 12px; color: var(--text-muted); padding: 0 8px; }
 
+/* Per-set line score for VB games — sets-won is the big number above; this is
+   the points-per-set breakdown rendered as winner-coloured pairs. */
+.set-line {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px;
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid var(--bg-elevated);
+    font-size: 14px; font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
+}
+.set-line .set-pair { font-weight: 700; }
+.set-line .set-pair.set-home { color: var(--accent); }
+.set-line .set-pair.set-away { color: var(--text-secondary); }
+.set-line .set-pair.set-tie { color: var(--text-muted); }
+.set-line .set-sep { color: var(--text-muted); }
+
 .bowling-list { display: grid; gap: 10px; }
 .bowling-row {
     display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: baseline;
@@ -962,6 +977,22 @@ function renderTeamScore(hub, game) {
     const hs = game.homeScore || 0;
     const as = game.awayScore || 0;
     const homeWin = hs > as, awayWin = as > hs;
+
+    // Per-set point line for VB (and any other sport that ships home/awaySetScores).
+    // homeScore/awayScore are SETS WON (e.g. 3-1); homeSetScores/awaySetScores are
+    // POINTS-PER-SET (e.g. [25,23,25,25] / [18,25,22,15]) — render under the final.
+    const homeSets = Array.isArray(game.homeSetScores) ? game.homeSetScores : [];
+    const awaySets = Array.isArray(game.awaySetScores) ? game.awaySetScores : [];
+    let setLine = '';
+    if (homeSets.length > 0 && homeSets.length === awaySets.length) {
+        const parts = homeSets.map((h, i) => {
+            const a = awaySets[i] ?? 0;
+            const winnerClass = h > a ? 'set-home' : (a > h ? 'set-away' : 'set-tie');
+            return `<span class="set-pair ${winnerClass}">${h}–${a}</span>`;
+        });
+        setLine = `<div class="set-line">${parts.join('<span class="set-sep">·</span>')}</div>`;
+    }
+
     $('scoreContent').innerHTML = `
         <div class="scoreline">
             <div class="team-block">
@@ -974,6 +1005,7 @@ function renderTeamScore(hub, game) {
                 <div class="score ${awayWin ? 'winner' : (homeWin ? 'loser' : '')}">${as}</div>
             </div>
         </div>
+        ${setLine}
     `;
     $('scoreCard').style.display = '';
 }
