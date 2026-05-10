@@ -76,6 +76,30 @@ html, body {
     background: var(--bg-elevated); color: var(--text-secondary); font-weight: 700;
     letter-spacing: 0.04em;
 }
+
+/* Playlist controls — shown below the iframe when a game has 2+ streams.
+   Lets viewers manually jump to the next stream and toggles auto-advance
+   on YouTube end-of-video events. */
+.playlist-controls {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-top: 10px; padding: 10px 12px;
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+    border-radius: 10px; font-size: 12px;
+}
+.playlist-pos { color: var(--text-secondary); font-weight: 600; letter-spacing: 0.04em; }
+.playlist-pos .current { color: var(--accent); }
+.playlist-btn {
+    background: var(--bg-elevated); color: var(--text-primary);
+    border: 1px solid var(--bg-elevated); border-radius: 8px;
+    padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.playlist-btn:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
+.playlist-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+.playlist-autoplay {
+    display: inline-flex; align-items: center; gap: 6px; margin-left: auto;
+    color: var(--text-secondary); cursor: pointer; user-select: none;
+}
+.playlist-autoplay input { accent-color: var(--accent); cursor: pointer; }
 .no-stream-card {
     width: 100%; padding: 48px 24px; text-align: center;
     background: var(--bg-surface); border-radius: 14px;
@@ -269,6 +293,16 @@ html, body {
         <div class="video-cap">
             <div id="streamPlatformPill"></div>
             <div id="streamCaption"></div>
+        </div>
+        <!-- Playlist controls (only shown when multiple streams) -->
+        <div id="playlistControls" class="playlist-controls" style="display:none;">
+            <div class="playlist-pos" id="playlistPos"></div>
+            <button class="playlist-btn" id="playlistPrevBtn" type="button">‹ Prev</button>
+            <button class="playlist-btn" id="playlistNextBtn" type="button">Next ›</button>
+            <label class="playlist-autoplay">
+                <input type="checkbox" id="playlistAutoplay" checked>
+                <span>Auto-play next</span>
+            </label>
         </div>
     </div>
 
@@ -681,9 +715,25 @@ function renderGame(hub, game) {
     const streams = (game.streams && game.streams.length > 0)
         ? game.streams
         : (game.streamUrl ? [{ url: game.streamUrl, platform: detectPlatform(game.streamUrl) }] : []);
-    const primary = pickPrimaryStream(streams);
-    if (primary) {
-        mountPrimaryStream(primary);
+
+    // Build the embeddable playlist. Order: YouTube first, then Twitch, then
+    // any other embeddable streams. Non-embeddable links don't go in the
+    // playlist — they stay in the "Watch & Replays" card as direct-watch
+    // links so we don't end up "advancing" to a stream that can't actually
+    // play inline.
+    const embeddable = (streams || []).filter(s => s && s.url && canEmbed(s.url, s.platform));
+    const ytFirst = embeddable.filter(s => detectPlatform(s.url) === 'youtube');
+    const twitchNext = embeddable.filter(s => detectPlatform(s.url) === 'twitch');
+    const others = embeddable.filter(s => {
+        const p = detectPlatform(s.url);
+        return p !== 'youtube' && p !== 'twitch';
+    });
+    playlistStreams = [...ytFirst, ...twitchNext, ...others];
+    playlistIndex = 0;
+    wirePlaylistControlsOnce();
+
+    if (playlistStreams.length > 0) {
+        mountStreamAtIndex(0);
     } else {
         $('playerSlot').innerHTML = `
             <div class="no-stream-card">
@@ -691,6 +741,7 @@ function renderGame(hub, game) {
                 <div class="label" style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">No video available for this game</div>
                 <div>Final score and stats are below.</div>
             </div>`;
+        refreshPlaylistControls(); // hides the controls
     }
 
     // Score card
@@ -706,19 +757,46 @@ function renderGame(hub, game) {
     // Highlights — load the subcollection asynchronously so the rest of
     // the page renders even if there's a brief Firestore delay or no
     // highlights at all (most non-streamed games won't have any).
-    loadHighlights(hub.teamId, game.id, primary);
+    loadHighlights(hub.teamId, game.id, playlistStreams[0]);
 
-    // Streams card — list all platforms (the embedded one shows up as
-    // "Now Playing"; the others are direct-watch links).
+    // Streams card — list all platforms. Embeddable streams get a click
+    // handler that jumps the inline player to that index; non-embeddable
+    // links open externally as before. The currently-playing entry is
+    // highlighted with the orange "Now Playing" treatment.
     if (streams.length > 0) {
-        const grid = $('streamGrid');
-        grid.innerHTML = streams.map(s => {
-            const p = s.platform || detectPlatform(s.url);
-            const isPrimary = primary && s.url === primary.url;
-            return `<a class="stream-link${isPrimary ? ' primary' : ''}" href="${s.url}" target="_blank" rel="noopener">
-                ${platformIcon(p)} ${platformLabel(p)}${isPrimary ? ' &mdash; Now Playing' : ''}
-            </a>`;
-        }).join('');
+        const renderStreamsCard = () => {
+            const grid = $('streamGrid');
+            grid.innerHTML = streams.map((s, i) => {
+                const p = s.platform || detectPlatform(s.url);
+                const embeddableHere = canEmbed(s.url, p);
+                // Find this stream's playlist index by URL match (a stream
+                // that's not embeddable returns -1 and stays a normal link).
+                const plIdx = playlistStreams.findIndex(x => x.url === s.url);
+                const isCurrent = embeddableHere && plIdx === playlistIndex;
+                const isInPlaylist = plIdx >= 0;
+                if (isInPlaylist) {
+                    // Inline-jump button
+                    return `<button class="stream-link${isCurrent ? ' primary' : ''}"
+                                    type="button" data-pl-idx="${plIdx}">
+                        ${platformIcon(p)} ${platformLabel(p)}${isCurrent ? ' &mdash; Now Playing' : ''}
+                    </button>`;
+                }
+                // Non-embeddable: open externally
+                return `<a class="stream-link" href="${s.url}" target="_blank" rel="noopener">
+                    ${platformIcon(p)} ${platformLabel(p)}
+                </a>`;
+            }).join('');
+            // Wire jump-to-index buttons.
+            grid.querySelectorAll('button.stream-link[data-pl-idx]').forEach(btn => {
+                btn.onclick = () => {
+                    const idx = parseInt(btn.dataset.plIdx, 10);
+                    if (!Number.isNaN(idx)) mountStreamAtIndex(idx);
+                };
+            });
+        };
+        // Expose so mountStreamAtIndex can re-render after a jump.
+        window.__rerenderStreamsCard = renderStreamsCard;
+        renderStreamsCard();
         $('streamsCard').style.display = '';
     }
 
@@ -733,6 +811,15 @@ function renderGame(hub, game) {
 let ytPlayer = null;
 let ytPlayerReady = false;
 let ytApiLoading = false;
+
+// ── Playlist state ────────────────────────────────────────────────────
+// When a game has multiple streams we treat them as a playlist: the first
+// embeddable stream auto-mounts, end-of-video advances to the next, and
+// users get manual Prev/Next buttons + an "Auto-play next" toggle. Only
+// embeddable streams (YouTube/Twitch) participate; non-embeddable links
+// stay in the "Watch & Replays" card as direct-watch links.
+let playlistStreams = [];
+let playlistIndex = 0;
 
 function ensureYouTubeApi(callback) {
     // Idempotent loader. The IFrame API uses a single global callback
@@ -754,6 +841,16 @@ function ensureYouTubeApi(callback) {
 }
 
 function mountPrimaryStream(stream) {
+    // Single-stream entry point — for the live-only path that doesn't have
+    // a playlist behind it. The multi-stream renderGame path uses
+    // mountStreamAtIndex() instead so playlist controls show up.
+    mountEmbed(stream);
+}
+
+/** Build the iframe + wire YouTube IFrame API hooks. Auto-advance to the
+ *  next playlist entry on YT.PlayerState.ENDED if the user has the
+ *  "Auto-play next" checkbox on. */
+function mountEmbed(stream) {
     const url = stream.url;
     const platform = stream.platform || detectPlatform(url);
     const allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
@@ -762,6 +859,9 @@ function mountPrimaryStream(stream) {
         // Use a known iframe id so the IFrame API can attach to it for
         // YouTube embeds. enablejsapi=1 is already in the embed src.
         const iframeId = 'sf-primary-player';
+        // Reset YT state; we're mounting a fresh player.
+        ytPlayer = null;
+        ytPlayerReady = false;
         $('playerSlot').innerHTML = `
             <div class="video-embed-wrap">
                 <iframe id="${iframeId}" src="${src}" allow="${allow}" allowfullscreen loading="eager"></iframe>
@@ -772,6 +872,15 @@ function mountPrimaryStream(stream) {
                     ytPlayer = new YT.Player(iframeId, {
                         events: {
                             onReady: () => { ytPlayerReady = true; },
+                            onStateChange: (e) => {
+                                // 0 === YT.PlayerState.ENDED. Advance the playlist
+                                // when the current video finishes IF the user hasn't
+                                // turned off Auto-play next.
+                                if (e.data === 0) {
+                                    const cb = document.getElementById('playlistAutoplay');
+                                    if (cb && cb.checked) playlistAdvance();
+                                }
+                            },
                         }
                     });
                 } catch (e) {
@@ -791,6 +900,60 @@ function mountPrimaryStream(stream) {
                 <a class="stream-link primary" href="${url}" target="_blank" rel="noopener">${platformIcon(platform)} Open on ${platformLabel(platform)}</a>
             </div>`;
     }
+}
+
+/** Mount the playlist entry at `idx`, refresh the playlist controls, and
+ *  re-render the "Watch & Replays" card so the active link gets the
+ *  "Now Playing" highlight. Idempotent: clamping handles invalid indices. */
+function mountStreamAtIndex(idx) {
+    if (playlistStreams.length === 0) return;
+    playlistIndex = Math.max(0, Math.min(idx, playlistStreams.length - 1));
+    mountEmbed(playlistStreams[playlistIndex]);
+    refreshPlaylistControls();
+    // Re-render the streams card so the active item gets the orange "Now
+    // Playing" treatment without us having to track DOM nodes manually.
+    if (typeof window.__rerenderStreamsCard === 'function') {
+        try { window.__rerenderStreamsCard(); } catch (_) {}
+    }
+}
+
+function playlistAdvance() {
+    if (playlistStreams.length === 0) return;
+    if (playlistIndex >= playlistStreams.length - 1) return; // last; no wrap
+    mountStreamAtIndex(playlistIndex + 1);
+}
+
+function playlistBack() {
+    if (playlistStreams.length === 0) return;
+    if (playlistIndex <= 0) return;
+    mountStreamAtIndex(playlistIndex - 1);
+}
+
+function refreshPlaylistControls() {
+    const controls = document.getElementById('playlistControls');
+    if (!controls) return;
+    if (playlistStreams.length < 2) {
+        controls.style.display = 'none';
+        return;
+    }
+    controls.style.display = '';
+    const pos = document.getElementById('playlistPos');
+    if (pos) {
+        pos.innerHTML = `<span class="current">${playlistIndex + 1}</span> of ${playlistStreams.length}`;
+    }
+    const prev = document.getElementById('playlistPrevBtn');
+    const next = document.getElementById('playlistNextBtn');
+    if (prev) prev.disabled = (playlistIndex <= 0);
+    if (next) next.disabled = (playlistIndex >= playlistStreams.length - 1);
+}
+
+// One-time wiring of the Prev/Next buttons. Safe to call multiple times —
+// we set the same handlers each time.
+function wirePlaylistControlsOnce() {
+    const prev = document.getElementById('playlistPrevBtn');
+    const next = document.getElementById('playlistNextBtn');
+    if (prev) prev.onclick = playlistBack;
+    if (next) next.onclick = playlistAdvance;
 }
 
 function renderTeamScore(hub, game) {
