@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0D0D0D">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
 <title>ScoreFrame — Dashboard</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -12,6 +13,13 @@
     --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
     --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
     --success: #4CAF50; --error: #F44336; --recording-red: #CC2222;
+}
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg-deepest: #F5F5F2; --bg-deep: #FFFFFF; --bg-surface: #FFFFFF;
+        --bg-elevated: #ECECE8; --accent: #E47A1F; --accent-dim: rgba(228,122,31,0.15);
+        --text-primary: #1A1A1A; --text-secondary: #555; --text-muted: #888;
+    }
 }
 html, body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -115,7 +123,7 @@ html, body {
 
 <div class="container" id="content">
     <div class="sign-in-prompt" id="signInPrompt">
-        Sign in to see your teams, hubs, and activity.
+        Sign in to see your teams and activity.
     </div>
 </div>
 
@@ -455,7 +463,7 @@ onAuthStateChanged(auth, async (user) => {
         await autoAcceptFollowerInvitations();
         loadDashboard();
     } else {
-        $('content').innerHTML = `<div class="sign-in-prompt">Sign in to see your teams, hubs, and activity.</div>`;
+        $('content').innerHTML = `<div class="sign-in-prompt">Sign in to see your teams and activity.</div>`;
     }
 });
 
@@ -679,7 +687,7 @@ async function loadDashboard() {
 
         if (ownedTeams.length === 0 && managedTeams.length === 0 && followedTeams.length === 0) {
             html += `<div class="empty-state">
-                No teams yet. Follow a team hub or create one in the ScoreFrame app.
+                No teams yet. Follow a team or create one in the ScoreFrame app.
             </div>`;
         }
 

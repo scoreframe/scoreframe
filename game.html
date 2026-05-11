@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0D0D0D">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
 <title>ScoreFrame — Game</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -12,7 +13,17 @@
     --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
     --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
     --success: #4CAF50; --error: #F44336; --recording-red: #CC2222;
+    --win-green: #2E7D32; --loss-red: #C62828; --tie-grey: #777777;
 }
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg-deepest: #F5F5F2; --bg-deep: #FFFFFF; --bg-surface: #FFFFFF;
+        --bg-elevated: #ECECE8; --accent: #E47A1F; --accent-dim: rgba(228,122,31,0.15);
+        --text-primary: #1A1A1A; --text-secondary: #555; --text-muted: #888;
+        --win-green: #1B5E20; --loss-red: #B71C1C; --tie-grey: #888888;
+    }
+}
+body.app .top-bar { display: none; }
 html, body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: var(--bg-deepest); color: var(--text-primary);
@@ -386,6 +397,9 @@ const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const hubCode = (params.get('team') || params.get('hub') || '').trim().toUpperCase();
 const gameId = (params.get('game') || params.get('id') || '').trim();
+// v13 — Android WebView wrapper appends ?app=1; hide the in-page top-bar
+// since the app already shows its own chrome.
+if (params.get('app') === '1') document.body.classList.add('app');
 
 const sportEmoji = s => ({
     GENERIC:'🎯', VOLLEYBALL:'🏐', BOWLING:'🎳', BASKETBALL:'🏀',
