@@ -353,6 +353,14 @@ html, body {
             <div id="liveGame"></div>
         </div>
 
+        <!-- v13 — Season switcher. Hidden when the team has 0 or 1 seasons.
+             Renders as a horizontal scroll of pills; tap to switch. The
+             selected season filters Upcoming + Past Games below. -->
+        <div class="section" id="seasonSwitcherSection" style="display:none; padding-bottom: 4px;">
+            <div class="section-title">🗓️ Season</div>
+            <div id="seasonSwitcher" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;"></div>
+        </div>
+
         <!-- Upcoming Schedule -->
         <div class="section">
             <div class="section-title">📅 Upcoming Games</div>
@@ -492,6 +500,11 @@ let hubCode = null;
 let teamId = null;  // Resolved from hubIndex/{hubCode}
 let hubProfile = null;
 let currentUser = null;  // null = not signed in, object = signed in with Google
+// v13 — Season state. teamSeasons holds the team's seasons sorted
+// active-first. selectedSeasonId filters Upcoming + Past Games rendering.
+// null = "All seasons" (default for single-season teams + the All pill).
+let teamSeasons = [];
+let selectedSeasonId = null;
 let isManager = false;
 let isSubscriber = false;
 let subStatus = null;  // null, 'pending', 'approved', 'blocked'
@@ -685,6 +698,7 @@ function showContent() {
         // Public hub: everyone sees content, no gate
         $('accessGate').style.display = 'none';
         $('teamContent').style.display = 'block';
+        loadSeasons();
         loadSchedule();
         loadRoster();
             loadPastGames();
@@ -693,6 +707,7 @@ function showContent() {
         // Private hub but user has access
         $('accessGate').style.display = 'none';
         $('teamContent').style.display = 'block';
+        loadSeasons();
         loadSchedule();
         loadRoster();
             loadPastGames();
@@ -970,6 +985,81 @@ window.requestAccess = async function() {
 
 // ── Content Loading ──
 
+/** v13 — Fetch the team's seasons + render the switcher.
+ *  Active season (isActive=true, endDate=null) lands first. If the team
+ *  has 0 or 1 seasons, the switcher stays hidden (no point in a one-pill
+ *  row). Tap a pill to filter Upcoming + Past Games to that season. */
+async function loadSeasons() {
+    try {
+        const seasonsCol = collection(db, 'teams', teamId, 'seasons');
+        const snap = await getDocs(seasonsCol);
+        const seasons = [];
+        snap.forEach(d => seasons.push({ id: d.id, ...d.data() }));
+        // Sort: active + non-ended first, then by startDate desc.
+        seasons.sort((a, b) => {
+            const aActive = (a.isActive && !a.endDate) ? 1 : 0;
+            const bActive = (b.isActive && !b.endDate) ? 1 : 0;
+            if (aActive !== bActive) return bActive - aActive;
+            return (b.startDate || 0) - (a.startDate || 0);
+        });
+        teamSeasons = seasons;
+        // Default selection = the active season, if any.
+        selectedSeasonId = seasons.find(s => s.isActive && !s.endDate)?.id || null;
+        renderSeasonSwitcher();
+    } catch (e) {
+        console.warn('loadSeasons failed:', e);
+        teamSeasons = [];
+        selectedSeasonId = null;
+    }
+}
+
+function renderSeasonSwitcher() {
+    const section = $('seasonSwitcherSection');
+    const switcher = $('seasonSwitcher');
+    if (!section || !switcher) return;
+    // Skip the switcher when there's nothing to switch between.
+    if (teamSeasons.length < 2) {
+        section.style.display = 'none';
+        switcher.innerHTML = '';
+        return;
+    }
+    section.style.display = 'block';
+    // "All" pill at the front so users can drop the filter and see every
+    // game on the team. Then one pill per season, active labeled.
+    const pills = ['<button data-sid="" class="season-pill"></button>'.replace('"></button>', '">All seasons</button>')];
+    for (const s of teamSeasons) {
+        const isActive = s.isActive && !s.endDate;
+        const label = (s.name || 'Untitled') + (isActive ? ' · ACTIVE' : '');
+        pills.push(`<button data-sid="${s.id}" class="season-pill">${label}</button>`);
+    }
+    switcher.innerHTML = pills.join('');
+    // Style + click handlers. Selected pill = orange filled; others outlined.
+    Array.from(switcher.querySelectorAll('.season-pill')).forEach(btn => {
+        const sid = btn.getAttribute('data-sid') || null;
+        const isSelected = sid === selectedSeasonId;
+        btn.style.cssText = `
+            padding: 8px 14px; border-radius: 16px; font-size: 12px; font-weight: 700;
+            white-space: nowrap; cursor: pointer; border: 1px solid var(--accent);
+            background: ${isSelected ? 'var(--accent)' : 'transparent'};
+            color: ${isSelected ? '#1A1A1A' : 'var(--accent)'};
+        `;
+        btn.onclick = () => {
+            selectedSeasonId = sid;
+            renderSeasonSwitcher();
+            loadSchedule();
+            loadPastGames();
+        };
+    });
+}
+
+/** v13 — Filter helper for season switcher. A null selectedSeasonId or
+ *  a game with no seasonId (legacy) passes when the user has picked "All".
+ *  When a specific season is selected, the game's seasonId must match. */
+function matchesSelectedSeason(game) {
+    if (!selectedSeasonId) return true;
+    return game.seasonId === selectedSeasonId;
+}
+
 async function loadSchedule() {
     try {
         // Post-cutover, scheduled games live in `games/` with status in
@@ -997,6 +1087,8 @@ async function loadSchedule() {
             // Skip games whose scheduled date is more than 6h in the past
             // (and they're not live). They're effectively past.
             if (game.status !== 'live' && typeof game.date === 'number' && game.date < cutoff) return;
+            // v13 — Season switcher filter.
+            if (!matchesSelectedSeason(game)) return;
             upcoming.push(game);
         });
 
@@ -1135,6 +1227,8 @@ async function loadPastGames() {
             // section. Legacy completed docs without a status field flow
             // through unchanged.
             if (g.status === 'scheduled' || g.status === 'live' || g.status === 'cancelled') return;
+            // v13 — Season switcher filter.
+            if (!matchesSelectedSeason(g)) return;
             renderedCount++;
             pastGamesCache.push(g);
             // Collect stream links from streams array or legacy streamUrl/streamCode
