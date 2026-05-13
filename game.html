@@ -158,6 +158,39 @@ html, body {
     text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px;
 }
 
+/* Pre-stream card — shows the YouTube link a broadcaster pre-set at
+   schedule time so fans can bookmark / set reminder before the game.
+   Same URL gets reused at match start (MainActivity reuses ytBroadcastId). */
+.prestream-card {
+    margin-top: 12px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--accent);
+    text-align: center;
+}
+.prestream-label {
+    font-size: 12px; font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 8px;
+}
+.prestream-link {
+    display: inline-block;
+    padding: 10px 18px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #1A1A1A;
+    font-size: 15px; font-weight: 700;
+    text-decoration: none;
+}
+.prestream-link:hover { filter: brightness(1.08); }
+.prestream-hint {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
 /* Body — game summary + stats stacked under the player */
 .body {
     max-width: 1100px; margin: 0 auto; padding: 16px 16px 32px;
@@ -650,13 +683,28 @@ function renderUpcomingGame(hub, game) {
     // Countdown card replacing the player. We tick once per second; the
     // interval is harmless if the user navigates away because we never
     // hold a reference outside this scope.
+    // If the broadcaster pre-created a YouTube broadcast at schedule time
+    // (ytWatchUrl is populated), surface the link now so fans can hit
+    // "Set reminder" / bookmark / share before the game starts. Same URL
+    // gets reused when the broadcaster goes live (MainActivity reuses
+    // ytBroadcastId for the scheduled game), so what they save here will
+    // be the actual stream they watch at match time.
+    const preStreamUrl = (game.ytWatchUrl || '').trim();
+    const preStreamHtml = preStreamUrl ? `
+        <div class="prestream-card">
+            <div class="prestream-label">📺 Stream is ready</div>
+            <a class="prestream-link" href="${escapeHtml(preStreamUrl)}" target="_blank" rel="noopener">
+                Watch on YouTube
+            </a>
+            <div class="prestream-hint">Tap "Set reminder" on YouTube — same link goes live at game time.</div>
+        </div>` : '';
     const countdownHtml = `
         <div class="countdown-card">
             <div class="label-top">Game Starts</div>
             <div class="matchup">${escapeHtml(title)}</div>
             <div class="when">${formatDate(game.date)}</div>
             <div class="count" id="countdownNumbers"></div>
-        </div>`;
+        </div>${preStreamHtml}`;
     $('playerSlot').innerHTML = countdownHtml;
     const tick = () => {
         const ms = (game.date || 0) - Date.now();
