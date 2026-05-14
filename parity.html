@@ -624,9 +624,9 @@ details.collapsible > .inner {
     <div class="subtitle">Feature Parity Dashboard</div>
     <div class="public-banner">👁️ Public Mode</div>
     <div class="meta">
-        <span class="meta-item"><b>Updated:</b> 2026-05-07</span>
-        <span class="meta-item"><b>Android:</b> v1.1.183</span>
-        <span class="meta-item"><b>iOS:</b> build 98 (1.1)</span>
+        <span class="meta-item"><b>Updated:</b> 2026-05-14</span>
+        <span class="meta-item"><b>Android:</b> v1.1.305 (FAD)</span>
+        <span class="meta-item"><b>iOS:</b> build 125 (1.1) · TestFlight uploaded 2026-05-14</span>
         <span class="meta-item"><b>Source:</b> code audit</span>
     </div>
     <div class="public-link-row internal-only">
@@ -647,13 +647,13 @@ details.collapsible > .inner {
             </div>
             <div class="deploy-card android-fad">
                 <div class="deploy-label">Android · Firebase Distribution</div>
-                <div class="deploy-version">v1.1.183</div>
-                <div class="deploy-meta">Internal testers · 2026-05-07</div>
+                <div class="deploy-version">v1.1.278</div>
+                <div class="deploy-meta">Internal testers · 2026-05-12 · seasons UI + inline-manage WIP</div>
             </div>
             <div class="deploy-card ios-tf">
                 <div class="deploy-label">iOS · TestFlight</div>
                 <div class="deploy-version">build 95</div>
-                <div class="deploy-meta">96–98 sideloaded only · 2026-05-07</div>
+                <div class="deploy-meta">122 staged locally · build blocked on iOS 26.5 SDK install</div>
             </div>
             <div class="deploy-card ios-as">
                 <div class="deploy-label">iOS · App Store</div>
@@ -662,8 +662,8 @@ details.collapsible > .inner {
             </div>
             <div class="deploy-card web">
                 <div class="deploy-label">Web · scoreframe.app</div>
-                <div class="deploy-version">2026-05-07</div>
-                <div class="deploy-meta">GitHub Pages · last commit today</div>
+                <div class="deploy-version">2026-05-12</div>
+                <div class="deploy-meta">GitHub Pages · parity dashboard refreshed</div>
             </div>
         </div>
     </div>
@@ -905,6 +905,7 @@ const FEATURES = [
 
     /* ---------- Home / Dashboard ---------- */
     { cat: 'Home/Dashboard', name: '6-tab bottom nav (Home/Teams/Hubs/History/Settings/Account)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'Bottom-nav active-tab affordance (orange label + bigger icon + underline pip)', a: 'shipped', i: 'shipped', w: 'na', notes: 'v1.1.303 — Home tab now styled identically to Teams/Schedule. Shared via ScoreFrameUI.bottomNavItem on Android, SwiftUI scaleEffect + spring animation on iOS.' },
     { cat: 'Home/Dashboard', name: 'HomeDataStore (snapshot listeners + cache)', a: 'shipped', i: 'partial', w: 'na', notes: 'Android persists Firestore snapshots to disk for instant cold start.' },
     { cat: 'Home/Dashboard', name: 'Hero card / Resume game CTA', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android: just fixed in v1.1.183 (hero box was hijacking New Game CTA).' },
     { cat: 'Home/Dashboard', name: 'Default New Game / Quick Start hero', a: 'shipped', i: 'shipped', w: 'na' },
@@ -952,6 +953,10 @@ const FEATURES = [
     { cat: 'Game Setup & Recording', name: 'Penalty dialog (offense/defense + yards)', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Game Setup & Recording', name: 'Volleyball pool play / Best-of-3/5', a: 'shipped', i: 'shipped', w: 'shipped' },
     { cat: 'Game Setup & Recording', name: 'End Game universal dialog', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Game Setup & Recording', name: 'Bowling — scrollable mini-scoreboard in scoring panel', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'v1.1.305 — replaces ◀/▶ edit arrows with horizontal-scrollable 10-frame strip; tap a cell to edit, auto-scrolls to put active frame on the right.' },
+    { cat: 'Game Setup & Recording', name: 'Bowling — big orange bowler-name banner + ← G N-1 pill', a: 'shipped', i: 'missing', w: 'na', effort: 'S', notes: 'v1.1.305 — 20sp orange bowler name, Frame N · Roll M subtitle, "← Game N-1" warp pill on game 2+ of a series.' },
+    { cat: 'Game Setup & Recording', name: 'Score Only mode — orientation unlock (no rotate-to-landscape guard)', a: 'shipped', i: 'na', w: 'na', notes: 'v1.1.305 — Score Only skips the recording-orientation placeholder; fixes the bowling-scoreboard-missing-in-portrait symptom. iOS Score Only is portrait-aware by default (different scaffold).' },
+    { cat: 'Game Setup & Recording', name: 'Score Only mode — Keep Screen On Quick Settings tile', a: 'shipped', i: 'na', w: 'na', notes: 'v1.1.305 — defaults ON in Score Only so bowlers don\'t have to keep waking the phone. iOS scoring screens already keep screen on via idleTimerDisabled.' },
 
     /* ---------- Video Recording ---------- */
     { cat: 'Video Recording', name: 'Camera capture pipeline', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android: Camera2 + OpenGL ES. iOS: AVCaptureSession + Metal.' },
@@ -1006,6 +1011,12 @@ const FEATURES = [
     { cat: 'Schedule/Agenda', name: 'Schedule reminder bell routing', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Schedule/Agenda', name: 'Single games-collection (status-based)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'May 06 cutover — teams/{id}/games/{id} with status field.' },
     { cat: 'Schedule/Agenda', name: 'Auto-complete on End Game (opponent match)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Schedule/Agenda', name: 'Pre-game "attach to schedule" picker (sport-filtered, 2-step)', a: 'shipped', i: 'na', w: 'na', effort: 'M', notes: 'Android v1.1.301: sport-filter the schedule list, team picker → event picker with "show past events" toggle. iOS doesn\'t currently surface this picker at all — attach happens via Schedule tab "Start Game" button. Separate UX, not a direct port.' },
+    { cat: 'Schedule/Agenda', name: 'Schedule → game-setup pre-fill (opponent / event title / location)', a: 'shipped', i: 'shipped', w: 'na', notes: 'v1.1.302 — picker passes full schedule payload through intent extras (Android) / GameSetupConfig (iOS).' },
+    { cat: 'Schedule/Agenda', name: 'Single Event title field (eventName + eventLabel collapsed)', a: 'shipped', i: 'shipped', w: 'na', notes: 'v1.1.302 — one input on ScheduleGameDialog/Sheet writes both fields; unifiedTitle accessor on ScheduledGame handles legacy reads.' },
+    { cat: 'Schedule/Agenda', name: 'Edit Event dialog (long-press) — unified title + remove YouTube stream', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'Android v1.1.302. iOS Schedule tab lacks an edit dialog; would need to add to ScheduleScreen.' },
+    { cat: 'Schedule/Agenda', name: 'saveGame status-preserve (no overwrite on scheduled/live/cancelled)', a: 'shipped', i: 'shipped', w: 'na', notes: 'v1.1.299 — read-then-write per teamId. Recovers existing clobbered docs on next sign-in via recoverClobberedSchedule.' },
+    { cat: 'Schedule/Agenda', name: 'End-Game schedule-entry consolidation (single past-games doc)', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'Android v1.1.304 — pushGameToTeamHubs deletes the matching schedule entry after copying its streams[] into the new past-games doc. iOS doesn\'t have an equivalent consolidation path; schedule entries stuck at status=live linger.' },
 
     /* ---------- Team Hubs ---------- */
     { cat: 'Team Hubs', name: 'Hub create / delete', a: 'shipped', i: 'shipped', w: 'na' },
@@ -1017,6 +1028,16 @@ const FEATURES = [
     { cat: 'Team Hubs', name: 'Live stream URL push to hub', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Read by team.html / game.html / watch.html.' },
     { cat: 'Team Hubs', name: 'In-app team hub viewer', a: 'shipped', i: 'shipped', w: 'shipped' },
     { cat: 'Team Hubs', name: 'Per-team logo upload (Firebase Storage)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Team Hubs', name: 'Inline-manage in team editor (TeamHubInline)', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'Android v1.1.279 WIP: TeamHubScreen folded into SportSettingsActivity editor; every TeamHubActivity launch reroutes. iOS still drills into TeamHubScreen sheet from TeamEditorScreen.' },
+    { cat: 'Team Hubs', name: 'Sharing card inline in team editor', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android v1.1.278 + iOS port (TeamEditorScreen Section("Sharing") with Code / Open / Copy / Share).' },
+
+    /* ---------- Seasons ---------- */
+    { cat: 'Seasons', name: 'Season data model + manager', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android Season.kt / SeasonManager.kt. iOS Phase 1 (2026-05-12): Season.swift + SeasonManager.swift.' },
+    { cat: 'Seasons', name: 'One-time Legacy migration (seasonId backfill)', a: 'shipped', i: 'shipped', w: 'na', notes: 'iOS SeasonMigration.swift mirrors Android; idempotent UserDefaults flag.' },
+    { cat: 'Seasons', name: 'seasonId stamped on game save', a: 'shipped', i: 'shipped', w: 'na', notes: 'Both platforms auto-resolve active season for the team at save time.' },
+    { cat: 'Seasons', name: 'Season switcher in team viewer ("CURRENT SEASON" pills)', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android v1.1.278. iOS Phase 2 (2026-05-12) — pill row + filtered schedule/past-games/record in TeamHubViewerScreen. Build pending iOS 26.5 SDK install.' },
+    { cat: 'Seasons', name: 'Season detail screen (rename / new / end)', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'Android SeasonDetailActivity. iOS deferred to Phase 3+.' },
+    { cat: 'Seasons', name: 'Public season page (web)', a: 'partial', i: 'na', w: 'missing', effort: 'M', notes: 'Web team.html still surfaces hub URL; dedicated season.html lives behind future cleanup phase.' },
 
     /* ---------- Reminders / Notifications ---------- */
     { cat: 'Reminders', name: 'In-app schedule reminder routing', a: 'shipped', i: 'shipped', w: 'na' },
@@ -1046,6 +1067,7 @@ const FEATURES = [
     /* ---------- Notifications & Push ---------- */
     { cat: 'Notifications & Push', name: 'FCM push notifications', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Notifications & Push', name: 'Cloud Function FCM dispatcher', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Server-side, shared.' },
+    { cat: 'Notifications & Push', name: 'Daily-digest email — per-metric "today / this week" deltas + Streams started line', a: 'shipped', i: 'shipped', w: 'shipped', notes: '2026-05-13 cloud-only rewrite. Users / Teams / Hubs / Approved followers / Games scored each now show "+today · +this week". New "Streams started" line via pendingNotifications data.type=="live" filter for 24h / 7d / 30d windows.' },
     { cat: 'Notifications & Push', name: 'In-app notification center + JSON storage', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Notifications & Push', name: 'Follow-request system notification (Approve/Block actions)', a: 'shipped', i: 'partial', w: 'na', notes: 'iOS approves via in-app — no system-notification action buttons (platform diff).' },
     { cat: 'Notifications & Push', name: 'Schedule reminder notifications', a: 'shipped', i: 'shipped', w: 'na' },
