@@ -15,6 +15,23 @@
     --success: #4CAF50; --error: #F44336; --recording-red: #CC2222;
     --win-green: #2E7D32; --loss-red: #C62828; --tie-grey: #777777;
 }
+/* v14 — When this page is rendered inside the app (?theme=light|dark
+   appended by GamePageActivity / GamePageView), force that theme regardless
+   of the OS setting so the in-app WebView matches the app chrome instead
+   of whatever the phone happens to be doing. body[data-theme] is set
+   from the URL param before any rendering. */
+body[data-theme="dark"] {
+    --bg-deepest: #0D0D0D !important; --bg-deep: #141414 !important; --bg-surface: #1E1E1E !important;
+    --bg-elevated: #272727 !important; --accent: #FF9640 !important; --accent-dim: rgba(255,150,64,0.15) !important;
+    --text-primary: #E0E0E0 !important; --text-secondary: #999 !important; --text-muted: #666 !important;
+    --win-green: #2E7D32 !important; --loss-red: #C62828 !important; --tie-grey: #777777 !important;
+}
+body[data-theme="light"] {
+    --bg-deepest: #F5F5F2 !important; --bg-deep: #FFFFFF !important; --bg-surface: #FFFFFF !important;
+    --bg-elevated: #ECECE8 !important; --accent: #E47A1F !important; --accent-dim: rgba(228,122,31,0.15) !important;
+    --text-primary: #1A1A1A !important; --text-secondary: #555 !important; --text-muted: #888 !important;
+    --win-green: #1B5E20 !important; --loss-red: #B71C1C !important; --tie-grey: #888888 !important;
+}
 @media (prefers-color-scheme: light) {
     :root {
         --bg-deepest: #F5F5F2; --bg-deep: #FFFFFF; --bg-surface: #FFFFFF;
@@ -317,6 +334,26 @@ html, body {
     .vs { display: none; }
 }
 </style>
+<script>
+// v14 — App-injected theme override. GamePageActivity (Android) and
+// GamePageView (iOS) append `?theme=light|dark` so the embedded WebView
+// follows the *app's* current state instead of the OS setting. Runs
+// inline before paint so there's no flash of wrong theme.
+(function() {
+    try {
+        var t = new URLSearchParams(location.search).get('theme');
+        if (t === 'light' || t === 'dark') {
+            // Set on <html> first so the document-root cascade picks it up
+            // immediately; the body[data-theme] CSS selectors will resolve
+            // once <body> exists.
+            document.documentElement.setAttribute('data-theme', t);
+            document.addEventListener('DOMContentLoaded', function() {
+                document.body.setAttribute('data-theme', t);
+            });
+        }
+    } catch (e) {}
+})();
+</script>
 </head>
 <body>
 
