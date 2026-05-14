@@ -1133,13 +1133,51 @@ async function loadSchedule() {
             upcoming.push(game);
         });
 
+        // v15 — Group scheduled children under their parent tournament so
+        // the schedule reads "🏆 Tournament card → nested child rows" instead
+        // of showing children as standalone events. Children are detected
+        // via the `parentEventId` backref the app stamps at create time.
+        const upcomingIds = new Set(upcoming.map(g => g.id));
+        const childrenByParent = new Map();
+        const nestedChildIds = new Set();
+        for (const g of upcoming) {
+            if (g.parentEventId && upcomingIds.has(g.parentEventId)) {
+                if (!childrenByParent.has(g.parentEventId)) childrenByParent.set(g.parentEventId, []);
+                childrenByParent.get(g.parentEventId).push(g);
+                nestedChildIds.add(g.id);
+            }
+        }
+        // Top-level list excludes nested children.
+        const topLevelUpcoming = upcoming.filter(g => !nestedChildIds.has(g.id));
+
         const container = $('upcomingGames');
         if (upcoming.length === 0) {
             container.innerHTML = '<div class="empty">No upcoming games scheduled</div>';
             return;
         }
 
-        container.innerHTML = upcoming.map(g => {
+        // v15 — Compact child row (nested under tournament cards). No
+        // tap-fork — clicking opens the child's game page directly.
+        const renderChildRow = (c) => {
+            const isLiveChild = c.status === 'live';
+            const childDate = (typeof c.date === 'number')
+                ? new Date(c.date).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+                : 'TBD';
+            const childTitle = c.opponent ? `vs ${c.opponent}` : (c.eventName || 'Game');
+            const childHref = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(c.id)}`;
+            const pill = isLiveChild
+                ? '<span class="event-type-badge" style="background:rgba(204,34,34,0.15);color:#CC2222;">● LIVE</span>'
+                : '<span class="event-type-badge single">Scheduled</span>';
+            return `<a href="${childHref}" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;margin:6px 0 6px 24px;padding:10px 12px;border:1px solid var(--bg-elevated);border-left:3px solid var(--accent);border-radius:8px;background:var(--bg-surface);">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:700;">${childTitle}</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${childDate}</div>
+                </div>
+                ${pill}
+            </a>`;
+        };
+
+        container.innerHTML = topLevelUpcoming.map(g => {
             const isLive = g.status === 'live';
             const statusClass = isLive ? 'live' : g.status === 'completed' ? 'completed' : 'scheduled';
             // v15 — Multi-day tournaments render the date range instead of
@@ -1194,9 +1232,21 @@ async function loadSchedule() {
             const cardBody = gameHref
                 ? `<a href="${gameHref}" style="text-decoration:none;color:inherit;display:block;">${inner}</a>`
                 : inner;
+            // v15 — Nested children block under tournament cards. Scheduled
+            // siblings of a played-game tournament get listed in chronological
+            // order so the user can see what's coming up at a glance.
+            const scheduledKids = childrenByParent.get(g.id) || [];
+            const childrenBlock = (isTournament && scheduledKids.length > 0)
+                ? scheduledKids
+                    .slice()
+                    .sort((a, b) => (a.date || 0) - (b.date || 0))
+                    .map(renderChildRow)
+                    .join('')
+                : '';
             return `<div class="game-card ${isLive ? 'live' : ''} ${isTournament ? 'tournament-card' : ''}">
                 ${cardBody}
                 ${managerActions}
+                ${childrenBlock}
             </div>`;
         }).join('');
     } catch (e) {
