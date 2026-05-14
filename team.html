@@ -101,6 +101,14 @@ html, body {
     border: 1px solid var(--bg-elevated);
 }
 .game-card.live { border-color: var(--recording-red); }
+.game-card.tournament-card { border-color: var(--accent-dim); }
+.event-type-badge {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.08em; padding: 3px 8px; border-radius: 4px;
+    margin-bottom: 8px;
+}
+.event-type-badge.tournament { color: var(--accent); background: var(--accent-dim); }
+.event-type-badge.single { color: var(--text-muted); background: var(--bg-elevated); }
 .game-date { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
 .game-opponent { font-size: 16px; font-weight: 700; }
 .game-location { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
@@ -1133,20 +1141,34 @@ async function loadSchedule() {
                 <button onclick="event.stopPropagation();event.preventDefault();window._deleteScheduleGame('${g.id}')" style="padding:4px 10px;background:transparent;color:var(--error);border:1px solid var(--error);border-radius:4px;font-size:11px;cursor:pointer;">Delete</button>
                 <button onclick="event.stopPropagation();event.preventDefault();window._cancelScheduleGame('${g.id}')" style="padding:4px 10px;background:transparent;color:var(--text-muted);border:1px solid var(--text-muted);border-radius:4px;font-size:11px;cursor:pointer;">Cancel</button>
             </div>` : '';
-            // Card body is wrapped in an <a> to game.html so the user
-            // lands on the dedicated game page (with countdown YouTube
-            // embed for upcoming, replay viewer for completed). Live
-            // status keeps its existing "Watch Live" button as a
-            // shortcut to the raw stream URL.
-            const gameHref = g.id ? `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}` : null;
+            // v14 — Tournament/multi-game container fork. The app stamps
+            // multiGame=true on schedule docs that hold many child games
+            // (gameIds[]). Single games keep going to game.html; multi-
+            // game events route to event.html which lists the child games.
+            const isTournament = g.multiGame === true || (Array.isArray(g.gameIds) && g.gameIds.length > 0);
+            const childCount = Array.isArray(g.gameIds) ? g.gameIds.length : 0;
+            const gameHref = g.id
+                ? (isTournament
+                    ? `/event.html?team=${encodeURIComponent(hubCode)}&event=${encodeURIComponent(g.id)}`
+                    : `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}`)
+                : null;
+            const typeBadge = isTournament
+                ? `<div class="event-type-badge tournament">🏆 TOURNAMENT${childCount > 0 ? ` · ${childCount} game${childCount === 1 ? '' : 's'}` : ''}</div>`
+                : `<div class="event-type-badge single">▶ SINGLE GAME</div>`;
             // Opponent is the primary line. If an Event Label was set on
             // the schedule (league / tournament name), surface it as a
             // secondary line — used to be shown only when no opponent
             // existed, but Eric wants it visible alongside the opponent
             // so fans see "Tigers vs Cardinals" + "Spring Tournament".
-            const headlineText = g.opponent ? `vs ${g.opponent}` : (g.eventName || 'TBD');
-            const eventLine = (g.opponent && g.eventName) ? `<div class="game-notes">🏷️ ${g.eventName}</div>` : '';
+            // Tournament cards lead with the event name (no opponent).
+            const headlineText = isTournament
+                ? (g.eventName || 'Tournament')
+                : (g.opponent ? `vs ${g.opponent}` : (g.eventName || 'TBD'));
+            const eventLine = (!isTournament && g.opponent && g.eventName)
+                ? `<div class="game-notes">🏷️ ${g.eventName}</div>`
+                : '';
             const inner = `
+                ${typeBadge}
                 <div class="game-date"><span class="game-status ${statusClass}">${statusLabel}</span></div>
                 <div class="game-opponent">${headlineText}</div>
                 ${eventLine}
@@ -1158,7 +1180,7 @@ async function loadSchedule() {
             const cardBody = gameHref
                 ? `<a href="${gameHref}" style="text-decoration:none;color:inherit;display:block;">${inner}</a>`
                 : inner;
-            return `<div class="game-card ${isLive ? 'live' : ''}">
+            return `<div class="game-card ${isLive ? 'live' : ''} ${isTournament ? 'tournament-card' : ''}">
                 ${cardBody}
                 ${managerActions}
             </div>`;

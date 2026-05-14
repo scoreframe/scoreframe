@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
+<title>ScoreFrame — Event</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg-deepest: #0D0D0D; --bg-deep: #141414; --bg-surface: #1E1E1E;
+    --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
+    --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
+    --success: #4CAF50; --error: #F44336; --recording-red: #CC2222;
+    --win-green: #2E7D32; --loss-red: #C62828; --tie-grey: #777777;
+}
+/* In-app theme override — GamePageActivity/GamePageView appends ?theme=light|dark. */
+body[data-theme="dark"] {
+    --bg-deepest: #0D0D0D !important; --bg-deep: #141414 !important; --bg-surface: #1E1E1E !important;
+    --bg-elevated: #272727 !important; --accent: #FF9640 !important; --accent-dim: rgba(255,150,64,0.15) !important;
+    --text-primary: #E0E0E0 !important; --text-secondary: #999 !important; --text-muted: #666 !important;
+    --win-green: #2E7D32 !important; --loss-red: #C62828 !important; --tie-grey: #777777 !important;
+}
+body[data-theme="light"] {
+    --bg-deepest: #F5F5F2 !important; --bg-deep: #FFFFFF !important; --bg-surface: #FFFFFF !important;
+    --bg-elevated: #ECECE8 !important; --accent: #E47A1F !important; --accent-dim: rgba(228,122,31,0.15) !important;
+    --text-primary: #1A1A1A !important; --text-secondary: #555 !important; --text-muted: #888 !important;
+    --win-green: #1B5E20 !important; --loss-red: #B71C1C !important; --tie-grey: #888888 !important;
+}
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg-deepest: #F5F5F2; --bg-deep: #FFFFFF; --bg-surface: #FFFFFF;
+        --bg-elevated: #ECECE8; --accent: #E47A1F; --accent-dim: rgba(228,122,31,0.15);
+        --text-primary: #1A1A1A; --text-secondary: #555; --text-muted: #888;
+        --win-green: #1B5E20; --loss-red: #B71C1C; --tie-grey: #888888;
+    }
+}
+body.app .top-bar { display: none; }
+html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-deepest); color: var(--text-primary);
+    min-height: 100vh; overflow-x: hidden;
+}
+
+.top-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; background: var(--bg-deep);
+    border-bottom: 1px solid var(--bg-elevated);
+}
+.brand { text-decoration: none; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+.brand .accent { color: var(--accent); }
+.back-link {
+    margin-left: auto; font-size: 13px; color: var(--text-secondary);
+    text-decoration: none; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid var(--bg-elevated);
+}
+.back-link:hover { color: var(--accent); border-color: var(--accent); }
+
+.hero {
+    padding: 24px; text-align: center;
+    background: linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-deepest) 100%);
+    border-bottom: 1px solid var(--bg-elevated);
+}
+.team-color-bar { height: 4px; border-radius: 2px; margin-bottom: 14px; max-width: 480px; margin-left: auto; margin-right: auto; }
+.event-type-badge {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em; padding: 4px 10px; border-radius: 4px;
+    margin-bottom: 12px; color: var(--accent); background: var(--accent-dim);
+}
+.hero-team { font-size: 13px; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+.hero-title { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+.hero-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+.live-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--recording-red); color: white; padding: 3px 10px;
+    border-radius: 10px; font-size: 11px; font-weight: 700;
+    animation: pulse 1s ease-in-out infinite; margin-top: 10px;
+}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+
+.section { padding: 20px 24px; }
+.section-title {
+    font-size: 12px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 12px;
+}
+.section-sub {
+    font-size: 12px; color: var(--text-muted); margin-bottom: 10px;
+}
+.empty {
+    padding: 20px; text-align: center;
+    color: var(--text-muted); font-size: 14px; font-style: italic;
+    background: var(--bg-surface); border-radius: 12px;
+    border: 1px dashed var(--bg-elevated);
+}
+
+.game-card {
+    background: var(--bg-surface); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 10px;
+    border: 1px solid var(--bg-elevated);
+    display: block; text-decoration: none; color: inherit;
+}
+.game-card:hover { border-color: var(--accent); }
+.game-card.live { border-color: var(--recording-red); }
+.game-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.game-left { flex: 1; min-width: 0; }
+.game-status {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; margin-bottom: 6px;
+}
+.game-status.live { background: var(--recording-red); color: white; }
+.game-status.scheduled { background: var(--accent-dim); color: var(--accent); }
+.game-status.completed { background: rgba(76,175,80,0.15); color: var(--success); }
+.game-status.cancelled { background: var(--bg-elevated); color: var(--text-muted); }
+.game-opponent { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.game-meta { font-size: 12px; color: var(--text-muted); }
+.game-score {
+    font-size: 22px; font-weight: 800; color: var(--accent);
+    margin-left: 12px; white-space: nowrap;
+}
+.game-chevron {
+    color: var(--text-muted); font-size: 18px; margin-left: 6px;
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+    <a href="/" class="brand">Score<span class="accent">Frame</span></a>
+    <a id="backLink" href="/" class="back-link">← Back</a>
+</div>
+
+<div class="hero">
+    <div id="teamColorBar" class="team-color-bar" style="display:none;"></div>
+    <div class="event-type-badge">🏆 TOURNAMENT</div>
+    <div id="heroTeam" class="hero-team">—</div>
+    <div id="heroTitle" class="hero-title">Loading…</div>
+    <div id="heroDate" class="hero-meta">—</div>
+    <div id="heroLocation" class="hero-meta" style="display:none;"></div>
+    <div id="heroSeason" class="hero-meta" style="display:none;"></div>
+    <div id="heroNotes" class="hero-meta" style="margin-top:8px;font-style:italic;display:none;"></div>
+    <div id="livePill" class="live-pill" style="display:none;">● LIVE NOW</div>
+</div>
+
+<div class="section">
+    <div class="section-title">Games in this event</div>
+    <div id="gamesList"></div>
+</div>
+
+<script type="module">
+// Theme override from URL param (matches game.html).
+(function() {
+    try {
+        var t = new URLSearchParams(location.search).get('theme');
+        if (t === 'light' || t === 'dark') document.body.setAttribute('data-theme', t);
+    } catch (_) {}
+    if (new URLSearchParams(location.search).get('app') === '1') document.body.classList.add('app');
+})();
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+    authDomain: "scoreframe-deploy.firebaseapp.com",
+    databaseURL: "https://scoreframe-deploy-default-rtdb.firebaseio.com",
+    projectId: "scoreframe-deploy",
+    storageBucket: "scoreframe-deploy.firebasestorage.app",
+    messagingSenderId: "728886280072",
+    appId: "1:728886280072:android:0050478669b89fc76b043d"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const params = new URLSearchParams(location.search);
+const hubCode = (params.get('team') || '').trim().toUpperCase();
+const eventId = (params.get('event') || '').trim();
+
+const $ = (id) => document.getElementById(id);
+const SPORT_EMOJI = {
+    Basketball: '🏀', Football: '🏈', Soccer: '⚽', Volleyball: '🏐',
+    Baseball: '⚾', Softball: '🥎', Tennis: '🎾', Pickleball: '🏓',
+    Hockey: '🏒', Lacrosse: '🥍', Bowling: '🎳', Generic: '🏆',
+};
+
+function formatDate(ms) {
+    if (!ms || typeof ms !== 'number') return 'TBD';
+    const d = new Date(ms);
+    const opts = { weekday: 'short', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit' };
+    return d.toLocaleString(undefined, opts);
+}
+
+function statusLabel(g) {
+    if (g.status === 'live') return '● LIVE';
+    if (g.status === 'completed') return 'Final';
+    if (g.status === 'cancelled') return 'Cancelled';
+    return formatDate(g.date);
+}
+
+function gameHeadline(g) {
+    if (g.opponent) return `vs ${g.opponent}`;
+    if (g.eventName) return g.eventName;
+    return 'Game';
+}
+
+async function loadEvent() {
+    if (!hubCode || !eventId) {
+        $('heroTitle').textContent = 'Missing event link';
+        return;
+    }
+    let teamId = null;
+    let team = null;
+    try {
+        const idx = await getDoc(doc(db, 'hubIndex', hubCode));
+        if (!idx.exists()) {
+            $('heroTitle').textContent = 'Team not found';
+            return;
+        }
+        teamId = idx.data().teamId;
+        const teamSnap = await getDoc(doc(db, 'teams', teamId));
+        team = teamSnap.exists() ? teamSnap.data() : null;
+    } catch (e) {
+        console.error('Team lookup failed', e);
+        $('heroTitle').textContent = 'Could not load team';
+        return;
+    }
+
+    // Back link routes to the parent team page.
+    $('backLink').href = `/team.html?code=${encodeURIComponent(hubCode)}`;
+    $('backLink').textContent = `← ${team?.profile?.name || team?.name || 'Team'}`;
+
+    // Team color stripe.
+    const color = team?.profile?.color || team?.color;
+    if (color) {
+        const bar = $('teamColorBar');
+        bar.style.background = color;
+        bar.style.display = 'block';
+    }
+    const sport = team?.profile?.sport || team?.sport || '';
+    const teamName = team?.profile?.name || team?.name || 'Team';
+    $('heroTeam').textContent = `${SPORT_EMOJI[sport] || '🏆'} ${teamName}`;
+
+    // Load event doc.
+    let ev = null;
+    try {
+        const evSnap = await getDoc(doc(db, 'teams', teamId, 'games', eventId));
+        if (!evSnap.exists()) {
+            $('heroTitle').textContent = 'Event not found';
+            return;
+        }
+        ev = { id: evSnap.id, ...evSnap.data() };
+    } catch (e) {
+        console.error('Event lookup failed', e);
+        $('heroTitle').textContent = 'Could not load event';
+        return;
+    }
+
+    // Hero metadata.
+    document.title = `${ev.eventName || 'Tournament'} — ScoreFrame`;
+    $('heroTitle').textContent = ev.eventName || 'Tournament';
+    $('heroDate').textContent = formatDate(ev.date);
+    if (ev.location) {
+        $('heroLocation').textContent = `📍 ${ev.location}`;
+        $('heroLocation').style.display = '';
+    }
+    if (ev.notes) {
+        $('heroNotes').textContent = ev.notes;
+        $('heroNotes').style.display = '';
+    }
+    if (ev.seasonId) {
+        try {
+            const seasonsSnap = await getDocs(collection(db, 'teams', teamId, 'seasons'));
+            const s = seasonsSnap.docs.find(d => d.id === ev.seasonId);
+            if (s) {
+                const sd = s.data();
+                $('heroSeason').textContent = `Season: ${sd.name}${sd.endDate ? ' (ended)' : ''}`;
+                $('heroSeason').style.display = '';
+            }
+        } catch (_) {}
+    }
+
+    // Child games — gameIds[] on the parent event doc.
+    const ids = Array.isArray(ev.gameIds) ? ev.gameIds.filter(x => typeof x === 'string' && x.length > 0) : [];
+    const list = $('gamesList');
+    if (ids.length === 0) {
+        list.innerHTML = '<div class="empty">No games played in this event yet. They\'ll appear here as the event runs.</div>';
+        return;
+    }
+    // Fetch child docs in parallel. Skip any that have been deleted.
+    const fetched = await Promise.all(ids.map(async (gid) => {
+        try {
+            const snap = await getDoc(doc(db, 'teams', teamId, 'games', gid));
+            return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+        } catch (_) { return null; }
+    }));
+    const games = fetched.filter(g => g != null);
+    if (games.length === 0) {
+        list.innerHTML = '<div class="empty">No games available.</div>';
+        return;
+    }
+    // Sort: live first, then scheduled by date asc, then completed by date desc.
+    games.sort((a, b) => {
+        const rank = (g) => g.status === 'live' ? 0 : g.status === 'scheduled' ? 1 : g.status === 'completed' ? 2 : 3;
+        const ra = rank(a), rb = rank(b);
+        if (ra !== rb) return ra - rb;
+        const ad = a.date || 0, bd = b.date || 0;
+        return rb === 2 ? bd - ad : ad - bd;
+    });
+    if (games.some(g => g.status === 'live')) $('livePill').style.display = '';
+
+    list.innerHTML = games.map(g => {
+        const sc = g.status === 'live' ? 'live' :
+                   g.status === 'completed' ? 'completed' :
+                   g.status === 'cancelled' ? 'cancelled' : 'scheduled';
+        const showScore = g.status === 'completed' || g.status === 'live';
+        const score = showScore && (g.homeScore != null || g.awayScore != null)
+            ? `<div class="game-score">${g.homeScore ?? 0} - ${g.awayScore ?? 0}</div>`
+            : '';
+        const href = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}`;
+        const meta = [g.location ? `📍 ${g.location}` : '', g.notes ? g.notes : '']
+            .filter(Boolean).join(' · ');
+        return `<a class="game-card ${g.status === 'live' ? 'live' : ''}" href="${href}">
+            <div class="game-row">
+                <div class="game-left">
+                    <span class="game-status ${sc}">${statusLabel(g)}</span>
+                    <div class="game-opponent">${gameHeadline(g)}</div>
+                    ${meta ? `<div class="game-meta">${meta}</div>` : ''}
+                </div>
+                ${score}
+                <span class="game-chevron">›</span>
+            </div>
+        </a>`;
+    }).join('');
+}
+
+loadEvent();
+</script>
+
+</body>
+</html>
