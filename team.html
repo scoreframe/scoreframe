@@ -1193,12 +1193,17 @@ async function loadSchedule() {
                 <button onclick="event.stopPropagation();event.preventDefault();window._deleteScheduleGame('${g.id}')" style="padding:4px 10px;background:transparent;color:var(--error);border:1px solid var(--error);border-radius:4px;font-size:11px;cursor:pointer;">Delete</button>
                 <button onclick="event.stopPropagation();event.preventDefault();window._cancelScheduleGame('${g.id}')" style="padding:4px 10px;background:transparent;color:var(--text-muted);border:1px solid var(--text-muted);border-radius:4px;font-size:11px;cursor:pointer;">Cancel</button>
             </div>` : '';
-            // v14 — Tournament/multi-game container fork. The app stamps
-            // multiGame=true on schedule docs that hold many child games
-            // (gameIds[]). Single games keep going to game.html; multi-
-            // game events route to event.html which lists the child games.
-            const isTournament = g.multiGame === true || (Array.isArray(g.gameIds) && g.gameIds.length > 0);
+            // v14/v15 — Tournament/multi-game container fork.
+            //   • multiGame=true → explicit tournament (always route to event.html,
+            //     even with 0 child games — the manager still wants the container).
+            //   • multiGame=false + gameIds.length > 1 → a single-game event that
+            //     ended up with MORE THAN ONE scored game attached (unusual but
+            //     possible — code supports it). Route to event.html so all child
+            //     games are visible.
+            //   • multiGame=false + gameIds.length <= 1 → ordinary single game.
+            //     Route straight to game.html for the dedicated player page.
             const childCount = Array.isArray(g.gameIds) ? g.gameIds.length : 0;
+            const isTournament = g.multiGame === true || childCount > 1;
             const gameHref = g.id
                 ? (isTournament
                     ? `/event.html?team=${encodeURIComponent(hubCode)}&event=${encodeURIComponent(g.id)}`
