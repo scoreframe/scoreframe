@@ -191,6 +191,15 @@ function formatDate(ms) {
         hour: 'numeric', minute: '2-digit' };
     return d.toLocaleString(undefined, opts);
 }
+// v15 — Multi-day tournament range. Falls back to single-date when end is
+// missing or <= start.
+function formatDateRange(startMs, endMs) {
+    if (!endMs || endMs <= startMs) return formatDate(startMs);
+    const s = new Date(startMs), e = new Date(endMs);
+    const sStr = s.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    const eStr = e.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    return `${sStr} – ${eStr}`;
+}
 
 function statusLabel(g) {
     if (g.status === 'live') return '● LIVE';
@@ -260,7 +269,10 @@ async function loadEvent() {
     // Hero metadata.
     document.title = `${ev.eventName || 'Tournament'} — ScoreFrame`;
     $('heroTitle').textContent = ev.eventName || 'Tournament';
-    $('heroDate').textContent = formatDate(ev.date);
+    // v15 — Render the date range for multi-day tournaments.
+    $('heroDate').textContent = (typeof ev.endDate === 'number' && ev.endDate > (ev.date || 0))
+        ? formatDateRange(ev.date, ev.endDate)
+        : formatDate(ev.date);
     if (ev.location) {
         $('heroLocation').textContent = `📍 ${ev.location}`;
         $('heroLocation').style.display = '';

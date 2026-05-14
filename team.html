@@ -560,6 +560,15 @@ function formatDate(ts) {
     const d = new Date(ts);
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
+// v15 — Date range for multi-day tournaments. Renders "Sat May 17 – Mon May 19"
+// when endDate is set + falls back to the single-day formatDate otherwise.
+function formatDateRange(startMs, endMs) {
+    if (!endMs || endMs <= startMs) return formatDate(startMs);
+    const s = new Date(startMs), e = new Date(endMs);
+    const sStr = s.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const eStr = e.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return `${sStr} – ${eStr}`;
+}
 
 // ── Init ──
 // Accept ?code= (canonical) or ?hub= (older email links)
@@ -1133,7 +1142,12 @@ async function loadSchedule() {
         container.innerHTML = upcoming.map(g => {
             const isLive = g.status === 'live';
             const statusClass = isLive ? 'live' : g.status === 'completed' ? 'completed' : 'scheduled';
-            const statusLabel = isLive ? '● LIVE' : g.status === 'completed' ? 'Final' : formatDate(g.date);
+            // v15 — Multi-day tournaments render the date range instead of
+            // the single start date. Single-game events keep the old format.
+            const dateText = (typeof g.endDate === 'number' && g.endDate > (g.date || 0))
+                ? formatDateRange(g.date, g.endDate)
+                : formatDate(g.date);
+            const statusLabel = isLive ? '● LIVE' : g.status === 'completed' ? 'Final' : dateText;
             const watchUrl = g.streamUrl || (g.streamCode ? `/watch.html?code=${g.streamCode}` : '');
             const watchBtn = isLive && watchUrl ? `<a class="watch-btn" href="${watchUrl}" target="_blank">▶ Watch Live</a>` : '';
             const score = g.status === 'completed' ? `<div class="game-score">${g.homeScore} - ${g.awayScore}</div>` : '';
