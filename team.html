@@ -315,7 +315,18 @@ html, body {
 </div>
 
 <div id="teamPage" style="display:none;">
-    <!-- Header -->
+    <!-- v14 — Account bar pinned ABOVE the team header. The comment used
+         to say "top of page, above team header" — and yet the markup had
+         it below. Now it actually is on top: ScoreFrame brand wordmark,
+         sign-in / sign-out + dashboard / out controls always at the very
+         top, then the team details below. Matches the app's chrome
+         convention (top bar before content). -->
+    <div id="accountBar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg-deep);border-bottom:1px solid var(--bg-elevated);flex-wrap:wrap;">
+        <a href="/" style="text-decoration:none;font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-right:auto;">Score<span style="color:var(--accent);">Frame</span></a>
+        <button class="sign-in-btn" onclick="doSignIn()" style="font-size:12px;padding:6px 14px;">Sign In</button>
+    </div>
+
+    <!-- Team Header -->
     <div class="team-header">
         <div class="team-color-bar" id="colorBar"></div>
         <div class="team-emoji" id="teamEmoji"></div>
@@ -328,12 +339,6 @@ html, body {
         <!-- Follow button (under team info) -->
         <div id="followArea" style="margin-top:12px;"></div>
         <div class="follow-status" id="followStatus"></div>
-    </div>
-
-    <!-- Account bar (top of page, above team header) -->
-    <div id="accountBar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg-deep);border-bottom:1px solid var(--bg-elevated);flex-wrap:wrap;">
-        <a href="/" style="text-decoration:none;font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-right:auto;">Score<span style="color:var(--accent);">Frame</span></a>
-        <button class="sign-in-btn" onclick="doSignIn()" style="font-size:12px;padding:6px 14px;">Sign In</button>
     </div>
 
     <!-- Access Gate (private/invite-only hubs — requires sign-in) -->
