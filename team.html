@@ -361,6 +361,15 @@ html, body {
             <div id="seasonSwitcher" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;"></div>
         </div>
 
+        <!-- v14 — Recent Games (last 7 days). Mirrors the in-app Team
+             Viewer's "RECENT GAMES" section: anything played in the last
+             week pinned above the schedule so fans see the latest results
+             at the top. Hidden by default; populated by loadPastGames. -->
+        <div class="section" id="recentGamesSection" style="display:none;">
+            <div class="section-title">📊 Recent Games</div>
+            <div id="recentGames"></div>
+        </div>
+
         <!-- Upcoming Schedule -->
         <div class="section">
             <div class="section-title">📅 Upcoming Games</div>
@@ -1220,6 +1229,13 @@ async function loadPastGames() {
         pastGamesCache = [];
         let renderedCount = 0;
         let html = '';
+        // v14 — Recent Games (past 7 days) — pinned above the schedule on
+        // the in-app Team viewer; same on web here. We build the recent
+        // strip out of the same card markup used for the full archive so
+        // duplicates with Past Games are intentional and visually identical.
+        const weekAgoMs = Date.now() - 7 * 24 * 3600 * 1000;
+        let recentHtml = '';
+        let recentCount = 0;
         snap.forEach(d => {
             if (renderedCount >= 20) return;
             const g = { id: d.id, ...d.data() };
@@ -1231,6 +1247,10 @@ async function loadPastGames() {
             if (!matchesSelectedSeason(g)) return;
             renderedCount++;
             pastGamesCache.push(g);
+            // Recent strip eligibility — captured here so the card HTML
+            // built below can be appended to both buffers without re-
+            // building it.
+            const isRecent = (g.date || 0) >= weekAgoMs;
             // Collect stream links from streams array or legacy streamUrl/streamCode
             let streamLinks = '';
             const streams = g.streams || [];
@@ -1293,7 +1313,7 @@ async function loadPastGames() {
             // action buttons stop propagation for the same reason.
             const gameHref = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}`;
 
-            html += `<div class="game-card linkable" id="game-${g.id}"
+            const cardHtml = `<div class="game-card linkable" id="game-${g.id}"
                 role="link" tabindex="0"
                 onclick="window.location.href='${gameHref}'"
                 onkeydown="if(event.key==='Enter'||event.key===' '){window.location.href='${gameHref}';}">
@@ -1309,7 +1329,29 @@ async function loadPastGames() {
                 </div>
                 ${actions}
             </div>`;
+            html += cardHtml;
+            if (isRecent) {
+                // De-dupe id collision across the two strips so JS can't
+                // accidentally lookup both — recent cards get a `-recent`
+                // suffix on the DOM id. Same hrefs / handlers; visually
+                // identical.
+                recentHtml += cardHtml.replace(`id="game-${g.id}"`, `id="game-${g.id}-recent"`);
+                recentCount++;
+            }
         });
+        // Write recent strip first so it renders before the user has scrolled
+        // past the section header.
+        const recentSection = $('recentGamesSection');
+        const recentContainer = $('recentGames');
+        if (recentContainer) {
+            if (recentCount > 0) {
+                recentContainer.innerHTML = recentHtml;
+                if (recentSection) recentSection.style.display = '';
+            } else {
+                recentContainer.innerHTML = '';
+                if (recentSection) recentSection.style.display = 'none';
+            }
+        }
         if (pastGamesCache.length === 0) {
             container.innerHTML = '<div class="empty">No past games yet</div>';
             $('teamRecord').textContent = '';
