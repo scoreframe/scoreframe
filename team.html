@@ -1338,7 +1338,7 @@ async function loadPastGames() {
                         <div class="game-date">${formatDate(g.date)}</div>
                         <div class="game-opponent">${titleLine}</div>
                         ${isBowling && scoreLine ? `<div style="margin-top:6px;color:var(--accent);font-weight:700;font-size:13px;">${scoreLine}</div>` : ''}
-                        ${streamLinks ? `<div style="margin-top:6px;" onclick="event.stopPropagation();"><div style="font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:0.05em;margin-bottom:2px;">STREAMS</div>${streamLinks}</div>` : ''}
+                        ${(isManager && streamLinks) ? `<div style="margin-top:6px;" onclick="event.stopPropagation();"><div style="font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:0.05em;margin-bottom:2px;">STREAMS</div>${streamLinks}</div>` : ''}
                     </div>
                     ${!isBowling ? `<div class="score">${scoreLine}</div>` : ''}
                 </div>
