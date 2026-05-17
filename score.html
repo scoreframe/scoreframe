@@ -30,6 +30,27 @@
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
+/* Light theme — applied when <body> has class `theme-light` (driven by
+   ?theme=light query param, set by the in-app WebView wrappers). Mirrors
+   the brand-friendly warm-grey palette ScoreFrameUI uses on the native
+   sides so the embedded page doesn't flash dark against the app chrome. */
+body.theme-light {
+    --bg-deepest: #F5F5F2;
+    --bg-deep: #FFFFFF;
+    --bg-surface: #FFFFFF;
+    --bg-elevated: #EEEEE9;
+    --bg-hover: #E5E5E0;
+    --accent: #E67E22;
+    --accent-dim: rgba(230, 126, 34, 0.12);
+    --accent-dark: #B6601A;
+    --text-primary: #1A1A1A;
+    --text-secondary: #4A4A4A;
+    --text-muted: #888888;
+    --success: #2E7D32;
+    --warning: #E08000;
+    --error: #C62828;
+    --recording-red: #C62828;
+}
 html, body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: var(--bg-deepest);
@@ -2110,6 +2131,11 @@ function init() {
     // Auto-fill code from URL
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
+    // Theme — light/dark driven by ?theme= query param (set by in-app
+    // WebView wrapper). Defaults to dark for direct browser visits to
+    // preserve the page's existing look.
+    const theme = (params.get('theme') || '').toLowerCase();
+    if (theme === 'light') document.body.classList.add('theme-light');
     if (code) {
         $('codeInput').value = code.toUpperCase();
         // Auto-join after short delay
@@ -2129,5 +2155,8 @@ function init() {
 
 init();
 </script>
+<!-- Web version footer — bumped on every Pages push so we can see at a
+     glance whether a phone's cached page is stale. -->
+<div style="position:fixed;bottom:4px;right:8px;font-size:9px;color:var(--text-muted);opacity:0.55;pointer-events:none;font-family:-apple-system,monospace;letter-spacing:0.5px;z-index:9999;">score v3</div>
 </body>
 </html>
