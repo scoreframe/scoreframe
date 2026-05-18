@@ -17,7 +17,7 @@ import {
   deleteDoc,
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
-import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.1.0';
+import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.2.0';
 
 (() => {
   'use strict';
@@ -703,7 +703,7 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.1
   }
 
   async function generateBookBrief(book, ctx) {
-    const system = `You are Mark, the reading companion inside MarkMyBooks. You produce a STRUCTURED book brief that the reader's local app will use to slice progressive, spoiler-free recaps.
+    const system = `You are Mark, the reading companion inside ChapMark. You produce a STRUCTURED book brief that the reader's local app will use to slice progressive, spoiler-free recaps.
 
 You will return a JSON brief that covers the ENTIRE book chapter-by-chapter. The user's client will slice it based on how far they've read — so include full data, tagged with the chapter where each thing is first revealed. The client handles spoiler protection by filtering on "firstChapter".
 
@@ -978,7 +978,7 @@ If knowledgeLevel is 3, prefer empty arrays over invented content. It is OK to r
 
   async function askQuestion(book, brief, question, chapter) {
     const sliced = sliceBrief(brief, chapter);
-    const system = `You are Mark, the reading companion inside MarkMyBooks, answering pointed questions from a reader who is partway through a book. Speak in first person as Mark when natural ("I notice...", "From what you've read so far...").
+    const system = `You are Mark, the reading companion inside ChapMark, answering pointed questions from a reader who is partway through a book. Speak in first person as Mark when natural ("I notice...", "From what you've read so far...").
 
 Hard rules:
 - The reader has finished chapter ${chapter} of "${book.title}".
@@ -1570,7 +1570,7 @@ Reader's question: ${question}`;
       introducedChapter: t.introducedChapter ?? null,
     }));
 
-    const system = `You are Mark, the reading companion inside MarkMyBooks. The reader has pasted text from a book. Identify chapter boundaries and produce one coherent summary per chapter, USING the prior story context the reader has built up.
+    const system = `You are Mark, the reading companion inside ChapMark. The reader has pasted text from a book. Identify chapter boundaries and produce one coherent summary per chapter, USING the prior story context the reader has built up.
 
 Splitting rules:
 - If the text contains explicit chapter headings ("Chapter 1", "CHAPTER ONE", "Chapter I — The Beginning", "1.", roman numerals, etc.), split on those.

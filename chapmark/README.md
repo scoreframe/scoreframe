@@ -1,8 +1,8 @@
-# MarkMyBooks (web prototype)
+# ChapMark (web prototype)
 
 A spoiler-free, progressive reading companion. Tell it where you are in a book; it gives you a recap of characters, plot, and places — only through your current chapter.
 
-Lives at `scoreframe.app/bookmarc/`. Static site — pure HTML/CSS/JS, no build step.
+Lives at `scoreframe.app/chapmark/`. Static site — pure HTML/CSS/JS, no build step.
 
 ## Local dev
 
@@ -11,7 +11,7 @@ Open `index.html` directly, or serve the folder:
 ```bash
 cd ~/Developer/scoreframe
 python3 -m http.server 8080
-# open http://localhost:8080/bookmarc/
+# open http://localhost:8080/chapmark/
 ```
 
 ## How to use
@@ -28,7 +28,7 @@ python3 -m http.server 8080
 
 ## Architecture
 
-- **Storage**: `localStorage` under key `bookmarc.v1`. Includes API key, book list, and cached recaps.
+- **Storage**: `localStorage` under key `bookmarc.v1` (legacy key — kept stable through the ChapMark rename so existing user data survives). Includes API key, book list, and cached recaps.
 - **Book metadata**: Google Books API (no key needed for casual use).
 - **Recaps**: Anthropic Messages API called directly from the browser with `anthropic-dangerous-direct-browser-access: true`.
 - **Prompt design**: hard constraint to include only what's revealed by end of stated chapter; instructs the model to set `confidence: low` if it doesn't know the book well, rather than hallucinating.

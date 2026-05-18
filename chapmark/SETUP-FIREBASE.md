@@ -1,4 +1,4 @@
-# MarkMyBooks — Firebase setup
+# ChapMark — Firebase setup
 
 Five-step console walkthrough. Do these in [Firebase Console](https://console.firebase.google.com/) while I scaffold the code.
 
@@ -11,7 +11,7 @@ Five-step console walkthrough. Do these in [Firebase Console](https://console.fi
 ## 2. Register the web app
 
 1. In the new project → **Project settings (gear icon)** → **Your apps** section → tap the `</>` **Web** icon.
-2. App nickname: `MarkMyBooks Web`.
+2. App nickname: `ChapMark Web`.
 3. **Do NOT** check "Set up Firebase Hosting" (we're hosting on scoreframe.app via GitHub Pages, not Firebase Hosting).
 4. Click **Register app**.
 5. **Copy the `firebaseConfig` object** that appears — paste it to me in chat. It looks like:
@@ -31,7 +31,7 @@ Five-step console walkthrough. Do these in [Firebase Console](https://console.fi
 
 1. Console → **Build** → **Authentication** → **Get started**.
 2. **Sign-in method** tab → **Add new provider** → **Google** → **Enable**.
-3. Set the **Public-facing name** to `MarkMyBooks`.
+3. Set the **Public-facing name** to `ChapMark`.
 4. Set the **Project support email** to your Glavin Labs email.
 5. Save.
 
@@ -77,11 +77,11 @@ Paste the `firebaseConfig` object from step 2 here in chat. I'll wire it into th
 
 ## Free tier headroom
 
-You won't come anywhere near it for MarkMyBooks:
+You won't come anywhere near it for ChapMark:
 - **Firestore**: 50K reads, 20K writes, 1 GiB storage per day on Spark plan (free).
 - **Auth**: 50K monthly active users on free tier.
 
-MarkMyBooks traffic per active user is maybe ~20 reads + ~5 writes per session. You could have hundreds of daily users before this matters.
+ChapMark traffic per active user is maybe ~20 reads + ~5 writes per session. You could have hundreds of daily users before this matters.
 
 ## What lives where after v1.0.0
 
@@ -96,5 +96,5 @@ MarkMyBooks traffic per active user is maybe ~20 reads + ~5 writes per session. 
 
 ## What's NOT changing
 
-- MarkMyBooks still has no server processing pasted text. Pastes go browser → Anthropic API directly.
+- ChapMark still has no server processing pasted text. Pastes go browser → Anthropic API directly.
 - Only the **summary** Claude returns gets persisted to Firestore. Raw pasted text never lands in Firestore (or anywhere else we control). Same rule as before — see [feedback_bookmarc_no_raw_text_storage.md] in memory.
