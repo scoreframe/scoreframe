@@ -311,11 +311,11 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.0
         </div>
       </div>
       <div class="brief-card">
-        <h3>Bookmarc doesn't know this book yet</h3>
+        <h3>BookMarc doesn't know this book yet</h3>
         <p class="muted">Generate a one-time book brief from what Claude knows + Wikipedia + Open Library. Uses one Opus call (~30s, roughly $0.10). After that everything is instant and offline.</p>
         <button class="primary" id="gen-brief-btn">Generate book brief</button>
         <div id="brief-status" class="muted small"></div>
-        <p class="muted small" style="margin-top:18px;">Or build it as you read: paste each chapter's text from your own copy and Bookmarc will summarize that chapter. The text is sent to Claude and not stored.</p>
+        <p class="muted small" style="margin-top:18px;">Or build it as you read: paste each chapter's text from your own copy and BookMarc will summarize that chapter. The text is sent to Claude and not stored.</p>
         <button class="link" id="paste-first-btn">Paste your first chapter</button>
       </div>
       <button class="link danger" id="remove-book-btn">Remove this book</button>
@@ -386,7 +386,7 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.0
       </div>
       <div id="recap-area"></div>
       <div class="ask-card">
-        <h3>Ask Bookmarc</h3>
+        <h3>Ask BookMarc</h3>
         <p class="muted small">Pointed question about plot or characters. We won't spoil anything past your current chapter.</p>
         <div class="ask-row">
           <input id="ask-input" type="text" placeholder="e.g. Who is Robert Langdon working with?" />
@@ -698,7 +698,7 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.0
   }
 
   async function generateBookBrief(book, ctx) {
-    const system = `You are Bookmarc. You produce a STRUCTURED book brief that a reader's local app will use to slice progressive, spoiler-free recaps.
+    const system = `You are BookMarc. You produce a STRUCTURED book brief that a reader's local app will use to slice progressive, spoiler-free recaps.
 
 You will return a JSON brief that covers the ENTIRE book chapter-by-chapter. The user's client will slice it based on how far they've read — so include full data, tagged with the chapter where each thing is first revealed. The client handles spoiler protection by filtering on "firstChapter".
 
@@ -973,7 +973,7 @@ If knowledgeLevel is 3, prefer empty arrays over invented content. It is OK to r
 
   async function askQuestion(book, brief, question, chapter) {
     const sliced = sliceBrief(brief, chapter);
-    const system = `You are Bookmarc answering pointed questions from a reader who is partway through a book.
+    const system = `You are BookMarc answering pointed questions from a reader who is partway through a book.
 
 Hard rules:
 - The reader has finished chapter ${chapter} of "${book.title}".
@@ -1565,7 +1565,7 @@ Reader's question: ${question}`;
       introducedChapter: t.introducedChapter ?? null,
     }));
 
-    const system = `You are Bookmarc. The reader has pasted text from a book. Identify chapter boundaries and produce one coherent summary per chapter, USING the prior story context the reader has built up.
+    const system = `You are BookMarc. The reader has pasted text from a book. Identify chapter boundaries and produce one coherent summary per chapter, USING the prior story context the reader has built up.
 
 Splitting rules:
 - If the text contains explicit chapter headings ("Chapter 1", "CHAPTER ONE", "Chapter I — The Beginning", "1.", roman numerals, etc.), split on those.
