@@ -17,7 +17,7 @@ import {
   deleteDoc,
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
-import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.0.2';
+import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.0.3';
 
 (() => {
   'use strict';
@@ -1875,19 +1875,78 @@ ${text}
   }
 
   async function initialSyncFromCloud(user) {
-    const userRef = doc(firebaseDb, 'users', user.uid);
+    // Union merge: never destroy local data. Pull cloud books we don't have,
+    // keep local books that aren't in cloud, and on collision keep the
+    // more-developed version. Then push the merged state back up so the
+    // cloud has everything from both sources.
+    toast('Syncing with your account…');
     try {
-      const snap = await getDoc(userRef);
-      if (!snap.exists() || !snap.data().bootstrapped) {
-        // First time — write current localStorage state up
-        toast('Syncing your library to your account…');
-        await pushFullStateToCloud(user);
-      } else {
-        // Pull cloud state down, replacing local
-        await pullCloudStateToLocal(user);
-        toast('Synced from your account.');
-        route();
+      const userRef = doc(firebaseDb, 'users', user.uid);
+      const profileSnap = await getDoc(userRef);
+      const cloudProfile = profileSnap.exists() ? profileSnap.data() : null;
+
+      // Profile fields — prefer non-empty values from either side
+      if (cloudProfile) {
+        if (!state.apiKey && cloudProfile.apiKey) state.apiKey = cloudProfile.apiKey;
+        if (!state.googleBooksKey && cloudProfile.googleBooksKey) state.googleBooksKey = cloudProfile.googleBooksKey;
+        if (cloudProfile.model && cloudProfile.model !== state.model) {
+          // If model differs, take the cloud's choice (most recent write wins)
+          state.model = cloudProfile.model;
+        }
       }
+
+      // Pull every cloud book
+      const booksCol = collection(firebaseDb, 'users', user.uid, 'books');
+      const booksSnap = await getDocs(booksCol);
+      let pulled = 0;
+      booksSnap.forEach(d => {
+        const data = d.data();
+        const bookId = d.id;
+        if (!data || !data.meta) return;
+        const localIdx = state.books.findIndex(b => b.id === bookId);
+        if (localIdx < 0) {
+          // Cloud-only — pull in
+          state.books.push(data.meta);
+          if (data.brief) state.briefs[bookId] = data.brief;
+          if (data.qaThread) state.qaThreads[bookId] = data.qaThread;
+          pulled++;
+        } else {
+          // In both — keep the more-developed brief (more chapters known)
+          const localBriefSize = ((state.briefs[bookId] && state.briefs[bookId].chapters) || []).length;
+          const cloudBriefSize = ((data.brief && data.brief.chapters) || []).length;
+          if (cloudBriefSize > localBriefSize && data.brief) {
+            state.briefs[bookId] = data.brief;
+          }
+          // Q&A: union by (question + atChapter + timestamp) so duplicates don't pile up
+          const localThread = state.qaThreads[bookId] || [];
+          const cloudThread = data.qaThread || [];
+          const seen = new Set(localThread.map(e => `${e.q}|${e.atChapter}|${e.timestamp || 0}`));
+          cloudThread.forEach(e => {
+            const key = `${e.q}|${e.atChapter}|${e.timestamp || 0}`;
+            if (!seen.has(key)) {
+              localThread.push(e);
+              seen.add(key);
+            }
+          });
+          state.qaThreads[bookId] = localThread.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        }
+      });
+
+      // Save merged state locally
+      suppressNextLocalSync = true;
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+      suppressNextLocalSync = false;
+
+      // Push full merged state back to cloud so it has everything
+      await pushFullStateToCloud(user);
+
+      const localOnlyCount = state.books.length - pulled;
+      const msgParts = [];
+      if (pulled) msgParts.push(`${pulled} pulled from cloud`);
+      if (localOnlyCount > 0 && !cloudProfile) msgParts.push(`${localOnlyCount} pushed up`);
+      else if (localOnlyCount > 0) msgParts.push(`${localOnlyCount} local also synced`);
+      toast(msgParts.length ? `Synced (${msgParts.join(', ')}).` : 'Synced.');
+      route();
     } catch (err) {
       console.error('Initial sync failed', err);
       toast('Sync failed; staying local. ' + (err.message || ''));
