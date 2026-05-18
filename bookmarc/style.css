@@ -373,6 +373,9 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
   .knowledge-chip.level-3 { background: #3d211c; color: #f0bdb2; border-color: #5c322a; }
 }
 .knowledge-note { margin-top: 6px; font-style: italic; }
+.brief-sources { margin-top: 4px; }
+.brief-sources a { color: var(--accent); text-decoration: none; }
+.brief-sources a:hover { text-decoration: underline; }
 
 /* --- Chapter select --- */
 .progress-card select { font: inherit; }

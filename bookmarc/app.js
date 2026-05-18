@@ -359,6 +359,21 @@
       note.textContent = brief.knowledgeNote;
       confEl.parentElement.appendChild(note);
     }
+    if ((brief.sources || []).length) {
+      const sources = document.createElement('div');
+      sources.className = 'muted small brief-sources';
+      sources.textContent = 'Sources: ';
+      brief.sources.forEach((s, i) => {
+        if (i > 0) sources.appendChild(document.createTextNode(' · '));
+        const a = document.createElement('a');
+        a.href = s.url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = s.kind === 'wikipedia' ? `Wikipedia: ${s.title}` : 'Open Library';
+        sources.appendChild(a);
+      });
+      confEl.parentElement.appendChild(sources);
+    }
 
     // Chapter select — populated with titles when available
     const select = $('#chapter-select', wrap);
@@ -458,19 +473,107 @@
     const statusEl = document.querySelector('#brief-status');
     const btn = document.querySelector('#gen-brief-btn');
     if (btn) btn.disabled = true;
-    if (statusEl) statusEl.innerHTML = '<span class="spinner"></span> Asking Claude to read up on this book… this can take 30-90 seconds.';
+    const setStatus = msg => { if (statusEl) statusEl.innerHTML = msg; };
     try {
-      const brief = await generateBookBrief(b);
+      setStatus('<span class="spinner"></span> Looking up Wikipedia and Open Library for context…');
+      const ctx = await fetchExternalContext(b);
+      const sourceList = ctx.sources.map(s => s.kind).join(' + ') || 'no external sources';
+      setStatus(`<span class="spinner"></span> Asking Claude to read up on this book (using ${sourceList})… 30-90 seconds.`);
+      const brief = await generateBookBrief(b, ctx);
       brief.generatedAt = Date.now();
+      brief.sources = ctx.sources;
       state.briefs[b.id] = brief;
-      // Auto-populate total chapters
       if ((brief.chapters || []).length) b.totalChapters = brief.chapters.length;
       saveState();
-      route(); // re-render — will now show brief UI
+      route();
     } catch (err) {
       console.error(err);
-      if (statusEl) statusEl.textContent = err.message || 'Failed to generate brief.';
+      setStatus(err.message || 'Failed to generate brief.');
       if (btn) btn.disabled = false;
+    }
+  }
+
+  // ---------- External context fetchers (free, no key) ----------
+  async function fetchExternalContext(book) {
+    const [wiki, ol] = await Promise.all([
+      fetchWikipediaPlot(book).catch(err => { console.warn('Wikipedia lookup failed', err); return null; }),
+      fetchOpenLibraryDescription(book).catch(err => { console.warn('Open Library lookup failed', err); return null; }),
+    ]);
+    const sources = [];
+    if (wiki) sources.push({ kind: 'wikipedia', title: wiki.title, url: wiki.url });
+    if (ol) sources.push({ kind: 'openlibrary', key: ol.key, url: ol.url });
+    return { wiki, ol, sources };
+  }
+
+  async function fetchWikipediaPlot(book) {
+    const author = (book.authors || [])[0] || '';
+    const query = `"${book.title}" ${author} novel book`;
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&srlimit=3&origin=*`;
+    const sres = await fetchWithTimeout(searchUrl, 6000);
+    if (!sres.ok) throw new Error(`Wikipedia search ${sres.status}`);
+    const sdata = await sres.json();
+    const hits = (sdata.query && sdata.query.search) || [];
+    if (!hits.length) return null;
+
+    const titleLower = book.title.toLowerCase();
+    const authorLower = author.toLowerCase();
+    const hit = hits.find(h => {
+      const t = h.title.toLowerCase();
+      const s = (h.snippet || '').toLowerCase();
+      return t.includes(titleLower) && (s.includes('novel') || s.includes('book') || s.includes(authorLower));
+    }) || hits.find(h => h.title.toLowerCase().includes(titleLower)) || hits[0];
+
+    const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&pageids=${hit.pageid}&format=json&origin=*`;
+    const eres = await fetchWithTimeout(extractUrl, 6000);
+    if (!eres.ok) throw new Error(`Wikipedia extract ${eres.status}`);
+    const edata = await eres.json();
+    const page = edata.query && edata.query.pages && edata.query.pages[hit.pageid];
+    if (!page || !page.extract) return null;
+    const extract = page.extract.slice(0, 18000);
+    return {
+      title: hit.title,
+      url: `https://en.wikipedia.org/wiki/${encodeURIComponent(hit.title.replace(/ /g, '_'))}`,
+      extract,
+    };
+  }
+
+  async function fetchOpenLibraryDescription(book) {
+    // Try via Open Library work key if we have it from search
+    if (book.source === 'openlibrary' && book.sourceId) {
+      const url = `https://openlibrary.org${book.sourceId}.json`;
+      const res = await fetchWithTimeout(url, 5000);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const desc = typeof data.description === 'string' ? data.description : (data.description && data.description.value) || '';
+      if (!desc) return null;
+      return { key: book.sourceId, url: `https://openlibrary.org${book.sourceId}`, description: desc };
+    }
+    // Fallback: ISBN lookup
+    if (book.isbn) {
+      const url = `https://openlibrary.org/isbn/${book.isbn}.json`;
+      const res = await fetchWithTimeout(url, 5000);
+      if (!res.ok) return null;
+      const data = await res.json();
+      // Editions don't always have description — try the work
+      const worksKey = data.works && data.works[0] && data.works[0].key;
+      if (!worksKey) return null;
+      const wres = await fetchWithTimeout(`https://openlibrary.org${worksKey}.json`, 5000);
+      if (!wres.ok) return null;
+      const wdata = await wres.json();
+      const desc = typeof wdata.description === 'string' ? wdata.description : (wdata.description && wdata.description.value) || '';
+      if (!desc) return null;
+      return { key: worksKey, url: `https://openlibrary.org${worksKey}`, description: desc };
+    }
+    return null;
+  }
+
+  async function fetchWithTimeout(url, ms) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), ms);
+    try {
+      return await fetch(url, { signal: controller.signal });
+    } finally {
+      clearTimeout(t);
     }
   }
 
@@ -478,7 +581,7 @@
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  async function generateBookBrief(book) {
+  async function generateBookBrief(book, ctx) {
     const system = `You are Bookmarc. You produce a STRUCTURED book brief that a reader's local app will use to slice progressive, spoiler-free recaps.
 
 You will return a JSON brief that covers the ENTIRE book chapter-by-chapter. The user's client will slice it based on how far they've read — so include full data, tagged with the chapter where each thing is first revealed. The client handles spoiler protection by filtering on "firstChapter".
@@ -490,17 +593,30 @@ Hard rules:
 - relationships.fromId and toId must reference real character IDs.
 - "groupCluster" groups characters by faction/family/household. Use identical strings for groupings.
 
-For knowledgeLevel, self-report honestly:
-  1 = public domain or canonical text — you've effectively memorized the prose and can produce near-verbatim recall of chapter contents
-  2 = popular published book — you know the plot, characters, and structure well from summaries/reviews/study guides, but not the prose itself
-  3 = new/obscure book — you have very limited knowledge. Output will be sparse; only include things you are genuinely confident about.
+You may be given EXTERNAL SOURCES (Wikipedia plot summaries, Open Library descriptions). Treat them as authoritative source material — they will typically contain the WHOLE PLOT including endings. Your job is to extract structure from them and tag firstChapter accurately so the client can hide spoilers downstream. Do NOT echo source material verbatim; transform it into chapter-by-chapter structure.
+
+For knowledgeLevel, self-report honestly about the FINAL brief (combining your training knowledge with any external sources provided):
+  1 = high fidelity — you have verbatim or near-verbatim recall (public domain classic, OR external sources gave detailed chapter-by-chapter plot)
+  2 = summary-level — you know the plot, characters, and broad structure (from training or external sources), but chapter divisions may be approximate
+  3 = sparse — neither training data nor external sources gave you enough to produce a useful brief. Return mostly empty arrays.
 
 If knowledgeLevel is 3, return MOSTLY EMPTY arrays. Do not invent. The user is better served by a sparse honest brief than a confident hallucination.
 
 Respond with ONLY a single JSON object. No prose before or after.`;
 
     const isbn = book.isbn ? `\nISBN: ${book.isbn}` : '';
-    const userMsg = `Book: "${book.title}" by ${(book.authors || []).join(', ') || 'unknown author'}${isbn}
+    let externalContext = '';
+    if (ctx && (ctx.wiki || ctx.ol)) {
+      externalContext = '\n\n=== EXTERNAL SOURCES ===\n';
+      if (ctx.wiki) {
+        externalContext += `\n--- Wikipedia article: "${ctx.wiki.title}" ---\n${ctx.wiki.extract}\n`;
+      }
+      if (ctx.ol) {
+        externalContext += `\n--- Open Library description ---\n${ctx.ol.description}\n`;
+      }
+      externalContext += '\n=== END EXTERNAL SOURCES ===\n';
+    }
+    const userMsg = `Book: "${book.title}" by ${(book.authors || []).join(', ') || 'unknown author'}${isbn}${externalContext}
 
 Produce a complete book brief as JSON matching this schema:
 
