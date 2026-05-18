@@ -413,6 +413,19 @@ dialog#paste-dialog {
 .paste-advanced summary { cursor: pointer; }
 .paste-advanced .advanced-grid { display: grid; gap: 6px; margin-top: 8px; padding: 12px; background: var(--paper-2); border-radius: var(--radius-sm); }
 
+.paste-status {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--paper-2);
+  border-left: 3px solid var(--accent);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.paste-status[hidden] { display: none; }
+.paste-status.error { border-left-color: var(--danger); background: rgba(160, 64, 48, 0.08); }
+.paste-status.success { border-left-color: #2f8554; background: rgba(47, 133, 84, 0.1); }
+
 .progress-card .total-row {
   display: flex;
   align-items: center;

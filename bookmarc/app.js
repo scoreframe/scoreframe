@@ -1406,68 +1406,108 @@ Reader's question: ${question}`;
     $('#paste-chapter-title').value = '';
     $('#paste-chapter-text').value = '';
     $('#paste-char-count').textContent = '0 characters';
+    const status = $('#paste-status');
+    status.hidden = true;
+    status.className = 'paste-status';
+    status.textContent = '';
+    $('#paste-submit-btn').disabled = false;
+    $('#paste-submit-btn').hidden = false;
+    $('#paste-cancel-btn').textContent = 'Cancel';
     if (typeof dlg.showModal === 'function') dlg.showModal();
     else dlg.setAttribute('open', '');
   }
 
   function wirePasteDialog() {
     const dlg = $('#paste-dialog');
+    const form = $('#paste-form');
     const textArea = $('#paste-chapter-text');
     textArea.addEventListener('input', () => {
       $('#paste-char-count').textContent = `${textArea.value.length.toLocaleString()} characters`;
     });
-    dlg.addEventListener('close', () => {
-      if (dlg.returnValue !== 'submit') return;
+    $('#paste-cancel-btn').addEventListener('click', () => dlg.close('cancel'));
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
       const ctx = pasteCtx;
       if (!ctx) return;
       const numRaw = $('#paste-chapter-num').value.trim();
       const startingNum = numRaw ? parseInt(numRaw, 10) : null;
       const title = $('#paste-chapter-title').value.trim();
       const text = $('#paste-chapter-text').value.trim();
-      if (!text || text.length < 100) { toast('Paste at least a chapter of text.'); return; }
-      doExtractChapters(ctx.book, ctx.brief, startingNum, title, text);
+      const status = $('#paste-status');
+      const submitBtn = $('#paste-submit-btn');
+      const cancelBtn = $('#paste-cancel-btn');
+      if (!text || text.length < 100) {
+        status.hidden = false;
+        status.className = 'paste-status error';
+        status.textContent = 'Paste at least a chapter of text (got ' + text.length + ' chars).';
+        return;
+      }
+      status.hidden = false;
+      status.className = 'paste-status';
+      status.innerHTML = `<span class="spinner"></span> Sending ${text.length.toLocaleString()} characters to Claude. This can take 30-90 seconds for a long paste…`;
+      submitBtn.disabled = true;
+      try {
+        const result = await extractChaptersFromText(ctx.book, ctx.brief, startingNum, title, text);
+        const extracted = result.chaptersExtracted || [];
+        const added = [];
+        const skipped = [];
+        extracted.forEach((chunk, idx) => {
+          // Determine chapter number. Accept 0 (Prologue). Skip only if null.
+          const explicit = chunk.number;
+          const inferred = startingNum != null ? startingNum + idx : null;
+          const num = explicit != null ? explicit : inferred;
+          if (num == null || num < 0) {
+            skipped.push(`#${idx + 1}: no chapter number (needsNumber=${chunk.needsNumber || false})`);
+            return;
+          }
+          const title = chunk.title || (extracted.length === 1 ? (fallbackTitleFromCtx() || '') : '');
+          mergePastedChapter(ctx.brief, num, title, chunk.charCount || 0, {
+            summary: chunk.summary || '',
+            keyMoments: chunk.keyMoments || [],
+            newCharacters: chunk.newCharacters || [],
+            newRelationships: chunk.newRelationships || [],
+            newPlaces: chunk.newPlaces || [],
+            newItems: chunk.newItems || [],
+            characterUpdates: chunk.characterUpdates || [],
+            newOpenThreads: chunk.newOpenThreads || [],
+            resolvedThreadIds: chunk.resolvedThreadIds || [],
+          });
+          added.push(num === 0 ? 'Prologue' : `Chapter ${num}`);
+        });
+        state.briefs[ctx.book.id] = ctx.brief;
+        const maxKnown = Math.max(...ctx.brief.chapters.map(c => c.number || 0), 0);
+        if (maxKnown > (ctx.book.totalChapters || 0)) ctx.book.totalChapters = maxKnown;
+        saveState();
+        if (!added.length) {
+          status.className = 'paste-status error';
+          status.innerHTML = `Claude returned a response but no chapters could be placed.<br>` +
+            `Skipped: ${skipped.length ? skipped.join('; ') : 'none'}.<br>` +
+            `Try setting "Starting chapter number" under Override and resubmitting.`;
+          submitBtn.disabled = false;
+          return;
+        }
+        status.className = 'paste-status success';
+        let msg = `Added: ${added.join(', ')}.`;
+        if (skipped.length) msg += `<br>Skipped: ${skipped.join('; ')}.`;
+        status.innerHTML = msg;
+        cancelBtn.textContent = 'Close';
+        submitBtn.hidden = true;
+        setTimeout(() => {
+          dlg.close('submit');
+          route();
+        }, 2200);
+      } catch (err) {
+        console.error(err);
+        status.className = 'paste-status error';
+        status.textContent = (err && err.message) || 'Failed to summarize.';
+        submitBtn.disabled = false;
+      }
     });
   }
 
-  async function doExtractChapters(b, brief, startingNum, fallbackTitle, text) {
-    if (!state.apiKey) { toast('Add your Anthropic API key in Settings.'); openSettings(); return; }
-    toast('Reading the pasted text…');
-    try {
-      const result = await extractChaptersFromText(b, brief, startingNum, fallbackTitle, text);
-      const extracted = result.chaptersExtracted || [];
-      if (!extracted.length) {
-        toast('Could not identify any chapters in the pasted text.');
-        return;
-      }
-      extracted.forEach((chunk, idx) => {
-        const num = chunk.number || (startingNum ? startingNum + idx : null);
-        if (!num || num < 1) return; // skip if we genuinely can't place it
-        const title = chunk.title || (extracted.length === 1 ? fallbackTitle : '');
-        mergePastedChapter(brief, num, title, chunk.charCount || 0, {
-          summary: chunk.summary || '',
-          keyMoments: chunk.keyMoments || [],
-          newCharacters: chunk.newCharacters || [],
-          newRelationships: chunk.newRelationships || [],
-          newPlaces: chunk.newPlaces || [],
-          newItems: chunk.newItems || [],
-          characterUpdates: chunk.characterUpdates || [],
-          newOpenThreads: chunk.newOpenThreads || [],
-          resolvedThreadIds: chunk.resolvedThreadIds || [],
-        });
-      });
-      state.briefs[b.id] = brief;
-      // Bump totalChapters if pastes ran past the previously declared total
-      const maxKnown = Math.max(...brief.chapters.map(c => c.number || 0), 0);
-      if (maxKnown > (b.totalChapters || 0)) {
-        b.totalChapters = maxKnown;
-      }
-      saveState();
-      toast(`Added ${extracted.length} chapter${extracted.length === 1 ? '' : 's'}.`);
-      route();
-    } catch (err) {
-      console.error(err);
-      toast(err.message || 'Failed to summarize chapter.');
-    }
+  function fallbackTitleFromCtx() {
+    const el = document.querySelector('#paste-chapter-title');
+    return el ? el.value.trim() : '';
   }
 
   async function extractChaptersFromText(book, brief, startingNum, fallbackTitle, text) {

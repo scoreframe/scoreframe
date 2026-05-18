@@ -6,7 +6,7 @@
   <title>Bookmarc — Your bookmark with a memory</title>
   <meta name="description" content="A progressive, spoiler-free reading companion. Catch up on characters and plot without ruining what's ahead." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='28'%3E%F0%9F%93%96%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="style.css?v=0.4.0" />
+  <link rel="stylesheet" href="style.css?v=0.4.1" />
 </head>
 <body>
   <header class="topbar">
@@ -81,7 +81,7 @@
 
   <!-- Paste-a-chapter dialog -->
   <dialog id="paste-dialog">
-    <form method="dialog" class="paste-form">
+    <form id="paste-form" class="paste-form">
       <h3>Paste from your book</h3>
       <p class="muted small">Paste one or more chapters. Bookmarc will split by chapter headings (or treat as a single chapter if there are none) and summarize each. Text is sent to Claude and never stored.</p>
       <label>Chapter text</label>
@@ -96,9 +96,10 @@
           <input id="paste-chapter-title" type="text" placeholder="only used if paste is a single chapter" />
         </div>
       </details>
+      <div id="paste-status" class="paste-status" hidden></div>
       <div class="settings-actions">
-        <button value="cancel">Cancel</button>
-        <button value="submit" class="primary">Summarize &amp; add</button>
+        <button type="button" id="paste-cancel-btn">Cancel</button>
+        <button type="submit" class="primary" id="paste-submit-btn">Summarize &amp; add</button>
       </div>
     </form>
   </dialog>
@@ -128,8 +129,8 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <footer class="version-footer">Bookmarc <span id="app-version">v0.4.0</span></footer>
+  <footer class="version-footer">Bookmarc <span id="app-version">v0.4.1</span></footer>
 
-  <script src="app.js?v=0.4.0"></script>
+  <script src="app.js?v=0.4.1"></script>
 </body>
 </html>
