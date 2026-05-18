@@ -677,7 +677,11 @@ async function loadTeam() {
             hubCode: raw.hub?.hubCode || hubCode,
             visibility: raw.hub?.visibility || 'private',
             activeStreamCode: raw.hub?.activeStreamCode || '',
-            activeStreamUrl: raw.hub?.activeStreamUrl || ''
+            activeStreamUrl: raw.hub?.activeStreamUrl || '',
+            // v1.1.366 — Team lifecycle. Missing status field reads as
+            // "active" for back-compat with pre-archive team docs.
+            status: raw.status || 'active',
+            archivedAt: raw.archivedAt || null
         } : raw;
         renderHeader();
 
@@ -838,6 +842,36 @@ function renderHeader() {
     $('teamSport').textContent = sportName(p.sport);
     $('teamCode').textContent = hubCode;
     document.title = `${p.teamName} — ScoreFrame`;
+
+    // v1.1.366 — ARCHIVED banner. Insert (or remove) a yellow pill right
+    // below the team name when the team is archived. Page stays read-only;
+    // schedule entries don't render, no new follow requests, no live
+    // status. The banner makes the state explicit so visitors don't think
+    // the team has disappeared or that the page is broken.
+    const existing = document.getElementById('archivedBanner');
+    if (p.status === 'archived') {
+        if (!existing) {
+            const banner = document.createElement('div');
+            banner.id = 'archivedBanner';
+            banner.style.cssText = 'background:#E0A030;color:#1A1A1A;font-weight:700;font-size:12px;letter-spacing:0.06em;padding:6px 14px;margin:8px 0 12px;border-radius:14px;display:inline-block;';
+            let label = '\u{1F4E6} ARCHIVED';
+            if (p.archivedAt) {
+                try {
+                    const d = new Date(p.archivedAt);
+                    const m = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+                    label += ` · ${m}`;
+                } catch (_) {}
+            }
+            banner.textContent = label;
+            // Insert right after the team-name div.
+            const teamNameEl = document.getElementById('teamName');
+            if (teamNameEl && teamNameEl.parentNode) {
+                teamNameEl.parentNode.insertBefore(banner, teamNameEl.nextSibling);
+            }
+        }
+    } else if (existing) {
+        existing.remove();
+    }
 }
 
 // ── Auth ──
