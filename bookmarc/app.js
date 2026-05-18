@@ -9,7 +9,9 @@
     googleBooksKey: '',
     model: 'claude-opus-4-7',
     books: [],
-    recaps: {}, // key: `${bookId}::${chapter}::v2`
+    briefs: {},        // bookId -> full book brief (v0.1.0+)
+    qaThreads: {},     // bookId -> [{ q, a, atChapter, timestamp }]
+    recaps: {},        // legacy: key `${bookId}::${chapter}::v2` (pre-0.1.0)
   });
 
   function loadState() {
@@ -266,92 +268,209 @@
     b.lastOpenedAt = Date.now();
     saveState();
     render(main => {
-      const node = cloneTpl('tpl-book');
-      main.appendChild(node);
-      $('#book-cover', main).src = b.coverUrl || '';
-      $('#book-title', main).textContent = b.title;
-      $('#book-authors', main).textContent = (b.authors || []).join(', ');
-      const chapInput = $('#chapter-input', main);
-      const totalInput = $('#total-input', main);
-      chapInput.value = b.currentChapter || 0;
-      totalInput.value = b.totalChapters || '';
-      chapInput.addEventListener('change', () => { b.currentChapter = Math.max(0, parseInt(chapInput.value, 10) || 0); saveState(); });
-      totalInput.addEventListener('change', () => { b.totalChapters = Math.max(0, parseInt(totalInput.value, 10) || 0); saveState(); });
-
-      const recapArea = $('#recap-area', main);
-
-      const cachedKey = recapKey(b.id, b.currentChapter);
-      if (state.recaps[cachedKey]) {
-        const inline = buildRecapInline(state.recaps[cachedKey]);
-        recapArea.appendChild(inline);
-        const openBtn = $('.inline-recap-open', inline);
-        if (openBtn) openBtn.addEventListener('click', () => navigate(`/book/${b.id}/recap`));
+      const brief = state.briefs[b.id];
+      if (!brief) {
+        renderBookNoBrief(main, b);
+      } else {
+        renderBookWithBrief(main, b, brief);
       }
-
-      $('#catchup-btn', main).addEventListener('click', () => doCatchup(b, recapArea));
-      $('#remove-book-btn', main).addEventListener('click', () => {
-        if (!confirm(`Remove "${b.title}" from your library?`)) return;
-        state.books = state.books.filter(x => x.id !== b.id);
-        // also drop cached recaps for this book
-        for (const k of Object.keys(state.recaps)) {
-          if (k.startsWith(b.id + '::')) delete state.recaps[k];
-        }
-        saveState();
-        navigate('/');
-      });
     });
   }
 
-  function recapKey(bookId, chapter) {
-    // v2 schema: previousChapter + storySoFar + typed relationships
-    return `${bookId}::${chapter || 0}::v2`;
+  function renderBookNoBrief(main, b) {
+    const wrap = document.createElement('section');
+    wrap.className = 'view book';
+    wrap.innerHTML = `
+      <div class="book-header">
+        <img id="book-cover" alt="" />
+        <div class="book-meta">
+          <h2></h2>
+          <p class="muted"></p>
+        </div>
+      </div>
+      <div class="brief-card">
+        <h3>Bookmarc doesn't know this book yet</h3>
+        <p class="muted">Generate a one-time book brief — chapter list, characters, places, plot threads. Uses one Opus call (~30s, roughly $0.10). After that everything is instant and offline.</p>
+        <button class="primary" id="gen-brief-btn">Generate book brief</button>
+        <div id="brief-status" class="muted small"></div>
+      </div>
+      <button class="link danger" id="remove-book-btn">Remove this book</button>
+    `;
+    main.appendChild(wrap);
+    $('#book-cover', wrap).src = b.coverUrl || '';
+    $('.book-meta h2', wrap).textContent = b.title;
+    $('.book-meta .muted', wrap).textContent = (b.authors || []).join(', ');
+    $('#gen-brief-btn', wrap).addEventListener('click', () => doGenerateBrief(b));
+    $('#remove-book-btn', wrap).addEventListener('click', () => removeBook(b));
   }
 
-  // ---------- Recap rendering ----------
-  function buildRecapInline(recap) {
-    const wrap = document.createElement('div');
-    wrap.className = 'recap-inline';
-    const prev = recap.previousChapter || {};
-    const summary = prev.summary || (recap.storySoFar && recap.storySoFar.overview) || '(no recap yet)';
+  function renderBookWithBrief(main, b, brief) {
+    const wrap = document.createElement('section');
+    wrap.className = 'view book';
+    const totalChapters = (brief.chapters || []).length;
+    if (totalChapters && b.totalChapters !== totalChapters) {
+      b.totalChapters = totalChapters;
+      saveState();
+    }
     wrap.innerHTML = `
-      <h4 class="previously-eyebrow">Previously…</h4>
+      <div class="book-header">
+        <img id="book-cover" alt="" />
+        <div class="book-meta">
+          <h2></h2>
+          <p class="muted authors"></p>
+          <p class="muted small confidence"></p>
+        </div>
+      </div>
+      <div class="progress-card">
+        <label for="chapter-select">I'm at the end of</label>
+        <select id="chapter-select"></select>
+        <button class="primary" id="catchup-btn">Catch me up</button>
+      </div>
+      <div id="recap-area"></div>
+      <div class="ask-card">
+        <h3>Ask Bookmarc</h3>
+        <p class="muted small">Pointed question about plot or characters. We won't spoil anything past your current chapter.</p>
+        <div class="ask-row">
+          <input id="ask-input" type="text" placeholder="e.g. Who is Robert Langdon working with?" />
+          <button class="primary" id="ask-btn">Ask</button>
+        </div>
+        <div id="ask-thread" class="ask-thread"></div>
+      </div>
+      <div class="brief-meta">
+        <button class="link" id="regen-brief-btn">Regenerate book brief</button>
+        <button class="link danger" id="remove-book-btn">Remove this book</button>
+      </div>
+    `;
+    main.appendChild(wrap);
+    $('#book-cover', wrap).src = b.coverUrl || '';
+    $('.book-meta h2', wrap).textContent = b.title;
+    $('.book-meta .authors', wrap).textContent = (b.authors || []).join(', ');
+    const lvl = brief.knowledgeLevel;
+    const chip = document.createElement('span');
+    chip.className = `knowledge-chip level-${lvl || 'unknown'}`;
+    chip.textContent = knowledgeLevelLabel(lvl);
+    chip.title = brief.knowledgeNote || '';
+    const confEl = $('.book-meta .confidence', wrap);
+    confEl.innerHTML = `${totalChapters} chapters · `;
+    confEl.appendChild(chip);
+    if (brief.knowledgeNote) {
+      const note = document.createElement('div');
+      note.className = 'muted small knowledge-note';
+      note.textContent = brief.knowledgeNote;
+      confEl.parentElement.appendChild(note);
+    }
+
+    // Chapter select — populated with titles when available
+    const select = $('#chapter-select', wrap);
+    select.innerHTML = '<option value="0">Not started</option>';
+    (brief.chapters || []).forEach(ch => {
+      const opt = document.createElement('option');
+      opt.value = ch.number;
+      const labelTitle = ch.title ? ` — ${ch.title}` : '';
+      opt.textContent = `Chapter ${ch.number}${labelTitle}`;
+      select.appendChild(opt);
+    });
+    select.value = String(b.currentChapter || 0);
+    select.addEventListener('change', () => {
+      b.currentChapter = parseInt(select.value, 10) || 0;
+      saveState();
+      // Re-render inline preview area
+      renderInlineRecap(b, brief, $('#recap-area', wrap));
+    });
+
+    renderInlineRecap(b, brief, $('#recap-area', wrap));
+
+    $('#catchup-btn', wrap).addEventListener('click', () => {
+      if ((b.currentChapter || 0) <= 0) { toast('Pick a chapter first.'); return; }
+      navigate(`/book/${b.id}/recap`);
+    });
+
+    // Q&A
+    renderAskThread(b, $('#ask-thread', wrap));
+    const askInput = $('#ask-input', wrap);
+    const askBtn = $('#ask-btn', wrap);
+    const submitAsk = () => {
+      const q = askInput.value.trim();
+      if (!q) return;
+      askInput.value = '';
+      doAsk(b, brief, q, wrap);
+    };
+    askBtn.addEventListener('click', submitAsk);
+    askInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitAsk(); });
+
+    $('#regen-brief-btn', wrap).addEventListener('click', () => {
+      if (!confirm('Regenerate the brief? This uses one Opus call (~$0.10) and replaces the existing brief.')) return;
+      delete state.briefs[b.id];
+      saveState();
+      doGenerateBrief(b);
+    });
+    $('#remove-book-btn', wrap).addEventListener('click', () => removeBook(b));
+  }
+
+  function renderInlineRecap(b, brief, mountEl) {
+    mountEl.innerHTML = '';
+    const ch = b.currentChapter || 0;
+    if (ch <= 0) {
+      mountEl.innerHTML = '<p class="muted small">Set your current chapter and tap "Catch me up" for the recap.</p>';
+      return;
+    }
+    const sliced = sliceBrief(brief, ch);
+    const prevSummary = (sliced.previousChapter && sliced.previousChapter.summary) || '';
+    if (!prevSummary) {
+      mountEl.innerHTML = '<p class="muted small">No previously-on summary available for this chapter.</p>';
+      return;
+    }
+    const div = document.createElement('div');
+    div.className = 'recap-inline';
+    div.innerHTML = `
+      <h4 class="previously-eyebrow">Previously, in <em></em></h4>
       <p></p>
       <button class="link inline-recap-open">Open full recap →</button>
-      <p class="muted small confidence"></p>
     `;
-    $('p', wrap).textContent = summary;
-    $('.confidence', wrap).textContent = `Confidence: ${recap.confidence || 'unknown'} · generated ${new Date(recap.generatedAt || Date.now()).toLocaleString()}`;
-    return wrap;
+    $('em', div).textContent = b.title;
+    $('p', div).textContent = prevSummary;
+    $('.inline-recap-open', div).addEventListener('click', () => navigate(`/book/${b.id}/recap`));
+    mountEl.appendChild(div);
   }
 
-  // ---------- Catch-me-up flow ----------
-  async function doCatchup(b, mountEl) {
+  function removeBook(b) {
+    if (!confirm(`Remove "${b.title}" from your library?`)) return;
+    state.books = state.books.filter(x => x.id !== b.id);
+    delete state.briefs[b.id];
+    delete state.qaThreads[b.id];
+    for (const k of Object.keys(state.recaps)) {
+      if (k.startsWith(b.id + '::')) delete state.recaps[k];
+    }
+    saveState();
+    navigate('/');
+  }
+
+
+  // ---------- Recap rendering ----------
+
+  // ---------- Book brief generation (one call per book) ----------
+  async function doGenerateBrief(b) {
     if (!state.apiKey) {
       toast('Add your Anthropic API key in Settings.');
       openSettings();
       return;
     }
-    const chapter = b.currentChapter || 0;
-    if (chapter <= 0) {
-      toast('Set your current chapter first.');
-      return;
-    }
-    const key = recapKey(b.id, chapter);
-    if (state.recaps[key]) {
-      // Already cached for this exact chapter — show it
-      navigate(`/book/${b.id}/recap`);
-      return;
-    }
-    mountEl.innerHTML = '<p><span class="spinner"></span> Asking Claude for a spoiler-free recap through chapter ' + chapter + '…</p>';
+    const statusEl = document.querySelector('#brief-status');
+    const btn = document.querySelector('#gen-brief-btn');
+    if (btn) btn.disabled = true;
+    if (statusEl) statusEl.innerHTML = '<span class="spinner"></span> Asking Claude to read up on this book… this can take 30-90 seconds.';
     try {
-      const recap = await generateRecap(b, chapter);
-      recap.generatedAt = Date.now();
-      state.recaps[key] = recap;
+      const brief = await generateBookBrief(b);
+      brief.generatedAt = Date.now();
+      state.briefs[b.id] = brief;
+      // Auto-populate total chapters
+      if ((brief.chapters || []).length) b.totalChapters = brief.chapters.length;
       saveState();
-      navigate(`/book/${b.id}/recap`);
+      route(); // re-render — will now show brief UI
     } catch (err) {
       console.error(err);
-      mountEl.innerHTML = '<p class="muted">' + escapeHtml(err.message || 'Failed to generate recap.') + '</p>';
+      if (statusEl) statusEl.textContent = err.message || 'Failed to generate brief.';
+      if (btn) btn.disabled = false;
     }
   }
 
@@ -359,69 +478,99 @@
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  async function generateRecap(book, chapter) {
-    const system = `You are Bookmarc, a reading-companion that produces NON-SPOILING progressive recaps for readers in the middle of a book.
+  async function generateBookBrief(book) {
+    const system = `You are Bookmarc. You produce a STRUCTURED book brief that a reader's local app will use to slice progressive, spoiler-free recaps.
+
+You will return a JSON brief that covers the ENTIRE book chapter-by-chapter. The user's client will slice it based on how far they've read — so include full data, tagged with the chapter where each thing is first revealed. The client handles spoiler protection by filtering on "firstChapter".
 
 Hard rules:
-- Include ONLY what is revealed by the END of the reader's stated chapter.
-- Do not mention any character, place, item, or plot point that first appears AFTER the reader's current chapter.
-- Do not hint at future twists, deaths, betrayals, romances, or revelations.
-- For "previousChapter", recap ONLY what happened in the single most recent chapter the reader finished (chapter N itself), like a TV "previously on..." segment focused on the last episode.
-- For "storySoFar", give the broader picture from the start of the book through end of chapter N.
-- Character IDs must be lowercase short slugs (e.g. "frodo", "samwise-gamgee"), stable, and used consistently across "characters" and "relationships".
-- Every relationship's fromId and toId must reference a character ID that exists in the "characters" array.
-- "groupCluster" should be a short label that groups characters together (faction, family, household, ship's crew, school, etc.) — used to lay them out spatially. Use the same exact string for characters that belong to the same cluster.
-- If you are not confident you know this specific book well, set "confidence" to "low" and produce only what you are sure of (or an empty result). Do not invent.
-- Respond with ONLY a single JSON object. No prose before or after.`;
+- Every entity (character, place, item, relationship) must have an integer "firstChapter" — the chapter at the end of which the reader first knows about it.
+- Each chapter entry's "summary" must describe ONLY events in THAT chapter (not cumulative).
+- Character IDs are lowercase short slugs (e.g. "robert-langdon"), stable across all references.
+- relationships.fromId and toId must reference real character IDs.
+- "groupCluster" groups characters by faction/family/household. Use identical strings for groupings.
 
-    const total = book.totalChapters ? ` (of approximately ${book.totalChapters})` : '';
+For knowledgeLevel, self-report honestly:
+  1 = public domain or canonical text — you've effectively memorized the prose and can produce near-verbatim recall of chapter contents
+  2 = popular published book — you know the plot, characters, and structure well from summaries/reviews/study guides, but not the prose itself
+  3 = new/obscure book — you have very limited knowledge. Output will be sparse; only include things you are genuinely confident about.
+
+If knowledgeLevel is 3, return MOSTLY EMPTY arrays. Do not invent. The user is better served by a sparse honest brief than a confident hallucination.
+
+Respond with ONLY a single JSON object. No prose before or after.`;
+
     const isbn = book.isbn ? `\nISBN: ${book.isbn}` : '';
     const userMsg = `Book: "${book.title}" by ${(book.authors || []).join(', ') || 'unknown author'}${isbn}
-Reader has just finished Chapter ${chapter}${total}.
 
-Respond as JSON matching this schema exactly:
+Produce a complete book brief as JSON matching this schema:
+
 {
-  "confidence": "high" | "medium" | "low",
-  "previousChapter": {
-    "title": "optional chapter title if you know it",
-    "summary": "1-2 paragraph recap of ONLY chapter ${chapter} itself (the most recently finished chapter). Past tense. TV-style 'previously on' beat.",
-    "keyMoments": ["3-6 short bullet phrases of the most important moments from chapter ${chapter}"]
-  },
-  "storySoFar": {
-    "overview": "2-4 paragraph high-level recap from the start of the book through end of chapter ${chapter}.",
-    "keyPlotPoints": ["6-12 short bullet phrases — the big beats so far, in roughly chronological order"]
-  },
+  "knowledgeLevel": 1 | 2 | 3,
+  "knowledgeNote": "one sentence explaining what you do/don't know about this specific book — e.g. 'Public-domain classic, full text in training data' or 'Popular thriller, plot well-documented in reviews' or 'Recent release, only know the publisher blurb'",
+  "title": "${escapeForPrompt(book.title)}",
+  "author": "${escapeForPrompt((book.authors || []).join(', '))}",
+  "totalChapters": <integer count of chapters in this book>,
+  "chapters": [
+    {
+      "number": 1,
+      "title": "optional chapter title or section heading if you know it",
+      "summary": "1-2 paragraph recap of ONLY this chapter's events. Past tense.",
+      "keyMoments": ["3-6 short bullet phrases — the most important beats of this chapter"]
+    }
+    // ... one entry per chapter, ALL chapters
+  ],
   "characters": [
     {
       "id": "lowercase-slug",
       "name": "...",
       "role": "protagonist | antagonist | supporting | mentioned",
-      "groupCluster": "short label — family/faction/group these characters belong to (use identical strings to group)",
-      "knownSoFar": "what the reader knows about them by end of chapter ${chapter}"
+      "groupCluster": "short label — family/faction/group (identical strings group together)",
+      "firstChapter": <integer — chapter where reader first meets/learns of this character>,
+      "bio": "full character description (spoilers OK — client filters by firstChapter)",
+      "progression": [
+        { "chapter": <int>, "note": "what we learn about this character in this specific chapter" }
+      ]
     }
   ],
   "relationships": [
     {
       "fromId": "char-slug",
       "toId": "other-slug",
-      "kind": "short relationship label — e.g. 'parent', 'spouse', 'sibling', 'friend', 'mentor', 'rival', 'enemy', 'lover', 'employer', 'ally', 'colleague', 'student'",
-      "note": "optional brief context (1 short sentence)"
+      "kind": "parent | spouse | sibling | friend | mentor | rival | enemy | lover | employer | ally | colleague | student | other-short-label",
+      "firstChapter": <integer — chapter where this relationship is first knowable to the reader>,
+      "note": "optional one-sentence context"
     }
   ],
   "places": [
-    { "name": "...", "note": "brief note about this location as introduced so far" }
+    {
+      "id": "lowercase-slug",
+      "name": "...",
+      "firstChapter": <integer>,
+      "note": "brief description"
+    }
   ],
   "items": [
-    { "name": "...", "note": "brief note about this item/object as introduced so far" }
+    {
+      "id": "lowercase-slug",
+      "name": "...",
+      "firstChapter": <integer>,
+      "note": "brief description (significant object: MacGuffin, weapon, letter, locket, etc.)"
+    }
   ],
-  "thingsToRemember": ["short bullet phrases — open threads, unresolved questions, items the reader might forget about"]
+  "openThreads": [
+    {
+      "thread": "short description of an unresolved mystery/question/promise the reader should track",
+      "introducedChapter": <integer>,
+      "resolvedChapter": <integer or null if unresolved by end of book>
+    }
+  ]
 }
 
-If you don't know this book confidently, return an object with "confidence": "low" and minimal/empty arrays rather than guessing.`;
+If knowledgeLevel is 3, prefer empty arrays over invented content. It is OK to return a brief with only knowledgeLevel + knowledgeNote + (sparse) chapters and nothing else.`;
 
     const body = {
       model: state.model || 'claude-opus-4-7',
-      max_tokens: 4096,
+      max_tokens: 16000,
       temperature: 0.2,
       system,
       messages: [{ role: 'user', content: userMsg }],
@@ -443,15 +592,17 @@ If you don't know this book confidently, return an object with "confidence": "lo
     }
     const data = await res.json();
     const text = (data.content || []).map(c => c.text || '').join('').trim();
-    return parseRecapJson(text);
+    return parseJsonResponse(text);
   }
 
-  function parseRecapJson(text) {
-    // Strip ```json fences if present
+  function escapeForPrompt(s) {
+    return String(s || '').replace(/"/g, '\\"');
+  }
+
+  function parseJsonResponse(text) {
     let t = text.trim();
     const fence = t.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
     if (fence) t = fence[1];
-    // Find first { and last } as fallback
     const first = t.indexOf('{');
     const last = t.lastIndexOf('}');
     if (first >= 0 && last > first) t = t.slice(first, last + 1);
@@ -462,32 +613,174 @@ If you don't know this book confidently, return an object with "confidence": "lo
     }
   }
 
-  // ---------- Recap view (tabbed) ----------
+  // ---------- Brief slicing (no API call — pure local) ----------
+  function sliceBrief(brief, chapter) {
+    const ch = chapter || 0;
+    const chapters = (brief.chapters || []).filter(c => (c.number || 0) <= ch);
+    const previousChapter = (brief.chapters || []).find(c => (c.number || 0) === ch) || null;
+    const characters = (brief.characters || []).filter(c => (c.firstChapter || 1) <= ch).map(c => {
+      const progression = (c.progression || []).filter(p => (p.chapter || 1) <= ch);
+      const knownSoFar = progression.length
+        ? progression.map(p => p.note).join(' ')
+        : c.bio || '';
+      return { ...c, knownSoFar, progression };
+    });
+    const charIds = new Set(characters.map(c => c.id));
+    const relationships = (brief.relationships || [])
+      .filter(r => (r.firstChapter || 1) <= ch)
+      .filter(r => charIds.has(r.fromId) && charIds.has(r.toId));
+    const places = (brief.places || []).filter(p => (p.firstChapter || 1) <= ch);
+    const items = (brief.items || []).filter(p => (p.firstChapter || 1) <= ch);
+    const thingsToRemember = (brief.openThreads || [])
+      .filter(t => (t.introducedChapter || 1) <= ch)
+      .filter(t => t.resolvedChapter == null || t.resolvedChapter > ch)
+      .map(t => t.thread);
+
+    const storyOverview = chapters.length
+      ? chapters.map(c => c.summary).filter(Boolean).join('\n\n')
+      : '';
+    const storyKeyPlotPoints = chapters.flatMap(c => c.keyMoments || []);
+
+    return {
+      knowledgeLevel: brief.knowledgeLevel,
+      knowledgeNote: brief.knowledgeNote,
+      confidence: knowledgeLevelToConfidence(brief.knowledgeLevel),
+      generatedAt: brief.generatedAt,
+      previousChapter: previousChapter ? {
+        title: previousChapter.title,
+        summary: previousChapter.summary,
+        keyMoments: previousChapter.keyMoments || [],
+      } : null,
+      storySoFar: {
+        overview: storyOverview,
+        keyPlotPoints: storyKeyPlotPoints,
+      },
+      characters,
+      relationships,
+      places,
+      items,
+      thingsToRemember,
+    };
+  }
+
+  function knowledgeLevelToConfidence(level) {
+    if (level === 1) return 'high (verbatim)';
+    if (level === 2) return 'high (summary-level)';
+    if (level === 3) return 'low (sparse knowledge)';
+    return 'unknown';
+  }
+
+  // ---------- Q&A flow ----------
+  async function doAsk(b, brief, q, wrap) {
+    if (!state.apiKey) { toast('Add your Anthropic API key in Settings.'); openSettings(); return; }
+    const ch = b.currentChapter || 0;
+    if (ch <= 0) { toast('Pick a current chapter first.'); return; }
+    if (!state.qaThreads[b.id]) state.qaThreads[b.id] = [];
+    const entry = { q, a: null, atChapter: ch, timestamp: Date.now(), pending: true };
+    state.qaThreads[b.id].push(entry);
+    saveState();
+    const threadEl = $('#ask-thread', wrap);
+    renderAskThread(b, threadEl);
+    try {
+      const answer = await askQuestion(b, brief, q, ch);
+      entry.a = answer;
+      entry.pending = false;
+    } catch (err) {
+      entry.a = `(error: ${err.message || 'failed'})`;
+      entry.pending = false;
+    }
+    saveState();
+    renderAskThread(b, threadEl);
+  }
+
+  function renderAskThread(b, mount) {
+    if (!mount) return;
+    mount.innerHTML = '';
+    const thread = state.qaThreads[b.id] || [];
+    [...thread].reverse().forEach(entry => {
+      const div = document.createElement('div');
+      div.className = 'ask-entry';
+      div.innerHTML = `
+        <div class="q"><strong>You — at ch. ${entry.atChapter}:</strong> <span></span></div>
+        <div class="a"></div>
+      `;
+      $('.q span', div).textContent = entry.q;
+      const aEl = $('.a', div);
+      if (entry.pending) {
+        aEl.innerHTML = '<span class="spinner"></span> Thinking…';
+      } else {
+        aEl.textContent = entry.a || '';
+      }
+      mount.appendChild(div);
+    });
+  }
+
+  async function askQuestion(book, brief, question, chapter) {
+    const sliced = sliceBrief(brief, chapter);
+    const system = `You are Bookmarc answering pointed questions from a reader who is partway through a book.
+
+Hard rules:
+- The reader has finished chapter ${chapter} of "${book.title}".
+- ONLY use information from the SLICED BRIEF below (everything in there is safe — already revealed by end of chapter ${chapter}).
+- Do NOT add information from your training data that goes beyond what is in the sliced brief.
+- If the answer requires information that's not in the sliced brief, say "That hasn't been revealed yet by chapter ${chapter}" or similar — do not speculate or spoil.
+- Keep answers tight: 1-3 short paragraphs.
+- Plain text. No JSON, no markdown headers.`;
+    const userMsg = `Sliced brief (only things known by end of chapter ${chapter}):
+${JSON.stringify({
+  previousChapter: sliced.previousChapter,
+  storySoFar: sliced.storySoFar,
+  characters: sliced.characters.map(c => ({ id: c.id, name: c.name, role: c.role, knownSoFar: c.knownSoFar })),
+  relationships: sliced.relationships,
+  places: sliced.places,
+  items: sliced.items,
+  thingsToRemember: sliced.thingsToRemember,
+}, null, 2)}
+
+Reader's question: ${question}`;
+
+    const body = {
+      model: state.model || 'claude-opus-4-7',
+      max_tokens: 1024,
+      temperature: 0.3,
+      system,
+      messages: [{ role: 'user', content: userMsg }],
+    };
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': state.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Claude API error ${res.status}: ${errText.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    return (data.content || []).map(c => c.text || '').join('').trim();
+  }
+
+  // ---------- Recap view (tabbed) — derived from the brief slice ----------
   function renderRecap(bookId) {
     const b = findBook(bookId);
     if (!b) { navigate('/'); return; }
-    const key = recapKey(b.id, b.currentChapter);
-    const recap = state.recaps[key];
-    if (!recap) { navigate(`/book/${b.id}`); return; }
+    const brief = state.briefs[b.id];
+    if (!brief) { navigate(`/book/${b.id}`); return; }
+    const ch = b.currentChapter || 0;
+    if (ch <= 0) { navigate(`/book/${b.id}`); return; }
+    const recap = sliceBrief(brief, ch);
     render(main => {
       const node = cloneTpl('tpl-recap');
       main.appendChild(node);
 
-      // Previously, in this book
-      const prevPanel = $('[data-panel="previously"]', main);
-      renderPreviously(prevPanel, recap, b);
-
-      // Story so far
-      const storyPanel = $('[data-panel="story"]', main);
-      renderStorySoFar(storyPanel, recap);
-
-      // Characters (family-tree-style map)
-      const charsPanel = $('[data-panel="characters"]', main);
-      renderCharacterMap(charsPanel, recap);
-
-      // Places & things
-      const worldPanel = $('[data-panel="world"]', main);
-      renderWorldPanel(worldPanel, recap);
+      renderPreviously($('[data-panel="previously"]', main), recap, b);
+      renderStorySoFar($('[data-panel="story"]', main), recap);
+      renderCharacterMap($('[data-panel="characters"]', main), recap);
+      renderWorldPanel($('[data-panel="world"]', main), recap);
 
       $$('.tab', main).forEach(t => t.addEventListener('click', () => {
         $$('.tab', main).forEach(x => x.classList.toggle('active', x === t));
@@ -495,8 +788,15 @@ If you don't know this book confidently, return an object with "confidence": "lo
         $$('.tab-panel', main).forEach(p => p.hidden = p.dataset.panel !== which);
       }));
 
-      $('#recap-confidence', main).textContent = `Through chapter ${b.currentChapter} · confidence ${recap.confidence || 'unknown'} · generated ${new Date(recap.generatedAt).toLocaleString()}`;
+      $('#recap-confidence', main).textContent = `Through chapter ${ch} · ${knowledgeLevelLabel(brief.knowledgeLevel)} · brief generated ${new Date(brief.generatedAt || Date.now()).toLocaleString()}`;
     });
+  }
+
+  function knowledgeLevelLabel(level) {
+    if (level === 1) return 'Verbatim knowledge';
+    if (level === 2) return 'Summary-level knowledge';
+    if (level === 3) return 'Sparse knowledge — output may be limited';
+    return 'unknown knowledge level';
   }
 
   function renderPreviously(panel, recap, book) {
