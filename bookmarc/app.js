@@ -17,7 +17,7 @@ import {
   deleteDoc,
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
-import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.0.0';
+import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.0.2';
 
 (() => {
   'use strict';
