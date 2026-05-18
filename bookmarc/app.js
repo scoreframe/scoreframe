@@ -6,9 +6,10 @@
 
   const defaultState = () => ({
     apiKey: '',
+    googleBooksKey: '',
     model: 'claude-opus-4-7',
     books: [],
-    recaps: {}, // key: `${bookId}::${chapter}`
+    recaps: {}, // key: `${bookId}::${chapter}::v2`
   });
 
   function loadState() {
@@ -155,49 +156,99 @@
   async function doSearch(q, statusEl, resultsEl) {
     statusEl.innerHTML = '<span class="spinner"></span> Searching…';
     resultsEl.innerHTML = '';
-    try {
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=15&printType=books`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Search failed');
-      const data = await res.json();
-      const items = data.items || [];
-      if (items.length === 0) { statusEl.textContent = 'No results.'; return; }
-      statusEl.textContent = '';
-      for (const item of items) {
-        const v = item.volumeInfo || {};
-        const li = document.createElement('li');
-        const cover = (v.imageLinks && (v.imageLinks.thumbnail || v.imageLinks.smallThumbnail)) || '';
-        li.innerHTML = `
-          <img alt="" src="${cover.replace('http:', 'https:')}" />
-          <div class="meta">
-            <h4></h4>
-            <div class="muted small"></div>
-          </div>
-        `;
-        $('h4', li).textContent = v.title || 'Untitled';
-        $('.muted', li).textContent = (v.authors || []).join(', ') + (v.publishedDate ? ` · ${v.publishedDate.slice(0, 4)}` : '');
-        li.addEventListener('click', () => addBookFromVolume(item));
-        resultsEl.appendChild(li);
+    // Try Google Books first if user supplied a key (richer metadata),
+    // otherwise go straight to Open Library which is keyless and not quota-shared.
+    const sources = state.googleBooksKey
+      ? [searchGoogleBooks, searchOpenLibrary]
+      : [searchOpenLibrary, searchGoogleBooks];
+    let lastErr = null;
+    for (const fn of sources) {
+      try {
+        const hits = await fn(q);
+        if (!hits) continue;
+        if (hits.length === 0) { statusEl.textContent = 'No results.'; return; }
+        statusEl.textContent = '';
+        for (const hit of hits) renderResult(hit, resultsEl);
+        return;
+      } catch (err) {
+        lastErr = err;
+        console.warn('Search source failed:', err);
       }
-    } catch (err) {
-      statusEl.textContent = 'Search failed. Check your connection.';
-      console.error(err);
     }
+    statusEl.textContent = lastErr && lastErr.message
+      ? `Search failed: ${lastErr.message}`
+      : 'Search failed. Both sources unreachable.';
   }
 
-  function addBookFromVolume(item) {
-    const v = item.volumeInfo || {};
-    const isbn = (v.industryIdentifiers || []).find(i => i.type === 'ISBN_13')?.identifier
-              || (v.industryIdentifiers || []).find(i => i.type === 'ISBN_10')?.identifier
-              || '';
-    const cover = (v.imageLinks && (v.imageLinks.thumbnail || v.imageLinks.smallThumbnail) || '').replace('http:', 'https:');
+  function renderResult(hit, resultsEl) {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <img alt="" />
+      <div class="meta">
+        <h4></h4>
+        <div class="muted small"></div>
+      </div>
+    `;
+    if (hit.coverUrl) $('img', li).src = hit.coverUrl;
+    $('h4', li).textContent = hit.title || 'Untitled';
+    $('.muted', li).textContent = (hit.authors || []).join(', ') + (hit.year ? ` · ${hit.year}` : '');
+    li.addEventListener('click', () => addBook(hit));
+    resultsEl.appendChild(li);
+  }
+
+  async function searchOpenLibrary(q) {
+    const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=15&fields=key,title,author_name,first_publish_year,isbn,cover_i`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Open Library ${res.status}`);
+    const data = await res.json();
+    return (data.docs || []).map(d => ({
+      source: 'openlibrary',
+      sourceId: d.key,
+      title: d.title || 'Untitled',
+      authors: d.author_name || [],
+      year: d.first_publish_year || '',
+      isbn: (d.isbn && d.isbn[0]) || '',
+      coverUrl: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : '',
+    }));
+  }
+
+  async function searchGoogleBooks(q) {
+    const params = new URLSearchParams({ q, maxResults: '15', printType: 'books' });
+    if (state.googleBooksKey) params.set('key', state.googleBooksKey);
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?${params.toString()}`);
+    if (res.status === 429 || res.status === 403) {
+      // Keyless quota exhausted, or invalid key — let the next source take over.
+      throw new Error(state.googleBooksKey ? 'Google Books key rejected or quota exceeded' : 'Google Books shared quota exhausted');
+    }
+    if (!res.ok) throw new Error(`Google Books ${res.status}`);
+    const data = await res.json();
+    return (data.items || []).map(item => {
+      const v = item.volumeInfo || {};
+      const cover = (v.imageLinks && (v.imageLinks.thumbnail || v.imageLinks.smallThumbnail) || '').replace('http:', 'https:');
+      const isbn = (v.industryIdentifiers || []).find(i => i.type === 'ISBN_13')?.identifier
+                || (v.industryIdentifiers || []).find(i => i.type === 'ISBN_10')?.identifier
+                || '';
+      return {
+        source: 'google',
+        sourceId: item.id,
+        title: v.title || 'Untitled',
+        authors: v.authors || [],
+        year: v.publishedDate ? v.publishedDate.slice(0, 4) : '',
+        isbn,
+        coverUrl: cover,
+      };
+    });
+  }
+
+  function addBook(hit) {
     const book = {
       id: uid(),
-      googleId: item.id,
-      title: v.title || 'Untitled',
-      authors: v.authors || [],
-      coverUrl: cover,
-      isbn,
+      source: hit.source,
+      sourceId: hit.sourceId,
+      title: hit.title,
+      authors: hit.authors || [],
+      coverUrl: hit.coverUrl || '',
+      isbn: hit.isbn || '',
       totalChapters: 0,
       currentChapter: 0,
       addedAt: Date.now(),
@@ -798,6 +849,7 @@ If you don't know this book confidently, return an object with "confidence": "lo
     const dlg = $('#settings-dialog');
     $('#api-key-input').value = state.apiKey || '';
     $('#model-select').value = state.model || 'claude-opus-4-7';
+    $('#google-key-input').value = state.googleBooksKey || '';
     if (typeof dlg.showModal === 'function') dlg.showModal();
     else dlg.setAttribute('open', '');
   }
@@ -809,6 +861,7 @@ If you don't know this book confidently, return an object with "confidence": "lo
       if (dlg.returnValue === 'save') {
         state.apiKey = $('#api-key-input').value.trim();
         state.model = $('#model-select').value;
+        state.googleBooksKey = $('#google-key-input').value.trim();
         saveState();
         toast('Saved.');
       }
