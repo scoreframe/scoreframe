@@ -325,6 +325,16 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
 }
 .toast[hidden] { display: none; }
 
+.version-footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  padding: 32px 0 16px;
+  opacity: 0.7;
+}
+.version-footer span { font-variant-numeric: tabular-nums; }
+
 .spinner {
   display: inline-block;
   width: 18px;
