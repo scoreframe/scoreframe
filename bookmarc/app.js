@@ -290,9 +290,11 @@
       </div>
       <div class="brief-card">
         <h3>Bookmarc doesn't know this book yet</h3>
-        <p class="muted">Generate a one-time book brief — chapter list, characters, places, plot threads. Uses one Opus call (~30s, roughly $0.10). After that everything is instant and offline.</p>
+        <p class="muted">Generate a one-time book brief from what Claude knows + Wikipedia + Open Library. Uses one Opus call (~30s, roughly $0.10). After that everything is instant and offline.</p>
         <button class="primary" id="gen-brief-btn">Generate book brief</button>
         <div id="brief-status" class="muted small"></div>
+        <p class="muted small" style="margin-top:18px;">Or build it as you read: paste each chapter's text from your own copy and Bookmarc will summarize that chapter. The text is sent to Claude and not stored.</p>
+        <button class="link" id="paste-first-btn">Paste your first chapter</button>
       </div>
       <button class="link danger" id="remove-book-btn">Remove this book</button>
     `;
@@ -301,6 +303,28 @@
     $('.book-meta h2', wrap).textContent = b.title;
     $('.book-meta .muted', wrap).textContent = (b.authors || []).join(', ');
     $('#gen-brief-btn', wrap).addEventListener('click', () => doGenerateBrief(b));
+    $('#paste-first-btn', wrap).addEventListener('click', () => {
+      // Seed an empty brief so the paste flow has something to merge into
+      if (!state.briefs[b.id]) {
+        state.briefs[b.id] = {
+          knowledgeLevel: 3,
+          knowledgeNote: 'Brief built entirely from reader-pasted chapters.',
+          title: b.title,
+          author: (b.authors || []).join(', '),
+          totalChapters: 0,
+          chapters: [],
+          characters: [],
+          relationships: [],
+          places: [],
+          items: [],
+          openThreads: [],
+          sources: [],
+          generatedAt: Date.now(),
+        };
+        saveState();
+      }
+      openPasteDialog(b, state.briefs[b.id]);
+    });
     $('#remove-book-btn', wrap).addEventListener('click', () => removeBook(b));
   }
 
@@ -325,6 +349,7 @@
         <label for="chapter-select">I'm at the end of</label>
         <select id="chapter-select"></select>
         <button class="primary" id="catchup-btn">Catch me up</button>
+        <button class="link" id="paste-chapter-btn">Paste a chapter to improve the brief</button>
       </div>
       <div id="recap-area"></div>
       <div class="ask-card">
@@ -375,23 +400,26 @@
       confEl.parentElement.appendChild(sources);
     }
 
-    // Chapter select — populated with titles when available
+    // Chapter select — populated with titles when available, with source marker
     const select = $('#chapter-select', wrap);
     select.innerHTML = '<option value="0">Not started</option>';
     (brief.chapters || []).forEach(ch => {
       const opt = document.createElement('option');
       opt.value = ch.number;
       const labelTitle = ch.title ? ` — ${ch.title}` : '';
-      opt.textContent = `Chapter ${ch.number}${labelTitle}`;
+      const marker = ch.source === 'user-paste' ? '  · pasted' : '';
+      opt.textContent = `Chapter ${ch.number}${labelTitle}${marker}`;
       select.appendChild(opt);
     });
     select.value = String(b.currentChapter || 0);
     select.addEventListener('change', () => {
       b.currentChapter = parseInt(select.value, 10) || 0;
       saveState();
-      // Re-render inline preview area
       renderInlineRecap(b, brief, $('#recap-area', wrap));
     });
+
+    // Paste-a-chapter button
+    $('#paste-chapter-btn', wrap).addEventListener('click', () => openPasteDialog(b, brief));
 
     renderInlineRecap(b, brief, $('#recap-area', wrap));
 
@@ -1282,11 +1310,263 @@ Reader's question: ${question}`;
     });
   }
 
+  // ---------- Paste-a-chapter flow ----------
+  let pasteCtx = null; // { book, brief }
+
+  function openPasteDialog(b, brief) {
+    pasteCtx = { book: b, brief };
+    const dlg = $('#paste-dialog');
+    $('#paste-chapter-num').value = b.currentChapter || (brief.chapters || []).length + 1 || 1;
+    $('#paste-chapter-title').value = '';
+    $('#paste-chapter-text').value = '';
+    $('#paste-char-count').textContent = '0 characters';
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    else dlg.setAttribute('open', '');
+  }
+
+  function wirePasteDialog() {
+    const dlg = $('#paste-dialog');
+    const textArea = $('#paste-chapter-text');
+    textArea.addEventListener('input', () => {
+      $('#paste-char-count').textContent = `${textArea.value.length.toLocaleString()} characters`;
+    });
+    dlg.addEventListener('close', () => {
+      if (dlg.returnValue !== 'submit') return;
+      const ctx = pasteCtx;
+      if (!ctx) return;
+      const num = parseInt($('#paste-chapter-num').value, 10);
+      const title = $('#paste-chapter-title').value.trim();
+      const text = $('#paste-chapter-text').value.trim();
+      if (!num || num < 1) { toast('Chapter number required.'); return; }
+      if (!text || text.length < 100) { toast('Paste the full chapter text.'); return; }
+      doSummarizeChapter(ctx.book, ctx.brief, num, title, text);
+    });
+  }
+
+  async function doSummarizeChapter(b, brief, chapterNumber, chapterTitle, text) {
+    if (!state.apiKey) { toast('Add your Anthropic API key in Settings.'); openSettings(); return; }
+    toast(`Summarizing chapter ${chapterNumber}…`);
+    try {
+      const result = await summarizeChapterFromText(b, brief, chapterNumber, chapterTitle, text);
+      mergePastedChapter(brief, chapterNumber, chapterTitle, text.length, result);
+      state.briefs[b.id] = brief;
+      if ((brief.chapters || []).length && (b.totalChapters || 0) < brief.chapters.length) {
+        b.totalChapters = brief.chapters.length;
+      }
+      saveState();
+      toast(`Chapter ${chapterNumber} added.`);
+      route(); // re-render with the updated brief
+    } catch (err) {
+      console.error(err);
+      toast(err.message || 'Failed to summarize chapter.');
+    }
+  }
+
+  async function summarizeChapterFromText(book, brief, chapterNumber, chapterTitle, text) {
+    // Condense existing brief so Claude knows what's already known and uses existing IDs
+    const knownChars = (brief.characters || []).map(c => ({ id: c.id, name: c.name, role: c.role, groupCluster: c.groupCluster }));
+    const knownPlaces = (brief.places || []).map(p => ({ id: p.id, name: p.name }));
+    const knownItems = (brief.items || []).map(p => ({ id: p.id, name: p.name }));
+
+    const system = `You are Bookmarc, summarizing a single chapter of a book from text the reader has pasted in.
+
+Output a SINGLE JSON object with this exact shape:
+{
+  "summary": "1-2 paragraph past-tense recap of THIS CHAPTER ONLY.",
+  "keyMoments": ["3-6 short bullet phrases — the most important beats of this chapter"],
+  "newCharacters": [
+    { "id": "lowercase-slug", "name": "...", "role": "protagonist | antagonist | supporting | mentioned", "groupCluster": "short label — family/faction/group", "bio": "short bio based ONLY on what was revealed in this chapter" }
+  ],
+  "newRelationships": [
+    { "fromId": "char-slug", "toId": "other-slug", "kind": "parent | spouse | sibling | friend | mentor | rival | enemy | lover | employer | ally | colleague | student | other-short-label", "note": "short context" }
+  ],
+  "newPlaces": [
+    { "id": "lowercase-slug", "name": "...", "note": "brief description" }
+  ],
+  "newItems": [
+    { "id": "lowercase-slug", "name": "...", "note": "brief description (significant object: MacGuffin, weapon, letter, locket, etc.)" }
+  ],
+  "characterUpdates": [
+    { "id": "existing-char-slug", "note": "what we learned about this already-known character in this chapter" }
+  ],
+  "newOpenThreads": [
+    { "thread": "short description of an unresolved question/mystery introduced", "introducedChapter": ${chapterNumber} }
+  ],
+  "resolvedThreadIds": ["thread descriptions from prior chapters that got resolved in THIS chapter"]
+}
+
+Rules:
+- Only include in "newCharacters" / "newPlaces" / "newItems" entities that are NOT already in the "Known so far" list below. For already-known characters, put progression notes in "characterUpdates" using their existing id.
+- Character IDs are lowercase short slugs. Reuse existing IDs from the known list when referring to existing characters.
+- All relationships must reference real character ids (either existing or in newCharacters of this same chapter).
+- Be terse. The chapter text is the source of truth; do not invent.
+
+Respond with ONLY a single JSON object. No prose before or after.`;
+
+    const knownStr = JSON.stringify({ characters: knownChars, places: knownPlaces, items: knownItems }, null, 2);
+    const userMsg = `Book: "${book.title}" by ${(book.authors || []).join(', ')}
+Chapter number: ${chapterNumber}${chapterTitle ? `\nChapter title: ${chapterTitle}` : ''}
+
+Known so far (already in this book's brief — reuse these IDs, don't duplicate):
+${knownStr}
+
+Chapter text:
+"""
+${text}
+"""`;
+
+    const body = {
+      model: state.model || 'claude-opus-4-7',
+      max_tokens: 4096,
+      system,
+      messages: [{ role: 'user', content: userMsg }],
+    };
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': state.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Claude API error ${res.status}: ${errText.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    const respText = (data.content || []).map(c => c.text || '').join('').trim();
+    return parseJsonResponse(respText);
+  }
+
+  // Merge the per-chapter result into the existing brief. Mutates brief.
+  function mergePastedChapter(brief, chapterNumber, chapterTitle, pastedCharCount, result) {
+    if (!brief.chapters) brief.chapters = [];
+    if (!brief.characters) brief.characters = [];
+    if (!brief.relationships) brief.relationships = [];
+    if (!brief.places) brief.places = [];
+    if (!brief.items) brief.items = [];
+    if (!brief.openThreads) brief.openThreads = [];
+
+    // Replace or insert the chapter
+    const chapEntry = {
+      number: chapterNumber,
+      title: chapterTitle || undefined,
+      summary: result.summary || '',
+      keyMoments: result.keyMoments || [],
+      source: 'user-paste',
+      pastedAt: Date.now(),
+      pastedCharCount,
+    };
+    const existingIdx = brief.chapters.findIndex(c => (c.number || 0) === chapterNumber);
+    if (existingIdx >= 0) brief.chapters[existingIdx] = chapEntry;
+    else brief.chapters.push(chapEntry);
+    brief.chapters.sort((a, b) => (a.number || 0) - (b.number || 0));
+
+    // Merge new characters (dedupe by id and normalized name)
+    const charNameKey = c => normalizeName(c.name);
+    const existingCharIds = new Set(brief.characters.map(c => c.id));
+    const existingCharNames = new Map(brief.characters.map(c => [charNameKey(c), c]));
+    (result.newCharacters || []).forEach(nc => {
+      if (!nc || !nc.id || !nc.name) return;
+      if (existingCharIds.has(nc.id)) return;
+      const existing = existingCharNames.get(charNameKey(nc));
+      if (existing) {
+        // already have by name — keep existing, just add a progression note
+        existing.progression = existing.progression || [];
+        existing.progression.push({ chapter: chapterNumber, note: nc.bio || '' });
+        return;
+      }
+      brief.characters.push({
+        id: nc.id,
+        name: nc.name,
+        role: nc.role || 'supporting',
+        groupCluster: nc.groupCluster || 'Other',
+        firstChapter: chapterNumber,
+        bio: nc.bio || '',
+        progression: [{ chapter: chapterNumber, note: nc.bio || '' }],
+      });
+      existingCharIds.add(nc.id);
+      existingCharNames.set(charNameKey(nc), brief.characters[brief.characters.length - 1]);
+    });
+
+    // Character progression updates for already-known characters
+    (result.characterUpdates || []).forEach(u => {
+      if (!u || !u.id) return;
+      const c = brief.characters.find(x => x.id === u.id);
+      if (!c) return;
+      c.progression = c.progression || [];
+      c.progression.push({ chapter: chapterNumber, note: u.note || '' });
+    });
+
+    // Relationships — only add if both ends exist and the pair isn't already there
+    const charIdSet = new Set(brief.characters.map(c => c.id));
+    (result.newRelationships || []).forEach(r => {
+      if (!r || !r.fromId || !r.toId || !r.kind) return;
+      if (!charIdSet.has(r.fromId) || !charIdSet.has(r.toId)) return;
+      const dup = brief.relationships.some(x =>
+        x.fromId === r.fromId && x.toId === r.toId && (x.kind || '').toLowerCase() === r.kind.toLowerCase()
+      );
+      if (dup) return;
+      brief.relationships.push({
+        fromId: r.fromId,
+        toId: r.toId,
+        kind: r.kind,
+        firstChapter: chapterNumber,
+        note: r.note || '',
+      });
+    });
+
+    // Places & items dedupe by id and name
+    mergeUniqueById(brief.places, result.newPlaces || [], chapterNumber);
+    mergeUniqueById(brief.items, result.newItems || [], chapterNumber);
+
+    // Open threads
+    (result.newOpenThreads || []).forEach(t => {
+      if (!t || !t.thread) return;
+      const dup = brief.openThreads.some(x => x.thread === t.thread);
+      if (dup) return;
+      brief.openThreads.push({ thread: t.thread, introducedChapter: chapterNumber, resolvedChapter: null });
+    });
+    (result.resolvedThreadIds || []).forEach(threadText => {
+      const existing = brief.openThreads.find(t => t.thread === threadText);
+      if (existing && existing.resolvedChapter == null) {
+        existing.resolvedChapter = chapterNumber;
+      }
+    });
+
+    // Update knowledgeLevel if we've materially improved it
+    const pastedCount = brief.chapters.filter(c => c.source === 'user-paste').length;
+    if (brief.knowledgeLevel === 3 && pastedCount >= 1) {
+      // User has at least one ground-truth chapter — bump to summary-level
+      brief.knowledgeLevel = 2;
+      brief.knowledgeNote = (brief.knowledgeNote || '') + (brief.knowledgeNote ? ' ' : '') + `Updated with ${pastedCount} reader-pasted chapter(s).`;
+    }
+  }
+
+  function mergeUniqueById(arr, additions, chapterNumber) {
+    const ids = new Set(arr.map(x => x.id));
+    const names = new Set(arr.map(x => normalizeName(x.name)));
+    additions.forEach(a => {
+      if (!a || !a.id || !a.name) return;
+      if (ids.has(a.id) || names.has(normalizeName(a.name))) return;
+      arr.push({ id: a.id, name: a.name, firstChapter: chapterNumber, note: a.note || '' });
+      ids.add(a.id);
+      names.add(normalizeName(a.name));
+    });
+  }
+
+  function normalizeName(s) {
+    return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
   // ---------- Back button ----------
   $('#back-btn').addEventListener('click', () => history.back());
 
   // ---------- Boot ----------
   wireSettings();
+  wirePasteDialog();
   if (!location.hash) location.hash = '#/';
   route();
 })();

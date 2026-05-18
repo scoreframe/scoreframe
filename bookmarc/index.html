@@ -6,7 +6,7 @@
   <title>Bookmarc — Your bookmark with a memory</title>
   <meta name="description" content="A progressive, spoiler-free reading companion. Catch up on characters and plot without ruining what's ahead." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='28'%3E%F0%9F%93%96%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="style.css?v=0.2.0" />
+  <link rel="stylesheet" href="style.css?v=0.3.0" />
 </head>
 <body>
   <header class="topbar">
@@ -79,6 +79,25 @@
     </section>
   </template>
 
+  <!-- Paste-a-chapter dialog -->
+  <dialog id="paste-dialog">
+    <form method="dialog" class="paste-form">
+      <h3>Paste a chapter</h3>
+      <p class="muted small">Paste the text of a chapter you've just read. Bookmarc will summarize it, extract any new characters and places, and add it to this book's brief. The text is sent to Claude and not stored.</p>
+      <label>Chapter number</label>
+      <input id="paste-chapter-num" type="number" min="1" step="1" />
+      <label>Chapter title (optional)</label>
+      <input id="paste-chapter-title" type="text" placeholder="If the chapter has a title" />
+      <label>Chapter text</label>
+      <textarea id="paste-chapter-text" rows="10" placeholder="Paste the chapter text here…"></textarea>
+      <p class="muted small" id="paste-char-count">0 characters</p>
+      <div class="settings-actions">
+        <button value="cancel">Cancel</button>
+        <button value="submit" class="primary">Summarize &amp; add</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Settings dialog -->
   <dialog id="settings-dialog">
     <form method="dialog" class="settings-form">
@@ -104,8 +123,8 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <footer class="version-footer">Bookmarc <span id="app-version">v0.2.0</span></footer>
+  <footer class="version-footer">Bookmarc <span id="app-version">v0.3.0</span></footer>
 
-  <script src="app.js?v=0.2.0"></script>
+  <script src="app.js?v=0.3.0"></script>
 </body>
 </html>
