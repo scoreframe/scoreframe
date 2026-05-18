@@ -17,7 +17,7 @@ import {
   deleteDoc,
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
-import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.0.3';
+import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.0.4';
 
 (() => {
   'use strict';
@@ -140,7 +140,11 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.0
   function bookCard(b) {
     const li = document.createElement('li');
     li.className = 'book-card';
-    li.addEventListener('click', () => navigate(`/book/${b.id}`));
+    li.addEventListener('click', () => {
+      b.lastOpenedAt = Date.now();
+      saveState();
+      navigate(`/book/${b.id}`);
+    });
     const total = b.totalChapters || 0;
     const cur = b.currentChapter || 0;
     const pct = total > 0 ? Math.min(100, Math.round((cur / total) * 100)) : 0;
@@ -287,8 +291,9 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.0
   function renderBook(id) {
     const b = findBook(id);
     if (!b) { navigate('/'); return; }
-    b.lastOpenedAt = Date.now();
-    saveState();
+    // NOTE: lastOpenedAt is updated when the user clicks a library card
+    // (see bookCard), NOT on every render — otherwise Firestore snapshot
+    // echoes trigger an infinite write loop.
     render(main => {
       const brief = state.briefs[b.id];
       if (!brief) {
@@ -2019,7 +2024,8 @@ ${text}
     });
     unsubscribers.push(unsub1);
 
-    // Listen for book collection changes
+    // Listen for book collection changes — deep-equal against local before
+    // updating, so server echoes of our own writes are silently dropped.
     const booksCol = collection(firebaseDb, 'users', user.uid, 'books');
     const unsub2 = onSnapshot(booksCol, snap => {
       let changed = false;
@@ -2027,26 +2033,40 @@ ${text}
         if (change.doc.metadata.hasPendingWrites) return;
         const id = change.doc.id;
         if (change.type === 'removed') {
-          state.books = state.books.filter(b => b.id !== id);
-          delete state.briefs[id];
-          delete state.qaThreads[id];
-          changed = true;
+          if (state.books.some(b => b.id === id)) {
+            state.books = state.books.filter(b => b.id !== id);
+            delete state.briefs[id];
+            delete state.qaThreads[id];
+            changed = true;
+          }
           return;
         }
         const data = change.doc.data();
         if (data.meta) {
           const idx = state.books.findIndex(b => b.id === id);
-          if (idx >= 0) state.books[idx] = data.meta;
-          else state.books.push(data.meta);
-          changed = true;
+          const currentJson = idx >= 0 ? JSON.stringify(state.books[idx]) : null;
+          const newJson = JSON.stringify(data.meta);
+          if (currentJson !== newJson) {
+            if (idx >= 0) state.books[idx] = data.meta;
+            else state.books.push(data.meta);
+            changed = true;
+          }
         }
         if (data.brief !== undefined) {
-          state.briefs[id] = data.brief;
-          changed = true;
+          const currentJson = JSON.stringify(state.briefs[id] || null);
+          const newJson = JSON.stringify(data.brief);
+          if (currentJson !== newJson) {
+            state.briefs[id] = data.brief;
+            changed = true;
+          }
         }
         if (data.qaThread !== undefined) {
-          state.qaThreads[id] = data.qaThread;
-          changed = true;
+          const currentJson = JSON.stringify(state.qaThreads[id] || []);
+          const newJson = JSON.stringify(data.qaThread);
+          if (currentJson !== newJson) {
+            state.qaThreads[id] = data.qaThread;
+            changed = true;
+          }
         }
       });
       if (changed) {
