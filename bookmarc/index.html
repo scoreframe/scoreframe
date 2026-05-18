@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Bookmarc — Your bookmark with a memory</title>
+  <meta name="description" content="A progressive, spoiler-free reading companion. Catch up on characters and plot without ruining what's ahead." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='28'%3E%F0%9F%93%96%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button class="iconbtn" id="back-btn" aria-label="Back" hidden>&larr;</button>
+    <h1 class="brand">Bookmarc</h1>
+    <button class="iconbtn" id="settings-btn" aria-label="Settings">&#9881;</button>
+  </header>
+
+  <main id="app"></main>
+
+  <!-- Library template -->
+  <template id="tpl-library">
+    <section class="view library">
+      <div class="library-empty" hidden>
+        <p class="tagline">Your bookmark with a memory.</p>
+        <p class="muted">Add a book and tell Bookmarc where you left off. We'll bring you up to speed without spoiling what's ahead.</p>
+      </div>
+      <ul class="book-list" id="book-list"></ul>
+      <button class="fab" id="add-book-btn" aria-label="Add a book">+</button>
+    </section>
+  </template>
+
+  <!-- Add book / search -->
+  <template id="tpl-search">
+    <section class="view search">
+      <input id="search-input" type="search" autocomplete="off" placeholder="Title, author, or ISBN" />
+      <div id="search-status" class="muted"></div>
+      <ul id="search-results" class="search-results"></ul>
+    </section>
+  </template>
+
+  <!-- Book detail -->
+  <template id="tpl-book">
+    <section class="view book">
+      <div class="book-header">
+        <img id="book-cover" alt="" />
+        <div class="book-meta">
+          <h2 id="book-title"></h2>
+          <p id="book-authors" class="muted"></p>
+        </div>
+      </div>
+      <div class="progress-card">
+        <label for="chapter-input">I'm at the end of chapter</label>
+        <div class="chapter-row">
+          <input id="chapter-input" type="number" min="0" step="1" value="0" />
+          <span class="muted">of</span>
+          <input id="total-input" type="number" min="1" step="1" />
+        </div>
+        <button class="primary" id="catchup-btn">Catch me up</button>
+      </div>
+      <div id="recap-area"></div>
+      <button class="link danger" id="remove-book-btn">Remove this book</button>
+    </section>
+  </template>
+
+  <!-- Recap -->
+  <template id="tpl-recap">
+    <section class="view recap">
+      <div class="tabs">
+        <button class="tab active" data-tab="previously">Previously</button>
+        <button class="tab" data-tab="story">Story so far</button>
+        <button class="tab" data-tab="characters">Characters</button>
+        <button class="tab" data-tab="world">Places &amp; things</button>
+      </div>
+      <div class="tab-panel" data-panel="previously"></div>
+      <div class="tab-panel" data-panel="story" hidden></div>
+      <div class="tab-panel" data-panel="characters" hidden></div>
+      <div class="tab-panel" data-panel="world" hidden></div>
+      <p class="muted footnote" id="recap-confidence"></p>
+    </section>
+  </template>
+
+  <!-- Settings dialog -->
+  <dialog id="settings-dialog">
+    <form method="dialog" class="settings-form">
+      <h3>Settings</h3>
+      <label>Anthropic API key</label>
+      <input id="api-key-input" type="password" placeholder="sk-ant-..." autocomplete="off" />
+      <p class="muted small">Stored locally on your device. Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>.</p>
+      <label>Model</label>
+      <select id="model-select">
+        <option value="claude-opus-4-7">Claude Opus 4.7 (best recall)</option>
+        <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (cheaper, faster)</option>
+        <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (cheapest)</option>
+      </select>
+      <div class="settings-actions">
+        <button value="cancel">Cancel</button>
+        <button value="save" class="primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
