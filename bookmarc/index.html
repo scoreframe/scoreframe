@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>BookMarc — Your bookmark with a memory</title>
-  <meta name="description" content="BookMarc is a progressive, spoiler-free reading companion. Catch up on characters and plot without ruining what's ahead." />
+  <title>MarkMyBooks — Recaps that stop where you stopped</title>
+  <meta name="description" content="MarkMyBooks is a spoiler-free reading companion. Mark catches you up on characters and plot, strictly capped at your current chapter — so you never spoil what's ahead." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='28'%3E%F0%9F%93%96%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="style.css?v=1.0.4" />
+  <link rel="stylesheet" href="style.css?v=1.1.0" />
 </head>
 <body>
   <header class="topbar">
     <button class="iconbtn" id="back-btn" aria-label="Back" hidden>&larr;</button>
-    <h1 class="brand">BookMarc</h1>
+    <h1 class="brand">MarkMyBooks</h1>
     <div class="account-chip" id="account-chip">
       <button class="signin-btn" id="signin-btn" hidden>Sign in</button>
       <button class="signedin" id="signedin-btn" hidden>
@@ -28,8 +28,8 @@
   <template id="tpl-library">
     <section class="view library">
       <div class="library-empty" hidden>
-        <p class="tagline">Your bookmark with a memory.</p>
-        <p class="muted">Add a book and tell Bookmarc where you left off. We'll bring you up to speed without spoiling what's ahead.</p>
+        <p class="tagline">Mark keeps your place — and remembers everything else.</p>
+        <p class="muted">Add a book and tell Mark where you left off. He'll catch you up on characters and plot without spoiling what's ahead.</p>
       </div>
       <ul class="book-list" id="book-list"></ul>
       <button class="fab" id="add-book-btn" aria-label="Add a book">+</button>
@@ -90,7 +90,7 @@
   <dialog id="paste-dialog">
     <form id="paste-form" class="paste-form">
       <h3>Paste from your book</h3>
-      <p class="muted small">Paste one or more chapters (3-5 at a time works best). BookMarc will split by chapter headings and summarize each — using the prior chapters in this book's brief as narrative context so the new summaries stay coherent. Text is sent to Claude and never stored.</p>
+      <p class="muted small">Paste one or more chapters (3-5 at a time works best). MarkMyBooks will split by chapter headings and summarize each — using the prior chapters in this book's brief as narrative context so the new summaries stay coherent. Text is sent to Claude and never stored.</p>
       <label>Chapter text</label>
       <textarea id="paste-chapter-text" rows="12" placeholder="Paste here. Multi-chapter pastes are auto-split. Chapter headings like &quot;Chapter 3&quot; or &quot;CHAPTER III&quot; will be used to identify breaks…"></textarea>
       <p class="muted small" id="paste-char-count">0 characters</p>
@@ -126,7 +126,7 @@
       </select>
       <label>Google Books API key (optional)</label>
       <input id="google-key-input" type="password" placeholder="AIza..." autocomplete="off" />
-      <p class="muted small">BookMarc searches Open Library by default (no key needed). Add a Google Books key for richer metadata and as a fallback. Get one at <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">console.cloud.google.com</a>.</p>
+      <p class="muted small">MarkMyBooks searches Open Library by default (no key needed). Add a Google Books key for richer metadata and as a fallback. Get one at <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">console.cloud.google.com</a>.</p>
       <div class="settings-actions">
         <button value="cancel">Cancel</button>
         <button value="save" class="primary">Save</button>
@@ -136,8 +136,8 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <footer class="version-footer">BookMarc <span id="app-version">v1.0.4</span></footer>
+  <footer class="version-footer">MarkMyBooks <span id="app-version">v1.1.0</span></footer>
 
-  <script type="module" src="app.js?v=1.0.4"></script>
+  <script type="module" src="app.js?v=1.1.0"></script>
 </body>
 </html>

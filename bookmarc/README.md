@@ -1,4 +1,4 @@
-# BookMarc (web prototype)
+# MarkMyBooks (web prototype)
 
 A spoiler-free, progressive reading companion. Tell it where you are in a book; it gives you a recap of characters, plot, and places — only through your current chapter.
 

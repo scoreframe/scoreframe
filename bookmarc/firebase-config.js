@@ -1,8 +1,8 @@
-// BookMarc Firebase config — public (safe to ship in client code).
+// MarkMyBooks Firebase config — public (safe to ship in client code).
 // See SETUP-FIREBASE.md for the console walkthrough.
 //
-// Once filled in, BookMarc enables Google Sign-In + cross-device sync.
-// If left empty, BookMarc still works in localStorage-only mode.
+// Once filled in, MarkMyBooks enables Google Sign-In + cross-device sync.
+// If left empty, MarkMyBooks still works in localStorage-only mode.
 
 export const firebaseConfig = {
   apiKey: "AIzaSyCz8TIEVcn6DcpjFo21utW7MQ8Bqi_6QTM",
