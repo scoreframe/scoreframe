@@ -79,6 +79,39 @@ a { color: var(--accent); }
 .iconbtn:hover { background: rgba(122, 92, 59, 0.1); }
 .iconbtn[hidden] { display: none; }
 
+.account-chip { display: flex; align-items: center; }
+.account-chip[hidden] { display: none; }
+.signin-btn {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.signin-btn:hover { background: var(--accent-2); }
+.signin-btn[hidden] { display: none; }
+.signedin {
+  background: transparent;
+  border: 1px solid rgba(122, 92, 59, 0.3);
+  border-radius: 999px;
+  padding: 3px 10px 3px 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--ink);
+  cursor: pointer;
+  max-width: 160px;
+}
+.signedin:hover { background: rgba(122, 92, 59, 0.08); }
+.signedin[hidden] { display: none; }
+.avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: rgba(122,92,59,0.1); }
+.account-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 .view { padding-top: 8px; }
 
 .muted { color: var(--muted); }

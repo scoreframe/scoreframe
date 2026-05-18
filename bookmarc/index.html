@@ -6,12 +6,19 @@
   <title>Bookmarc — Your bookmark with a memory</title>
   <meta name="description" content="A progressive, spoiler-free reading companion. Catch up on characters and plot without ruining what's ahead." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='28'%3E%F0%9F%93%96%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="style.css?v=0.5.0" />
+  <link rel="stylesheet" href="style.css?v=1.0.0" />
 </head>
 <body>
   <header class="topbar">
     <button class="iconbtn" id="back-btn" aria-label="Back" hidden>&larr;</button>
     <h1 class="brand">Bookmarc</h1>
+    <div class="account-chip" id="account-chip">
+      <button class="signin-btn" id="signin-btn" hidden>Sign in</button>
+      <button class="signedin" id="signedin-btn" hidden>
+        <img class="avatar" id="account-avatar" alt="" />
+        <span class="account-name" id="account-name"></span>
+      </button>
+    </div>
     <button class="iconbtn" id="settings-btn" aria-label="Settings">&#9881;</button>
   </header>
 
@@ -129,8 +136,8 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <footer class="version-footer">Bookmarc <span id="app-version">v0.5.0</span></footer>
+  <footer class="version-footer">Bookmarc <span id="app-version">v1.0.0</span></footer>
 
-  <script src="app.js?v=0.5.0"></script>
+  <script type="module" src="app.js?v=1.0.0"></script>
 </body>
 </html>

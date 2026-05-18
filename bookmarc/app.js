@@ -1,3 +1,24 @@
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+} from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  onSnapshot,
+  collection,
+  getDocs,
+  deleteDoc,
+  serverTimestamp,
+} from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
+import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.0.0';
+
 (() => {
   'use strict';
 
@@ -26,6 +47,7 @@
 
   function saveState() {
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    scheduleCloudSync();
   }
 
   const state = loadState();
@@ -542,10 +564,15 @@
     state.books = state.books.filter(x => x.id !== b.id);
     delete state.briefs[b.id];
     delete state.qaThreads[b.id];
-    for (const k of Object.keys(state.recaps)) {
+    for (const k of Object.keys(state.recaps || {})) {
       if (k.startsWith(b.id + '::')) delete state.recaps[k];
     }
     saveState();
+    // Also delete from Firestore if signed in
+    if (currentUser && firebaseDb) {
+      const bookRef = doc(firebaseDb, 'users', currentUser.uid, 'books', b.id);
+      deleteDoc(bookRef).catch(err => console.warn('Cloud delete failed', err));
+    }
     navigate('/');
   }
 
@@ -1779,12 +1806,236 @@ ${text}
     return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   }
 
+  // ---------- Firebase Auth + Firestore cross-device sync ----------
+  let firebaseApp = null;
+  let firebaseAuth = null;
+  let firebaseDb = null;
+  let currentUser = null;
+  let cloudSyncTimer = null;
+  let suppressNextLocalSync = false;
+  let unsubscribers = [];
+
+  function initFirebase() {
+    if (!isFirebaseConfigured()) {
+      // Firebase not configured — stay localStorage-only, hide sign-in.
+      $('#account-chip').hidden = true;
+      return;
+    }
+    try {
+      firebaseApp = initializeApp(firebaseConfig);
+      firebaseAuth = getAuth(firebaseApp);
+      firebaseDb = getFirestore(firebaseApp);
+      $('#signin-btn').hidden = false;
+      $('#signin-btn').addEventListener('click', doSignIn);
+      $('#signedin-btn').addEventListener('click', doSignOutMenu);
+      onAuthStateChanged(firebaseAuth, handleAuthState);
+    } catch (err) {
+      console.error('Firebase init failed', err);
+      $('#account-chip').hidden = true;
+    }
+  }
+
+  async function doSignIn() {
+    if (!firebaseAuth) return;
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(firebaseAuth, provider);
+    } catch (err) {
+      console.error('Sign-in failed', err);
+      toast(err.message || 'Sign-in failed.');
+    }
+  }
+
+  function doSignOutMenu() {
+    if (!confirm(`Sign out of ${currentUser?.email || 'this account'}? Your data stays synced to your Google account and will be there when you sign back in.`)) return;
+    signOut(firebaseAuth);
+  }
+
+  async function handleAuthState(user) {
+    // Tear down any prior listeners
+    unsubscribers.forEach(fn => { try { fn(); } catch {} });
+    unsubscribers = [];
+
+    if (!user) {
+      currentUser = null;
+      $('#signin-btn').hidden = false;
+      $('#signedin-btn').hidden = true;
+      return;
+    }
+    currentUser = user;
+    $('#signin-btn').hidden = true;
+    $('#signedin-btn').hidden = false;
+    $('#account-avatar').src = user.photoURL || '';
+    $('#account-name').textContent = user.displayName || user.email || '';
+
+    // First sign-in: if Firestore is empty for this user, push localStorage state up.
+    // Otherwise: pull cloud state into local.
+    await initialSyncFromCloud(user);
+    subscribeToCloudChanges(user);
+  }
+
+  async function initialSyncFromCloud(user) {
+    const userRef = doc(firebaseDb, 'users', user.uid);
+    try {
+      const snap = await getDoc(userRef);
+      if (!snap.exists() || !snap.data().bootstrapped) {
+        // First time — write current localStorage state up
+        toast('Syncing your library to your account…');
+        await pushFullStateToCloud(user);
+      } else {
+        // Pull cloud state down, replacing local
+        await pullCloudStateToLocal(user);
+        toast('Synced from your account.');
+        route();
+      }
+    } catch (err) {
+      console.error('Initial sync failed', err);
+      toast('Sync failed; staying local. ' + (err.message || ''));
+    }
+  }
+
+  async function pushFullStateToCloud(user) {
+    const userRef = doc(firebaseDb, 'users', user.uid);
+    await setDoc(userRef, {
+      apiKey: state.apiKey || '',
+      googleBooksKey: state.googleBooksKey || '',
+      model: state.model || 'claude-opus-4-7',
+      bootstrapped: true,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    // Per-book docs
+    await Promise.all(state.books.map(b => {
+      const bookRef = doc(firebaseDb, 'users', user.uid, 'books', b.id);
+      return setDoc(bookRef, {
+        meta: b,
+        brief: state.briefs[b.id] || null,
+        qaThread: state.qaThreads[b.id] || [],
+        updatedAt: serverTimestamp(),
+      });
+    }));
+  }
+
+  async function pullCloudStateToLocal(user) {
+    suppressNextLocalSync = true;
+    const userRef = doc(firebaseDb, 'users', user.uid);
+    const profile = await getDoc(userRef);
+    const p = profile.data() || {};
+    state.apiKey = p.apiKey || '';
+    state.googleBooksKey = p.googleBooksKey || '';
+    state.model = p.model || 'claude-opus-4-7';
+
+    const booksCol = collection(firebaseDb, 'users', user.uid, 'books');
+    const booksSnap = await getDocs(booksCol);
+    const books = [];
+    const briefs = {};
+    const qaThreads = {};
+    booksSnap.forEach(d => {
+      const data = d.data();
+      if (data.meta) books.push(data.meta);
+      if (data.brief) briefs[d.id] = data.brief;
+      if (data.qaThread) qaThreads[d.id] = data.qaThread;
+    });
+    state.books = books;
+    state.briefs = briefs;
+    state.qaThreads = qaThreads;
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    suppressNextLocalSync = false;
+  }
+
+  function subscribeToCloudChanges(user) {
+    // Listen for profile changes
+    const userRef = doc(firebaseDb, 'users', user.uid);
+    const unsub1 = onSnapshot(userRef, snap => {
+      if (!snap.exists() || snap.metadata.hasPendingWrites) return;
+      const p = snap.data();
+      let changed = false;
+      if (p.apiKey != null && p.apiKey !== state.apiKey) { state.apiKey = p.apiKey; changed = true; }
+      if (p.googleBooksKey != null && p.googleBooksKey !== state.googleBooksKey) { state.googleBooksKey = p.googleBooksKey; changed = true; }
+      if (p.model && p.model !== state.model) { state.model = p.model; changed = true; }
+      if (changed) {
+        suppressNextLocalSync = true;
+        localStorage.setItem(STORE_KEY, JSON.stringify(state));
+        suppressNextLocalSync = false;
+      }
+    });
+    unsubscribers.push(unsub1);
+
+    // Listen for book collection changes
+    const booksCol = collection(firebaseDb, 'users', user.uid, 'books');
+    const unsub2 = onSnapshot(booksCol, snap => {
+      let changed = false;
+      snap.docChanges().forEach(change => {
+        if (change.doc.metadata.hasPendingWrites) return;
+        const id = change.doc.id;
+        if (change.type === 'removed') {
+          state.books = state.books.filter(b => b.id !== id);
+          delete state.briefs[id];
+          delete state.qaThreads[id];
+          changed = true;
+          return;
+        }
+        const data = change.doc.data();
+        if (data.meta) {
+          const idx = state.books.findIndex(b => b.id === id);
+          if (idx >= 0) state.books[idx] = data.meta;
+          else state.books.push(data.meta);
+          changed = true;
+        }
+        if (data.brief !== undefined) {
+          state.briefs[id] = data.brief;
+          changed = true;
+        }
+        if (data.qaThread !== undefined) {
+          state.qaThreads[id] = data.qaThread;
+          changed = true;
+        }
+      });
+      if (changed) {
+        suppressNextLocalSync = true;
+        localStorage.setItem(STORE_KEY, JSON.stringify(state));
+        suppressNextLocalSync = false;
+        route();
+      }
+    });
+    unsubscribers.push(unsub2);
+  }
+
+  function scheduleCloudSync() {
+    if (!currentUser || !firebaseDb || suppressNextLocalSync) return;
+    clearTimeout(cloudSyncTimer);
+    cloudSyncTimer = setTimeout(() => pushIncrementalState(currentUser).catch(err => console.error('Cloud sync failed', err)), 800);
+  }
+
+  async function pushIncrementalState(user) {
+    // Profile fields
+    const userRef = doc(firebaseDb, 'users', user.uid);
+    await setDoc(userRef, {
+      apiKey: state.apiKey || '',
+      googleBooksKey: state.googleBooksKey || '',
+      model: state.model || 'claude-opus-4-7',
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    // Books: write each book's combined doc
+    await Promise.all(state.books.map(b => {
+      const bookRef = doc(firebaseDb, 'users', user.uid, 'books', b.id);
+      return setDoc(bookRef, {
+        meta: b,
+        brief: state.briefs[b.id] || null,
+        qaThread: state.qaThreads[b.id] || [],
+        updatedAt: serverTimestamp(),
+      });
+    }));
+    // We don't delete absent books here — removeBook handles deletes explicitly.
+  }
+
   // ---------- Back button ----------
   $('#back-btn').addEventListener('click', () => history.back());
 
   // ---------- Boot ----------
   wireSettings();
   wirePasteDialog();
+  initFirebase();
   if (!location.hash) location.hash = '#/';
   route();
 })();
