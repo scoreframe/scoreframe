@@ -571,7 +571,6 @@ If knowledgeLevel is 3, prefer empty arrays over invented content. It is OK to r
     const body = {
       model: state.model || 'claude-opus-4-7',
       max_tokens: 16000,
-      temperature: 0.2,
       system,
       messages: [{ role: 'user', content: userMsg }],
     };
@@ -742,7 +741,6 @@ Reader's question: ${question}`;
     const body = {
       model: state.model || 'claude-opus-4-7',
       max_tokens: 1024,
-      temperature: 0.3,
       system,
       messages: [{ role: 'user', content: userMsg }],
     };
