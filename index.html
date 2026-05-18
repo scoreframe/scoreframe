@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
   <title>ScoreFrame — Live Scoreboard on Your Sports Video</title>
   <link rel="canonical" href="https://scoreframe.app/" />
-  <meta name="description" content="Record sports video with professional scoreboards burned in live. 12 sports, remote scoring, live streaming, team hubs, Wear OS. Free on Android." />
+  <meta name="description" content="Record sports video with professional scoreboards burned in live. 12 sports, remote scoring, live streaming, team hubs, Wear OS. Free on iPhone and Android." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
@@ -625,11 +625,10 @@
     <div class="nav-links">
       <a href="#features">Features</a>
       <a href="#sports">Sports</a>
-      <a href="#pricing">Pricing</a>
       <a href="https://www.reddit.com/r/ScoreFrame/" target="_blank">Community</a>
       <a href="support.html">Support</a>
       <a href="dashboard.html">Sign In</a>
-      <a href="https://play.google.com/store/apps/details?id=com.scoreframe.android" class="nav-cta">Download Free</a>
+      <a href="#download" class="nav-cta">Download Free</a>
     </div>
     <button class="nav-menu-btn" onclick="document.getElementById('mobileMenu').classList.toggle('open');this.textContent=this.textContent==='&#9776;'?'&#10005;':'&#9776;'" aria-label="Menu">&#9776;</button>
   </div>
@@ -637,10 +636,9 @@
 <div class="nav-mobile-overlay" id="mobileMenu">
   <a href="#features" onclick="document.getElementById('mobileMenu').classList.remove('open')">Features</a>
   <a href="#sports" onclick="document.getElementById('mobileMenu').classList.remove('open')">Sports</a>
-  <a href="#pricing" onclick="document.getElementById('mobileMenu').classList.remove('open')">Pricing</a>
   <a href="https://www.reddit.com/r/ScoreFrame/" target="_blank">Community</a>
   <a href="dashboard.html">Sign In</a>
-  <a href="https://play.google.com/store/apps/details?id=com.scoreframe.android" class="nav-cta">Download Free</a>
+  <a href="#download" class="nav-cta">Download Free</a>
 </div>
 
 <!-- HERO -->
@@ -648,17 +646,20 @@
   <div class="hero-content">
     <div class="hero-badge">
       <span class="dot"></span>
-      Live on Google Play
+      Live on the App Store &amp; Google Play
     </div>
     <h1>Live Scoreboard.<br /><span class="accent">On Your Video.</span></h1>
     <p class="hero-sub">
       Record sports video with a broadcast-quality scoreboard burned directly into the footage.
       12 sports. Remote scoring. Live streaming. Team hubs. No editing required.
-      <br /><strong style="color: var(--accent);">Android available now. iOS in development.</strong>
+      <br /><strong style="color: var(--accent);">Now available on iPhone and Android.</strong>
     </p>
-    <div class="hero-buttons">
-      <a href="https://play.google.com/store/apps/details?id=com.scoreframe.android" class="btn-primary" id="download">
-        Get It Free on Google Play
+    <div class="hero-buttons" id="download">
+      <a href="https://apps.apple.com/us/app/scoreframe/id6762281454" class="btn-primary">
+        Get It on the App Store
+      </a>
+      <a href="https://play.google.com/store/apps/details?id=com.scoreframe.android" class="btn-primary">
+        Get It on Google Play
       </a>
       <a href="https://www.reddit.com/r/ScoreFrame/" class="btn-secondary">
         Join r/ScoreFrame
@@ -819,81 +820,19 @@
   </div>
 </section>
 
-<!-- PRICING -->
-<section class="pricing" id="pricing">
-  <div class="section-inner" style="text-align: center;">
-    <span class="section-label">Pricing</span>
-    <h2 class="section-title">Free to Record. Pro to Go Further.</h2>
-    <p class="section-desc" style="margin: 0 auto 48px;">All the essentials are free &#8212; no paywalls on your own game footage.</p>
-
-    <div class="pricing-grid">
-      <div class="price-card">
-        <h3>Free</h3>
-        <div class="price-amount">$0</div>
-        <p class="price-desc">Everything you need to get started</p>
-        <ul>
-          <li>All 12 sports with full scoring</li>
-          <li>Live scoreboard on video</li>
-          <li>Remote scoring (all connection methods)</li>
-          <li>Scoring-only mode (no video)</li>
-          <li>1080p recording up to 45 minutes</li>
-          <li>Cloud team &amp; roster sync</li>
-          <li>3 highlight clips per recording</li>
-          <li>Live streaming (10 min)</li>
-          <li>1 team hub</li>
-        </ul>
-      </div>
-      <div class="price-card pro">
-        <h3>ScoreFrame Pro</h3>
-        <div class="price-amount">$5.99<span class="period"> /mo</span></div>
-        <p class="price-desc">Or $49.99/year &#8212; 14-day free trial</p>
-        <ul>
-          <li>Everything in Free, plus:</li>
-          <li>4K 60fps recording</li>
-          <li>No watermark</li>
-          <li>Ad-free experience</li>
-          <li>Unlimited recording time</li>
-          <li>Unlimited live streaming</li>
-          <li>Highlight buffer mode</li>
-          <li>Full baseball/softball scorebook</li>
-          <li>Full-screen recording mode</li>
-          <li>Wear OS companion app</li>
-          <li>Unlimited team hubs</li>
-          <li>HDR, tap-to-focus, sharpening</li>
-          <li>Bluetooth button control</li>
-          <li>PiP camera overlay (crop &amp; move)</li>
-          <li>Stats export (PDF)</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- iOS BANNER -->
-<section style="background: var(--bg-deepest); padding: 60px 24px; text-align: center; border-top: 1px solid rgba(255,150,64,0.1); border-bottom: 1px solid rgba(255,150,64,0.1);">
-  <div class="section-inner">
-    <span style="font-size: 3rem; display: block; margin-bottom: 16px;">&#x1F34F;</span>
-    <h2 class="section-title">iOS Is Coming</h2>
-    <p style="color: var(--text-secondary); font-size: 1.05rem; max-width: 500px; margin: 0 auto 24px;">
-      ScoreFrame for iPhone and iPad is actively in development. Same features, same scoreboard quality, native iOS experience.
-    </p>
-    <p style="color: var(--text-tertiary); font-size: 0.9rem;">
-      Want to be notified when it launches? <a href="https://www.reddit.com/r/ScoreFrame/" style="color: var(--accent); font-weight: 600;">Follow r/ScoreFrame</a> or email <a href="mailto:support@scoreframe.app" style="color: var(--accent);">support@scoreframe.app</a>
-    </p>
-  </div>
-</section>
-
 <!-- FINAL CTA -->
 <section class="final-cta">
   <div class="section-inner" style="position: relative; z-index: 1;">
     <h2 class="section-title">Ready to Record?</h2>
-    <p>Download ScoreFrame free on Android. Try Pro free for 14 days.</p>
-    <a href="https://play.google.com/store/apps/details?id=com.scoreframe.android" class="btn-primary" id="download-bottom">
-      Get ScoreFrame on Google Play
-    </a>
-    <p style="margin-top: 16px; color: var(--text-tertiary); font-size: 0.85rem;">
-      iOS coming soon. <a href="https://www.reddit.com/r/ScoreFrame/" style="color: var(--accent);">Follow us on Reddit for updates.</a>
-    </p>
+    <p>Free to download on iPhone and Android. No editing required.</p>
+    <div class="hero-buttons" id="download-bottom" style="justify-content: center;">
+      <a href="https://apps.apple.com/us/app/scoreframe/id6762281454" class="btn-primary">
+        Get It on the App Store
+      </a>
+      <a href="https://play.google.com/store/apps/details?id=com.scoreframe.android" class="btn-primary">
+        Get It on Google Play
+      </a>
+    </div>
   </div>
 </section>
 
