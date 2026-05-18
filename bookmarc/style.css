@@ -409,6 +409,20 @@ dialog#paste-dialog {
 #paste-chapter-num { width: 8em; }
 #paste-char-count { margin: 4px 0 0; font-variant-numeric: tabular-nums; }
 
+.paste-advanced { margin-top: 6px; }
+.paste-advanced summary { cursor: pointer; }
+.paste-advanced .advanced-grid { display: grid; gap: 6px; margin-top: 8px; padding: 12px; background: var(--paper-2); border-radius: var(--radius-sm); }
+
+.progress-card .total-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+}
+.progress-card .total-row label { margin: 0; color: var(--ink-2); }
+.progress-card .total-row input { width: 5.5em; text-align: center; padding: 8px 10px; }
+
 /* --- Chapter select --- */
 .progress-card select { font: inherit; }
 

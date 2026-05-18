@@ -331,11 +331,17 @@
   function renderBookWithBrief(main, b, brief) {
     const wrap = document.createElement('section');
     wrap.className = 'view book';
-    const totalChapters = (brief.chapters || []).length;
-    if (totalChapters && b.totalChapters !== totalChapters) {
-      b.totalChapters = totalChapters;
+    // totalChapters is authoritative: brief.totalChapters if provided, else max known chapter, else book's own value
+    const knownChapterNums = (brief.chapters || []).map(c => c.number || 0);
+    const maxKnown = knownChapterNums.length ? Math.max(...knownChapterNums) : 0;
+    const briefTotal = parseInt(brief.totalChapters, 10) || 0;
+    const declaredTotal = Math.max(briefTotal, maxKnown, b.totalChapters || 0);
+    if (declaredTotal && b.totalChapters !== declaredTotal) {
+      b.totalChapters = declaredTotal;
       saveState();
     }
+    const totalChapters = b.totalChapters || 0;
+    const knownCount = knownChapterNums.length;
     wrap.innerHTML = `
       <div class="book-header">
         <img id="book-cover" alt="" />
@@ -346,6 +352,11 @@
         </div>
       </div>
       <div class="progress-card">
+        <div class="total-row">
+          <label for="total-chapters-input">Book has</label>
+          <input id="total-chapters-input" type="number" min="0" step="1" />
+          <span class="muted">chapters total</span>
+        </div>
         <label for="chapter-select">I'm at the end of</label>
         <select id="chapter-select"></select>
         <button class="primary" id="catchup-btn">Catch me up</button>
@@ -376,7 +387,9 @@
     chip.textContent = knowledgeLevelLabel(lvl);
     chip.title = brief.knowledgeNote || '';
     const confEl = $('.book-meta .confidence', wrap);
-    confEl.innerHTML = `${totalChapters} chapters · `;
+    const totalLabel = totalChapters > 0 ? `${totalChapters} chapters` : 'chapter count unknown';
+    const knownLabel = knownCount > 0 ? `${knownCount} known` : 'no chapter summaries yet';
+    confEl.innerHTML = `${totalLabel} · ${knownLabel} · `;
     confEl.appendChild(chip);
     if (brief.knowledgeNote) {
       const note = document.createElement('div');
@@ -400,20 +413,68 @@
       confEl.parentElement.appendChild(sources);
     }
 
-    // Chapter select — populated with titles when available, with source marker
-    const select = $('#chapter-select', wrap);
-    select.innerHTML = '<option value="0">Not started</option>';
-    (brief.chapters || []).forEach(ch => {
-      const opt = document.createElement('option');
-      opt.value = ch.number;
-      const labelTitle = ch.title ? ` — ${ch.title}` : '';
-      const marker = ch.source === 'user-paste' ? '  · pasted' : '';
-      opt.textContent = `Chapter ${ch.number}${labelTitle}${marker}`;
-      select.appendChild(opt);
+    // Total chapters input
+    const totalInput = $('#total-chapters-input', wrap);
+    totalInput.value = totalChapters > 0 ? String(totalChapters) : '';
+    totalInput.addEventListener('change', () => {
+      const v = Math.max(0, parseInt(totalInput.value, 10) || 0);
+      b.totalChapters = v;
+      saveState();
+      rebuildChapterSelect();
     });
-    select.value = String(b.currentChapter || 0);
+
+    // Chapter select — iterates Prologue (if any), 1..totalChapters, Epilogue (if any)
+    const select = $('#chapter-select', wrap);
+    function rebuildChapterSelect() {
+      const total = b.totalChapters || 0;
+      const chapterByNum = new Map((brief.chapters || []).map(c => [c.number, c]));
+      const prev = b.currentChapter;
+      select.innerHTML = '<option value="">Not started</option>';
+      // Prologue: chapter number 0
+      const prologue = chapterByNum.get(0);
+      if (prologue) {
+        const opt = document.createElement('option');
+        opt.value = '0';
+        const title = prologue.title ? ` — ${prologue.title}` : '';
+        const marker = prologue.source === 'user-paste' ? ' · pasted' : ' · known';
+        opt.textContent = `Prologue${title}${marker}`;
+        select.appendChild(opt);
+      }
+      // Numbered chapters
+      if (total <= 0) {
+        (brief.chapters || []).filter(c => (c.number || 0) > 0).forEach(ch => {
+          select.appendChild(chapterOption(ch.number, ch));
+        });
+      } else {
+        for (let n = 1; n <= total; n++) {
+          select.appendChild(chapterOption(n, chapterByNum.get(n)));
+        }
+      }
+      // Epilogue: any chapter with number > totalChapters
+      (brief.chapters || []).filter(c => (c.number || 0) > total && total > 0).forEach(ch => {
+        const opt = document.createElement('option');
+        opt.value = String(ch.number);
+        const title = ch.title ? ` — ${ch.title}` : '';
+        const marker = ch.source === 'user-paste' ? ' · pasted' : ' · known';
+        opt.textContent = `Epilogue${title}${marker}`;
+        select.appendChild(opt);
+      });
+      // Select prior value (handle null = "Not started")
+      select.value = prev == null ? '' : String(prev);
+    }
+    function chapterOption(num, ch) {
+      const opt = document.createElement('option');
+      opt.value = String(num);
+      const title = ch && ch.title ? ` — ${ch.title}` : '';
+      let marker = ' · no summary';
+      if (ch) marker = ch.source === 'user-paste' ? ' · pasted' : ' · known';
+      opt.textContent = `Chapter ${num}${title}${marker}`;
+      return opt;
+    }
+    rebuildChapterSelect();
     select.addEventListener('change', () => {
-      b.currentChapter = parseInt(select.value, 10) || 0;
+      const v = select.value;
+      b.currentChapter = v === '' ? null : parseInt(v, 10);
       saveState();
       renderInlineRecap(b, brief, $('#recap-area', wrap));
     });
@@ -424,7 +485,7 @@
     renderInlineRecap(b, brief, $('#recap-area', wrap));
 
     $('#catchup-btn', wrap).addEventListener('click', () => {
-      if ((b.currentChapter || 0) <= 0) { toast('Pick a chapter first.'); return; }
+      if (b.currentChapter == null) { toast('Pick a chapter first.'); return; }
       navigate(`/book/${b.id}/recap`);
     });
 
@@ -452,15 +513,15 @@
 
   function renderInlineRecap(b, brief, mountEl) {
     mountEl.innerHTML = '';
-    const ch = b.currentChapter || 0;
-    if (ch <= 0) {
+    const ch = b.currentChapter;
+    if (ch == null) {
       mountEl.innerHTML = '<p class="muted small">Set your current chapter and tap "Catch me up" for the recap.</p>';
       return;
     }
     const sliced = sliceBrief(brief, ch);
     const prevSummary = (sliced.previousChapter && sliced.previousChapter.summary) || '';
     if (!prevSummary) {
-      mountEl.innerHTML = '<p class="muted small">No previously-on summary available for this chapter.</p>';
+      mountEl.innerHTML = '<p class="muted small">No summary available for this chapter yet. Paste the chapter text to fill it in.</p>';
       return;
     }
     const div = document.createElement('div');
@@ -621,6 +682,13 @@ Hard rules:
 - relationships.fromId and toId must reference real character IDs.
 - "groupCluster" groups characters by faction/family/household. Use identical strings for groupings.
 
+Chapter numbering conventions (CRITICAL):
+- Prologue (if present) is chapter number 0.
+- Numbered chapters are 1, 2, 3, ... totalChapters.
+- Epilogue (if present) is chapter number totalChapters + 1 (use the title field, e.g. "Epilogue").
+- "totalChapters" is the count of NUMBERED chapters only (excluding prologue and epilogue).
+- ALWAYS provide totalChapters as an integer if you can determine it, even if you cannot enumerate per-chapter detail. This is critical so the reader's UI can render a chapter picker.
+
 You may be given EXTERNAL SOURCES (Wikipedia plot summaries, Open Library descriptions). Treat them as authoritative source material — they will typically contain the WHOLE PLOT including endings. Your job is to extract structure from them and tag firstChapter accurately so the client can hide spoilers downstream. Do NOT echo source material verbatim; transform it into chapter-by-chapter structure.
 
 For knowledgeLevel, self-report honestly about the FINAL brief (combining your training knowledge with any external sources provided):
@@ -758,11 +826,29 @@ If knowledgeLevel is 3, prefer empty arrays over invented content. It is OK to r
 
   // ---------- Brief slicing (no API call — pure local) ----------
   function sliceBrief(brief, chapter) {
-    const ch = chapter || 0;
-    const chapters = (brief.chapters || []).filter(c => (c.number || 0) <= ch);
-    const previousChapter = (brief.chapters || []).find(c => (c.number || 0) === ch) || null;
-    const characters = (brief.characters || []).filter(c => (c.firstChapter || 1) <= ch).map(c => {
-      const progression = (c.progression || []).filter(p => (p.chapter || 1) <= ch);
+    // chapter == null means "not started" — show nothing.
+    // chapter == 0 means "read prologue" — include only prologue.
+    // chapter == N (N > 0) means include prologue (0) and chapters 1..N.
+    if (chapter == null) {
+      return {
+        knowledgeLevel: brief.knowledgeLevel,
+        knowledgeNote: brief.knowledgeNote,
+        confidence: knowledgeLevelToConfidence(brief.knowledgeLevel),
+        generatedAt: brief.generatedAt,
+        previousChapter: null,
+        storySoFar: { overview: '', keyPlotPoints: [] },
+        characters: [],
+        relationships: [],
+        places: [],
+        items: [],
+        thingsToRemember: [],
+      };
+    }
+    const ch = chapter;
+    const chapters = (brief.chapters || []).filter(c => (c.number ?? 1) <= ch);
+    const previousChapter = (brief.chapters || []).find(c => (c.number ?? 1) === ch) || null;
+    const characters = (brief.characters || []).filter(c => (c.firstChapter ?? 1) <= ch).map(c => {
+      const progression = (c.progression || []).filter(p => (p.chapter ?? 1) <= ch);
       const knownSoFar = progression.length
         ? progression.map(p => p.note).join(' ')
         : c.bio || '';
@@ -770,12 +856,12 @@ If knowledgeLevel is 3, prefer empty arrays over invented content. It is OK to r
     });
     const charIds = new Set(characters.map(c => c.id));
     const relationships = (brief.relationships || [])
-      .filter(r => (r.firstChapter || 1) <= ch)
+      .filter(r => (r.firstChapter ?? 1) <= ch)
       .filter(r => charIds.has(r.fromId) && charIds.has(r.toId));
-    const places = (brief.places || []).filter(p => (p.firstChapter || 1) <= ch);
-    const items = (brief.items || []).filter(p => (p.firstChapter || 1) <= ch);
+    const places = (brief.places || []).filter(p => (p.firstChapter ?? 1) <= ch);
+    const items = (brief.items || []).filter(p => (p.firstChapter ?? 1) <= ch);
     const thingsToRemember = (brief.openThreads || [])
-      .filter(t => (t.introducedChapter || 1) <= ch)
+      .filter(t => (t.introducedChapter ?? 1) <= ch)
       .filter(t => t.resolvedChapter == null || t.resolvedChapter > ch)
       .map(t => t.thread);
 
@@ -816,8 +902,8 @@ If knowledgeLevel is 3, prefer empty arrays over invented content. It is OK to r
   // ---------- Q&A flow ----------
   async function doAsk(b, brief, q, wrap) {
     if (!state.apiKey) { toast('Add your Anthropic API key in Settings.'); openSettings(); return; }
-    const ch = b.currentChapter || 0;
-    if (ch <= 0) { toast('Pick a current chapter first.'); return; }
+    if (b.currentChapter == null) { toast('Pick a current chapter first.'); return; }
+    const ch = b.currentChapter;
     if (!state.qaThreads[b.id]) state.qaThreads[b.id] = [];
     const entry = { q, a: null, atChapter: ch, timestamp: Date.now(), pending: true };
     state.qaThreads[b.id].push(entry);
@@ -912,8 +998,8 @@ Reader's question: ${question}`;
     if (!b) { navigate('/'); return; }
     const brief = state.briefs[b.id];
     if (!brief) { navigate(`/book/${b.id}`); return; }
-    const ch = b.currentChapter || 0;
-    if (ch <= 0) { navigate(`/book/${b.id}`); return; }
+    if (b.currentChapter == null) { navigate(`/book/${b.id}`); return; }
+    const ch = b.currentChapter;
     const recap = sliceBrief(brief, ch);
     render(main => {
       const node = cloneTpl('tpl-recap');
@@ -1316,7 +1402,7 @@ Reader's question: ${question}`;
   function openPasteDialog(b, brief) {
     pasteCtx = { book: b, brief };
     const dlg = $('#paste-dialog');
-    $('#paste-chapter-num').value = b.currentChapter || (brief.chapters || []).length + 1 || 1;
+    $('#paste-chapter-num').value = '';
     $('#paste-chapter-title').value = '';
     $('#paste-chapter-text').value = '';
     $('#paste-char-count').textContent = '0 characters';
@@ -1334,90 +1420,135 @@ Reader's question: ${question}`;
       if (dlg.returnValue !== 'submit') return;
       const ctx = pasteCtx;
       if (!ctx) return;
-      const num = parseInt($('#paste-chapter-num').value, 10);
+      const numRaw = $('#paste-chapter-num').value.trim();
+      const startingNum = numRaw ? parseInt(numRaw, 10) : null;
       const title = $('#paste-chapter-title').value.trim();
       const text = $('#paste-chapter-text').value.trim();
-      if (!num || num < 1) { toast('Chapter number required.'); return; }
-      if (!text || text.length < 100) { toast('Paste the full chapter text.'); return; }
-      doSummarizeChapter(ctx.book, ctx.brief, num, title, text);
+      if (!text || text.length < 100) { toast('Paste at least a chapter of text.'); return; }
+      doExtractChapters(ctx.book, ctx.brief, startingNum, title, text);
     });
   }
 
-  async function doSummarizeChapter(b, brief, chapterNumber, chapterTitle, text) {
+  async function doExtractChapters(b, brief, startingNum, fallbackTitle, text) {
     if (!state.apiKey) { toast('Add your Anthropic API key in Settings.'); openSettings(); return; }
-    toast(`Summarizing chapter ${chapterNumber}…`);
+    toast('Reading the pasted text…');
     try {
-      const result = await summarizeChapterFromText(b, brief, chapterNumber, chapterTitle, text);
-      mergePastedChapter(brief, chapterNumber, chapterTitle, text.length, result);
+      const result = await extractChaptersFromText(b, brief, startingNum, fallbackTitle, text);
+      const extracted = result.chaptersExtracted || [];
+      if (!extracted.length) {
+        toast('Could not identify any chapters in the pasted text.');
+        return;
+      }
+      extracted.forEach((chunk, idx) => {
+        const num = chunk.number || (startingNum ? startingNum + idx : null);
+        if (!num || num < 1) return; // skip if we genuinely can't place it
+        const title = chunk.title || (extracted.length === 1 ? fallbackTitle : '');
+        mergePastedChapter(brief, num, title, chunk.charCount || 0, {
+          summary: chunk.summary || '',
+          keyMoments: chunk.keyMoments || [],
+          newCharacters: chunk.newCharacters || [],
+          newRelationships: chunk.newRelationships || [],
+          newPlaces: chunk.newPlaces || [],
+          newItems: chunk.newItems || [],
+          characterUpdates: chunk.characterUpdates || [],
+          newOpenThreads: chunk.newOpenThreads || [],
+          resolvedThreadIds: chunk.resolvedThreadIds || [],
+        });
+      });
       state.briefs[b.id] = brief;
-      if ((brief.chapters || []).length && (b.totalChapters || 0) < brief.chapters.length) {
-        b.totalChapters = brief.chapters.length;
+      // Bump totalChapters if pastes ran past the previously declared total
+      const maxKnown = Math.max(...brief.chapters.map(c => c.number || 0), 0);
+      if (maxKnown > (b.totalChapters || 0)) {
+        b.totalChapters = maxKnown;
       }
       saveState();
-      toast(`Chapter ${chapterNumber} added.`);
-      route(); // re-render with the updated brief
+      toast(`Added ${extracted.length} chapter${extracted.length === 1 ? '' : 's'}.`);
+      route();
     } catch (err) {
       console.error(err);
       toast(err.message || 'Failed to summarize chapter.');
     }
   }
 
-  async function summarizeChapterFromText(book, brief, chapterNumber, chapterTitle, text) {
-    // Condense existing brief so Claude knows what's already known and uses existing IDs
+  async function extractChaptersFromText(book, brief, startingNum, fallbackTitle, text) {
     const knownChars = (brief.characters || []).map(c => ({ id: c.id, name: c.name, role: c.role, groupCluster: c.groupCluster }));
     const knownPlaces = (brief.places || []).map(p => ({ id: p.id, name: p.name }));
     const knownItems = (brief.items || []).map(p => ({ id: p.id, name: p.name }));
+    const knownChapters = (brief.chapters || []).map(c => ({ number: c.number, title: c.title || null, source: c.source || 'training' }));
 
-    const system = `You are Bookmarc, summarizing a single chapter of a book from text the reader has pasted in.
+    const system = `You are Bookmarc. The reader has pasted text from a book. Identify chapter boundaries and produce one summary per chapter.
 
-Output a SINGLE JSON object with this exact shape:
+Splitting rules:
+- If the text contains explicit chapter headings ("Chapter 1", "CHAPTER ONE", "Chapter I — The Beginning", "1.", roman numerals, etc.), split on those.
+- If there are no headings, treat the whole paste as a single chapter.
+- For each chapter, try to determine its chapter number from headings in the text.
+- If headings aren't numeric (e.g., "Prologue", "Epilogue", "Part One"), use number 0 for Prologue, the next-after-highest for Epilogue, and your best judgment otherwise.
+- If the reader provided a "starting chapter number" override, use it for the FIRST extracted chapter and increment for subsequent ones (unless explicit headings in the text override that).
+- If you cannot determine a chapter number with any confidence, return that chunk with "number": null and a "needsNumber": true flag.
+
+Output a SINGLE JSON object:
 {
-  "summary": "1-2 paragraph past-tense recap of THIS CHAPTER ONLY.",
-  "keyMoments": ["3-6 short bullet phrases — the most important beats of this chapter"],
-  "newCharacters": [
-    { "id": "lowercase-slug", "name": "...", "role": "protagonist | antagonist | supporting | mentioned", "groupCluster": "short label — family/faction/group", "bio": "short bio based ONLY on what was revealed in this chapter" }
-  ],
-  "newRelationships": [
-    { "fromId": "char-slug", "toId": "other-slug", "kind": "parent | spouse | sibling | friend | mentor | rival | enemy | lover | employer | ally | colleague | student | other-short-label", "note": "short context" }
-  ],
-  "newPlaces": [
-    { "id": "lowercase-slug", "name": "...", "note": "brief description" }
-  ],
-  "newItems": [
-    { "id": "lowercase-slug", "name": "...", "note": "brief description (significant object: MacGuffin, weapon, letter, locket, etc.)" }
-  ],
-  "characterUpdates": [
-    { "id": "existing-char-slug", "note": "what we learned about this already-known character in this chapter" }
-  ],
-  "newOpenThreads": [
-    { "thread": "short description of an unresolved question/mystery introduced", "introducedChapter": ${chapterNumber} }
-  ],
-  "resolvedThreadIds": ["thread descriptions from prior chapters that got resolved in THIS chapter"]
+  "chaptersExtracted": [
+    {
+      "number": <integer or null>,
+      "title": "optional",
+      "charCount": <integer — approx char count of this chunk in the original paste>,
+      "needsNumber": <true if you couldn't determine, omit otherwise>,
+      "summary": "1-2 paragraph past-tense recap of THIS CHAPTER ONLY",
+      "keyMoments": ["3-6 short bullet phrases"],
+      "newCharacters": [
+        { "id": "lowercase-slug", "name": "...", "role": "protagonist | antagonist | supporting | mentioned", "groupCluster": "short label", "bio": "short bio based ONLY on what was revealed in this chapter" }
+      ],
+      "newRelationships": [
+        { "fromId": "char-slug", "toId": "other-slug", "kind": "parent | spouse | sibling | friend | mentor | rival | enemy | lover | employer | ally | colleague | student | other-short-label", "note": "short context" }
+      ],
+      "newPlaces": [
+        { "id": "lowercase-slug", "name": "...", "note": "brief description" }
+      ],
+      "newItems": [
+        { "id": "lowercase-slug", "name": "...", "note": "brief description" }
+      ],
+      "characterUpdates": [
+        { "id": "existing-char-slug", "note": "what we learned about this already-known character in this chapter" }
+      ],
+      "newOpenThreads": [
+        { "thread": "short description of an unresolved question/mystery introduced" }
+      ],
+      "resolvedThreadIds": ["thread descriptions from prior chapters resolved in this chapter"]
+    }
+    // ... one entry per chapter found
+  ]
 }
 
-Rules:
+Dedup rules (apply to every chapter):
 - Only include in "newCharacters" / "newPlaces" / "newItems" entities that are NOT already in the "Known so far" list below. For already-known characters, put progression notes in "characterUpdates" using their existing id.
 - Character IDs are lowercase short slugs. Reuse existing IDs from the known list when referring to existing characters.
-- All relationships must reference real character ids (either existing or in newCharacters of this same chapter).
-- Be terse. The chapter text is the source of truth; do not invent.
+- All relationships must reference real character ids (existing or newly introduced in this same paste).
+- Be terse. The chapter text is the source of truth; do not invent or extrapolate.
 
 Respond with ONLY a single JSON object. No prose before or after.`;
 
-    const knownStr = JSON.stringify({ characters: knownChars, places: knownPlaces, items: knownItems }, null, 2);
-    const userMsg = `Book: "${book.title}" by ${(book.authors || []).join(', ')}
-Chapter number: ${chapterNumber}${chapterTitle ? `\nChapter title: ${chapterTitle}` : ''}
+    const knownStr = JSON.stringify({ chapters: knownChapters, characters: knownChars, places: knownPlaces, items: knownItems }, null, 2);
+    const overrideLine = startingNum
+      ? `\nStarting chapter number override (use for the first chunk; increment for subsequent): ${startingNum}`
+      : '';
+    const titleLine = fallbackTitle
+      ? `\nFallback title (use only if exactly ONE chapter is extracted and it has no in-text title): ${fallbackTitle}`
+      : '';
+
+    const userMsg = `Book: "${book.title}" by ${(book.authors || []).join(', ')}${overrideLine}${titleLine}
 
 Known so far (already in this book's brief — reuse these IDs, don't duplicate):
 ${knownStr}
 
-Chapter text:
+Pasted text:
 """
 ${text}
 """`;
 
     const body = {
       model: state.model || 'claude-opus-4-7',
-      max_tokens: 4096,
+      max_tokens: 16000,
       system,
       messages: [{ role: 'user', content: userMsg }],
     };
@@ -1440,7 +1571,7 @@ ${text}
     return parseJsonResponse(respText);
   }
 
-  // Merge the per-chapter result into the existing brief. Mutates brief.
+  // Merge a single chapter's extracted data into the existing brief. Mutates brief.
   function mergePastedChapter(brief, chapterNumber, chapterTitle, pastedCharCount, result) {
     if (!brief.chapters) brief.chapters = [];
     if (!brief.characters) brief.characters = [];
