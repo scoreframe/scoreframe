@@ -1511,12 +1511,34 @@ Reader's question: ${question}`;
   }
 
   async function extractChaptersFromText(book, brief, startingNum, fallbackTitle, text) {
-    const knownChars = (brief.characters || []).map(c => ({ id: c.id, name: c.name, role: c.role, groupCluster: c.groupCluster }));
-    const knownPlaces = (brief.places || []).map(p => ({ id: p.id, name: p.name }));
-    const knownItems = (brief.items || []).map(p => ({ id: p.id, name: p.name }));
-    const knownChapters = (brief.chapters || []).map(c => ({ number: c.number, title: c.title || null, source: c.source || 'training' }));
+    // Build full story-so-far context: every chapter summary + open threads
+    // + character progression notes. Claude needs this to write coherent
+    // mid-book summaries that reference established characters and threads.
+    const priorChapters = (brief.chapters || [])
+      .slice()
+      .sort((a, b) => (a.number ?? 0) - (b.number ?? 0))
+      .map(c => ({
+        number: c.number,
+        title: c.title || null,
+        summary: c.summary || '',
+        keyMoments: c.keyMoments || [],
+      }));
+    const knownChars = (brief.characters || []).map(c => ({
+      id: c.id,
+      name: c.name,
+      role: c.role,
+      groupCluster: c.groupCluster,
+      firstChapter: c.firstChapter ?? null,
+      knownSoFar: (c.progression || []).map(p => `(ch ${p.chapter}) ${p.note}`).join(' ') || c.bio || '',
+    }));
+    const knownPlaces = (brief.places || []).map(p => ({ id: p.id, name: p.name, firstChapter: p.firstChapter ?? null, note: p.note || '' }));
+    const knownItems = (brief.items || []).map(p => ({ id: p.id, name: p.name, firstChapter: p.firstChapter ?? null, note: p.note || '' }));
+    const openThreads = (brief.openThreads || []).filter(t => t.resolvedChapter == null).map(t => ({
+      thread: t.thread,
+      introducedChapter: t.introducedChapter ?? null,
+    }));
 
-    const system = `You are Bookmarc. The reader has pasted text from a book. Identify chapter boundaries and produce one summary per chapter.
+    const system = `You are Bookmarc. The reader has pasted text from a book. Identify chapter boundaries and produce one coherent summary per chapter, USING the prior story context the reader has built up.
 
 Splitting rules:
 - If the text contains explicit chapter headings ("Chapter 1", "CHAPTER ONE", "Chapter I — The Beginning", "1.", roman numerals, etc.), split on those.
@@ -1525,6 +1547,13 @@ Splitting rules:
 - If headings aren't numeric (e.g., "Prologue", "Epilogue", "Part One"), use number 0 for Prologue, the next-after-highest for Epilogue, and your best judgment otherwise.
 - If the reader provided a "starting chapter number" override, use it for the FIRST extracted chapter and increment for subsequent ones (unless explicit headings in the text override that).
 - If you cannot determine a chapter number with any confidence, return that chunk with "number": null and a "needsNumber": true flag.
+
+Coherence rules (CRITICAL — this is why the prior context is given):
+- Write each summary as a natural continuation of what came before. If a character returns from an earlier chapter, refer to them by their established role/relationships, not as if newly introduced.
+- If the new chapter resolves or progresses an open plot thread, populate "resolvedThreadIds" with the EXACT thread description text from the open threads list.
+- If a known character gains new info or undergoes development, add a "characterUpdates" entry with their existing id — not a new character entry.
+- Use established character / place / item IDs from the "Known so far" block. Do not create duplicate IDs for the same entity.
+- Match the established tone of prior chapter summaries (terse, past tense, story-level rather than line-by-line).
 
 Output a SINGLE JSON object:
 {
@@ -1568,7 +1597,21 @@ Dedup rules (apply to every chapter):
 
 Respond with ONLY a single JSON object. No prose before or after.`;
 
-    const knownStr = JSON.stringify({ chapters: knownChapters, characters: knownChars, places: knownPlaces, items: knownItems }, null, 2);
+    const storySoFar = priorChapters.length
+      ? priorChapters.map(c => {
+          const head = c.number === 0 ? 'Prologue' : `Chapter ${c.number}`;
+          const title = c.title ? ` — ${c.title}` : '';
+          return `${head}${title}\n${c.summary}${c.keyMoments.length ? '\nKey moments: ' + c.keyMoments.join('; ') : ''}`;
+        }).join('\n\n')
+      : '(none yet — this is the first paste for this book)';
+
+    const knownStr = JSON.stringify({
+      characters: knownChars,
+      places: knownPlaces,
+      items: knownItems,
+      openThreads,
+    }, null, 2);
+
     const overrideLine = startingNum
       ? `\nStarting chapter number override (use for the first chunk; increment for subsequent): ${startingNum}`
       : '';
@@ -1578,13 +1621,17 @@ Respond with ONLY a single JSON object. No prose before or after.`;
 
     const userMsg = `Book: "${book.title}" by ${(book.authors || []).join(', ')}${overrideLine}${titleLine}
 
-Known so far (already in this book's brief — reuse these IDs, don't duplicate):
-${knownStr}
+=== STORY SO FAR (prior chapters already in the brief — use this for narrative continuity) ===
+${storySoFar}
+=== END STORY SO FAR ===
 
-Pasted text:
-"""
+=== KNOWN ENTITIES (reuse these IDs, don't duplicate; open threads may resolve in the new chapters) ===
+${knownStr}
+=== END KNOWN ENTITIES ===
+
+=== PASTED TEXT (new chapter(s) to summarize) ===
 ${text}
-"""`;
+=== END PASTED TEXT ===`;
 
     const body = {
       model: state.model || 'claude-opus-4-7',
