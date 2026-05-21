@@ -373,6 +373,21 @@ html, body {
     <div style="margin-top:12px;"><a id="notFoundBack" class="back-link" href="/">← Back to team hub</a></div>
 </div>
 
+<!-- v1.1.389 — Sign-in card for private hubs. Shown when the Firestore
+     read returns permission-denied AND the user isn't signed in. -->
+<div id="signInState" style="display:none;" class="loading">
+    <div style="font-size:36px;margin-bottom:8px;">🔒</div>
+    <div style="font-weight:700;font-size:16px;color:var(--text-primary);margin-bottom:4px;">Private team page</div>
+    <div style="margin-bottom:16px;">Sign in to view this team's games. You'll need to be the team owner, a manager, or an approved follower.</div>
+    <button id="signInGoogleBtn" type="button" style="
+        background:#FFFFFF;color:#1A1A1A;border:none;border-radius:8px;
+        padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;
+        display:inline-flex;align-items:center;gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.98 10.98 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A10.98 10.98 0 0 0 1 12c0 1.77.42 3.44 1.18 4.93l3.66-2.83z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.83C6.71 7.31 9.14 5.38 12 5.38z"/></svg>
+        Sign in with Google
+    </button>
+</div>
+
 <div id="gameView" style="display:none;">
     <!-- Hero (team identity + game title) -->
     <div class="hero">
@@ -449,6 +464,14 @@ html, body {
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+// v1.1.389 — Auth imports added so private-hub games (visibility !== 'public')
+// can be viewed by their owner / approved subscribers after signing in.
+// Without this, the v1.1.372 Firestore privacy rules block every browser
+// read against a private team and game.html silently shows "not found."
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
+    GoogleAuthProvider, onAuthStateChanged,
+    setPersistence, browserLocalPersistence }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 // Same Firebase project as team.html / watch.html — single source of truth.
 const firebaseConfig = {
@@ -462,6 +485,17 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence:', e));
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+// Safari / iOS / in-app browsers block popup auth; fall back to redirect there.
+const _ua = navigator.userAgent || '';
+const _useRedirectAuth = /iP(hone|ad|od)|Safari/i.test(_ua) && !/Chrome|CriOS|FxiOS/i.test(_ua);
+getRedirectResult(auth).catch(e => {
+    if (e && e.code !== 'auth/no-auth-event') console.warn('[auth] Redirect result:', e);
+});
+let currentUser = null;
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -615,6 +649,16 @@ async function load() {
             hub: t.hub || {},
         };
     } catch (e) {
+        // v1.1.389 — Private-hub reads bounce as permission-denied for any
+        // unauthenticated browser visitor. Show the sign-in card instead
+        // of the generic "not found" so owners + approved followers have
+        // a path to view their team's games. Once auth state changes the
+        // onAuthStateChanged listener below re-fires load() and the
+        // Firestore read succeeds (subject to the canReadTeam rule).
+        if (e && e.code === 'permission-denied' && !currentUser) {
+            showSignIn();
+            return;
+        }
         console.error('Hub load failed:', e);
         showNotFound();
         return;
@@ -1257,6 +1301,32 @@ function showNotFound() {
     $('notFound').style.display = '';
 }
 
+// v1.1.389 — Private-hub sign-in card. Shown when Firestore returns
+// permission-denied for an unauthenticated visitor. After the user signs
+// in, onAuthStateChanged below re-fires load() and the read succeeds
+// (subject to the canReadTeam rule — owner / manager / approved follower).
+function showSignIn() {
+    $('loadingState').style.display = 'none';
+    $('notFound').style.display = 'none';
+    $('signInState').style.display = '';
+}
+
+document.getElementById('signInGoogleBtn')?.addEventListener('click', async () => {
+    try {
+        if (_useRedirectAuth) {
+            await signInWithRedirect(auth, googleProvider);
+        } else {
+            await signInWithPopup(auth, googleProvider);
+        }
+    } catch (e) {
+        // Popup blocked / closed → try redirect as fallback.
+        if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user')) {
+            try { await signInWithRedirect(auth, googleProvider); return; } catch (_) {}
+        }
+        console.error('[auth] sign-in failed:', e);
+    }
+});
+
 // ── Share ──
 window.copyLink = function(btn) {
     const url = window.location.href;
@@ -1281,7 +1351,23 @@ window.shareNative = function() {
     }
 };
 
-load();
+// v1.1.389 — Listen for auth state. On first load, fire load() once
+// (anonymous visitors hit public hubs without needing sign-in). When a
+// user signs in (because we showed the sign-in card for a private hub),
+// re-fire load() so the page reloads with the new credentials.
+let _initialLoadDone = false;
+onAuthStateChanged(auth, (user) => {
+    currentUser = user && !user.isAnonymous ? user : null;
+    if (!_initialLoadDone) {
+        _initialLoadDone = true;
+        load();
+    } else if (currentUser) {
+        // User just signed in via the sign-in card — retry with creds.
+        $('signInState').style.display = 'none';
+        $('loadingState').style.display = '';
+        load();
+    }
+});
 </script>
 </body>
 </html>
