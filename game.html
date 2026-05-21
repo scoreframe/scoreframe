@@ -305,6 +305,12 @@ html, body {
 .bowling-frame .roll.strike { color: var(--accent); }
 .bowling-frame .roll.spare { color: var(--accent); }
 .bowling-frame .roll.empty { color: var(--text-muted); }
+/* Strike that spans the entire frame width (non-frame-10). Bigger glyph,
+   centered — easier to scan a strike across the strip. */
+.bowling-frame .roll.strike-full {
+    flex: 1 1 100%;
+    font-size: 13px;
+}
 .bowling-frame .roll .pin-circle {
     display: inline-flex; align-items: center; justify-content: center;
     width: 14px; height: 14px; border-radius: 50%;
@@ -1292,41 +1298,51 @@ function renderBowlingScore(game) {
     // counts 0-10, possibly null for incomplete frames. `split` marks the
     // first roll as a split — if the second roll is a spare (or 10 in
     // frame 10), the split is a conversion and the circle is accent-colored.
-    function rollMark(value, isStrike, isSpare, isSplit) {
-        if (value == null) return '<span class="roll empty">·</span>';
-        const v = Number(value);
+    // Renders a single roll cell. `roll` is the parseRoll() result
+    // ({pins, label}) or null when the roll wasn't bowled. isStrike /
+    // isSpare are passed by buildFrameCells when the frame context
+    // makes the visual call differently (e.g. a strike in frame 10's
+    // second ball renders X instead of using the parsed label).
+    function rollMark(roll, isStrike, isSpare, isSplit) {
+        if (roll == null) return '<span class="roll empty">·</span>';
         if (isStrike) return '<span class="roll strike">X</span>';
         if (isSpare) return '<span class="roll spare">/</span>';
-        if (v === 0) return '<span class="roll empty">-</span>';
+        const lbl = roll.label;
+        // Foul stays "F" (not collapsed into the gutter "-" path) so
+        // bowlers can tell them apart on the scoreboard. Both still
+        // score 0 pins.
+        if (lbl === 'F') return '<span class="roll empty">F</span>';
+        if (lbl === '-' || roll.pins === 0) return '<span class="roll empty">-</span>';
+        const display = (roll.pins != null) ? roll.pins : lbl;
         if (isSplit) {
-            return `<span class="roll"><span class="pin-circle">${v}</span></span>`;
+            return `<span class="roll"><span class="pin-circle">${display}</span></span>`;
         }
-        return `<span class="roll">${v}</span>`;
+        return `<span class="roll">${display}</span>`;
     }
-    // v1.1.405b — Android persists rolls as strings: "X" strike, "/" spare,
-    // "-" miss (0 pins), "1".."9" partial counts, "" / undefined when not
-    // bowled yet. The previous JS treated rolls as numbers — `r1 === 10`
-    // failed for strikes (string "X"), `Number("X")` was NaN, and the
-    // displayed pin counts came out as NaN for every frame. This helper
-    // normalizes a raw roll into a plain pin-count integer 0..10 (or null
-    // when the roll hasn't been thrown yet). Strike → 10. Spare on second
-    // ball → 10 − r1. Miss / "-" → 0. Anything else gets parsed as int.
+    // Android persists rolls as strings: "X" strike, "/" spare, "-" miss
+    // (gutter ball / 0 pins), "F" foul (also 0 pins, but separate notation),
+    // "1".."9" partial counts, "" / undefined when not bowled yet. This
+    // helper normalizes into a {pins, label} pair so the strike/spare
+    // logic can do math on `pins` while `label` carries the original
+    // notation for display (so "F" still renders as "F", not "-").
     function parseRoll(raw, prev) {
         if (raw == null) return null;
-        if (typeof raw === 'string') {
-            const s = raw.trim();
-            if (s === '') return null;
-            if (s.toUpperCase() === 'X') return 10;
-            if (s === '/') {
-                const p = (prev == null) ? 0 : prev;
-                return Math.max(0, 10 - p);
-            }
-            if (s === '-') return 0;
-            const n = parseInt(s, 10);
-            return isNaN(n) ? null : n;
+        let s = '';
+        if (typeof raw === 'string') s = raw.trim();
+        else if (typeof raw === 'number') return { pins: raw, label: String(raw) };
+        else return null;
+        if (s === '') return null;
+        const up = s.toUpperCase();
+        if (up === 'X') return { pins: 10, label: 'X' };
+        if (s === '/') {
+            const p = (prev == null) ? 0 : prev.pins;
+            return { pins: Math.max(0, 10 - p), label: '/' };
         }
-        if (typeof raw === 'number') return raw;
-        return null;
+        if (s === '-') return { pins: 0, label: '-' };
+        if (up === 'F') return { pins: 0, label: 'F' };
+        const n = parseInt(s, 10);
+        if (isNaN(n)) return null;
+        return { pins: n, label: String(n) };
     }
 
     function buildFrameCells(frames) {
@@ -1346,15 +1362,19 @@ function renderBowlingScore(game) {
             const r1 = parseRoll(f.r1, null);
             const r2 = parseRoll(f.r2, r1);
             const r3 = parseRoll(f.r3, r2);
+            const pins1 = r1 ? r1.pins : null;
+            const pins2 = r2 ? r2.pins : null;
+            const pins3 = r3 ? r3.pins : null;
             const split = !!f.split;
             let rollsHtml = '';
             if (!isF10) {
-                const isStrike = r1 === 10;
-                const isSpare = !isStrike && r1 != null && r2 != null && (r1 + r2) === 10;
+                const isStrike = pins1 === 10;
+                const isSpare = !isStrike && pins1 != null && pins2 != null && (pins1 + pins2) === 10;
                 if (isStrike) {
-                    // Traditional: strike rendered in the SECOND cell, first
-                    // cell blank. Easier to scan a row of X's down the strip.
-                    rollsHtml = '<span class="roll empty"></span>' + rollMark(10, true, false, false);
+                    // Strike spans the WHOLE frame width — a single big X
+                    // is the traditional bowling-sheet rendering and avoids
+                    // squeezing the mark into half the cell.
+                    rollsHtml = '<span class="roll strike strike-full">X</span>';
                 } else {
                     rollsHtml = rollMark(r1, false, false, split) +
                                 rollMark(r2, false, isSpare, false);
@@ -1363,20 +1383,20 @@ function renderBowlingScore(game) {
                 // Frame 10 — up to 3 rolls. r2 is a spare iff r1+r2===10 and
                 // r1 is NOT a strike. r3 only renders if r1 strike or r2
                 // spare (i.e. bonus earned).
-                const r1Strike = r1 === 10;
-                const r2Strike = r1Strike && r2 === 10;
-                const r2Spare = !r1Strike && r1 != null && r2 != null && (r1 + r2) === 10;
-                const r3Strike = r3 === 10;
-                const r3Spare = r1Strike && !r2Strike && r2 != null && r3 != null && (r2 + r3) === 10;
+                const r1Strike = pins1 === 10;
+                const r2Strike = r1Strike && pins2 === 10;
+                const r2Spare = !r1Strike && pins1 != null && pins2 != null && (pins1 + pins2) === 10;
+                const r3Strike = pins3 === 10;
+                const r3Spare = r1Strike && !r2Strike && pins2 != null && pins3 != null && (pins2 + pins3) === 10;
                 const c1 = rollMark(r1, r1Strike, false, split);
                 let c2;
                 if (r2 == null) c2 = '<span class="roll empty">·</span>';
-                else if (r2Strike) c2 = rollMark(10, true, false, false);
+                else if (r2Strike) c2 = rollMark(r2, true, false, false);
                 else if (r2Spare) c2 = rollMark(r2, false, true, false);
                 else c2 = rollMark(r2, false, false, false);
                 let c3;
                 if (r3 == null) c3 = '<span class="roll empty">·</span>';
-                else if (r3Strike) c3 = rollMark(10, true, false, false);
+                else if (r3Strike) c3 = rollMark(r3, true, false, false);
                 else if (r3Spare) c3 = rollMark(r3, false, true, false);
                 else c3 = rollMark(r3, false, false, false);
                 rollsHtml = c1 + c2 + c3;
