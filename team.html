@@ -486,6 +486,7 @@ import { getDatabase, ref, onValue }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
     signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    signInWithCustomToken,
     GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile,
     setPersistence, browserLocalPersistence }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -577,10 +578,48 @@ hubCode = _params.get('code') || _params.get('hub') || location.pathname.split('
 // v13 — Android WebView wrapper appends ?app=1; we hide the in-page
 // team-header via body.app since the app already shows its own chrome.
 if (_params.get('app') === '1') document.body.classList.add('app');
+// v1.1.389 — SSO bridge. The native app appends #auth=<firebaseIdToken>
+// to the WebView URL before loading. We detect that hash, exchange the
+// ID token for a custom token via Cloud Function, then signInWithCustom
+// Token so the WebView authenticates as the same UID as the app. The
+// onAuthStateChanged listener below fires after sign-in and continues
+// the load flow normally — no second Google prompt required.
+async function tryAppAuthHandoff() {
+    const hash = window.location.hash || '';
+    const m = hash.match(/[#&]auth=([^&]+)/);
+    if (!m) return false;
+    const idToken = decodeURIComponent(m[1]);
+    // Strip the hash immediately so the token doesn't linger in history,
+    // get re-shared via copy-link, or end up in screen recordings.
+    try {
+        const cleanHash = hash.replace(/[#&]auth=[^&]+/, '').replace(/^#$/, '');
+        history.replaceState(null, '', window.location.pathname + window.location.search + cleanHash);
+    } catch (_) {}
+    try {
+        const resp = await fetch('https://us-central1-scoreframe-deploy.cloudfunctions.net/mintAuthToken', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + idToken }
+        });
+        if (!resp.ok) { console.warn('[auth] mintAuthToken ' + resp.status); return false; }
+        const data = await resp.json();
+        if (!data.customToken) return false;
+        await signInWithCustomToken(auth, data.customToken);
+        console.log('[auth] SSO handoff complete');
+        return true;
+    } catch (e) {
+        console.warn('[auth] SSO handoff failed:', e);
+        return false;
+    }
+}
+
 if (!hubCode || hubCode.length < 4) {
     $('loadingScreen').style.display = 'none';
     $('notFoundScreen').style.display = 'block';
 } else {
+    // v1.1.389 — Try the app→web auth handoff before loading. If the URL
+    // hash carries an ID token, signInWithCustomToken fires + the auth
+    // listener below picks up `currentUser` non-null on its first call.
+    tryAppAuthHandoff();
     // Listen for auth state — user may already be signed in from a previous visit
     onAuthStateChanged(auth, async (user) => {
         currentUser = user && !user.isAnonymous ? user : null;

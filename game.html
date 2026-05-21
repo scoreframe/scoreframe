@@ -469,6 +469,7 @@ import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy }
 // Without this, the v1.1.372 Firestore privacy rules block every browser
 // read against a private team and game.html silently shows "not found."
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
+    signInWithCustomToken,
     GoogleAuthProvider, onAuthStateChanged,
     setPersistence, browserLocalPersistence }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -496,6 +497,44 @@ getRedirectResult(auth).catch(e => {
     if (e && e.code !== 'auth/no-auth-event') console.warn('[auth] Redirect result:', e);
 });
 let currentUser = null;
+
+// v1.1.389 — SSO bridge. The native app appends #auth=<firebaseIdToken>
+// to the WebView URL before loading. We detect that hash, exchange the
+// ID token for a custom token via Cloud Function, then signInWithCustom
+// Token so the WebView authenticates as the same UID as the app.
+// Returns a promise that resolves to true if a token was found AND
+// successfully consumed (callers should defer load() until then).
+async function tryAppAuthHandoff() {
+    const hash = window.location.hash || '';
+    const m = hash.match(/[#&]auth=([^&]+)/);
+    if (!m) return false;
+    const idToken = decodeURIComponent(m[1]);
+    // Strip the hash immediately so it doesn't linger in browser history,
+    // get re-shared via copy-link, or accidentally end up in screen
+    // recordings of the page.
+    try {
+        const cleanHash = hash.replace(/[#&]auth=[^&]+/, '').replace(/^#$/, '');
+        history.replaceState(null, '', window.location.pathname + window.location.search + cleanHash);
+    } catch (_) {}
+    try {
+        const resp = await fetch('https://us-central1-scoreframe-deploy.cloudfunctions.net/mintAuthToken', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + idToken }
+        });
+        if (!resp.ok) {
+            console.warn('[auth] mintAuthToken responded ' + resp.status);
+            return false;
+        }
+        const data = await resp.json();
+        if (!data.customToken) return false;
+        await signInWithCustomToken(auth, data.customToken);
+        console.log('[auth] SSO handoff complete');
+        return true;
+    } catch (e) {
+        console.warn('[auth] SSO handoff failed:', e);
+        return false;
+    }
+}
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -1351,11 +1390,19 @@ window.shareNative = function() {
     }
 };
 
-// v1.1.389 — Listen for auth state. On first load, fire load() once
-// (anonymous visitors hit public hubs without needing sign-in). When a
-// user signs in (because we showed the sign-in card for a private hub),
-// re-fire load() so the page reloads with the new credentials.
+// v1.1.389 — Listen for auth state. On first load, attempt the SSO
+// handoff (if the native app passed an ID token in the URL hash) and
+// defer load() until that resolves. After the initial load, when the
+// user signs in via the in-page card, re-fire load() so the page
+// reloads with the new credentials.
 let _initialLoadDone = false;
+(async () => {
+    await tryAppAuthHandoff();
+    // onAuthStateChanged will fire shortly with the new auth state and
+    // call load(). If no handoff happened, it fires with `user = null`
+    // and load() runs anonymously (public hubs work, private show the
+    // sign-in card).
+})();
 onAuthStateChanged(auth, (user) => {
     currentUser = user && !user.isAnonymous ? user : null;
     if (!_initialLoadDone) {
