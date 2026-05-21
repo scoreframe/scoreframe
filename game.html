@@ -1303,6 +1303,32 @@ function renderBowlingScore(game) {
         }
         return `<span class="roll">${v}</span>`;
     }
+    // v1.1.405b — Android persists rolls as strings: "X" strike, "/" spare,
+    // "-" miss (0 pins), "1".."9" partial counts, "" / undefined when not
+    // bowled yet. The previous JS treated rolls as numbers — `r1 === 10`
+    // failed for strikes (string "X"), `Number("X")` was NaN, and the
+    // displayed pin counts came out as NaN for every frame. This helper
+    // normalizes a raw roll into a plain pin-count integer 0..10 (or null
+    // when the roll hasn't been thrown yet). Strike → 10. Spare on second
+    // ball → 10 − r1. Miss / "-" → 0. Anything else gets parsed as int.
+    function parseRoll(raw, prev) {
+        if (raw == null) return null;
+        if (typeof raw === 'string') {
+            const s = raw.trim();
+            if (s === '') return null;
+            if (s.toUpperCase() === 'X') return 10;
+            if (s === '/') {
+                const p = (prev == null) ? 0 : prev;
+                return Math.max(0, 10 - p);
+            }
+            if (s === '-') return 0;
+            const n = parseInt(s, 10);
+            return isNaN(n) ? null : n;
+        }
+        if (typeof raw === 'number') return raw;
+        return null;
+    }
+
     function buildFrameCells(frames) {
         // Pad to 10 frames so the scoreboard always has the full row, even
         // for in-progress / abandoned games.
@@ -1317,7 +1343,9 @@ function renderBowlingScore(game) {
                 const rolls = Array(cells).fill('<span class="roll empty">·</span>').join('');
                 return `<div class="${cls}"><div class="rolls">${rolls}</div><div class="cum empty"></div></div>`;
             }
-            const r1 = f.r1, r2 = f.r2, r3 = f.r3;
+            const r1 = parseRoll(f.r1, null);
+            const r2 = parseRoll(f.r2, r1);
+            const r3 = parseRoll(f.r3, r2);
             const split = !!f.split;
             let rollsHtml = '';
             if (!isF10) {
