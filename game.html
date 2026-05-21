@@ -1362,9 +1362,17 @@ function renderBowlingScore(game) {
     }
     function buildFramesBlock(framesByGame) {
         if (!Array.isArray(framesByGame) || framesByGame.length === 0) return '';
-        const multi = framesByGame.length > 1;
-        const rows = framesByGame.map((frames, idx) => {
-            if (!Array.isArray(frames)) return '';
+        // v1.1.405 — Accept Firestore-legal shape: each game is a
+        // {gameNumber, frames} map. Old in-flight data may still be a
+        // bare frames array (List<List<Map>>) — handle both.
+        const games = framesByGame.map((entry) => {
+            if (Array.isArray(entry)) return entry;
+            if (entry && Array.isArray(entry.frames)) return entry.frames;
+            return null;
+        }).filter(Boolean);
+        if (games.length === 0) return '';
+        const multi = games.length > 1;
+        const rows = games.map((frames, idx) => {
             const label = multi ? `<div class="game-label">G${idx + 1}</div>` : '';
             return `<div class="bowling-frames-row">${label}${buildFrameCells(frames)}</div>`;
         }).join('');
