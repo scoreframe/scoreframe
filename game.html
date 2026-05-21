@@ -263,6 +263,69 @@ html, body {
 .bowling-stats .chip { white-space: nowrap; }
 .bowling-stats .chip strong { color: var(--text-primary); font-weight: 700; }
 
+/* v15 — Traditional 10-frame bowling scoreboard. Renders when a bowler's
+   stats include `framesByGame` (Pro feature, persisted by Android v1.1.391+).
+   Each game gets its own row of 10 frame cells with roll marks (X/spare/dash)
+   in the top half and cumulative score in the bottom half. Frame 10 is wider
+   to fit the 3-roll bonus columns. Split pins get a circle outline; converted
+   splits show the circle in the accent color. */
+.bowling-frames-wrap {
+    grid-column: 1 / -1; margin-top: 6px;
+    display: grid; gap: 6px;
+}
+.bowling-frames-row {
+    display: flex; align-items: stretch; gap: 0;
+    background: var(--bg-deep); border: 1px solid var(--bg-elevated);
+    border-radius: 4px; overflow: hidden;
+    font-variant-numeric: tabular-nums;
+}
+.bowling-frames-row .game-label {
+    flex: 0 0 auto; min-width: 36px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 6px;
+    background: var(--bg-elevated); color: var(--text-secondary);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+}
+.bowling-frame {
+    flex: 1 1 0; min-width: 0;
+    display: flex; flex-direction: column;
+    border-left: 1px solid var(--bg-elevated);
+}
+.bowling-frame.f10 { flex: 1.5 1 0; }
+.bowling-frame .rolls {
+    display: flex; height: 18px; border-bottom: 1px solid var(--bg-elevated);
+}
+.bowling-frame .roll {
+    flex: 1 1 0; min-width: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--text-primary);
+    border-left: 1px solid var(--bg-elevated);
+}
+.bowling-frame .roll:first-child { border-left: none; }
+.bowling-frame .roll.strike { color: var(--accent); }
+.bowling-frame .roll.spare { color: var(--accent); }
+.bowling-frame .roll.empty { color: var(--text-muted); }
+.bowling-frame .roll .pin-circle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 1px solid var(--text-secondary); line-height: 1;
+    font-size: 9px;
+}
+.bowling-frame .roll .pin-circle.converted { border-color: var(--accent); color: var(--accent); }
+.bowling-frame .cum {
+    flex: 1 1 auto;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--text-primary);
+    padding: 2px 0;
+    min-height: 20px;
+}
+.bowling-frame .cum.empty { color: var(--text-muted); font-weight: 500; }
+@media (max-width: 540px) {
+    .bowling-frame .roll { font-size: 10px; }
+    .bowling-frame .cum { font-size: 11px; }
+    .bowling-frames-row .game-label { min-width: 28px; font-size: 9px; }
+}
+
 .meta-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;
 }
@@ -1222,6 +1285,92 @@ function renderBowlingScore(game) {
         const key = (p.name || '').trim().toLowerCase();
         if (key) partByName.set(key, p);
     }
+
+    // v15 — Render the rolls for a single frame in traditional bowling
+    // notation. Frames 1-9 get 2 cells; frame 10 gets 3 cells (the third is
+    // the bonus roll, only used after a strike or spare). r1/r2/r3 are pin
+    // counts 0-10, possibly null for incomplete frames. `split` marks the
+    // first roll as a split — if the second roll is a spare (or 10 in
+    // frame 10), the split is a conversion and the circle is accent-colored.
+    function rollMark(value, isStrike, isSpare, isSplit) {
+        if (value == null) return '<span class="roll empty">·</span>';
+        const v = Number(value);
+        if (isStrike) return '<span class="roll strike">X</span>';
+        if (isSpare) return '<span class="roll spare">/</span>';
+        if (v === 0) return '<span class="roll empty">-</span>';
+        if (isSplit) {
+            return `<span class="roll"><span class="pin-circle">${v}</span></span>`;
+        }
+        return `<span class="roll">${v}</span>`;
+    }
+    function buildFrameCells(frames) {
+        // Pad to 10 frames so the scoreboard always has the full row, even
+        // for in-progress / abandoned games.
+        const padded = [];
+        for (let i = 0; i < 10; i++) padded.push(frames[i] || null);
+        return padded.map((f, idx) => {
+            const isF10 = idx === 9;
+            const cls = `bowling-frame${isF10 ? ' f10' : ''}`;
+            if (!f) {
+                // Empty frame — placeholder rolls + blank cum.
+                const cells = isF10 ? 3 : 2;
+                const rolls = Array(cells).fill('<span class="roll empty">·</span>').join('');
+                return `<div class="${cls}"><div class="rolls">${rolls}</div><div class="cum empty"></div></div>`;
+            }
+            const r1 = f.r1, r2 = f.r2, r3 = f.r3;
+            const split = !!f.split;
+            let rollsHtml = '';
+            if (!isF10) {
+                const isStrike = r1 === 10;
+                const isSpare = !isStrike && r1 != null && r2 != null && (r1 + r2) === 10;
+                if (isStrike) {
+                    // Traditional: strike rendered in the SECOND cell, first
+                    // cell blank. Easier to scan a row of X's down the strip.
+                    rollsHtml = '<span class="roll empty"></span>' + rollMark(10, true, false, false);
+                } else {
+                    rollsHtml = rollMark(r1, false, false, split) +
+                                rollMark(r2, false, isSpare, false);
+                }
+            } else {
+                // Frame 10 — up to 3 rolls. r2 is a spare iff r1+r2===10 and
+                // r1 is NOT a strike. r3 only renders if r1 strike or r2
+                // spare (i.e. bonus earned).
+                const r1Strike = r1 === 10;
+                const r2Strike = r1Strike && r2 === 10;
+                const r2Spare = !r1Strike && r1 != null && r2 != null && (r1 + r2) === 10;
+                const r3Strike = r3 === 10;
+                const r3Spare = r1Strike && !r2Strike && r2 != null && r3 != null && (r2 + r3) === 10;
+                const c1 = rollMark(r1, r1Strike, false, split);
+                let c2;
+                if (r2 == null) c2 = '<span class="roll empty">·</span>';
+                else if (r2Strike) c2 = rollMark(10, true, false, false);
+                else if (r2Spare) c2 = rollMark(r2, false, true, false);
+                else c2 = rollMark(r2, false, false, false);
+                let c3;
+                if (r3 == null) c3 = '<span class="roll empty">·</span>';
+                else if (r3Strike) c3 = rollMark(10, true, false, false);
+                else if (r3Spare) c3 = rollMark(r3, false, true, false);
+                else c3 = rollMark(r3, false, false, false);
+                rollsHtml = c1 + c2 + c3;
+            }
+            const score = f.score;
+            const cumHtml = (score != null && Number(score) > 0)
+                ? `<div class="cum">${score}</div>`
+                : '<div class="cum empty"></div>';
+            return `<div class="${cls}"><div class="rolls">${rollsHtml}</div>${cumHtml}</div>`;
+        }).join('');
+    }
+    function buildFramesBlock(framesByGame) {
+        if (!Array.isArray(framesByGame) || framesByGame.length === 0) return '';
+        const multi = framesByGame.length > 1;
+        const rows = framesByGame.map((frames, idx) => {
+            if (!Array.isArray(frames)) return '';
+            const label = multi ? `<div class="game-label">G${idx + 1}</div>` : '';
+            return `<div class="bowling-frames-row">${label}${buildFrameCells(frames)}</div>`;
+        }).join('');
+        return `<div class="bowling-frames-wrap">${rows}</div>`;
+    }
+
     const fmtPct = v => {
         const n = Number(v);
         if (!isFinite(n) || n <= 0) return '';
@@ -1263,7 +1412,15 @@ function renderBowlingScore(game) {
         const calcSeries = scores.reduce((a, x) => a + x, 0);
         const series = calcSeries > 0 ? calcSeries : (parseInt(storedSeries) || 0);
         const high = scores.length ? Math.max(...scores) : 0;
-        return { name: name || 'Bowler', scores, series, high };
+        // v15 — Pull framesByGame off the matching participant snapshot.
+        // Pro games written by Android v1.1.391+ carry this; older games
+        // (or free-tier) won't, and the row falls back to the scores-only
+        // strip beneath the bowler name.
+        const p = partByName.get((name || '').trim().toLowerCase());
+        const framesByGame = (p && p.stats && Array.isArray(p.stats.framesByGame))
+            ? p.stats.framesByGame
+            : null;
+        return { name: name || 'Bowler', scores, series, high, framesByGame };
     });
     $('scoreContent').innerHTML = `
         <div class="bowling-list">
@@ -1271,11 +1428,12 @@ function renderBowlingScore(game) {
                 <div class="bowling-row">
                     <div>
                         <div class="bowling-name">${r.name}</div>
-                        ${r.scores.length ? `<div class="bowling-detail">${r.scores.join(' · ')}</div>` : ''}
+                        ${(!r.framesByGame && r.scores.length) ? `<div class="bowling-detail">${r.scores.join(' · ')}</div>` : ''}
                     </div>
                     <div class="bowling-detail">High ${r.high}</div>
                     <div class="bowling-series">${r.series}</div>
                     ${buildStatsLine(r.name, r.scores.length)}
+                    ${r.framesByGame ? buildFramesBlock(r.framesByGame) : ''}
                 </div>
             `).join('')}
         </div>`;
