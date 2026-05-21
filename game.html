@@ -253,6 +253,15 @@ html, body {
 .bowling-name { font-weight: 700; }
 .bowling-series { color: var(--accent); font-weight: 700; }
 .bowling-detail { font-size: 11px; color: var(--text-secondary); }
+/* v1.1.390 — Per-bowler frame-level stats row. Sits below the per-game
+   scores. Comma-separated chips. Muted color so the series total stays
+   the visual headline. */
+.bowling-stats {
+    grid-column: 1 / -1; font-size: 11px; color: var(--text-secondary);
+    margin-top: 2px; display: flex; flex-wrap: wrap; gap: 8px;
+}
+.bowling-stats .chip { white-space: nowrap; }
+.bowling-stats .chip strong { color: var(--text-primary); font-weight: 700; }
 
 .meta-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;
@@ -1201,6 +1210,53 @@ function renderBowlingScore(game) {
         }
         return;
     }
+    // v1.1.390 — Index participants by lowercased name so each bowler row
+    // can pick up its strike / spare / open / split counts from the
+    // participant snapshot. The per-game playerScores string only carries
+    // names + scores; the frame-level stats live alongside in
+    // participants[].stats (written by MainActivity.savePerPlayerStats at
+    // End Game). When no matching participant exists (legacy games saved
+    // before the stats map was populated) the stats line just hides.
+    const partByName = new Map();
+    for (const p of (game.participants || [])) {
+        const key = (p.name || '').trim().toLowerCase();
+        if (key) partByName.set(key, p);
+    }
+    const fmtPct = v => {
+        const n = Number(v);
+        if (!isFinite(n) || n <= 0) return '';
+        return n >= 100 ? '100%' : `${n.toFixed(0)}%`;
+    };
+    const buildStatsLine = (name, scoreCount) => {
+        const p = partByName.get((name || '').trim().toLowerCase());
+        if (!p) return '';
+        const s = p.stats || {};
+        const strikes = Number(s.strikes || 0);
+        const spares = Number(s.spares || 0);
+        const open = Number(s.openFrames || 0);
+        const splits = Number(s.splits || 0);
+        const conv = Number(s.splitConversions || 0);
+        // Prefer precomputed percentages; fall back to (count / frames)
+        // when missing.
+        const frames = Number(s.totalFrames || (scoreCount * 10) || 0);
+        const strikePct = s.strikePct != null
+            ? Number(s.strikePct)
+            : (frames > 0 ? strikes * 100 / frames : 0);
+        const sparePct = s.sparePct != null
+            ? Number(s.sparePct)
+            : (frames > 0 ? spares * 100 / frames : 0);
+        if (strikes + spares + open + splits === 0) return '';
+        const chips = [];
+        if (strikes > 0) chips.push(`<span class="chip"><strong>X</strong> ${strikes}${strikePct ? ` (${fmtPct(strikePct)})` : ''}</span>`);
+        if (spares > 0) chips.push(`<span class="chip"><strong>/</strong> ${spares}${sparePct ? ` (${fmtPct(sparePct)})` : ''}</span>`);
+        if (open > 0) chips.push(`<span class="chip"><strong>O</strong> ${open}</span>`);
+        if (splits > 0) {
+            const txt = conv > 0 ? `${conv}/${splits}` : `${splits}`;
+            chips.push(`<span class="chip"><strong>Split</strong> ${txt}</span>`);
+        }
+        return chips.length ? `<div class="bowling-stats">${chips.join('')}</div>` : '';
+    };
+
     const rows = ps.split(';').filter(Boolean).map(b => {
         const [name, gamesStr, storedSeries] = b.split(':');
         const scores = (gamesStr || '').split(',').filter(s => s).map(Number);
@@ -1219,6 +1275,7 @@ function renderBowlingScore(game) {
                     </div>
                     <div class="bowling-detail">High ${r.high}</div>
                     <div class="bowling-series">${r.series}</div>
+                    ${buildStatsLine(r.name, r.scores.length)}
                 </div>
             `).join('')}
         </div>`;
