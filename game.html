@@ -1661,21 +1661,35 @@ window.shareNative = function() {
     }
 };
 
-// v1.1.389 — Listen for auth state. On first load, attempt the SSO
-// handoff (if the native app passed an ID token in the URL hash) and
-// defer load() until that resolves. After the initial load, when the
-// user signs in via the in-page card, re-fire load() so the page
-// reloads with the new credentials.
+// v18 — Listen for auth state. When the URL hash carries an SSO token
+// from the native app, suppress the first anonymous onAuthStateChanged
+// fire so the page doesn't flash the "🔒 Private team page" card
+// before signInWithCustomToken completes. The IIFE below awaits the
+// handoff, then fires load() with whatever auth state landed.
 let _initialLoadDone = false;
+const _hadAuthToken = /[#&]auth=/.test(window.location.hash);
+let _handoffSettled = !_hadAuthToken;
 (async () => {
-    await tryAppAuthHandoff();
-    // onAuthStateChanged will fire shortly with the new auth state and
-    // call load(). If no handoff happened, it fires with `user = null`
-    // and load() runs anonymously (public hubs work, private show the
-    // sign-in card).
+    if (_hadAuthToken) {
+        try { await tryAppAuthHandoff(); } catch (_) {}
+    }
+    _handoffSettled = true;
+    // If the listener was suppressed (anonymous fire arrived during
+    // handoff), fire the initial load now with whatever the post-
+    // handoff auth state is. Public hubs render; private hubs with a
+    // successful handoff render too; failed handoff falls through to
+    // the sign-in card on permission-denied.
+    if (!_initialLoadDone) {
+        _initialLoadDone = true;
+        load();
+    }
 })();
 onAuthStateChanged(auth, (user) => {
     currentUser = user && !user.isAnonymous ? user : null;
+    // Suppress the anonymous fire while we're still waiting on the SSO
+    // handoff — otherwise the page flashes signInState before the
+    // in-app session lands. The IIFE above fires load() once settled.
+    if (!_handoffSettled && !currentUser) return;
     if (!_initialLoadDone) {
         _initialLoadDone = true;
         load();

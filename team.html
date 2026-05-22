@@ -616,10 +616,11 @@ if (!hubCode || hubCode.length < 4) {
     $('loadingScreen').style.display = 'none';
     $('notFoundScreen').style.display = 'block';
 } else {
-    // v1.1.389 — Try the app→web auth handoff before loading. If the URL
-    // hash carries an ID token, signInWithCustomToken fires + the auth
-    // listener below picks up `currentUser` non-null on its first call.
-    tryAppAuthHandoff();
+    // v18 — Defer loadTeam() until the SSO handoff resolves so the
+    // "🔒 This team is private" gate doesn't flash before the in-app
+    // session unlocks the page. tryAppAuthHandoff only does network
+    // work when the URL hash carries an #auth= token; otherwise it
+    // returns immediately and loadTeam proceeds anonymously.
     // Listen for auth state — user may already be signed in from a previous visit
     onAuthStateChanged(auth, async (user) => {
         currentUser = user && !user.isAnonymous ? user : null;
@@ -645,7 +646,11 @@ if (!hubCode || hubCode.length < 4) {
             showContent();
         }
     });
-    loadTeam();
+    // Await SSO handoff before kicking off the Firestore read. After
+    // this resolves, currentUser reflects the in-app session (when a
+    // token was present + valid) so loadTeam → showContent renders
+    // the unlocked content directly instead of flashing accessGate.
+    tryAppAuthHandoff().then(() => loadTeam());
 }
 
 // Auto-accept any pending follower invitations addressed to the signed-in user's email.
