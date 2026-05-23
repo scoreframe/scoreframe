@@ -509,6 +509,14 @@ html, body {
             <div class="meta-grid" id="metaGrid"></div>
         </div>
 
+        <!-- ✨ AI Recap — generated in-app via the Labs feature and
+             persisted on the game doc. Hidden by default; revealed by
+             load() when game.aiRecap is present. -->
+        <div class="card" id="aiRecapCard" style="display:none;">
+            <div class="label">✨ AI Recap</div>
+            <div id="aiRecapText" style="font-size:15px;line-height:1.55;color:var(--text-primary);"></div>
+        </div>
+
         <!-- Highlights — chips that seek the YouTube embed to the moment
              the broadcaster tagged during the live stream. -->
         <div class="card" id="highlightsCard" style="display:none;">
@@ -930,6 +938,7 @@ function renderUpcomingGame(hub, game) {
     setInterval(tick, 1000);
 
     renderMeta(game, sport);
+    renderAiRecap(game);
     $('streamPlatformPill').innerHTML = '';
     $('streamCaption').textContent = '';
 
@@ -1028,6 +1037,8 @@ function renderGame(hub, game) {
 
     // Game info card
     renderMeta(game, sport);
+    // ✨ AI recap card (Labs feature, persisted from in-app generation).
+    renderAiRecap(game);
 
     // Highlights — load the subcollection asynchronously so the rest of
     // the page renders even if there's a brief Firestore delay or no
@@ -1586,6 +1597,13 @@ function seekToHighlight(seconds, platform, baseUrl) {
         const sep = baseUrl.includes('?') ? '&' : '?';
         window.open(`${baseUrl}${sep}t=${seconds}`, '_blank', 'noopener');
     }
+}
+
+function renderAiRecap(game) {
+    const recap = (game && typeof game.aiRecap === 'string') ? game.aiRecap.trim() : '';
+    if (!recap) return;
+    $('aiRecapText').textContent = recap;
+    $('aiRecapCard').style.display = '';
 }
 
 function renderMeta(game, sport) {
