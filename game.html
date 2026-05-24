@@ -471,6 +471,11 @@ html, body {
     <div class="hero">
         <div id="liveSlot"></div>
         <div class="team-color-bar" id="colorBar"></div>
+        <!-- v18 — Event banner above the team identity. Populated from
+             game.eventLabel / eventName when present; hidden otherwise.
+             Sits above heroTeam so a tournament / conference label is
+             the first thing the viewer sees on the page. -->
+        <div id="heroEvent" style="display:none;font-size:13px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;"></div>
         <div class="hero-team" id="heroTeam"></div>
         <div class="hero-title" id="heroTitle"></div>
         <div class="hero-meta" id="heroMeta"></div>
@@ -975,16 +980,20 @@ function renderGame(hub, game) {
     document.title = `${title} · ${hub.teamName} · ScoreFrame`;
     $('heroTitle').textContent = title;
 
+    // v18 — Promote the event label to its own banner above the team
+    // name. eventLabel is the new Pro field; eventName is the legacy
+    // bowling-only field — fall back so older data still shows up.
+    // Skip when the same string is already the title (bowling games
+    // use eventName as the title text, so no need to duplicate).
+    const evt = (game.eventLabel || game.eventName || '').trim();
+    if (evt && evt !== title) {
+        $('heroEvent').textContent = evt;
+        $('heroEvent').style.display = '';
+    }
+
     const metaBits = [];
     if (game.date) metaBits.push(formatDate(game.date));
     if (game.location) metaBits.push(`📍 ${game.location}`);
-    // Surface the scoreboard Event Label (e.g. "Conference Game",
-    // "Spring Tournament") here too. eventLabel is the new Pro field;
-    // eventName is the legacy bowling-only field — fall back so older
-    // data still shows up. Skip duplicating when the title already
-    // contains it (bowling games use eventName as the title).
-    const evt = (game.eventLabel || game.eventName || '').trim();
-    if (evt && evt !== title) metaBits.push(`🏷️ ${evt}`);
     $('heroMeta').textContent = metaBits.join('  ·  ');
 
     // LIVE pill if this game matches the hub's active stream.
