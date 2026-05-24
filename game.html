@@ -1282,9 +1282,50 @@ function renderTeamScore(hub, game) {
 }
 
 function renderBowlingScore(game) {
+    // v1.1.440 — Head-to-head bowling matchup header. When the saved
+    // game carries `sportSpecificStats.h2h === true` we lead the score
+    // card with a stacked team/opponent scoreline (winner colored gold,
+    // loser dim, tie neutral). When the game also has a handicap, we
+    // show BOTH raw and adjusted totals so the viewer can see how the
+    // W/L was determined.
+    const stats = game.sportSpecificStats || {};
+    const isH2H = stats.h2h === true && (game.awayTeam || '').toString().trim() !== '';
+    const hasHandicap = isH2H && stats.hasHandicap === true;
+    let h2hHeader = '';
+    if (isH2H) {
+        const home = (game.homeTeam || 'Home').toString();
+        const away = (game.awayTeam || 'Away').toString();
+        const homeAdj = Number(game.homeScore || 0);
+        const awayAdj = Number(game.awayScore || 0);
+        const homeRaw = hasHandicap ? Number(stats.teamRawSeries ?? homeAdj) : homeAdj;
+        const awayRaw = hasHandicap ? Number(stats.opponentRawSeries ?? awayAdj) : awayAdj;
+        const homeWon = homeAdj > awayAdj;
+        const awayWon = awayAdj > homeAdj;
+        const tied = homeAdj === awayAdj;
+        const colorFor = won => tied ? 'var(--text-primary)' : (won ? '#F2A93B' : 'var(--text-secondary)');
+        const sideHtml = (name, raw, adj, won) => {
+            const adjStr = hasHandicap && raw !== adj
+                ? `<span style="font-size:14px;color:var(--text-secondary);margin-left:8px;">raw ${raw}</span> <span style="font-size:14px;color:${colorFor(won)};margin-left:4px;">· Adj <strong>${adj}</strong></span>`
+                : `<strong>${adj}</strong>`;
+            return `<div style="display:flex;align-items:baseline;justify-content:space-between;padding:6px 0;color:${colorFor(won)};">
+                        <span style="font-size:16px;font-weight:700;">${escapeHtml(name)}</span>
+                        <span style="font-size:22px;font-weight:800;">${adjStr}</span>
+                    </div>`;
+        };
+        const handicapNote = hasHandicap
+            ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:6px;">Adjusted totals include handicap × games (${stats.gameCount || 1}). W/L is based on adjusted.</div>`
+            : '';
+        h2hHeader = `${sideHtml(home, homeRaw, homeAdj, homeWon)}${sideHtml(away, awayRaw, awayAdj, awayWon)}${handicapNote}`;
+        // Show the score card immediately so the matchup header lands
+        // even when the per-bowler frame data below is empty (no
+        // playerScores string on the doc yet).
+        $('scoreContent').innerHTML = h2hHeader;
+        $('scoreCard').style.display = '';
+    }
+
     const ps = game.playerScores || '';
     if (!ps) {
-        if (game.homeScore > 0) {
+        if (!isH2H && game.homeScore > 0) {
             $('scoreContent').innerHTML = `<div style="font-size:32px;font-weight:800;color:var(--accent);">${game.homeScore}</div>`;
             $('scoreCard').style.display = '';
         }
@@ -1489,7 +1530,10 @@ function renderBowlingScore(game) {
             : null;
         return { name: name || 'Bowler', scores, series, high, framesByGame };
     });
-    $('scoreContent').innerHTML = `
+    // v1.1.440 — Prepend the H2H matchup header (built above) instead
+    // of overwriting it. Solo nights leave h2hHeader empty so no
+    // visual change there.
+    $('scoreContent').innerHTML = h2hHeader + `
         <div class="bowling-list">
             ${rows.map(r => `
                 <div class="bowling-row">
