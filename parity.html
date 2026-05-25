@@ -693,9 +693,9 @@ onAuthStateChanged(auth, async (user) => {
     <div class="subtitle">Feature Parity Dashboard</div>
     <div class="public-banner">👁️ Public Mode</div>
     <div class="meta">
-        <span class="meta-item"><b>Updated:</b> 2026-05-14</span>
-        <span class="meta-item"><b>Android:</b> v1.1.305 (FAD)</span>
-        <span class="meta-item"><b>iOS:</b> build 125 (1.1) · TestFlight uploaded 2026-05-14</span>
+        <span class="meta-item"><b>Updated:</b> 2026-05-25</span>
+        <span class="meta-item"><b>Android:</b> v1.1.443 (FAD)</span>
+        <span class="meta-item"><b>iOS:</b> build 192 (1.1) · TestFlight</span>
         <span class="meta-item"><b>Source:</b> code audit</span>
     </div>
     <div class="public-link-row internal-only">
@@ -957,11 +957,18 @@ const STATUS = {
 };
 
 // FEATURES: web column added; pro flag added; effort field for iOS gaps.
-// Verified against PARITY_AUDIT_2026-05-07 + FeatureGate.kt/swift + repo greps.
-// Drift sweep 2026-05-25 added: bowling handicap / untracked teammates / opponent
-// label, AI game summary (Labs), Fan/Coach app mode, red record CTA, stream
-// resume, pull-to-refresh career stats, event-on-past-game cards, What's New
-// web page, multi-stream playlist on game.html, super-user gate on internal pages.
+// Verified against PARITY_AUDIT_2026-05-25 + FeatureGate.kt/swift + repo greps.
+// Latest deep sweep folded in:
+//  - iOS catch-up flips: StreamQualityPreset.swift, AdaptiveBitrateManager.swift,
+//    EndGameOverlayBuilder.swift, ConversionManager.swift, FloatingRecordingHud.swift
+//    were all shipped on iOS but still marked stub/missing — flipped to shipped.
+//  - Tournaments (multiGame + event.html + manager controls + idle CF) — entire
+//    feature stack added; was untracked.
+//  - Android Picture-in-Picture (v1.1.336-341) — added.
+//  - Locked games gate (maxSavedGames) was retired in v1.1.409 — flipped to na/na.
+//  - Bowling handicap / untracked teammates / opponent label corrected to
+//    Android-only — iOS source has zero matches (last sweep got this wrong).
+//  - Header version metadata refreshed.
 const FEATURES = [
     /* ---------- Authentication & Account ---------- */
     { cat: 'Authentication & Account', name: 'Firebase Auth — email + password', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Web auth on dashboard.html, support.html, team.html, beta.html, reset-password.html.' },
@@ -975,12 +982,14 @@ const FEATURES = [
     { cat: 'Authentication & Account', name: 'Tier badge on Account screen', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Authentication & Account', name: 'Super-user flag (debug tier switcher)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'admin.html gates on super-user uid.' },
     { cat: 'Authentication & Account', name: 'Password reset (email link)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'reset-password.html handles the action link.' },
+    { cat: 'Authentication & Account', name: 'SSO custom-token handoff to web (signInWithCustomToken)', a: 'shipped', i: 'partial', w: 'shipped', notes: 'Android mintAuthToken Cloud Function returns a custom token. game.html detects "#auth=" hash and signs in (commit 61ea27a). iOS handoff TBD.' },
+    { cat: 'Authentication & Account', name: 'Google sign-in on game.html (private hubs)', a: 'na', i: 'na', w: 'shipped', notes: 'Commit aed207c — Google + email sign-in inline on game.html so subscriber-gated streams unlock without leaving the page.' },
 
     /* ---------- Home / Dashboard ---------- */
     { cat: 'Home/Dashboard', name: '6-tab bottom nav (Home/Teams/Hubs/History/Settings/Account)', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Home/Dashboard', name: 'Bottom-nav active-tab affordance (orange label + bigger icon + underline pip)', a: 'shipped', i: 'shipped', w: 'na', notes: 'v1.1.303 — Home tab now styled identically to Teams/Schedule. Shared via ScoreFrameUI.bottomNavItem on Android, SwiftUI scaleEffect + spring animation on iOS.' },
     { cat: 'Home/Dashboard', name: 'HomeDataStore (snapshot listeners + cache)', a: 'shipped', i: 'partial', w: 'na', notes: 'Android persists Firestore snapshots to disk for instant cold start.' },
-    { cat: 'Home/Dashboard', name: 'Hero card / Resume game CTA', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android: just fixed in v1.1.183 (hero box was hijacking New Game CTA).' },
+    { cat: 'Home/Dashboard', name: 'Hero card / Resume game CTA', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android v1.1.217 replaced the hero with the bright red "Record a Game" card (HomeActivity.buildRecordCta). iOS keeps the gradient hero card flow.' },
     { cat: 'Home/Dashboard', name: 'Default New Game / Quick Start hero', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Home/Dashboard', name: 'Connect Phones button', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Home/Dashboard', name: 'Quick Stats row (games / hours / highlights)', a: 'shipped', i: 'shipped', w: 'na' },
@@ -1032,9 +1041,9 @@ const FEATURES = [
     { cat: 'Game Setup & Recording', name: 'Bowling — big orange bowler-name banner + ← G N-1 pill', a: 'shipped', i: 'missing', w: 'na', effort: 'S', notes: 'v1.1.305 — 20sp orange bowler name, Frame N · Roll M subtitle, "← Game N-1" warp pill on game 2+ of a series.' },
     { cat: 'Game Setup & Recording', name: 'Score Only mode — orientation unlock (no rotate-to-landscape guard)', a: 'shipped', i: 'na', w: 'na', notes: 'v1.1.305 — Score Only skips the recording-orientation placeholder; fixes the bowling-scoreboard-missing-in-portrait symptom. iOS Score Only is portrait-aware by default (different scaffold).' },
     { cat: 'Game Setup & Recording', name: 'Score Only mode — Keep Screen On Quick Settings tile', a: 'shipped', i: 'na', w: 'na', notes: 'v1.1.305 — defaults ON in Score Only so bowlers don\'t have to keep waking the phone. iOS scoring screens already keep screen on via idleTimerDisabled.' },
-    { cat: 'Game Setup & Recording', name: 'Bowling — handicap per bowler (team H2H)', a: 'shipped', i: 'shipped', w: 'na', notes: 'Per-bowler handicap entered at setup. Adjusted totals (raw + handicap × gameCount) drive W/L in buildGameSummary.' },
-    { cat: 'Game Setup & Recording', name: 'Bowling — untracked teammates (per-game scores only)', a: 'shipped', i: 'shipped', w: 'na', notes: 'Add roster members at game start whose game scores you record without per-frame scoring. Prompts at end of each 10-frame game. Editable later. Surfaced on the game web page.' },
-    { cat: 'Game Setup & Recording', name: 'Bowling — opponent label on scoreboard ("vs Opponent")', a: 'shipped', i: 'shipped', w: 'na', notes: 'Pulls from the same opponent field the schedule uses; renders after the event label.' },
+    { cat: 'Game Setup & Recording', name: 'Bowling — handicap per bowler (team H2H)', a: 'shipped', i: 'missing', w: 'shipped', effort: 'M', notes: 'Android v1.1.440 — per-bowler handicap entered at setup; adjusted totals (raw + handicap × playedGames) drive W/L in buildGameSummary. Web game.html renders the H2H/handicap header when sportSpecificStats.h2h===true. iOS has no handicap field anywhere in source (verified via grep).' },
+    { cat: 'Game Setup & Recording', name: 'Bowling — untracked teammates (per-game scores only)', a: 'shipped', i: 'missing', w: 'partial', effort: 'M', notes: 'Android v1.1.441 (ScoreboardType.kt, MainActivity, HomeActivity). Per-game prompt at end of 10-frame; editable later. Web does not yet render untracked-teammate scores on game.html. iOS has no untracked-teammate data field or UI.' },
+    { cat: 'Game Setup & Recording', name: 'Bowling — opponent label on scoreboard ("vs Opponent")', a: 'shipped', i: 'missing', w: 'shipped', effort: 'S', notes: 'Android scoreboard renders "vs Opponent" inline after the event label. iOS bowling scoreboard does not. Web game.html H2H header is the cross-platform read surface.' },
     { cat: 'Game Setup & Recording', name: 'Scheduled-opponent prefill in bowling setup', a: 'shipped', i: 'shipped', w: 'na', notes: 'Game setup auto-fills opponent + event when launched from a scheduled game.' },
 
     /* ---------- Video Recording ---------- */
@@ -1064,10 +1073,11 @@ const FEATURES = [
     { cat: 'Video Recording', name: 'Scoring-only mode (no video)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'score.html is essentially scoring-only by design.' },
     { cat: 'Video Recording', name: 'Scoreboard zoom (tap to enlarge)', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Video Recording', name: 'Scoreboard visibility toggle (eye)', a: 'shipped', i: 'shipped', w: 'na' },
-    { cat: 'Video Recording', name: 'End-of-game stats overlay (burned in)', a: 'shipped', i: 'missing', w: 'na', effort: 'L', notes: 'No setEndGameOverlay / createEndGameSummary on iOS.' },
+    { cat: 'Video Recording', name: 'End-of-game stats overlay (burned in)', a: 'shipped', i: 'shipped', w: 'na', notes: 'iOS: Compositor/EndGameOverlayBuilder.swift + MetalCompositor.setEndGameOverlay(CGImage), wired in ContentView.swift via EndGameOverlayBuilder.Input → EndGameOverlayBuilder.make.' },
     { cat: 'Video Recording', name: 'Scoring animations (CONFETTI/STRIKE/GOAL/TOUCHDOWN/ACE)', a: 'shipped', i: 'missing', w: 'na', effort: 'L', notes: '358-line ScoringAnimationRenderer.kt; no iOS equivalent + no animations pref.' },
     { cat: 'Video Recording', name: 'Per-game video folder + SF_{shortId} naming', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Video Recording', name: 'Video repair tool (interrupted MP4)', a: 'partial', i: 'shipped', w: 'na', notes: 'iOS has explicit VideoRepairTool.swift; Android relies on graceful auto-save.' },
+    { cat: 'Video Recording', name: 'Picture-in-Picture (Android system PiP for recording)', a: 'shipped', i: 'na', w: 'na', notes: 'Android v1.1.336-341 — onUserLeaveHint auto-enters PiP if recording/streaming; orientation-aware setFixedSize lock prevents surface destruction. AndroidManifest declares supportsPictureInPicture="true". iOS PiP is AVPlayer-only — N/A for capture.' },
 
     /* ---------- Game History ---------- */
     { cat: 'Game History', name: 'Game history CRUD (sport filter, drill-downs)', a: 'shipped', i: 'shipped', w: 'partial', notes: 'team.html shows past games per hub; no personal history.' },
@@ -1080,8 +1090,9 @@ const FEATURES = [
     { cat: 'Game History', name: 'Video ↔ game bidirectional linking', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Game History', name: 'Stats export PDF', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Game History', name: 'Rebuild career stats from history', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
-    { cat: 'Game History', name: 'Locked / archived games (free overflow)', a: 'shipped', i: 'missing', w: 'na', effort: 'S', notes: 'maxSavedGames=10 declared on iOS but not enforced — Pro-tier leak.' },
+    { cat: 'Game History', name: 'Locked / archived games (free overflow)', a: 'na', i: 'na', w: 'na', notes: 'v1.1.409 — the 10-game free-tier cap was retired. FeatureGate.maxSavedGames returns Int.MAX_VALUE on both platforms; full history is accessible on every tier. No locked-game UI.' },
     { cat: 'Game History', name: 'Pull-to-refresh on player profile → cloud career-stats rebuild', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'v1.1.411 Android — swipe down on player drill-down forces a server-side rebuild from game history (handles cross-device staleness + manual edits). iOS port pending.' },
+    { cat: 'Game History', name: 'Bowling — frame-by-frame web scoreboard (game.html)', a: 'na', i: 'na', w: 'shipped', notes: 'Commits 549ab86, d861f43, 8bfe75b — game.html renders the full 10-frame strip with strike/spare/split stats, handles X / - / F notation, accepts the Firestore frames shape.' },
 
     /* ---------- Schedule / Agenda ---------- */
     { cat: 'Schedule/Agenda', name: 'Schedule add / edit / delete', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Manager edits schedule on team.html.' },
@@ -1098,6 +1109,13 @@ const FEATURES = [
     { cat: 'Schedule/Agenda', name: 'saveGame status-preserve (no overwrite on scheduled/live/cancelled)', a: 'shipped', i: 'shipped', w: 'na', notes: 'v1.1.299 — read-then-write per teamId. Recovers existing clobbered docs on next sign-in via recoverClobberedSchedule.' },
     { cat: 'Schedule/Agenda', name: 'End-Game schedule-entry consolidation (single past-games doc)', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'Android v1.1.304 — pushGameToTeamHubs deletes the matching schedule entry after copying its streams[] into the new past-games doc. iOS doesn\'t have an equivalent consolidation path; schedule entries stuck at status=live linger.' },
 
+    /* ---------- Tournaments ---------- */
+    { cat: 'Tournaments', name: 'Multi-day tournament container (multiGame + gameIds[] + endDate + parentEventId)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Android v1.1.314 ScheduledGame fields. iOS TeamHubManager.swift mirrors. Web event.html + team.html render the container.' },
+    { cat: 'Tournaments', name: 'Scheduled-child games nested under tournament card', a: 'shipped', i: 'missing', w: 'shipped', effort: 'M', notes: 'Android v1.1.315 GameHistoryActivity.renderAgendaList + TeamHubViewerActivity. Web team.html commit 70b2f33. iOS ScheduleScreen still renders flat — deferred follow-up.' },
+    { cat: 'Tournaments', name: 'Tournament detail screen (+ Add game / End tournament)', a: 'shipped', i: 'shipped', w: 'partial', notes: 'Android ScheduledEventDetailActivity.kt. iOS ScheduledEventDetailScreen.swift has + Add game + End tournament buttons. Web event.html renders the read view; no manager + Add game button yet.' },
+    { cat: 'Tournaments', name: 'Tournament idle reminder (24h Cloud Function)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'functions/index.js tournamentIdleReminder pubsub schedule writes appNotifications; both clients receive. Dedupe via tournamentEndReminderSentAt on the parent.' },
+    { cat: 'Tournaments', name: 'Multi-game container route — event.html', a: 'na', i: 'na', w: 'shipped', notes: 'event.html renders hero, date range, child game list; team.html schedule cards route to it when multiGame===true OR gameIds.length>1.' },
+
     /* ---------- Team Hubs ---------- */
     { cat: 'Team Hubs', name: 'Hub create / delete', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Team Hubs', name: 'Hub limit (Free=1, Pro=∞)', a: 'shipped', i: 'shipped', w: 'na', pro: true },
@@ -1110,12 +1128,14 @@ const FEATURES = [
     { cat: 'Team Hubs', name: 'Per-team logo upload (Firebase Storage)', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Team Hubs', name: 'Inline-manage in team editor (TeamHubInline)', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'Android v1.1.279 WIP: TeamHubScreen folded into SportSettingsActivity editor; every TeamHubActivity launch reroutes. iOS still drills into TeamHubScreen sheet from TeamEditorScreen.' },
     { cat: 'Team Hubs', name: 'Sharing card inline in team editor', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android v1.1.278 + iOS port (TeamEditorScreen Section("Sharing") with Code / Open / Copy / Share).' },
+    { cat: 'Team Hubs', name: 'Recent Games strip on team.html (last 7 days, above schedule)', a: 'na', i: 'na', w: 'shipped', notes: 'Commit 70414f1 — recent games surface above the schedule for quick scanning.' },
+    { cat: 'Team Hubs', name: 'Team archive lifecycle (status / archivedAt + ARCHIVED banner)', a: 'shipped', i: 'partial', w: 'shipped', effort: 'S', notes: 'Android v1.1.366 wired the lifecycle. team.html commit be924a0 renders the ARCHIVED banner from status/archivedAt fields. iOS audit needed.' },
 
     /* ---------- Seasons ---------- */
     { cat: 'Seasons', name: 'Season data model + manager', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android Season.kt / SeasonManager.kt. iOS Phase 1 (2026-05-12): Season.swift + SeasonManager.swift.' },
     { cat: 'Seasons', name: 'One-time Legacy migration (seasonId backfill)', a: 'shipped', i: 'shipped', w: 'na', notes: 'iOS SeasonMigration.swift mirrors Android; idempotent UserDefaults flag.' },
     { cat: 'Seasons', name: 'seasonId stamped on game save', a: 'shipped', i: 'shipped', w: 'na', notes: 'Both platforms auto-resolve active season for the team at save time.' },
-    { cat: 'Seasons', name: 'Season switcher in team viewer ("CURRENT SEASON" pills)', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android v1.1.278. iOS Phase 2 (2026-05-12) — pill row + filtered schedule/past-games/record in TeamHubViewerScreen. Build pending iOS 26.5 SDK install.' },
+    { cat: 'Seasons', name: 'Season switcher in team viewer ("CURRENT SEASON" pills)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Android v1.1.278. iOS TeamHubViewerScreen has allSeasons + selectedSeasonId state, pill row, filtered schedule/past-games/record. Web team.html switcher landed at commit 039bc22.' },
     { cat: 'Seasons', name: 'Season detail screen (rename / new / end)', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'Android SeasonDetailActivity. iOS deferred to Phase 3+.' },
     { cat: 'Seasons', name: 'Public season page (web)', a: 'partial', i: 'na', w: 'missing', effort: 'M', notes: 'Web team.html still surfaces hub URL; dedicated season.html lives behind future cleanup phase.' },
 
@@ -1129,8 +1149,8 @@ const FEATURES = [
     { cat: 'Streaming/YouTube', name: 'YouTube Live broadcast create / bind / start / stop', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Streaming/YouTube', name: 'Manual stream key paste (any RTMP)', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Streaming/YouTube', name: 'YouTube live chat polling + send', a: 'shipped', i: 'shipped', w: 'na' },
-    { cat: 'Streaming/YouTube', name: 'Stream quality presets (Std/High/Ultra)', a: 'shipped', i: 'stub', w: 'na', pro: true, effort: 'M', notes: 'iOS gate canSelectStreamQuality declared, no preset enum / UI.' },
-    { cat: 'Streaming/YouTube', name: 'Adaptive bitrate', a: 'shipped', i: 'stub', w: 'na', pro: true, effort: 'M', notes: 'iOS gate canUseAdaptiveBitrate declared, no AdaptiveBitrateManager.swift.' },
+    { cat: 'Streaming/YouTube', name: 'Stream quality presets (Std/High/Ultra)', a: 'shipped', i: 'shipped', w: 'na', pro: true, notes: 'Android: StreamQualityPreset.kt. iOS: StreamQualityPreset.swift (134 lines, .standard/.high/.ultra with save/loadCurrent helpers).' },
+    { cat: 'Streaming/YouTube', name: 'Adaptive bitrate', a: 'shipped', i: 'shipped', w: 'na', pro: true, notes: 'iOS AdaptiveBitrateManager.swift (196 lines) — 5s health-check tick, 25%-down on struggle, AdaptiveBitrateManagerDelegate for resolution switch. Mirrors Android.' },
     { cat: 'Streaming/YouTube', name: 'Stream duration cap (Free=10 min)', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Streaming/YouTube', name: 'Stream URL share / copy', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Streaming/YouTube', name: 'Live chat overlay during stream', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
@@ -1163,7 +1183,7 @@ const FEATURES = [
     { cat: 'Billing/Pricing', name: 'Interstitial ads on End Game', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Billing/Pricing', name: 'Rewarded ad for stats export', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Billing/Pricing', name: 'First-game Pro preview', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
-    { cat: 'Billing/Pricing', name: 'Smart paywalls (post-share / post-game / team-create / remote-connect)', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'No ConversionManager.swift on iOS.' },
+    { cat: 'Billing/Pricing', name: 'Smart paywalls (post-share / post-game / team-create / remote-connect)', a: 'shipped', i: 'shipped', w: 'na', notes: 'iOS ConversionManager.swift exposes shouldShowPostSharePrompt / shouldShowPostGamePrompt / shouldShowTeamCreationPrompt(teamCount:) / shouldShowRemotePrompt — all four prompt types match Android.' },
     { cat: 'Billing/Pricing', name: 'Free / Pro tier toggle (debug super-user)', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Billing/Pricing', name: 'Sticky banner across tab switches', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Billing/Pricing', name: 'Free / Pro tier follows real billing in release', a: 'shipped', i: 'shipped', w: 'na' },
@@ -1181,6 +1201,7 @@ const FEATURES = [
     { cat: 'Settings/Preferences', name: 'Quick Settings panel — tile count', a: 'shipped', i: 'partial', w: 'na', effort: 'M', notes: 'iOS has 16 tiles vs Android 22 — missing Fullscreen, Quality, PiP, Go Live, Ext Button.' },
     { cat: 'Settings/Preferences', name: 'About dialog with Privacy / Features links', a: 'shipped', i: 'shipped', w: 'shipped' },
     { cat: 'Settings/Preferences', name: 'In-app feedback (submitTicket Cloud Function)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Web: support.html.' },
+    { cat: 'Settings/Preferences', name: 'Light/dark theme override on web pages (?theme=light|dark)', a: 'na', i: 'na', w: 'shipped', notes: 'Commits e1d30ec, 18d106b — game.html and score.html honor ?theme= query param overriding prefers-color-scheme.' },
 
     /* ---------- Offline / Sync ---------- */
     { cat: 'Offline/Sync', name: 'Offline-first JSON file storage', a: 'shipped', i: 'shipped', w: 'na' },
@@ -1198,6 +1219,8 @@ const FEATURES = [
     { cat: 'Cloud Functions hooks', name: 'Auto-create YouTube broadcast at schedule time', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Cloud Functions hooks', name: 'submitTicket / replyToTicket / customerReplyToTicket', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'support.html uses customerReplyToTicket.' },
     { cat: 'Cloud Functions hooks', name: 'sendHubInvite (email invite to follow team)', a: 'shipped', i: 'shipped', w: 'na' },
+    { cat: 'Cloud Functions hooks', name: 'tournamentIdleReminder (pubsub, every 24h)', a: 'shipped', i: 'shipped', w: 'na', notes: 'Sweeps multi-game events with no recent child writes; nudges managers via appNotifications. Dedupes via tournamentEndReminderSentAt on the parent doc.' },
+    { cat: 'Cloud Functions hooks', name: 'consolidateOrphanScheduleOnGameComplete', a: 'shipped', i: 'shipped', w: 'na', notes: 'Server-side cleanup — replaced the older sweep_completed_schedule.py one-off script.' },
 
     /* ---------- Other/Misc — Remote scoring ---------- */
     { cat: 'Other/Misc — Remote scoring', name: 'TCP + JSON line protocol v2', a: 'shipped', i: 'shipped', w: 'na' },
@@ -1235,7 +1258,7 @@ const FEATURES = [
     { cat: 'Other/Misc', name: 'Roster editor with position pickers', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Other/Misc', name: 'Custom HSV color wheel picker', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Other/Misc', name: 'Dual team colors (primary + secondary)', a: 'shipped', i: 'shipped', w: 'na' },
-    { cat: 'Other/Misc', name: 'Floating HUD', a: 'shipped', i: 'stub', w: 'na', pro: true, effort: 'M', notes: 'iOS gate canUseFloatingHud declared but no FloatingHudView.swift.' },
+    { cat: 'Other/Misc', name: 'Floating HUD', a: 'shipped', i: 'shipped', w: 'na', pro: true, notes: 'iOS Views/FloatingRecordingHud.swift mirrors Android FloatingRecordingHud.kt — draggable transparent card, corner-snap, persisted via hud_position_x/y. Wired in ContentView under FeatureGate.canUseFloatingHud.' },
     { cat: 'Other/Misc', name: 'Wear OS / Apple Watch companion', a: 'shipped', i: 'missing', w: 'na', effort: 'L', notes: 'Android wear/ module exists. No WatchConnectivity / Apple Watch target on iOS.' },
     { cat: 'Other/Misc', name: 'Scoreboard rounded corners + 3% inset', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Other/Misc', name: 'Football field strip on overlay', a: 'shipped', i: 'shipped', w: 'na' },
