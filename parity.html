@@ -958,6 +958,10 @@ const STATUS = {
 
 // FEATURES: web column added; pro flag added; effort field for iOS gaps.
 // Verified against PARITY_AUDIT_2026-05-07 + FeatureGate.kt/swift + repo greps.
+// Drift sweep 2026-05-25 added: bowling handicap / untracked teammates / opponent
+// label, AI game summary (Labs), Fan/Coach app mode, red record CTA, stream
+// resume, pull-to-refresh career stats, event-on-past-game cards, What's New
+// web page, multi-stream playlist on game.html, super-user gate on internal pages.
 const FEATURES = [
     /* ---------- Authentication & Account ---------- */
     { cat: 'Authentication & Account', name: 'Firebase Auth — email + password', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Web auth on dashboard.html, support.html, team.html, beta.html, reset-password.html.' },
@@ -992,6 +996,8 @@ const FEATURES = [
     { cat: 'Home/Dashboard', name: 'Coach marks tutorial (5–6 step)', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Home/Dashboard', name: 'Onboarding flow (5 pages)', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Home/Dashboard', name: 'SF watermark behind Home content', a: 'shipped', i: 'partial', w: 'na' },
+    { cat: 'Home/Dashboard', name: 'Event name surfaced on past-game cards', a: 'shipped', i: 'shipped', w: 'na', notes: 'Recent Games + Team detail past-game rows show the event/tournament/league label inline, not just date + score.' },
+    { cat: 'Home/Dashboard', name: 'Home button dismisses all overlays cleanly', a: 'shipped', i: 'na', w: 'na', notes: 'Fixes a regression where tapping Home from Settings while opened from Notifications routed back to Notifications instead of Home.' },
 
     /* ---------- Game Setup & Recording ---------- */
     { cat: 'Game Setup & Recording', name: 'Sport picker (12 sports)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'score.html supports all 12 sports.' },
@@ -1026,6 +1032,10 @@ const FEATURES = [
     { cat: 'Game Setup & Recording', name: 'Bowling — big orange bowler-name banner + ← G N-1 pill', a: 'shipped', i: 'missing', w: 'na', effort: 'S', notes: 'v1.1.305 — 20sp orange bowler name, Frame N · Roll M subtitle, "← Game N-1" warp pill on game 2+ of a series.' },
     { cat: 'Game Setup & Recording', name: 'Score Only mode — orientation unlock (no rotate-to-landscape guard)', a: 'shipped', i: 'na', w: 'na', notes: 'v1.1.305 — Score Only skips the recording-orientation placeholder; fixes the bowling-scoreboard-missing-in-portrait symptom. iOS Score Only is portrait-aware by default (different scaffold).' },
     { cat: 'Game Setup & Recording', name: 'Score Only mode — Keep Screen On Quick Settings tile', a: 'shipped', i: 'na', w: 'na', notes: 'v1.1.305 — defaults ON in Score Only so bowlers don\'t have to keep waking the phone. iOS scoring screens already keep screen on via idleTimerDisabled.' },
+    { cat: 'Game Setup & Recording', name: 'Bowling — handicap per bowler (team H2H)', a: 'shipped', i: 'shipped', w: 'na', notes: 'Per-bowler handicap entered at setup. Adjusted totals (raw + handicap × gameCount) drive W/L in buildGameSummary.' },
+    { cat: 'Game Setup & Recording', name: 'Bowling — untracked teammates (per-game scores only)', a: 'shipped', i: 'shipped', w: 'na', notes: 'Add roster members at game start whose game scores you record without per-frame scoring. Prompts at end of each 10-frame game. Editable later. Surfaced on the game web page.' },
+    { cat: 'Game Setup & Recording', name: 'Bowling — opponent label on scoreboard ("vs Opponent")', a: 'shipped', i: 'shipped', w: 'na', notes: 'Pulls from the same opponent field the schedule uses; renders after the event label.' },
+    { cat: 'Game Setup & Recording', name: 'Scheduled-opponent prefill in bowling setup', a: 'shipped', i: 'shipped', w: 'na', notes: 'Game setup auto-fills opponent + event when launched from a scheduled game.' },
 
     /* ---------- Video Recording ---------- */
     { cat: 'Video Recording', name: 'Camera capture pipeline', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android: Camera2 + OpenGL ES. iOS: AVCaptureSession + Metal.' },
@@ -1071,6 +1081,7 @@ const FEATURES = [
     { cat: 'Game History', name: 'Stats export PDF', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Game History', name: 'Rebuild career stats from history', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
     { cat: 'Game History', name: 'Locked / archived games (free overflow)', a: 'shipped', i: 'missing', w: 'na', effort: 'S', notes: 'maxSavedGames=10 declared on iOS but not enforced — Pro-tier leak.' },
+    { cat: 'Game History', name: 'Pull-to-refresh on player profile → cloud career-stats rebuild', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'v1.1.411 Android — swipe down on player drill-down forces a server-side rebuild from game history (handles cross-device staleness + manual edits). iOS port pending.' },
 
     /* ---------- Schedule / Agenda ---------- */
     { cat: 'Schedule/Agenda', name: 'Schedule add / edit / delete', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Manager edits schedule on team.html.' },
@@ -1126,6 +1137,9 @@ const FEATURES = [
     { cat: 'Streaming/YouTube', name: 'Stream survives backgrounding', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
     { cat: 'Streaming/YouTube', name: 'Auto-thumbnail generation', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
     { cat: 'Streaming/YouTube', name: 'Amazon IVS streaming', a: 'shipped', i: 'missing', w: 'na', effort: 'L', notes: 'Deliberately skipped on iOS per YouTube-invisible-plumbing strategy.' },
+    { cat: 'Streaming/YouTube', name: 'Stream resume after process bounce (same YouTube broadcast)', a: 'shipped', i: 'na', w: 'na', notes: 'StreamResumeStore snapshot persisted so a relaunch re-attaches to the same broadcast instead of opening a new URL. FGS (mediaPlayback) keeps the process alive in the first place. iOS background-task lifecycle differs.' },
+    { cat: 'Streaming/YouTube', name: 'Red record CTA + dedicated APP MODE settings card', a: 'shipped', i: 'na', w: 'na', notes: 'v1.1.217 — record button is always-visible bright red; APP MODE Fan/Coach toggle moved into its own settings card.' },
+    { cat: 'Streaming/YouTube', name: 'Multi-stream playlist on game.html', a: 'na', i: 'na', w: 'shipped', notes: 'Games with >1 stream link render as a selectable playlist on the public game page instead of one default link.' },
 
     /* ---------- Watch Page / Live Viewing ---------- */
     { cat: 'Watch Page/Live Viewing', name: 'watch.html (HLS + Firebase scoreboard)', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Web page shared.' },
@@ -1212,6 +1226,8 @@ const FEATURES = [
     { cat: 'Web Only', name: 'President of the World concept', a: 'na', i: 'na', w: 'shipped', notes: 'Side project / concept page.' },
     { cat: 'Web Only', name: 'Public team page (team.html)', a: 'na', i: 'na', w: 'shipped', notes: 'Schedule + roster + past games + live stream.' },
     { cat: 'Web Only', name: 'Per-game page (game.html — countdown + replay)', a: 'na', i: 'na', w: 'shipped' },
+    { cat: 'Web Only', name: 'What\'s New changelog (whatsnew.html)', a: 'na', i: 'na', w: 'shipped', notes: '2026-05-25 — public reverse-chrono changelog grouped by month. Data-driven from a JS array; new entries are a one-object prepend.' },
+    { cat: 'Web Only', name: 'Super-user gate on internal pages (parity + architecture)', a: 'na', i: 'na', w: 'shipped', notes: '2026-05-24 — both pages now require Firebase auth + app_config/super_users membership. Soft gate (HTML still visible via View Source — acceptable for strategy pages).' },
 
     /* ---------- Other / Misc ---------- */
     { cat: 'Other/Misc', name: 'Sport settings (per-sport defaults)', a: 'shipped', i: 'shipped', w: 'na' },
@@ -1228,6 +1244,10 @@ const FEATURES = [
     { cat: 'Other/Misc', name: 'In-app update checker (Remote Config)', a: 'shipped', i: 'na', w: 'na', notes: 'iOS uses App Store TestFlight.' },
     { cat: 'Other/Misc', name: 'Privacy policy + terms / delete-account pages', a: 'shipped', i: 'shipped', w: 'shipped', notes: 'Web shared.' },
     { cat: 'Other/Misc', name: 'Support / tickets archive (open vs closed split)', a: 'shipped', i: 'shipped', w: 'shipped' },
+    { cat: 'Other/Misc', name: 'Fan / Coach app mode role split', a: 'shipped', i: 'shipped', w: 'na', notes: 'UserRole enum (FAN / COACH) with first-launch picker, fan-only Home, Coach-only recording shell. Settings switcher under APP MODE.' },
+    { cat: 'Other/Misc', name: 'AI Game Summary (Labs)', a: 'shipped', i: 'shipped', w: 'shipped', pro: true, notes: 'Post-game recap via Claude API; saved on the GameSummary as aiRecap. Rendered on the game web page when present. Labs / Pro gated.' },
+    { cat: 'Other/Misc', name: 'ScoreFrameAdmin internal tool (com.scoreframe.admin)', a: 'shipped', i: 'na', w: 'na', notes: 'Internal-only Android APK distributed via Firebase App Distribution. Tickets, User Lookup, Broadcast Composer, Team Sharing health, Broadcast health, Metrics tile. Not customer-facing.' },
+    { cat: 'Other/Misc', name: 'Hub → "Team Sharing" UX rename', a: 'shipped', i: 'shipped', w: 'shipped', notes: '2026-05-24 — every user-facing "Hub" / "Hubs" label renamed to "Team Sharing" / "Team Shares". Data field names (subscribedHubs, hubCode, hubIndex) unchanged.' },
     { cat: 'Other/Misc', name: 'Foreground service for connection lifetime', a: 'shipped', i: 'na', w: 'na', notes: 'iOS uses background tasks instead.' },
     { cat: 'Other/Misc', name: 'AppNotificationManager (badge + JSON cache)', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Other/Misc', name: 'Permissions flow (Camera/Mic/Photos/BT/Network)', a: 'shipped', i: 'shipped', w: 'na' },
