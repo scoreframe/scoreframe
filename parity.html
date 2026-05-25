@@ -618,6 +618,75 @@ details.collapsible > .inner {
 </style>
 </head>
 <body>
+<!-- ============ SUPER-USER GATE — START ============ -->
+<!-- Visually hides the actual page until a super-user signs in.
+     Note: the HTML is still readable via View Source — this is a
+     soft access gate, not server-enforced protection. Acceptable for
+     internal strategy pages; revisit if true secrecy is ever needed. -->
+<style id="sf-pre-gate-style">body > *:not(#sf-superuser-gate) { display: none !important; }</style>
+<div id="sf-superuser-gate" style="position:fixed;inset:0;background:#0D0D0D;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#E0E0E0;text-align:center;padding:20px;">
+  <div style="font-size:22px;margin-bottom:14px;color:#FF9640;font-weight:700;">Restricted</div>
+  <div id="sf-gate-msg" style="font-size:14px;color:#999;margin-bottom:20px;max-width:420px;line-height:1.4;">Internal page. Sign in with a super-user Google account to continue.</div>
+  <button id="sf-gate-btn" style="background:#FF9640;color:#0D0D0D;border:0;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Sign in with Google</button>
+  <div id="sf-gate-err" style="color:#EF4444;font-size:12px;margin-top:14px;min-height:1em;"></div>
+</div>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+const app = initializeApp({
+  apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+  authDomain: "scoreframe-deploy.firebaseapp.com",
+  projectId: "scoreframe-deploy",
+  storageBucket: "scoreframe-deploy.firebasestorage.app",
+  messagingSenderId: "728886280072",
+  appId: "1:728886280072:android:0050478669b89fc76b043d"
+});
+const db = getFirestore(app);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(()=>{});
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: 'select_account' });
+const ua = navigator.userAgent || '';
+const useRedirect = /iP(hone|ad|od)|Safari/i.test(ua) && !/Chrome|CriOS|FxiOS/i.test(ua);
+const $g = document.getElementById('sf-superuser-gate');
+const $msg = document.getElementById('sf-gate-msg');
+const $btn = document.getElementById('sf-gate-btn');
+const $err = document.getElementById('sf-gate-err');
+const $style = document.getElementById('sf-pre-gate-style');
+async function signIn() {
+  $err.textContent = '';
+  try {
+    if (useRedirect) await signInWithRedirect(auth, provider);
+    else await signInWithPopup(auth, provider);
+  } catch (e) { $err.textContent = e.message || String(e); }
+}
+$btn.onclick = signIn;
+getRedirectResult(auth).catch(()=>{});
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    $msg.textContent = 'Internal page. Sign in with a super-user Google account to continue.';
+    $btn.textContent = 'Sign in with Google';
+    $btn.onclick = signIn;
+    return;
+  }
+  let isSuper = false;
+  try {
+    const snap = await getDoc(doc(db, 'app_config', 'super_users'));
+    const uids = snap.exists() ? (snap.data().uids || []) : [];
+    isSuper = Array.isArray(uids) && uids.includes(user.uid);
+  } catch (e) { console.warn('super-user check failed:', e); }
+  if (!isSuper) {
+    $msg.textContent = `Signed in as ${user.email}, but this account isn't on the super-user list.`;
+    $btn.textContent = 'Sign out';
+    $btn.onclick = async () => { await signOut(auth); location.reload(); };
+    return;
+  }
+  $style.remove();
+  $g.remove();
+});
+</script>
+<!-- ============ SUPER-USER GATE — END ============ -->
 
 <div class="header">
     <div class="logo">Score<span class="frame">Frame</span></div>
