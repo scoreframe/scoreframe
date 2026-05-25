@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0D0D0D">
+<title>What's New — ScoreFrame</title>
+<link rel="canonical" href="https://scoreframe.app/whatsnew.html" />
+<meta name="description" content="Recent feature updates to ScoreFrame on iPhone and Android." />
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0D0D0D;
+  --surface: #1A1A1A;
+  --surface-2: #232323;
+  --accent: #FF9640;
+  --accent-dim: rgba(255,150,64,0.12);
+  --text: #E8E6F0;
+  --text-mute: #999;
+  --text-dim: #666;
+  --border: #2A2A2A;
+}
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.nav {
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand {
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+.brand-orange { color: var(--accent); }
+.nav-links { display: flex; gap: 18px; font-size: 13px; color: var(--text-mute); }
+.nav-links a { color: var(--text-mute); }
+.nav-links a:hover { color: var(--text); text-decoration: none; }
+
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+}
+
+header.hero {
+  margin-bottom: 36px;
+}
+header.hero h1 {
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+header.hero h1 .accent { color: var(--accent); }
+header.hero p {
+  color: var(--text-mute);
+  font-size: 15px;
+  max-width: 540px;
+}
+
+.month {
+  margin-top: 36px;
+}
+.month-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  text-transform: uppercase;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 18px;
+}
+
+.entry {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.entry-icon {
+  font-size: 26px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+  padding-top: 2px;
+}
+.entry-body { flex: 1; min-width: 0; }
+.entry-title {
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 4px;
+  letter-spacing: -0.005em;
+}
+.entry-meta {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.entry-meta .pill {
+  background: var(--surface-2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--text-mute);
+}
+.entry-text {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+footer {
+  margin-top: 60px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+}
+footer a { color: var(--text-mute); }
+
+@media (max-width: 520px) {
+  .wrap { padding: 28px 16px 60px; }
+  header.hero h1 { font-size: 30px; }
+  .entry { padding: 16px; gap: 12px; }
+  .entry-icon { font-size: 22px; width: 28px; }
+}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="brand">Score<span class="brand-orange">Frame</span></a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/support.html">Support</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header class="hero">
+    <h1>What's <span class="accent">New</span></h1>
+    <p>Recent feature drops on ScoreFrame for iPhone and Android. Newest first.</p>
+  </header>
+
+  <main id="entries"></main>
+
+  <footer>
+    <p>Want more? See the <a href="/">full app overview</a> · feedback at <a href="mailto:support@scoreframe.app">support@scoreframe.app</a></p>
+  </footer>
+</div>
+
+<script>
+// ── Entries — newest first. To add a new one, prepend an object below.
+// Fields: date (YYYY-MM, used for grouping + sort), title, body, emoji,
+// optional `platforms` array (["iOS"], ["Android"], or both).
+const entries = [
+  {
+    date: '2026-05',
+    title: 'Multi-stream playlist on game pages',
+    emoji: '🎞',
+    platforms: ['Web'],
+    body: 'Games with more than one stream link now surface them as a playlist on the public game page. Pick which feed to watch without leaving the page.',
+  },
+  {
+    date: '2026-05',
+    title: 'Red record CTA + dedicated APP MODE settings',
+    emoji: '⏺',
+    platforms: ['Android'],
+    body: 'The record button is now unmissable — bright red, always-on-screen when ready to roll. APP MODE moved into its own settings card so Fan / Coach switching is one tap.',
+  },
+  {
+    date: '2026-05',
+    title: 'Fan mode + Coach mode',
+    emoji: '🎟',
+    platforms: ['Android', 'iOS'],
+    body: 'A clean split between the people scoring/recording the game and the people watching from the stands. Fans get a focused home with their favorite teams, a remote-control dialog, and a streamlined game viewer.',
+  },
+  {
+    date: '2026-05',
+    title: 'Stream resume after process bounce',
+    emoji: '🔄',
+    platforms: ['Android'],
+    body: 'If Android kills the app mid-stream (low memory, screen off, system upgrade nag), ScoreFrame now re-attaches to the same YouTube broadcast on relaunch instead of starting a new one. Your viewers stay on the same URL.',
+  },
+  {
+    date: '2026-05',
+    title: 'Bluetooth remote scoring across iOS ↔ Android',
+    emoji: '📱',
+    platforms: ['Android', 'iOS'],
+    body: 'Pair an iPhone scorer with an Android camera (or any combo) over Bluetooth. No Wi-Fi router, no hotspot — works in venues with no network at all.',
+  },
+  {
+    date: '2026-05',
+    title: 'Bowling head-to-head with handicap',
+    emoji: '🎳',
+    platforms: ['Android', 'iOS'],
+    body: 'Set a per-bowler handicap before the match. Final W/L uses raw scratch + handicap totals. Plus untracked teammates: add roster members at game start whose game scores you record without per-frame scoring.',
+  },
+  {
+    date: '2026-05',
+    title: 'Seasons + Tournaments',
+    emoji: '🏆',
+    platforms: ['Android', 'iOS'],
+    body: 'Group a season of games under one roof. Tournaments live as multi-game events inside a season, so a bracket / weekend round-robin stays organized without flooding the regular schedule.',
+  },
+  {
+    date: '2026-05',
+    title: 'Pull-to-refresh on career stats',
+    emoji: '🔁',
+    platforms: ['Android'],
+    body: 'Tug a player profile down to force a fresh rebuild of their career stats from the cloud — handy after editing a past game or when stats look stale across devices.',
+  },
+  {
+    date: '2026-05',
+    title: 'Notification archive + event names on past games',
+    emoji: '🔔',
+    platforms: ['Android', 'iOS'],
+    body: 'The in-app notification bell now keeps a permanent archive of every alert. Past-game cards on Home and Team pages show the event name (Tournament, League, Scrimmage) instead of just the date.',
+  },
+];
+
+// Group by date string (YYYY-MM), render in reverse-chrono order.
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function monthLabel(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  return MONTHS[m - 1] + ' ' + y;
+}
+
+const grouped = {};
+for (const e of entries) {
+  if (!grouped[e.date]) grouped[e.date] = [];
+  grouped[e.date].push(e);
+}
+const sortedKeys = Object.keys(grouped).sort().reverse();
+
+const container = document.getElementById('entries');
+for (const k of sortedKeys) {
+  const section = document.createElement('section');
+  section.className = 'month';
+  const h = document.createElement('div');
+  h.className = 'month-label';
+  h.textContent = monthLabel(k);
+  section.appendChild(h);
+  for (const e of grouped[k]) {
+    const card = document.createElement('article');
+    card.className = 'entry';
+    const icon = document.createElement('div');
+    icon.className = 'entry-icon';
+    icon.textContent = e.emoji || '✨';
+    const body = document.createElement('div');
+    body.className = 'entry-body';
+    const t = document.createElement('div');
+    t.className = 'entry-title';
+    t.textContent = e.title;
+    body.appendChild(t);
+    if (e.platforms && e.platforms.length) {
+      const meta = document.createElement('div');
+      meta.className = 'entry-meta';
+      for (const p of e.platforms) {
+        const pill = document.createElement('span');
+        pill.className = 'pill';
+        pill.textContent = p;
+        meta.appendChild(pill);
+      }
+      body.appendChild(meta);
+    }
+    const txt = document.createElement('div');
+    txt.className = 'entry-text';
+    txt.textContent = e.body;
+    body.appendChild(txt);
+    card.appendChild(icon);
+    card.appendChild(body);
+    section.appendChild(card);
+  }
+  container.appendChild(section);
+}
+</script>
+</body>
+</html>
