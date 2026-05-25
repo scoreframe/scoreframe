@@ -224,7 +224,7 @@ tr[data-attn="attn"] td:first-child strong::before {
             <div class="tab active" data-tab="broadcast">Broadcast</div>
             <div class="tab" data-tab="active">Active Broadcasts</div>
             <div class="tab" data-tab="tickets">Tickets <span id="ticketBadge" class="tab-badge" style="display:none;"></span></div>
-            <div class="tab" data-tab="hubs">Hubs</div>
+            <div class="tab" data-tab="hubs">Team Sharing</div>
             <div class="tab" data-tab="health">Health</div>
         </div>
 
@@ -306,8 +306,8 @@ tr[data-attn="attn"] td:first-child strong::before {
         <!-- Tab: Hubs Overview -->
         <div id="tab-hubs" class="tab-panel" style="display: none;">
             <div class="card">
-                <h2>Hub Health</h2>
-                <div class="hint">Quick view of hubs with stuck live state — useful for support. Tap "Clear" to run forceClearLiveState remotely.</div>
+                <h2>Team Sharing Health</h2>
+                <div class="hint">Quick view of team shares with stuck live state — useful for support. Tap "Clear" to run forceClearLiveState remotely.</div>
                 <div id="hubsStats" class="stats-grid"></div>
                 <div style="margin-top: 16px;" id="stuckHubs"></div>
             </div>
@@ -600,7 +600,7 @@ async function loadHubs() {
             <div class="stat-card"><div class="label">Stuck Live</div><div class="value">${stuckCount}</div></div>
         `;
         if (stuckList.length === 0) {
-            stuck.innerHTML = '<div class="empty">No hubs are stuck.</div>';
+            stuck.innerHTML = '<div class="empty">No team shares are stuck.</div>';
         } else {
             const rows = stuckList.map(s => html`
                 <tr>
@@ -610,7 +610,7 @@ async function loadHubs() {
                     <td><button class="secondary" onclick="clearStuckHub('${s.teamId}')">Clear</button></td>
                 </tr>`).join('');
             stuck.innerHTML = `
-                <h2 style="margin-top: 24px;">Stuck-Live Hubs</h2>
+                <h2 style="margin-top: 24px;">Stuck-Live Team Shares</h2>
                 <table>
                     <thead><tr><th>Team</th><th>Last update</th><th>Stream</th><th></th></tr></thead>
                     <tbody>${rows}</tbody>
@@ -622,7 +622,7 @@ async function loadHubs() {
 }
 
 async function clearStuckHub(teamId) {
-    if (!confirm('Clear stuck live state on this hub? Equivalent to the Danger-Zone button in the app.')) return;
+    if (!confirm('Clear stuck live state on this team share? Equivalent to the Danger-Zone button in the app.')) return;
     try {
         // Mirror TeamHubManager.forceClearLiveState — clear hub.activeStream*
         // and flip schedule entries stuck at status="live" back to "completed".
