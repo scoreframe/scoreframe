@@ -1065,7 +1065,7 @@ const FEATURES = [
     { cat: 'Video Recording', name: 'Mic mute toggle', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Video Recording', name: 'Camera snapshot (JPEG with overlay)', a: 'shipped', i: 'shipped', w: 'na' },
     { cat: 'Video Recording', name: 'Screen-dim mode (black + brightness 0)', a: 'shipped', i: 'partial', w: 'na', effort: 'S' },
-    { cat: 'Video Recording', name: 'Storage warning system', a: 'shipped', i: 'partial', w: 'na', effort: 'S', notes: 'iOS counterpart not verified at line level.' },
+    { cat: 'Video Recording', name: 'Storage warning system', a: 'shipped', i: 'missing', w: 'na', effort: 'S', notes: 'Android has real-time recording storage estimate with toasts / persistent indicator / dialog / auto-stop thresholds. iOS only reads freeDiskMB once for ticket debugInfo dumps — no active warning system. Verified via grep.' },
     { cat: 'Video Recording', name: 'External BT button', a: 'shipped', i: 'shipped', w: 'na', pro: true, notes: 'iOS: MPRemoteCommandCenter + AVAudioSession volume KVO.' },
     { cat: 'Video Recording', name: 'External BT zoom buttons', a: 'shipped', i: 'shipped', w: 'na', pro: true },
     { cat: 'Video Recording', name: 'Portrait mode recording', a: 'shipped', i: 'shipped', w: 'na' },
@@ -1105,7 +1105,7 @@ const FEATURES = [
     { cat: 'Schedule/Agenda', name: 'Pre-game "attach to schedule" picker (sport-filtered, 2-step)', a: 'shipped', i: 'na', w: 'na', effort: 'M', notes: 'Android v1.1.301: sport-filter the schedule list, team picker → event picker with "show past events" toggle. iOS doesn\'t currently surface this picker at all — attach happens via Schedule tab "Start Game" button. Separate UX, not a direct port.' },
     { cat: 'Schedule/Agenda', name: 'Schedule → game-setup pre-fill (opponent / event title / location)', a: 'shipped', i: 'shipped', w: 'na', notes: 'v1.1.302 — picker passes full schedule payload through intent extras (Android) / GameSetupConfig (iOS).' },
     { cat: 'Schedule/Agenda', name: 'Single Event title field (eventName + eventLabel collapsed)', a: 'shipped', i: 'shipped', w: 'na', notes: 'v1.1.302 — one input on ScheduleGameDialog/Sheet writes both fields; unifiedTitle accessor on ScheduledGame handles legacy reads.' },
-    { cat: 'Schedule/Agenda', name: 'Edit Event dialog (long-press) — unified title + remove YouTube stream', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'Android v1.1.302. iOS Schedule tab lacks an edit dialog; would need to add to ScheduleScreen.' },
+    { cat: 'Schedule/Agenda', name: 'Edit Event dialog (long-press) — unified title + remove YouTube stream', a: 'shipped', i: 'shipped', w: 'na', notes: 'Android v1.1.302. iOS ScheduleScreen has editEventTarget State + EditEventTarget struct ("v15 — Mirrors Android showEditEventDialog").' },
     { cat: 'Schedule/Agenda', name: 'saveGame status-preserve (no overwrite on scheduled/live/cancelled)', a: 'shipped', i: 'shipped', w: 'na', notes: 'v1.1.299 — read-then-write per teamId. Recovers existing clobbered docs on next sign-in via recoverClobberedSchedule.' },
     { cat: 'Schedule/Agenda', name: 'End-Game schedule-entry consolidation (single past-games doc)', a: 'shipped', i: 'missing', w: 'na', effort: 'M', notes: 'Android v1.1.304 — pushGameToTeamHubs deletes the matching schedule entry after copying its streams[] into the new past-games doc. iOS doesn\'t have an equivalent consolidation path; schedule entries stuck at status=live linger.' },
 
