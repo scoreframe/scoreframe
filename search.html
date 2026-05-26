@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0D0D0D">
+<title>Find Teams — ScoreFrame</title>
+<link rel="canonical" href="https://scoreframe.app/search.html" />
+<meta name="description" content="Find a team on ScoreFrame to follow." />
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0D0D0D;
+  --surface: #1A1A1A;
+  --surface-2: #232323;
+  --accent: #FF9640;
+  --accent-dim: rgba(255,150,64,0.12);
+  --text: #E8E6F0;
+  --text-mute: #999;
+  --text-dim: #666;
+  --border: #2A2A2A;
+  --green: #2EA644;
+  --red: #D92E2E;
+}
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.nav {
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.brand { font-weight: 800; font-size: 17px; letter-spacing: -0.01em; }
+.brand-orange { color: var(--accent); }
+.nav-links { display: flex; gap: 18px; font-size: 13px; color: var(--text-mute); }
+.nav-links a { color: var(--text-mute); }
+.nav-links a:hover { color: var(--text); text-decoration: none; }
+
+.wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+
+h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
+h1 .accent { color: var(--accent); }
+.subtitle { color: var(--text-mute); font-size: 14px; margin-bottom: 24px; }
+
+.search-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+.search-card input, .search-card select {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.search-card input:focus, .search-card select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.search-card label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  margin-top: 12px;
+}
+.search-card label:first-child { margin-top: 0; }
+.filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.results { min-height: 60px; }
+.result {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.result-icon { font-size: 24px; line-height: 1; width: 32px; text-align: center; }
+.result-body { flex: 1; min-width: 0; }
+.result-name { font-weight: 700; font-size: 15px; }
+.result-meta {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-mute);
+}
+.result-meta .pill {
+  background: var(--surface-2);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.result-meta .pill.public { background: rgba(46,166,68,0.15); color: var(--green); }
+.result-meta .pill.invite { background: rgba(255,150,64,0.15); color: var(--accent); }
+.result-actions { display: flex; gap: 8px; }
+.btn {
+  background: var(--accent);
+  color: #0D0D0D;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn:hover { filter: brightness(1.1); }
+.btn-outline {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.empty, .hint {
+  text-align: center;
+  color: var(--text-mute);
+  font-size: 13px;
+  padding: 24px 12px;
+}
+.hint { font-size: 12px; color: var(--text-dim); }
+
+footer {
+  margin-top: 60px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+}
+footer a { color: var(--text-mute); }
+
+@media (max-width: 520px) {
+  .wrap { padding: 24px 16px 60px; }
+  h1 { font-size: 26px; }
+  .filter-row { grid-template-columns: 1fr; }
+  .result { flex-wrap: wrap; }
+  .result-actions { width: 100%; padding-left: 44px; }
+}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="brand">Score<span class="brand-orange">Frame</span></a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/dashboard.html">Dashboard</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <h1>Find <span class="accent">Teams</span></h1>
+  <p class="subtitle">Search by name. Use city or sport to narrow it down when there are matches.</p>
+
+  <section class="search-card">
+    <label for="q">Team name</label>
+    <input id="q" type="search" placeholder="e.g. Wildcats" autocomplete="off" autofocus />
+    <div class="filter-row">
+      <div>
+        <label for="city">City (optional)</label>
+        <input id="city" type="search" placeholder="Topeka" autocomplete="off" />
+      </div>
+      <div>
+        <label for="sport">Sport (optional)</label>
+        <select id="sport">
+          <option value="">Any sport</option>
+          <option>BASKETBALL</option>
+          <option>FOOTBALL</option>
+          <option>BOWLING</option>
+          <option>SOCCER</option>
+          <option>VOLLEYBALL</option>
+          <option>BASEBALL</option>
+          <option>SOFTBALL</option>
+          <option>TENNIS</option>
+          <option>PICKLEBALL</option>
+          <option>HOCKEY</option>
+          <option>LACROSSE</option>
+          <option>GENERIC</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <div id="results" class="results">
+    <div class="hint">Start typing a team name to search.</div>
+  </div>
+
+  <footer>
+    <p>Don't see your team? Ask the coach to enable sharing on their team — privacy stays in their control.</p>
+    <p style="margin-top:8px;"><a href="mailto:support@scoreframe.app">support@scoreframe.app</a></p>
+  </footer>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+  getFirestore, collection, query, where, getDocs, limit, orderBy
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+  authDomain: "scoreframe-deploy.firebaseapp.com",
+  projectId: "scoreframe-deploy",
+  storageBucket: "scoreframe-deploy.firebasestorage.app",
+  messagingSenderId: "728886280072",
+  appId: "1:728886280072:android:0050478669b89fc76b043d"
+});
+const db = getFirestore(app);
+
+const SPORT_EMOJI = {
+  BASKETBALL: '🏀', FOOTBALL: '🏈', BOWLING: '🎳', SOCCER: '⚽',
+  VOLLEYBALL: '🏐', BASEBALL: '⚾', SOFTBALL: '🥎', TENNIS: '🎾',
+  PICKLEBALL: '🏓', HOCKEY: '🏒', LACROSSE: '🥍', GENERIC: '🎯',
+};
+
+const $q = document.getElementById('q');
+const $city = document.getElementById('city');
+const $sport = document.getElementById('sport');
+const $results = document.getElementById('results');
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+let lastQuery = '';
+let pending = null;
+
+function runSearch() {
+  const name = $q.value.trim();
+  const city = $city.value.trim();
+  const sport = $sport.value.trim();
+  const key = `${name}|${city}|${sport}`;
+  if (key === lastQuery) return;
+  lastQuery = key;
+  if (!name && !city && !sport) {
+    $results.innerHTML = '<div class="hint">Start typing a team name to search.</div>';
+    return;
+  }
+  if (name.length > 0 && name.length < 2) {
+    $results.innerHTML = '<div class="hint">Type at least 2 characters.</div>';
+    return;
+  }
+  $results.innerHTML = '<div class="hint">Searching…</div>';
+  if (pending) clearTimeout(pending);
+  pending = setTimeout(() => doSearch(name, city, sport), 220);
+}
+
+async function doSearch(name, city, sport) {
+  try {
+    // Strategy: query teamSearchIndex by the most selective filter we
+    // have. Name prefix when the user typed one (anchored Firestore
+    // range query); otherwise sport / city.
+    const col = collection(db, 'teamSearchIndex');
+    let q;
+    if (name) {
+      const lower = name.toLowerCase();
+      q = query(col,
+        orderBy('nameLower'),
+        // Firestore prefix-match: range with the high-Unicode sentinel.
+        where('nameLower', '>=', lower),
+        where('nameLower', '<=', lower + '\uF8FF'),
+        limit(40)
+      );
+    } else if (city) {
+      const lower = city.toLowerCase();
+      q = query(col,
+        orderBy('cityLower'),
+        where('cityLower', '>=', lower),
+        where('cityLower', '<=', lower + '\uF8FF'),
+        limit(40)
+      );
+    } else if (sport) {
+      q = query(col, where('sport', '==', sport), limit(40));
+    }
+    const snap = await getDocs(q);
+    let rows = [];
+    snap.forEach(d => rows.push(d.data()));
+
+    // Client-side narrow on the secondary filters Firestore can't easily
+    // combine without composite indexes for every permutation.
+    if (sport) rows = rows.filter(r => (r.sport || '') === sport);
+    if (city) {
+      const c = city.toLowerCase();
+      rows = rows.filter(r => (r.cityLower || '').includes(c));
+    }
+    if (name) {
+      const n = name.toLowerCase();
+      rows = rows.filter(r => (r.nameLower || '').includes(n));
+    }
+
+    if (rows.length === 0) {
+      $results.innerHTML = '<div class="empty">No teams match. Try a shorter name or check the spelling.</div>';
+      return;
+    }
+
+    $results.innerHTML = rows.map(r => {
+      const emoji = SPORT_EMOJI[r.sport] || '🏷';
+      const visClass = r.visibility === 'public' ? 'public' : 'invite';
+      const visLabel = r.visibility === 'public' ? 'PUBLIC' : 'INVITE ONLY';
+      const meta = [
+        `<span class="pill ${visClass}">${visLabel}</span>`,
+        r.sport ? `<span class="pill">${escapeHtml(r.sport)}</span>` : '',
+        r.city ? `<span>📍 ${escapeHtml(r.city)}${r.region ? ', ' + escapeHtml(r.region) : ''}</span>` : '',
+        r.ownerNameInitial ? `<span>👤 ${escapeHtml(r.ownerNameInitial)}</span>` : '',
+      ].filter(Boolean).join(' ');
+      const followLabel = r.visibility === 'public' ? 'Follow' : 'Request to follow';
+      const viewUrl = `team.html?code=${encodeURIComponent(r.hubCode)}`;
+      return `
+        <div class="result">
+          <div class="result-icon">${emoji}</div>
+          <div class="result-body">
+            <div class="result-name">${escapeHtml(r.name)}</div>
+            <div class="result-meta">${meta}</div>
+          </div>
+          <div class="result-actions">
+            <a class="btn-outline btn" href="${viewUrl}">View</a>
+            <a class="btn" href="${viewUrl}#follow">${followLabel}</a>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    console.warn('search failed:', e);
+    $results.innerHTML = `<div class="empty" style="color:var(--red)">Search failed: ${escapeHtml(e.message || String(e))}</div>`;
+  }
+}
+
+[$q, $city, $sport].forEach(el => el.addEventListener('input', runSearch));
+[$q, $city, $sport].forEach(el => el.addEventListener('change', runSearch));
+
+// Honor a ?q= deep-link so we can drive entries from the app.
+const urlQ = new URLSearchParams(location.search).get('q');
+if (urlQ) { $q.value = urlQ; runSearch(); }
+</script>
+</body>
+</html>
