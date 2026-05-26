@@ -670,6 +670,15 @@ async function loadDashboard() {
             }
         }
 
+        // Find Teams CTA — top of dashboard, above all team sections.
+        // Search now requires sign-in (gated by Firestore rules); since
+        // a signed-in user is already on this page, link them straight
+        // to the search UI rather than making them hunt for it.
+        html += `<a href="/search.html" style="display:block; text-decoration:none; background:linear-gradient(135deg, rgba(255,150,64,0.18), rgba(255,150,64,0.06)); border:1px solid rgba(255,150,64,0.4); border-radius:12px; padding:14px 18px; margin-bottom:20px;">
+            <div style="font-size:15px; font-weight:700; color:var(--accent);">🔎 Find Teams</div>
+            <div style="font-size:12px; color:var(--text-mute); margin-top:4px;">Search by name, city, or sport across every team that has sharing enabled. Public auto-follow, Invite Only requires approval.</div>
+        </a>`;
+
         if (ownedTeams.length > 0) {
             html += `<div class="section-header">My Teams</div>`;
             for (const t of ownedTeams) html += teamCard(t, 'owner');
@@ -687,7 +696,7 @@ async function loadDashboard() {
 
         if (ownedTeams.length === 0 && managedTeams.length === 0 && followedTeams.length === 0) {
             html += `<div class="empty-state">
-                No teams yet. Follow a team or create one in the ScoreFrame app.
+                No teams yet. <a href="/search.html" style="color:var(--accent); font-weight:600;">Find a team to follow</a>, or create one in the ScoreFrame app.
             </div>`;
         }
 

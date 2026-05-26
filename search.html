@@ -181,9 +181,23 @@ footer a { color: var(--text-mute); }
   <h1>Find <span class="accent">Teams</span></h1>
   <p class="subtitle">Search by name. Use city or sport to narrow it down when there are matches.</p>
 
-  <section class="search-card">
+  <!-- Signed-out gate. Search is for signed-in users only — keeps the
+       teamSearchIndex from being trivially scraped while still letting
+       direct team-page links (team.html?code=XXXX) work for anyone. -->
+  <section class="search-card" id="signInPanel" style="display:none;">
+    <label style="font-size:13px; letter-spacing:0; text-transform:none; color:var(--text); font-weight:600; margin-bottom:8px;">Sign in to find teams</label>
+    <p style="font-size:13px; color:var(--text-mute); margin-bottom:14px; line-height:1.5;">
+      A free account keeps Find Teams out of scrapers' reach and unlocks notifications, invitations, and cross-device sync.
+      You can still open a team's public page directly if you have the share link.
+    </p>
+    <button id="signInBtn" style="background:var(--accent); color:#0D0D0D; border:0; border-radius:8px; padding:10px 18px; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit;">
+      Sign in with Google
+    </button>
+  </section>
+
+  <section class="search-card" id="searchPanel" style="display:none;">
     <label for="q">Team name</label>
-    <input id="q" type="search" placeholder="e.g. Wildcats" autocomplete="off" autofocus />
+    <input id="q" type="search" placeholder="e.g. Wildcats" autocomplete="off" />
     <div class="filter-row">
       <div>
         <label for="city">City (optional)</label>
@@ -210,7 +224,7 @@ footer a { color: var(--text-mute); }
     </div>
   </section>
 
-  <div id="results" class="results">
+  <div id="results" class="results" style="display:none;">
     <div class="hint">Start typing a team name to search.</div>
   </div>
 
@@ -225,6 +239,10 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/fireba
 import {
   getFirestore, collection, query, where, getDocs, limit, orderBy
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+  onAuthStateChanged, setPersistence, browserLocalPersistence
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const app = initializeApp({
   apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
@@ -235,6 +253,39 @@ const app = initializeApp({
   appId: "1:728886280072:android:0050478669b89fc76b043d"
 });
 const db = getFirestore(app);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(()=>{});
+
+// Sign-in / sign-out → toggle the two panels. Search is gated so the
+// teamSearchIndex isn't an open scraping target. Direct team-page links
+// (team.html?code=…) stay public — only the index lookup requires auth.
+const $signInPanel = document.getElementById('signInPanel');
+const $searchPanel = document.getElementById('searchPanel');
+const $signInBtn = document.getElementById('signInBtn');
+const useRedirectAuth = /iP(hone|ad|od)|Safari/i.test(navigator.userAgent || '')
+  && !/Chrome|CriOS|FxiOS/i.test(navigator.userAgent || '');
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+$signInBtn.onclick = async () => {
+  try {
+    if (useRedirectAuth) await signInWithRedirect(auth, googleProvider);
+    else await signInWithPopup(auth, googleProvider);
+  } catch (e) {
+    console.warn('Sign in error:', e);
+  }
+};
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    $signInPanel.style.display = 'none';
+    $searchPanel.style.display = '';
+    document.getElementById('results').style.display = '';
+    setTimeout(() => document.getElementById('q')?.focus(), 50);
+  } else {
+    $signInPanel.style.display = '';
+    $searchPanel.style.display = 'none';
+    document.getElementById('results').style.display = 'none';
+  }
+});
 
 const SPORT_EMOJI = {
   BASKETBALL: '🏀', FOOTBALL: '🏈', BOWLING: '🎳', SOCCER: '⚽',
