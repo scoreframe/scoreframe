@@ -1314,7 +1314,7 @@ function renderBowlingScore(game) {
         const colorFor = won => tied ? 'var(--text-primary)' : (won ? '#F2A93B' : 'var(--text-secondary)');
         const sideHtml = (name, raw, adj, won) => {
             const adjStr = hasHandicap && raw !== adj
-                ? `<span style="font-size:14px;color:var(--text-secondary);margin-left:8px;">raw ${raw}</span> <span style="font-size:14px;color:${colorFor(won)};margin-left:4px;">· Adj <strong>${adj}</strong></span>`
+                ? `<span style="font-size:14px;color:var(--text-secondary);margin-left:8px;">scratch ${raw}</span> <span style="font-size:14px;color:${colorFor(won)};margin-left:4px;">· +hcp <strong>${adj}</strong></span>`
                 : `<strong>${adj}</strong>`;
             return `<div style="display:flex;align-items:baseline;justify-content:space-between;padding:6px 0;color:${colorFor(won)};">
                         <span style="font-size:16px;font-weight:700;">${escapeHtml(name)}</span>
@@ -1322,7 +1322,7 @@ function renderBowlingScore(game) {
                     </div>`;
         };
         const handicapNote = hasHandicap
-            ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:6px;">Adjusted totals include handicap × games (${stats.gameCount || 1}). W/L is based on adjusted.</div>`
+            ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:6px;">+hcp totals include handicap × games (${stats.gameCount || 1}). W/L is based on +hcp.</div>`
             : '';
         h2hHeader = `${sideHtml(home, homeRaw, homeAdj, homeWon)}${sideHtml(away, awayRaw, awayAdj, awayWon)}${handicapNote}`;
         // Show the score card immediately so the matchup header lands
@@ -1555,8 +1555,8 @@ function renderBowlingScore(game) {
     const seriesCell = r => {
         if (hasHandicap && r.bowlerHcap > 0 && r.bowlerAdj !== r.series) {
             return `<div class="bowling-series" style="text-align:right;">
-                        <div style="font-size:13px;color:var(--text-secondary);">raw ${r.series}</div>
-                        <div><strong>${r.bowlerAdj}</strong> <span style="font-size:11px;color:var(--text-secondary);">+${r.bowlerHcap}/g</span></div>
+                        <div style="font-size:13px;color:var(--text-secondary);">scratch ${r.series}</div>
+                        <div><strong>${r.bowlerAdj}</strong> <span style="font-size:11px;color:var(--text-secondary);">+hcp +${r.bowlerHcap}/g</span></div>
                     </div>`;
         }
         return `<div class="bowling-series">${r.series}</div>`;
