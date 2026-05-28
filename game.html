@@ -1352,6 +1352,18 @@ function renderBowlingScore(game) {
         const key = (p.name || '').trim().toLowerCase();
         if (key) partByName.set(key, p);
     }
+    // v19 — iOS writes per-bowler frame data + handicap + seriesAdjusted
+    // onto `sportSpecificStats.bowlers[]` (via uploadBowlingFrameData),
+    // while Android writes them onto `participants[].stats`. Build a
+    // second lookup by lowercased bowler name so the per-row read can
+    // fall back to whichever location actually has the data. Without
+    // this, iOS-saved bowling games render with no frame strip and no
+    // scratch/+hcp breakdown.
+    const ssBowlerByName = new Map();
+    for (const b of (game.sportSpecificStats?.bowlers || [])) {
+        const key = ((b && b.name) || '').trim().toLowerCase();
+        if (key) ssBowlerByName.set(key, b);
+    }
 
     // v15 — Render the rolls for a single frame in traditional bowling
     // notation. Frames 1-9 get 2 cells; frame 10 gets 3 cells (the third is
@@ -1533,16 +1545,30 @@ function renderBowlingScore(game) {
         // Pro games written by Android v1.1.391+ carry this; older games
         // (or free-tier) won't, and the row falls back to the scores-only
         // strip beneath the bowler name.
-        const p = partByName.get((name || '').trim().toLowerCase());
+        const lname = (name || '').trim().toLowerCase();
+        const p = partByName.get(lname);
+        const ssb = ssBowlerByName.get(lname);
+        // v19 — read from participants[].stats first (Android writer),
+        // fall back to sportSpecificStats.bowlers[] (iOS writer).
         const framesByGame = (p && p.stats && Array.isArray(p.stats.framesByGame))
             ? p.stats.framesByGame
-            : null;
+            : (ssb && Array.isArray(ssb.framesByGame))
+                ? ssb.framesByGame
+                : null;
         // Per-bowler handicap — when present, each bowler row shows both
         // raw and adjusted series so the page mirrors a league recap sheet.
-        const bowlerHcap = (p && p.stats && Number.isFinite(Number(p.stats.handicap)))
-            ? Number(p.stats.handicap) : 0;
-        const bowlerAdj = (p && p.stats && Number.isFinite(Number(p.stats.seriesAdjusted)))
-            ? Number(p.stats.seriesAdjusted) : series;
+        const partHcap = (p && p.stats && Number.isFinite(Number(p.stats.handicap)))
+            ? Number(p.stats.handicap) : NaN;
+        const ssHcap = (ssb && Number.isFinite(Number(ssb.handicap)))
+            ? Number(ssb.handicap) : NaN;
+        const bowlerHcap = Number.isFinite(partHcap) ? partHcap
+            : Number.isFinite(ssHcap) ? ssHcap : 0;
+        const partAdj = (p && p.stats && Number.isFinite(Number(p.stats.seriesAdjusted)))
+            ? Number(p.stats.seriesAdjusted) : NaN;
+        const ssAdj = (ssb && Number.isFinite(Number(ssb.seriesAdjusted)))
+            ? Number(ssb.seriesAdjusted) : NaN;
+        const bowlerAdj = Number.isFinite(partAdj) ? partAdj
+            : Number.isFinite(ssAdj) ? ssAdj : series;
         return { name: name || 'Bowler', scores, series, high, framesByGame, bowlerHcap, bowlerAdj };
     });
     // v1.1.440 — Prepend the H2H matchup header (built above) instead
