@@ -1537,11 +1537,30 @@ function renderBowlingScore(game) {
         const framesByGame = (p && p.stats && Array.isArray(p.stats.framesByGame))
             ? p.stats.framesByGame
             : null;
-        return { name: name || 'Bowler', scores, series, high, framesByGame };
+        // Per-bowler handicap — when present, each bowler row shows both
+        // raw and adjusted series so the page mirrors a league recap sheet.
+        const bowlerHcap = (p && p.stats && Number.isFinite(Number(p.stats.handicap)))
+            ? Number(p.stats.handicap) : 0;
+        const bowlerAdj = (p && p.stats && Number.isFinite(Number(p.stats.seriesAdjusted)))
+            ? Number(p.stats.seriesAdjusted) : series;
+        return { name: name || 'Bowler', scores, series, high, framesByGame, bowlerHcap, bowlerAdj };
     });
     // v1.1.440 — Prepend the H2H matchup header (built above) instead
     // of overwriting it. Solo nights leave h2hHeader empty so no
     // visual change there.
+    // v1.1.450 — Per-bowler raw + adjusted series when handicap is on
+    // the game, so league sheets read like a real recap (raw 539 · Adj
+    // 542 with hcap +1). Solo / non-handicap games keep the single
+    // series number to avoid clutter.
+    const seriesCell = r => {
+        if (hasHandicap && r.bowlerHcap > 0 && r.bowlerAdj !== r.series) {
+            return `<div class="bowling-series" style="text-align:right;">
+                        <div style="font-size:13px;color:var(--text-secondary);">raw ${r.series}</div>
+                        <div><strong>${r.bowlerAdj}</strong> <span style="font-size:11px;color:var(--text-secondary);">+${r.bowlerHcap}/g</span></div>
+                    </div>`;
+        }
+        return `<div class="bowling-series">${r.series}</div>`;
+    };
     $('scoreContent').innerHTML = h2hHeader + `
         <div class="bowling-list">
             ${rows.map(r => `
@@ -1551,7 +1570,7 @@ function renderBowlingScore(game) {
                         ${(!r.framesByGame && r.scores.length) ? `<div class="bowling-detail">${r.scores.join(' · ')}</div>` : ''}
                     </div>
                     <div class="bowling-detail">High ${r.high}</div>
-                    <div class="bowling-series">${r.series}</div>
+                    ${seriesCell(r)}
                     ${buildStatsLine(r.name, r.scores.length)}
                     ${r.framesByGame ? buildFramesBlock(r.framesByGame) : ''}
                 </div>
