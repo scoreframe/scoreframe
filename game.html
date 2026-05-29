@@ -1605,11 +1605,18 @@ function renderBowlingScore(game) {
     // the game, so league sheets read like a real recap (raw 539 · Adj
     // 542 with hcap +1). Solo / non-handicap games keep the single
     // series number to avoid clutter.
+    // v21 — Eric: "on the game page, I want the individual players, both
+    // tracked and untracked, to show their individual series scores both
+    // scratch and handicap." When the game itself has handicap on, every
+    // bowler row now shows the scratch / +hcp split, even when this
+    // specific bowler's hcap is 0 (rendered as "+hcp +0/g"). Keeps the
+    // column visually consistent across the lineup and surfaces the
+    // adjusted total next to scratch for every contributor.
     const seriesCell = r => {
-        if (hasHandicap && r.bowlerHcap > 0 && r.bowlerAdj !== r.series) {
+        if (hasHandicap) {
             return `<div class="bowling-series" style="text-align:right;">
                         <div style="font-size:13px;color:var(--text-secondary);">scratch ${r.series}</div>
-                        <div><strong>${r.bowlerAdj}</strong> <span style="font-size:11px;color:var(--text-secondary);">+hcp +${r.bowlerHcap}/g</span></div>
+                        <div><strong>${r.bowlerAdj}</strong> <span style="font-size:11px;color:var(--text-secondary);">+hcp +${r.bowlerHcap || 0}/g</span></div>
                     </div>`;
         }
         return `<div class="bowling-series">${r.series}</div>`;
