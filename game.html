@@ -1364,6 +1364,20 @@ function renderBowlingScore(game) {
         const key = ((b && b.name) || '').trim().toLowerCase();
         if (key) ssBowlerByName.set(key, b);
     }
+    // v20 — Untracked teammates aren't in participants[] or
+    // sportSpecificStats.bowlers[]; they live on
+    // sportSpecificStats.untrackedBowlers[] with {name, handicap,
+    // gameScores}. Build a third lookup so the per-bowler row can show
+    // their handicap + adjusted series too. Without this, an untracked
+    // teammate's row rendered just the raw series with no scratch/+hcp
+    // breakdown even when the team had handicap on. Eric: "game pages
+    // need to show the handicap for each player and their own adjusted
+    // handicap score as well."
+    const untrackedByName = new Map();
+    for (const u of (game.sportSpecificStats?.untrackedBowlers || [])) {
+        const key = ((u && u.name) || '').trim().toLowerCase();
+        if (key) untrackedByName.set(key, u);
+    }
 
     // v15 — Render the rolls for a single frame in traditional bowling
     // notation. Frames 1-9 get 2 cells; frame 10 gets 3 cells (the third is
@@ -1548,6 +1562,7 @@ function renderBowlingScore(game) {
         const lname = (name || '').trim().toLowerCase();
         const p = partByName.get(lname);
         const ssb = ssBowlerByName.get(lname);
+        const utr = untrackedByName.get(lname);
         // v19 — read from participants[].stats first (Android writer),
         // fall back to sportSpecificStats.bowlers[] (iOS writer).
         const framesByGame = (p && p.stats && Array.isArray(p.stats.framesByGame))
@@ -1557,18 +1572,30 @@ function renderBowlingScore(game) {
                 : null;
         // Per-bowler handicap — when present, each bowler row shows both
         // raw and adjusted series so the page mirrors a league recap sheet.
+        // v20 — Fall through to sportSpecificStats.untrackedBowlers[] so
+        // untracked teammates also show their scratch / +hcp split.
         const partHcap = (p && p.stats && Number.isFinite(Number(p.stats.handicap)))
             ? Number(p.stats.handicap) : NaN;
         const ssHcap = (ssb && Number.isFinite(Number(ssb.handicap)))
             ? Number(ssb.handicap) : NaN;
+        const utrHcap = (utr && Number.isFinite(Number(utr.handicap)))
+            ? Number(utr.handicap) : NaN;
         const bowlerHcap = Number.isFinite(partHcap) ? partHcap
-            : Number.isFinite(ssHcap) ? ssHcap : 0;
+            : Number.isFinite(ssHcap) ? ssHcap
+            : Number.isFinite(utrHcap) ? utrHcap : 0;
         const partAdj = (p && p.stats && Number.isFinite(Number(p.stats.seriesAdjusted)))
             ? Number(p.stats.seriesAdjusted) : NaN;
         const ssAdj = (ssb && Number.isFinite(Number(ssb.seriesAdjusted)))
             ? Number(ssb.seriesAdjusted) : NaN;
+        // Untracked entries don't carry a precomputed seriesAdjusted —
+        // derive it as series + handicap × gameCount-played so the
+        // displayed adjusted total matches what the team total used.
+        const utrAdj = (utr && Number.isFinite(Number(utr.handicap)))
+            ? series + Number(utr.handicap) * (Array.isArray(utr.gameScores) ? utr.gameScores.filter(s => s > 0).length : scores.length)
+            : NaN;
         const bowlerAdj = Number.isFinite(partAdj) ? partAdj
-            : Number.isFinite(ssAdj) ? ssAdj : series;
+            : Number.isFinite(ssAdj) ? ssAdj
+            : Number.isFinite(utrAdj) ? utrAdj : series;
         return { name: name || 'Bowler', scores, series, high, framesByGame, bowlerHcap, bowlerAdj };
     });
     // v1.1.440 — Prepend the H2H matchup header (built above) instead
