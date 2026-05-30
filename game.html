@@ -1005,9 +1005,22 @@ function renderGame(hub, game) {
     }
 
     // Player — pick the best stream to embed at the top.
-    const streams = (game.streams && game.streams.length > 0)
-        ? game.streams
+    const baseStreams = (game.streams && game.streams.length > 0)
+        ? game.streams.slice()
         : (game.streamUrl ? [{ url: game.streamUrl, platform: detectPlatform(game.streamUrl) }] : []);
+    // v1.1.478 — Save to YouTube. The Android app (Labs+Pro) uploads the
+    // saved game video to the user's own YouTube channel and writes the
+    // watch URL back to `game.youtubeVideoUrl`. Treat it as a stream so
+    // the existing playlist / streams-card pipeline picks it up without
+    // a separate render path. If the same URL is already in streams[]
+    // (e.g. the broadcaster manually added it), don't duplicate.
+    if (game.youtubeVideoUrl && !baseStreams.some(s => s && s.url === game.youtubeVideoUrl)) {
+        baseStreams.push({ url: game.youtubeVideoUrl, platform: 'youtube' });
+    }
+    if (game.youtubeHighlightsUrl && !baseStreams.some(s => s && s.url === game.youtubeHighlightsUrl)) {
+        baseStreams.push({ url: game.youtubeHighlightsUrl, platform: 'youtube' });
+    }
+    const streams = baseStreams;
 
     // Build the embeddable playlist. Order: YouTube first, then Twitch, then
     // any other embeddable streams. Non-embeddable links don't go in the
