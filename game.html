@@ -328,7 +328,9 @@ html, body {
 .bowling-frame .roll:first-child { border-left: none; }
 .bowling-frame .roll.strike { color: var(--accent); }
 .bowling-frame .roll.spare { color: var(--accent); }
-.bowling-frame .roll.empty { color: var(--text-muted); }
+/* v27 — Brighter grey so gutter dashes are visible against the dark
+   surface. The muted #666 was technically rendering but easy to miss. */
+.bowling-frame .roll.empty { color: var(--text-secondary); }
 /* Strike that spans the entire frame width (non-frame-10). Bigger glyph,
    centered — easier to scan a strike across the strip. */
 .bowling-frame .roll.strike-full {
@@ -578,7 +580,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v26</span>
+    <span class="page-version">game.html v27</span>
 </div>
 
 <script type="module">
