@@ -1499,11 +1499,19 @@ function renderBowlingScore(game) {
                     // squeezing the mark into half the cell.
                     rollsHtml = '<span class="roll strike strike-full">X</span>';
                 } else {
-                    // r2 missing on a non-strike completed frame → gutter dash
+                    // v1.1.510 — Missing roll on a tallied frame → dash.
+                    // iOS-saved games often persist the per-frame score
+                    // without storing per-roll values; without this fallback
+                    // those frames render as empty `·` placeholders. The
+                    // dash is the right visual signal: "frame was bowled,
+                    // detail unknown / gutter".
+                    const c1 = r1 == null
+                        ? (frameTallied ? DASH_ROLL : DOT_ROLL)
+                        : rollMark(r1, false, false, split);
                     const c2 = r2 == null
-                        ? (frameTallied && r1 != null ? DASH_ROLL : DOT_ROLL)
+                        ? (frameTallied ? DASH_ROLL : DOT_ROLL)
                         : rollMark(r2, false, isSpare, false);
-                    rollsHtml = rollMark(r1, false, false, split) + c2;
+                    rollsHtml = c1 + c2;
                 }
             } else {
                 // Frame 10 — up to 3 rolls. r2 is a spare iff r1+r2===10 and
@@ -1515,22 +1523,24 @@ function renderBowlingScore(game) {
                 const r3Strike = pins3 === 10;
                 const r3Spare = r1Strike && !r2Strike && pins2 != null && pins3 != null && (pins2 + pins3) === 10;
                 const bonusEarned = r1Strike || r2Spare;
-                const c1 = rollMark(r1, r1Strike, false, split);
+                const c1 = r1 == null
+                    ? (frameTallied ? DASH_ROLL : DOT_ROLL)
+                    : rollMark(r1, r1Strike, false, split);
                 let c2;
                 if (r2 == null) {
-                    // Missing r2 on a tallied frame 10 → gutter dash.
-                    c2 = (frameTallied && r1 != null) ? DASH_ROLL : DOT_ROLL;
+                    // Missing r2 on a tallied frame 10 → dash.
+                    c2 = frameTallied ? DASH_ROLL : DOT_ROLL;
                 }
                 else if (r2Strike) c2 = rollMark(r2, true, false, false);
                 else if (r2Spare) c2 = rollMark(r2, false, true, false);
                 else c2 = rollMark(r2, false, false, false);
                 let c3;
                 if (r3 == null) {
-                    // r3 only "should" exist when a strike/spare earned
-                    // the bonus roll. If the frame is tallied and the
-                    // bonus was earned but r3 is null, that's a gutter.
-                    // Otherwise it's just "not bowled".
-                    c3 = (frameTallied && bonusEarned) ? DASH_ROLL : DOT_ROLL;
+                    // r3 cell shown when the strike/spare bonus was
+                    // earned, or when the data is missing on a tallied
+                    // F10 (iOS save without per-roll detail).
+                    // Otherwise leave a dot.
+                    c3 = (frameTallied && (bonusEarned || r1 == null)) ? DASH_ROLL : DOT_ROLL;
                 }
                 else if (r3Strike) c3 = rollMark(r3, true, false, false);
                 else if (r3Spare) c3 = rollMark(r3, false, true, false);
