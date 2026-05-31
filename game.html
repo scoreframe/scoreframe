@@ -301,26 +301,26 @@ html, body {
    wrong row"). Fixed-height rows guarantee each section has room
    regardless of frame width. Frames end up slightly wider than tall
    on narrow viewports; that's the trade for legibility. */
+/* v25 — Replaced inner CSS Grid with flexbox column. Grid was somehow
+   letting the rolls visually land in the cum row (Eric showed dashes
+   clearly rendering next to the score). Flex column with fixed-basis
+   rolls + 1fr cum is bulletproof: rolls is a 22px-tall flex row at
+   the TOP, cum is the rest. No grid track surprises. */
 .bowling-frame {
-    display: grid; grid-template-rows: 22px 1fr;
+    display: flex; flex-direction: column;
     border-left: 1px solid var(--bg-elevated);
     min-width: 0;
     min-height: 44px;
-    overflow: hidden; /* v24 — defensive: roll glyphs can't bleed into cum row */
+    overflow: hidden;
 }
-/* Explicit columns: 1fr 1fr for non-F10 (two rolls), 1fr 1fr 1fr for
-   frame 10. The earlier auto-flow + auto-columns combo could collapse
-   silently when row constraints got tight; explicit templates lay the
-   cells out predictably. */
 .bowling-frame .rolls {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    flex: 0 0 22px;
+    display: flex;
     border-bottom: 1px solid var(--bg-elevated);
-    min-height: 0;
     line-height: 1;
 }
-.bowling-frame.f10 .rolls { grid-template-columns: 1fr 1fr 1fr; }
 .bowling-frame .roll {
+    flex: 1 1 0;
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 700; color: var(--text-primary);
     border-left: 1px solid var(--bg-elevated);
@@ -333,7 +333,7 @@ html, body {
 /* Strike that spans the entire frame width (non-frame-10). Bigger glyph,
    centered — easier to scan a strike across the strip. */
 .bowling-frame .roll.strike-full {
-    grid-column: 1 / -1;
+    flex: 1 1 100%;
     font-size: 13px;
 }
 .bowling-frame .roll .pin-circle {
@@ -345,6 +345,7 @@ html, body {
 }
 .bowling-frame .roll .pin-circle.converted { border-color: var(--accent); color: var(--accent); }
 .bowling-frame .cum {
+    flex: 1 1 0;
     display: flex; align-items: center; justify-content: center;
     font-size: 14px; font-weight: 700; color: var(--text-primary);
     min-width: 0; overflow: hidden;
@@ -578,7 +579,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v24</span>
+    <span class="page-version">game.html v25</span>
 </div>
 
 <script type="module">
