@@ -427,6 +427,10 @@ html, body {
     border-top: 1px solid var(--bg-elevated); margin-top: 12px;
 }
 .footer a { color: var(--accent); text-decoration: none; }
+.footer .page-version {
+    display: inline-block; margin-left: 8px;
+    font-size: 10px; color: var(--text-muted); opacity: 0.6;
+}
 
 /* Mobile tweaks — at narrow widths we lose the side-by-side scoreline
    and stack everything vertically for thumb-readability. */
@@ -573,6 +577,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
+    <span class="page-version">game.html v23</span>
 </div>
 
 <script type="module">
