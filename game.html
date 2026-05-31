@@ -273,33 +273,47 @@ html, body {
     grid-column: 1 / -1; margin-top: 6px;
     display: grid; gap: 6px;
 }
+/* v1.1.510 — Grid layout (was flex) so frames 1-9 are mathematically
+   equal width and frame 10 is exactly 1.5x. Content-driven sizing
+   couldn't guarantee this with flex when some rolls had pin-circles or
+   wider numeric values. The has-label / no-label variants are split out
+   so the column count matches whether the per-game label cell renders. */
 .bowling-frames-row {
-    display: flex; align-items: stretch; gap: 0;
+    display: grid;
+    grid-template-columns: auto repeat(9, 1fr) 1.5fr;
+    align-items: stretch;
     background: var(--bg-deep); border: 1px solid var(--bg-elevated);
     border-radius: 4px; overflow: hidden;
     font-variant-numeric: tabular-nums;
 }
+.bowling-frames-row.no-label { grid-template-columns: repeat(9, 1fr) 1.5fr; }
 .bowling-frames-row .game-label {
-    flex: 0 0 auto; min-width: 36px;
     display: flex; align-items: center; justify-content: center;
     padding: 0 6px;
     background: var(--bg-elevated); color: var(--text-secondary);
     font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
 }
+/* Square cells with rolls top, score bottom — traditional scoresheet
+   shape. aspect-ratio: 1 keeps every frame the same height as its
+   width, regardless of which marks the rolls contain. */
 .bowling-frame {
-    flex: 1 1 0; min-width: 0;
-    display: flex; flex-direction: column;
+    aspect-ratio: 1 / 1;
+    display: grid; grid-template-rows: 42% 1fr;
     border-left: 1px solid var(--bg-elevated);
+    min-width: 0;
 }
-.bowling-frame.f10 { flex: 1.5 1 0; }
 .bowling-frame .rolls {
-    display: flex; height: 18px; border-bottom: 1px solid var(--bg-elevated);
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    border-bottom: 1px solid var(--bg-elevated);
+    min-height: 0;
 }
 .bowling-frame .roll {
-    flex: 1 1 0; min-width: 0;
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 700; color: var(--text-primary);
     border-left: 1px solid var(--bg-elevated);
+    min-width: 0; overflow: hidden;
 }
 .bowling-frame .roll:first-child { border-left: none; }
 .bowling-frame .roll.strike { color: var(--accent); }
@@ -308,28 +322,28 @@ html, body {
 /* Strike that spans the entire frame width (non-frame-10). Bigger glyph,
    centered — easier to scan a strike across the strip. */
 .bowling-frame .roll.strike-full {
-    flex: 1 1 100%;
+    grid-column: 1 / -1;
     font-size: 13px;
 }
 .bowling-frame .roll .pin-circle {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 14px; height: 14px; border-radius: 50%;
+    width: 13px; height: 13px; border-radius: 50%;
     border: 1px solid var(--text-secondary); line-height: 1;
     font-size: 9px;
+    flex-shrink: 0;
 }
 .bowling-frame .roll .pin-circle.converted { border-color: var(--accent); color: var(--accent); }
 .bowling-frame .cum {
-    flex: 1 1 auto;
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; color: var(--text-primary);
-    padding: 2px 0;
-    min-height: 20px;
+    font-size: 14px; font-weight: 700; color: var(--text-primary);
+    min-width: 0; overflow: hidden;
 }
 .bowling-frame .cum.empty { color: var(--text-muted); font-weight: 500; }
 @media (max-width: 540px) {
     .bowling-frame .roll { font-size: 10px; }
-    .bowling-frame .cum { font-size: 11px; }
-    .bowling-frames-row .game-label { min-width: 28px; font-size: 9px; }
+    .bowling-frame .cum { font-size: 12px; }
+    .bowling-frames-row .game-label { font-size: 9px; padding: 0 4px; }
+    .bowling-frame .roll .pin-circle { width: 11px; height: 11px; font-size: 8px; }
 }
 
 .meta-grid {
@@ -1445,6 +1459,14 @@ function renderBowlingScore(game) {
         return { pins: n, label: String(n) };
     }
 
+    // v1.1.510 — Missing rolls in COMPLETED frames render as a gutter
+    // dash, not the dot placeholder. iOS-saved games sometimes drop the
+    // explicit 0-pin roll, leaving `r2`/`r3` undefined; a viewer who
+    // sees a `·` next to a 6 thinks the game isn't done, when in fact
+    // it was a 6 + gutter. `f.score != null` is the "frame was tallied
+    // by the scorer" signal — anything with a score is complete.
+    const DASH_ROLL = '<span class="roll empty">-</span>';
+    const DOT_ROLL = '<span class="roll empty">·</span>';
     function buildFrameCells(frames) {
         // Pad to 10 frames so the scoreboard always has the full row, even
         // for in-progress / abandoned games.
@@ -1456,7 +1478,7 @@ function renderBowlingScore(game) {
             if (!f) {
                 // Empty frame — placeholder rolls + blank cum.
                 const cells = isF10 ? 3 : 2;
-                const rolls = Array(cells).fill('<span class="roll empty">·</span>').join('');
+                const rolls = Array(cells).fill(DOT_ROLL).join('');
                 return `<div class="${cls}"><div class="rolls">${rolls}</div><div class="cum empty"></div></div>`;
             }
             const r1 = parseRoll(f.r1, null);
@@ -1466,6 +1488,7 @@ function renderBowlingScore(game) {
             const pins2 = r2 ? r2.pins : null;
             const pins3 = r3 ? r3.pins : null;
             const split = !!f.split;
+            const frameTallied = f.score != null && Number.isFinite(Number(f.score));
             let rollsHtml = '';
             if (!isF10) {
                 const isStrike = pins1 === 10;
@@ -1476,8 +1499,11 @@ function renderBowlingScore(game) {
                     // squeezing the mark into half the cell.
                     rollsHtml = '<span class="roll strike strike-full">X</span>';
                 } else {
-                    rollsHtml = rollMark(r1, false, false, split) +
-                                rollMark(r2, false, isSpare, false);
+                    // r2 missing on a non-strike completed frame → gutter dash
+                    const c2 = r2 == null
+                        ? (frameTallied && r1 != null ? DASH_ROLL : DOT_ROLL)
+                        : rollMark(r2, false, isSpare, false);
+                    rollsHtml = rollMark(r1, false, false, split) + c2;
                 }
             } else {
                 // Frame 10 — up to 3 rolls. r2 is a spare iff r1+r2===10 and
@@ -1488,14 +1514,24 @@ function renderBowlingScore(game) {
                 const r2Spare = !r1Strike && pins1 != null && pins2 != null && (pins1 + pins2) === 10;
                 const r3Strike = pins3 === 10;
                 const r3Spare = r1Strike && !r2Strike && pins2 != null && pins3 != null && (pins2 + pins3) === 10;
+                const bonusEarned = r1Strike || r2Spare;
                 const c1 = rollMark(r1, r1Strike, false, split);
                 let c2;
-                if (r2 == null) c2 = '<span class="roll empty">·</span>';
+                if (r2 == null) {
+                    // Missing r2 on a tallied frame 10 → gutter dash.
+                    c2 = (frameTallied && r1 != null) ? DASH_ROLL : DOT_ROLL;
+                }
                 else if (r2Strike) c2 = rollMark(r2, true, false, false);
                 else if (r2Spare) c2 = rollMark(r2, false, true, false);
                 else c2 = rollMark(r2, false, false, false);
                 let c3;
-                if (r3 == null) c3 = '<span class="roll empty">·</span>';
+                if (r3 == null) {
+                    // r3 only "should" exist when a strike/spare earned
+                    // the bonus roll. If the frame is tallied and the
+                    // bonus was earned but r3 is null, that's a gutter.
+                    // Otherwise it's just "not bowled".
+                    c3 = (frameTallied && bonusEarned) ? DASH_ROLL : DOT_ROLL;
+                }
                 else if (r3Strike) c3 = rollMark(r3, true, false, false);
                 else if (r3Spare) c3 = rollMark(r3, false, true, false);
                 else c3 = rollMark(r3, false, false, false);
@@ -1522,7 +1558,8 @@ function renderBowlingScore(game) {
         const multi = games.length > 1;
         const rows = games.map((frames, idx) => {
             const label = multi ? `<div class="game-label">G${idx + 1}</div>` : '';
-            return `<div class="bowling-frames-row">${label}${buildFrameCells(frames)}</div>`;
+            const rowCls = multi ? 'bowling-frames-row' : 'bowling-frames-row no-label';
+            return `<div class="${rowCls}">${label}${buildFrameCells(frames)}</div>`;
         }).join('');
         return `<div class="bowling-frames-wrap">${rows}</div>`;
     }
