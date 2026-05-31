@@ -306,6 +306,7 @@ html, body {
     border-left: 1px solid var(--bg-elevated);
     min-width: 0;
     min-height: 44px;
+    overflow: hidden; /* v24 — defensive: roll glyphs can't bleed into cum row */
 }
 /* Explicit columns: 1fr 1fr for non-F10 (two rolls), 1fr 1fr 1fr for
    frame 10. The earlier auto-flow + auto-columns combo could collapse
@@ -577,7 +578,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v23</span>
+    <span class="page-version">game.html v24</span>
 </div>
 
 <script type="module">
