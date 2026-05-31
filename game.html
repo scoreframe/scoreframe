@@ -293,14 +293,19 @@ html, body {
     background: var(--bg-elevated); color: var(--text-secondary);
     font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
 }
-/* Square cells with rolls top, score bottom — traditional scoresheet
-   shape. aspect-ratio: 1 keeps every frame the same height as its
-   width, regardless of which marks the rolls contain. */
+/* Rolls on top, score on bottom — traditional scoresheet shape.
+   Earlier we used `aspect-ratio: 1 / 1` to force square frames, but
+   on mobile that compressed the rolls row down to ~12px, which was
+   shorter than the roll glyph height — content then overflowed
+   visually into the cum row below (Eric: "putting dashes in the
+   wrong row"). Fixed-height rows guarantee each section has room
+   regardless of frame width. Frames end up slightly wider than tall
+   on narrow viewports; that's the trade for legibility. */
 .bowling-frame {
-    aspect-ratio: 1 / 1;
-    display: grid; grid-template-rows: 42% 1fr;
+    display: grid; grid-template-rows: 22px 1fr;
     border-left: 1px solid var(--bg-elevated);
     min-width: 0;
+    min-height: 44px;
 }
 /* Explicit columns: 1fr 1fr for non-F10 (two rolls), 1fr 1fr 1fr for
    frame 10. The earlier auto-flow + auto-columns combo could collapse
