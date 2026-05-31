@@ -301,30 +301,29 @@ html, body {
    wrong row"). Fixed-height rows guarantee each section has room
    regardless of frame width. Frames end up slightly wider than tall
    on narrow viewports; that's the trade for legibility. */
-/* v25 — Replaced inner CSS Grid with flexbox column. Grid was somehow
-   letting the rolls visually land in the cum row (Eric showed dashes
-   clearly rendering next to the score). Flex column with fixed-basis
-   rolls + 1fr cum is bulletproof: rolls is a 22px-tall flex row at
-   the TOP, cum is the rest. No grid track surprises. */
+/* v26 — Reverted inner-frame layout to the original flex-column with
+   18px rolls. The CSS Grid + aspect-ratio + flex-column iterations I
+   tried (v23-v25) each broke the layout in a different way; rolling
+   back to the pre-v22 inner-frame structure that was visually correct
+   before. The OUTER row stays on grid (added in v23) since that's
+   what fixed Eric's original "frames all different sizes" complaint
+   — grid guarantees mathematical equal column widths.
+   The only intentional changes vs pre-v22:
+     • outer row is grid not flex (column equality)
+     • dash fallback for missing rolls in tallied frames (JS) */
 .bowling-frame {
     display: flex; flex-direction: column;
     border-left: 1px solid var(--bg-elevated);
     min-width: 0;
-    min-height: 44px;
-    overflow: hidden;
 }
 .bowling-frame .rolls {
-    flex: 0 0 22px;
-    display: flex;
-    border-bottom: 1px solid var(--bg-elevated);
-    line-height: 1;
+    display: flex; height: 18px; border-bottom: 1px solid var(--bg-elevated);
 }
 .bowling-frame .roll {
-    flex: 1 1 0;
+    flex: 1 1 0; min-width: 0;
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 700; color: var(--text-primary);
     border-left: 1px solid var(--bg-elevated);
-    min-width: 0; overflow: hidden;
 }
 .bowling-frame .roll:first-child { border-left: none; }
 .bowling-frame .roll.strike { color: var(--accent); }
@@ -345,10 +344,10 @@ html, body {
 }
 .bowling-frame .roll .pin-circle.converted { border-color: var(--accent); color: var(--accent); }
 .bowling-frame .cum {
-    flex: 1 1 0;
+    flex: 1 1 auto;
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 700; color: var(--text-primary);
-    min-width: 0; overflow: hidden;
+    font-size: 12px; font-weight: 700; color: var(--text-primary);
+    padding: 2px 0; min-height: 20px;
 }
 .bowling-frame .cum.empty { color: var(--text-muted); font-weight: 500; }
 @media (max-width: 540px) {
@@ -579,7 +578,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v25</span>
+    <span class="page-version">game.html v26</span>
 </div>
 
 <script type="module">
