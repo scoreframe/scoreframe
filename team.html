@@ -801,11 +801,31 @@ async function loadTeam() {
                 $('notFoundScreen').style.display = 'block';
                 return;
             }
+            // 2026-06-01c — teamSearchIndex doc IDs aren't guaranteed
+            // to be teamId — the CF that writes them may use a
+            // different key. Query by hubCode field instead, which
+            // is reliably present (search.html uses r.hubCode for
+            // the team.html link). Try both the doc-ID lookup AND
+            // the hubCode query so we cover both schemas.
             let indexInfo = null;
             try {
                 const idx = await getDoc(doc(db, 'teamSearchIndex', teamId));
                 if (idx.exists()) indexInfo = idx.data();
-            } catch (e2) { /* denied — treat as private */ }
+            } catch (e2) { console.warn('[team.html] teamSearchIndex by teamId failed:', e2); }
+            if (!indexInfo) {
+                try {
+                    const { getDocs, query, collection, where, limit: fbLimit } =
+                        await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+                    const q = query(
+                        collection(db, 'teamSearchIndex'),
+                        where('hubCode', '==', hubCode),
+                        fbLimit(1)
+                    );
+                    const snap = await getDocs(q);
+                    if (!snap.empty) indexInfo = snap.docs[0].data();
+                } catch (e3) { console.warn('[team.html] teamSearchIndex by hubCode failed:', e3); }
+            }
+            console.log('[team.html] gate-fallback indexInfo:', indexInfo);
             if (!indexInfo) {
                 $('loadingScreen').style.display = 'none';
                 $('notFoundScreen').style.display = 'block';
@@ -816,7 +836,7 @@ async function loadTeam() {
                 sport: indexInfo.sport || '',
                 color: indexInfo.color || '#1565C0',
                 color2: indexInfo.color2 || '#FFFFFF',
-                hub: { hubCode: hubCode, visibility: 'private' },
+                hub: { hubCode: hubCode, visibility: indexInfo.visibility || 'private' },
                 status: 'active',
             };
         }
