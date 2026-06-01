@@ -328,20 +328,20 @@ html, body {
 .bowling-frame .roll:first-child { border-left: none; }
 .bowling-frame .roll.strike { color: var(--accent); }
 .bowling-frame .roll.spare { color: var(--accent); }
-/* v29 — THE REAL FIX. The generic `.empty, .loading` rule (used for
-   "No data" page states) was applying `padding: 60px 24px` to every
-   `<span class="roll empty">` because the gutter span has class
-   "empty". That 60px vertical padding pushed the dash 60px out of
-   its 18px rolls cell — visible elsewhere as the strange floating
-   "boxes" Eric spotted, and the actual dash glyph got clipped out
-   of view by the frame's bounds. Resetting padding back to 0 and
-   bumping color to bright red so the gutters are clearly marked. */
-.bowling-frame .roll.empty {
+/* v30 — Per-type roll styling. The earlier all-using-`empty` rule
+   ran into the global `.empty, .loading { padding: 60px 24px }` page-
+   state rule which clipped the marks out of view. New classes split
+   the roles:
+     • .roll.gutter (-) and .roll.dot (·) — quietly muted grey
+     • .roll.foul (F) — loud red, bowler took a step over the line
+     • split pin-circle — red outline (open split = warning)
+     • split pin-circle.converted — accent orange (picked up = good)
+*/
+.bowling-frame .roll.gutter,
+.bowling-frame .roll.dot { color: var(--text-muted); }
+.bowling-frame .roll.foul {
     color: #FF4747;
-    font-size: 13px;
     font-weight: 900;
-    padding: 0 !important;
-    text-align: center;
 }
 /* Strike that spans the entire frame width (non-frame-10). Bigger glyph,
    centered — easier to scan a strike across the strip. */
@@ -352,9 +352,10 @@ html, body {
 .bowling-frame .roll .pin-circle {
     display: inline-flex; align-items: center; justify-content: center;
     width: 13px; height: 13px; border-radius: 50%;
-    border: 1px solid var(--text-secondary); line-height: 1;
+    border: 1.5px solid #FF4747; color: #FF4747; line-height: 1;
     font-size: 9px;
     flex-shrink: 0;
+    font-weight: 800;
 }
 .bowling-frame .roll .pin-circle.converted { border-color: var(--accent); color: var(--accent); }
 .bowling-frame .cum {
@@ -596,7 +597,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v29</span>
+    <span class="page-version">game.html v30</span>
 </div>
 
 <script type="module">
@@ -1452,15 +1453,17 @@ function renderBowlingScore(game) {
     // makes the visual call differently (e.g. a strike in frame 10's
     // second ball renders X instead of using the parsed label).
     function rollMark(roll, isStrike, isSpare, isSplit) {
-        if (roll == null) return '<span class="roll empty">·</span>';
+        // v30 — distinct classes per roll type (gutter / foul / dot)
+        // instead of all-using "empty". Keeps gutters subtle while
+        // letting fouls render loud red. Also sidesteps the global
+        // `.empty, .loading { padding: 60px 24px }` page-state rule
+        // — these classes don't collide with it.
+        if (roll == null) return '<span class="roll dot">·</span>';
         if (isStrike) return '<span class="roll strike">X</span>';
         if (isSpare) return '<span class="roll spare">/</span>';
         const lbl = roll.label;
-        // Foul stays "F" (not collapsed into the gutter "-" path) so
-        // bowlers can tell them apart on the scoreboard. Both still
-        // score 0 pins.
-        if (lbl === 'F') return '<span class="roll empty">F</span>';
-        if (lbl === '-' || roll.pins === 0) return '<span class="roll empty">-</span>';
+        if (lbl === 'F') return '<span class="roll foul">F</span>';
+        if (lbl === '-' || roll.pins === 0) return '<span class="roll gutter">-</span>';
         const display = (roll.pins != null) ? roll.pins : lbl;
         if (isSplit) {
             return `<span class="roll"><span class="pin-circle">${display}</span></span>`;
@@ -1499,8 +1502,8 @@ function renderBowlingScore(game) {
     // sees a `·` next to a 6 thinks the game isn't done, when in fact
     // it was a 6 + gutter. `f.score != null` is the "frame was tallied
     // by the scorer" signal — anything with a score is complete.
-    const DASH_ROLL = '<span class="roll empty">-</span>';
-    const DOT_ROLL = '<span class="roll empty">·</span>';
+    const DASH_ROLL = '<span class="roll gutter">-</span>';
+    const DOT_ROLL = '<span class="roll dot">·</span>';
     function buildFrameCells(frames) {
         // Pad to 10 frames so the scoreboard always has the full row, even
         // for in-progress / abandoned games.
