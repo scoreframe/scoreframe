@@ -733,27 +733,44 @@ async function loadTeam() {
         }
 
         if (permissionDenied) {
-            // Fall back to teamSearchIndex (public to any signed-in user)
-            // for the basic header info — name, sport, visibility — so
-            // the access gate shows the team name they're trying to
-            // follow instead of a generic "doesn't exist" page.
-            // 2026-06-01 — Anonymous users land here too: the existing
-            // access-gate path renders "Sign in with your Google account
-            // to request access" when `!currentUser`. We just stub a
-            // minimal hubProfile so the gate UI has something to render
-            // (header still shows hubCode + "Private Team" placeholder).
+            // 2026-06-01 — Differentiate invite_only from private.
+            // Truly private teams should stay hidden ("team not found")
+            // even when the URL is hand-entered — that's the privacy
+            // contract. Invite_only teams should surface the access
+            // gate so the visitor can ask the owner to be added.
+            //
+            // The teamSearchIndex collection is maintained server-side
+            // by `onTeamWriteUpdateSearchIndex` and ONLY contains docs
+            // for teams with visibility ∈ {public, invite_only} — see
+            // firestore.rules:88-94. So:
+            //   • teamSearchIndex doc exists → invite_only / public → gate
+            //   • teamSearchIndex doc missing → private → notFound
+            //
+            // Anonymous visitors can't read teamSearchIndex (rules gate
+            // it on auth), so we conservatively show notFound for them.
+            // They can sign in via the main app and re-visit if they
+            // actually have a link to an invite_only team — preserves
+            // the privacy default for true private teams.
+            if (!currentUser) {
+                $('loadingScreen').style.display = 'none';
+                $('notFoundScreen').style.display = 'block';
+                return;
+            }
             let indexInfo = null;
-            if (currentUser) {
-                try {
-                    const idx = await getDoc(doc(db, 'teamSearchIndex', teamId));
-                    if (idx.exists()) indexInfo = idx.data();
-                } catch (e2) { /* missing or denied — fall through */ }
+            try {
+                const idx = await getDoc(doc(db, 'teamSearchIndex', teamId));
+                if (idx.exists()) indexInfo = idx.data();
+            } catch (e2) { /* denied — treat as private */ }
+            if (!indexInfo) {
+                $('loadingScreen').style.display = 'none';
+                $('notFoundScreen').style.display = 'block';
+                return;
             }
             raw = {
-                name: indexInfo?.teamName || indexInfo?.name || 'Private Team',
-                sport: indexInfo?.sport || '',
-                color: indexInfo?.color || '#1565C0',
-                color2: indexInfo?.color2 || '#FFFFFF',
+                name: indexInfo.teamName || indexInfo.name || 'Team',
+                sport: indexInfo.sport || '',
+                color: indexInfo.color || '#1565C0',
+                color2: indexInfo.color2 || '#FFFFFF',
                 hub: { hubCode: hubCode, visibility: 'private' },
                 status: 'active',
             };
