@@ -328,15 +328,20 @@ html, body {
 .bowling-frame .roll:first-child { border-left: none; }
 .bowling-frame .roll.strike { color: var(--accent); }
 .bowling-frame .roll.spare { color: var(--accent); }
-/* v28 — Made gutter dashes loud and unmistakable. Eric reported no
-   dash visible despite `<span class="roll empty">-</span>` being in
-   the DOM. Bumping color to the accent orange + larger + bolder so
-   it's physically impossible to miss; if these aren't visible there's
-   a deeper rendering issue (zoom, font fallback, hidden container). */
+/* v29 — THE REAL FIX. The generic `.empty, .loading` rule (used for
+   "No data" page states) was applying `padding: 60px 24px` to every
+   `<span class="roll empty">` because the gutter span has class
+   "empty". That 60px vertical padding pushed the dash 60px out of
+   its 18px rolls cell — visible elsewhere as the strange floating
+   "boxes" Eric spotted, and the actual dash glyph got clipped out
+   of view by the frame's bounds. Resetting padding back to 0 and
+   bumping color to bright red so the gutters are clearly marked. */
 .bowling-frame .roll.empty {
-    color: var(--accent);
-    font-size: 16px;
+    color: #FF4747;
+    font-size: 13px;
     font-weight: 900;
+    padding: 0 !important;
+    text-align: center;
 }
 /* Strike that spans the entire frame width (non-frame-10). Bigger glyph,
    centered — easier to scan a strike across the strip. */
@@ -358,7 +363,11 @@ html, body {
     font-size: 12px; font-weight: 700; color: var(--text-primary);
     padding: 2px 0; min-height: 20px;
 }
-.bowling-frame .cum.empty { color: var(--text-muted); font-weight: 500; }
+.bowling-frame .cum.empty {
+    color: var(--text-muted);
+    font-weight: 500;
+    padding: 0 !important; /* v29 — same .empty/.loading padding-bomb fix */
+}
 @media (max-width: 540px) {
     .bowling-frame .roll { font-size: 10px; }
     .bowling-frame .cum { font-size: 12px; }
@@ -587,7 +596,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v28</span>
+    <span class="page-version">game.html v29</span>
 </div>
 
 <script type="module">
