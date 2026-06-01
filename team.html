@@ -612,6 +612,9 @@ async function tryAppAuthHandoff() {
     }
 }
 
+// 2026-06-01b — Page build marker for cache-debug. Visible in console.
+console.log('[team.html] build 2026-06-01b loaded');
+
 if (!hubCode || hubCode.length < 4) {
     $('loadingScreen').style.display = 'none';
     $('notFoundScreen').style.display = 'block';
@@ -761,11 +764,17 @@ async function loadTeam() {
             }
             raw = profileDoc.data();
         } catch (readErr) {
-            if (readErr && readErr.code === 'permission-denied') {
-                permissionDenied = true;
-            } else {
-                throw readErr;
-            }
+            // 2026-06-01b — Treat ANY read error as a denial signal and
+            // fall through to the search-index gate. Firebase JS may
+            // surface permission-denied as `code: 'permission-denied'`
+            // or under `code: 'PERMISSION_DENIED'` depending on the
+            // SDK build / interceptor stack, and some browsers wrap
+            // the FirebaseError in an outer Error that loses `.code`
+            // entirely. Defensive catch keeps the gate path reachable
+            // in every case — if the gate logic can't find a search
+            // index doc, it falls to notFound on its own.
+            console.warn('[team.html] team doc read failed → gate fallback:', readErr);
+            permissionDenied = true;
         }
 
         if (permissionDenied) {
