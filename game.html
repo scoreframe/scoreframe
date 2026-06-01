@@ -328,9 +328,16 @@ html, body {
 .bowling-frame .roll:first-child { border-left: none; }
 .bowling-frame .roll.strike { color: var(--accent); }
 .bowling-frame .roll.spare { color: var(--accent); }
-/* v27 — Brighter grey so gutter dashes are visible against the dark
-   surface. The muted #666 was technically rendering but easy to miss. */
-.bowling-frame .roll.empty { color: var(--text-secondary); }
+/* v28 — Made gutter dashes loud and unmistakable. Eric reported no
+   dash visible despite `<span class="roll empty">-</span>` being in
+   the DOM. Bumping color to the accent orange + larger + bolder so
+   it's physically impossible to miss; if these aren't visible there's
+   a deeper rendering issue (zoom, font fallback, hidden container). */
+.bowling-frame .roll.empty {
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: 900;
+}
 /* Strike that spans the entire frame width (non-frame-10). Bigger glyph,
    centered — easier to scan a strike across the strip. */
 .bowling-frame .roll.strike-full {
@@ -580,7 +587,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v27</span>
+    <span class="page-version">game.html v28</span>
 </div>
 
 <script type="module">
