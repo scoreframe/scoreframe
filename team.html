@@ -737,16 +737,18 @@ async function loadTeam() {
             // for the basic header info — name, sport, visibility — so
             // the access gate shows the team name they're trying to
             // follow instead of a generic "doesn't exist" page.
-            if (!currentUser) {
-                $('loadingScreen').style.display = 'none';
-                $('notFoundScreen').style.display = 'block';
-                return;
-            }
+            // 2026-06-01 — Anonymous users land here too: the existing
+            // access-gate path renders "Sign in with your Google account
+            // to request access" when `!currentUser`. We just stub a
+            // minimal hubProfile so the gate UI has something to render
+            // (header still shows hubCode + "Private Team" placeholder).
             let indexInfo = null;
-            try {
-                const idx = await getDoc(doc(db, 'teamSearchIndex', teamId));
-                if (idx.exists()) indexInfo = idx.data();
-            } catch (e2) { /* anon or missing — fall through */ }
+            if (currentUser) {
+                try {
+                    const idx = await getDoc(doc(db, 'teamSearchIndex', teamId));
+                    if (idx.exists()) indexInfo = idx.data();
+                } catch (e2) { /* missing or denied — fall through */ }
+            }
             raw = {
                 name: indexInfo?.teamName || indexInfo?.name || 'Private Team',
                 sport: indexInfo?.sport || '',
