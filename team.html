@@ -993,7 +993,16 @@ function updateUserBar() {
     if (isManager) {
         statusText = '👑 Team Manager';
     } else if (isSubscriber) {
-        followBtn = `<button class="follow-btn following" onclick="doUnfollow()">✓ Following</button>`;
+        // 2026-06-01 — Two distinct buttons + confirmation. The previous
+        // single "✓ Following" toggle was one tap away from a silent
+        // unfollow — easy to fire by accident and the destructive
+        // behavior wasn't telegraphed by the label. Now: "✓ Following"
+        // is just status (no action), and a separate "Unfollow" button
+        // sits next to it that prompts before clearing the subscription.
+        followBtn = `
+            <span class="follow-btn following" style="cursor:default;pointer-events:none;">✓ Following</span>
+            <button class="follow-btn unfollow-btn" onclick="confirmUnfollow()" style="background:transparent;color:var(--text-secondary);border:1px solid var(--text-secondary);">Unfollow</button>
+        `;
     } else if (subStatus === 'pending') {
         statusText = '⏳ Follow request pending';
     } else if (subStatus === 'blocked') {
@@ -1187,6 +1196,16 @@ window.doFollow = async function() {
     } catch (e) {
         console.error('Follow error:', e);
         $('followStatus').textContent = 'Failed to follow. Try again.';
+    }
+};
+
+// 2026-06-01 — Confirmation wrapper for unfollow. The "Following" pill
+// no longer triggers an unfollow directly; the new "Unfollow" button
+// calls this helper, which prompts before doing the destructive write.
+window.confirmUnfollow = function() {
+    const name = (hubProfile && hubProfile.teamName) || 'this team';
+    if (confirm(`Unfollow ${name}? You'll stop receiving updates and will need to re-request access if it's an invite-only team.`)) {
+        doUnfollow();
     }
 };
 
