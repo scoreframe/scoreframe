@@ -706,14 +706,57 @@ async function loadTeam() {
         }
         teamId = indexDoc.data().teamId;
 
-        const profileDoc = await getDoc(doc(db, 'teams', teamId));
-        if (!profileDoc.exists()) {
-            $('loadingScreen').style.display = 'none';
-            $('notFoundScreen').style.display = 'block';
-            return;
+        // 2026-06-01 — Read the team doc. If the user can't read it
+        // (private team + not a manager/subscriber), Firestore throws
+        // permission-denied. Catch that case specifically and fall back
+        // to the public `teamSearchIndex` so we can still render the
+        // access gate (request-to-follow / pending status). Previously
+        // any read failure dropped users on the "doesn't exist" page
+        // even when the team genuinely existed and they just hadn't
+        // been approved yet.
+        let raw = null;
+        let permissionDenied = false;
+        try {
+            const profileDoc = await getDoc(doc(db, 'teams', teamId));
+            if (!profileDoc.exists()) {
+                $('loadingScreen').style.display = 'none';
+                $('notFoundScreen').style.display = 'block';
+                return;
+            }
+            raw = profileDoc.data();
+        } catch (readErr) {
+            if (readErr && readErr.code === 'permission-denied') {
+                permissionDenied = true;
+            } else {
+                throw readErr;
+            }
         }
 
-        const raw = profileDoc.data();
+        if (permissionDenied) {
+            // Fall back to teamSearchIndex (public to any signed-in user)
+            // for the basic header info — name, sport, visibility — so
+            // the access gate shows the team name they're trying to
+            // follow instead of a generic "doesn't exist" page.
+            if (!currentUser) {
+                $('loadingScreen').style.display = 'none';
+                $('notFoundScreen').style.display = 'block';
+                return;
+            }
+            let indexInfo = null;
+            try {
+                const idx = await getDoc(doc(db, 'teamSearchIndex', teamId));
+                if (idx.exists()) indexInfo = idx.data();
+            } catch (e2) { /* anon or missing — fall through */ }
+            raw = {
+                name: indexInfo?.teamName || indexInfo?.name || 'Private Team',
+                sport: indexInfo?.sport || '',
+                color: indexInfo?.color || '#1565C0',
+                color2: indexInfo?.color2 || '#FFFFFF',
+                hub: { hubCode: hubCode, visibility: 'private' },
+                status: 'active',
+            };
+        }
+
         // Normalize: new path stores hub fields in nested "hub" object
         hubProfile = teamId ? {
             ...raw,
@@ -729,7 +772,11 @@ async function loadTeam() {
         } : raw;
         renderHeader();
 
-        // Check access if user is signed in
+        // Check access if user is signed in. When we hit
+        // permission-denied above, checkAccess will also fail-soft on
+        // the manager/subscriber lookups — that's fine, the gate UI
+        // already handles "no subStatus + signed in" as the
+        // request-to-follow path.
         if (currentUser) {
             await checkAccess();
         }
