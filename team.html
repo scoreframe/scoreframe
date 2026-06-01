@@ -791,16 +791,13 @@ async function loadTeam() {
             //   • teamSearchIndex doc exists → invite_only / public → gate
             //   • teamSearchIndex doc missing → private → notFound
             //
-            // Anonymous visitors can't read teamSearchIndex (rules gate
-            // it on auth), so we conservatively show notFound for them.
-            // They can sign in via the main app and re-visit if they
-            // actually have a link to an invite_only team — preserves
-            // the privacy default for true private teams.
-            if (!currentUser) {
-                $('loadingScreen').style.display = 'none';
-                $('notFoundScreen').style.display = 'block';
-                return;
-            }
+            // 2026-06-01d — Anonymous visitors are now ALSO allowed to
+            // probe teamSearchIndex (rules split `get` from `list`:
+            // direct-ID/hubCode lookups are public, bulk queries
+            // still require auth). When the doc exists, the team is
+            // invite_only or public → show the gate so the visitor
+            // can sign in to request access. When the doc is missing,
+            // the team is private → fall through to notFound.
             // 2026-06-01c — teamSearchIndex doc IDs aren't guaranteed
             // to be teamId — the CF that writes them may use a
             // different key. Query by hubCode field instead, which
