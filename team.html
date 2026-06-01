@@ -621,9 +621,34 @@ if (!hubCode || hubCode.length < 4) {
     // session unlocks the page. tryAppAuthHandoff only does network
     // work when the URL hash carries an #auth= token; otherwise it
     // returns immediately and loadTeam proceeds anonymously.
+    // 2026-06-01 — Also wait for the FIRST onAuthStateChanged event
+    // before kicking off loadTeam. Firebase Auth rehydrates the
+    // signed-in session asynchronously from IndexedDB on page load
+    // / refresh; without this gate, loadTeam ran while currentUser
+    // was still null, hit permission-denied on the private team
+    // doc, and bailed to notFound. The auth listener would then
+    // fire moments later — but hubProfile was never set, so the
+    // re-render path at line 643 below couldn't recover. Result:
+    // first visit (cached + lucky timing) showed the gate; refresh
+    // showed "team not found" until you re-navigated.
+    let authResolved = false;
+    let authResolveFn = null;
+    const authReady = new Promise((resolve) => {
+        authResolveFn = resolve;
+        // Hard cap so a totally offline / broken auth doesn't hang
+        // the page forever. 2s is generous — Firebase usually
+        // resolves the cached session in <100ms.
+        setTimeout(() => {
+            if (!authResolved) { authResolved = true; resolve(); }
+        }, 2000);
+    });
     // Listen for auth state — user may already be signed in from a previous visit
     onAuthStateChanged(auth, async (user) => {
         currentUser = user && !user.isAnonymous ? user : null;
+        if (!authResolved) {
+            authResolved = true;
+            authResolveFn && authResolveFn();
+        }
         // Create/update user doc on sign-in
         if (currentUser) {
             try {
@@ -644,13 +669,24 @@ if (!hubCode || hubCode.length < 4) {
             if (currentUser) await checkAccess();
             updateUserBar();
             showContent();
+        } else if ($('notFoundScreen').style.display === 'block' && currentUser) {
+            // 2026-06-01 — Recovery path: if loadTeam already ran and
+            // landed on notFound while currentUser was null, and we
+            // now have a signed-in user, retry the load. Covers the
+            // edge case where Firebase's auth callback fires AFTER
+            // the 2s `authReady` timeout above (rare but possible
+            // on slow networks).
+            $('notFoundScreen').style.display = 'none';
+            $('loadingScreen').style.display = 'block';
+            loadTeam();
         }
     });
-    // Await SSO handoff before kicking off the Firestore read. After
-    // this resolves, currentUser reflects the in-app session (when a
-    // token was present + valid) so loadTeam → showContent renders
-    // the unlocked content directly instead of flashing accessGate.
-    tryAppAuthHandoff().then(() => loadTeam());
+    // Await SSO handoff AND first auth resolution before kicking off
+    // the Firestore read. After this resolves, currentUser reflects
+    // the in-app session (when a token was present + valid) so
+    // loadTeam → showContent renders the unlocked content directly
+    // instead of flashing accessGate / notFound.
+    Promise.all([tryAppAuthHandoff(), authReady]).then(() => loadTeam());
 }
 
 // Auto-accept any pending follower invitations addressed to the signed-in user's email.
