@@ -350,6 +350,11 @@ html, body {
         <div class="team-emoji" id="teamEmoji"></div>
         <div class="team-name" id="teamName"></div>
         <div class="team-sport" id="teamSport"></div>
+        <!-- 2026-06-01 — Active season pill, shown right under the
+             sport line so the current season is always visible —
+             not buried in the season switcher that only appears for
+             2+ seasons. Hidden when the team has no active season. -->
+        <div id="teamSeason" style="display:none; font-size:12px; font-weight:700; color:var(--accent); margin: 4px 0;"></div>
         <div id="teamRecord" style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:8px;"></div>
         <div id="liveBadge" style="display:none;" class="live-badge">● LIVE NOW</div>
         <div class="team-code" id="teamCode"></div>
@@ -1270,7 +1275,22 @@ async function loadSeasons() {
         });
         teamSeasons = seasons;
         // Default selection = the active season, if any.
-        selectedSeasonId = seasons.find(s => s.isActive && !s.endDate)?.id || null;
+        const activeSeason = seasons.find(s => s.isActive && !s.endDate);
+        selectedSeasonId = activeSeason?.id || null;
+        // 2026-06-01 — Surface the active season name in the header
+        // unconditionally so it's visible even when the switcher is
+        // hidden (single-season teams). Cleared/hidden when there's
+        // no active season — don't fake a label.
+        const seasonEl = $('teamSeason');
+        if (seasonEl) {
+            if (activeSeason && activeSeason.name) {
+                seasonEl.textContent = `📅 ${activeSeason.name}`;
+                seasonEl.style.display = 'block';
+            } else {
+                seasonEl.textContent = '';
+                seasonEl.style.display = 'none';
+            }
+        }
         renderSeasonSwitcher();
     } catch (e) {
         console.warn('loadSeasons failed:', e);
