@@ -383,6 +383,56 @@ html, body {
 .meta-item .k { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 .meta-item .v { font-size: 14px; color: var(--text-primary); margin-top: 2px; }
 
+/* 2026-06-02 — Box score. Two side-stacked tables (HOME / AWAY) with
+   sport-specific columns. Header row uses the team color as the
+   accent so HOME / AWAY read at a glance. Player rows scrollable
+   horizontally on narrow screens — the column set is intentionally
+   wide for stats-heavy sports (basketball, baseball). */
+.box-side {
+    margin-bottom: 16px;
+}
+.box-side:last-child { margin-bottom: 0; }
+.box-side-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 13px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    color: white;
+}
+.box-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.box-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 12px; min-width: 100%;
+}
+.box-table th, .box-table td {
+    padding: 6px 8px; text-align: right;
+    border-bottom: 1px solid var(--bg-elevated);
+    white-space: nowrap;
+}
+.box-table th {
+    font-size: 10px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--bg-elevated);
+}
+.box-table td.bx-name, .box-table th.bx-name {
+    text-align: left;
+    color: var(--text-primary); font-weight: 600;
+    min-width: 110px;
+}
+.box-table td.bx-num, .box-table th.bx-num {
+    width: 28px; text-align: center;
+    color: var(--text-muted); font-weight: 700;
+}
+.box-table td.bx-stat { font-variant-numeric: tabular-nums; }
+.box-table tfoot td {
+    font-weight: 800; color: var(--accent);
+    border-top: 2px solid var(--accent);
+    border-bottom: none;
+    background: rgba(255,150,64,0.08);
+}
+
 /* Highlights — clickable chips that seek the YouTube/Twitch player to the
    moment the broadcaster tagged. Each chip is a pill with description,
    score-at-time, and a HH:MM:SS timestamp on the right. */
@@ -560,6 +610,16 @@ html, body {
         <div class="card" id="metaCard" style="display:none;">
             <div class="label">Game Info</div>
             <div class="meta-grid" id="metaGrid"></div>
+        </div>
+
+        <!-- 2026-06-02 — Box score per sport. Lists every participant
+             (HOME side first, then AWAY) with a sport-specific column
+             set built from participants[].stats. Bowling already has
+             its own per-frame visualization in the score card so this
+             section stays hidden for bowling games. -->
+        <div class="card" id="boxScoreCard" style="display:none;">
+            <div class="label">Box Score</div>
+            <div id="boxScoreContent"></div>
         </div>
 
         <!-- ✨ AI Recap — generated in-app via the Labs feature and
@@ -992,6 +1052,7 @@ function renderUpcomingGame(hub, game) {
     setInterval(tick, 1000);
 
     renderMeta(game, sport);
+    renderBoxScore(hub, game, sport);
     renderAiRecap(game);
     $('streamPlatformPill').innerHTML = '';
     $('streamCaption').textContent = '';
@@ -1833,6 +1894,138 @@ function renderAiRecap(game) {
     if (!recap) return;
     $('aiRecapText').textContent = recap;
     $('aiRecapCard').style.display = '';
+}
+
+// 2026-06-02 — Box score. Reads game.participants (per-player stats
+// snapshot written at End Game on both platforms) and renders a
+// sport-specific column set for each side. Skipped for bowling
+// (per-frame visualization handles it) and for games with no
+// participants[] at all (sport without per-player tracking, or a
+// legacy save).
+function renderBoxScore(hub, game, sport) {
+    const card = $('boxScoreCard');
+    const content = $('boxScoreContent');
+    const parts = Array.isArray(game.participants) ? game.participants : [];
+    if (parts.length === 0) return;
+    const s = String(sport || '').toUpperCase();
+    if (s === 'BOWLING') return; // already rendered per-frame above
+    const cols = boxScoreColumnsForSport(s);
+    if (!cols || cols.length === 0) return;
+    const home = parts.filter(p => String(p.side || '').toLowerCase() === 'home');
+    const away = parts.filter(p => String(p.side || '').toLowerCase() === 'away');
+    const homeName = game.homeTeam || hub.teamName || 'Home';
+    const awayName = game.awayTeam || 'Away';
+    const homeColor = game.homeColor || hub.color || '#1565C0';
+    const awayColor = game.awayColor || '#C62828';
+    const sections = [];
+    if (home.length > 0) sections.push(renderBoxSide(homeName, homeColor, home, cols, s));
+    if (away.length > 0) sections.push(renderBoxSide(awayName, awayColor, away, cols, s));
+    if (sections.length === 0) return;
+    content.innerHTML = sections.join('');
+    card.style.display = '';
+}
+
+function renderBoxSide(name, color, players, cols, sportKey) {
+    const headerStyle = `background:${color};`;
+    const headerCols = '<th class="bx-num">#</th><th class="bx-name">Player</th>' +
+        cols.map(c => `<th>${c.label}</th>`).join('');
+    const bodyRows = players.map(p => {
+        const stats = (p.stats && typeof p.stats === 'object') ? p.stats : {};
+        const cells = cols.map(c => `<td class="bx-stat">${c.fmt(stats, sportKey)}</td>`).join('');
+        return `<tr><td class="bx-num">${escapeHtml(p.number || '–')}</td>` +
+            `<td class="bx-name">${escapeHtml(p.name || 'Player')}</td>${cells}</tr>`;
+    }).join('');
+    const totals = computeBoxTotals(players, cols, sportKey);
+    const totalRow = totals ?
+        `<tfoot><tr><td class="bx-num"></td><td class="bx-name">Total</td>` +
+        cols.map(c => `<td class="bx-stat">${c.totalFmt ? c.totalFmt(totals, sportKey) : (totals[c.key] != null ? totals[c.key] : '')}</td>`).join('') +
+        `</tr></tfoot>` : '';
+    return `<div class="box-side"><div class="box-side-header" style="${headerStyle}">${escapeHtml(name)}</div>` +
+        `<div class="box-table-wrap"><table class="box-table"><thead><tr>${headerCols}</tr></thead>` +
+        `<tbody>${bodyRows}</tbody>${totalRow}</table></div></div>`;
+}
+
+// Per-sport column definitions. Each column = { key, label, fmt(stats),
+// totalFmt?(totals), sumKey? }. `key` matches the participant.stats
+// map key written by the apps (see Android MainActivity.buildParticipants,
+// iOS MainActivity.buildParticipants).
+function boxScoreColumnsForSport(s) {
+    const num = (v) => (v == null || v === '') ? '0' : String(v);
+    const dec = (v, d) => (typeof v === 'number' && v > 0) ? v.toFixed(d) : '–';
+    const pct = (m, a) => (a > 0) ? Math.round((m / a) * 100) + '%' : '–';
+    if (s === 'BASKETBALL') {
+        return [
+            { key: 'PTS', label: 'PTS', fmt: (st) => num(st.PTS), sum: true },
+            { key: 'FG',  label: 'FG',  fmt: (st) => `${num(st.FGM)}-${num(st.FGA)}`,
+              totalFmt: (t) => `${num(t.FGM)}-${num(t.FGA)}` },
+            { key: '3P',  label: '3P',  fmt: (st) => `${num(st['3PM'])}-${num(st['3PA'])}`,
+              totalFmt: (t) => `${num(t['3PM'])}-${num(t['3PA'])}` },
+            { key: 'FT',  label: 'FT',  fmt: (st) => `${num(st.FTM)}-${num(st.FTA)}`,
+              totalFmt: (t) => `${num(t.FTM)}-${num(t.FTA)}` },
+            { key: 'REB', label: 'REB', fmt: (st) => num(st.REB), sum: true },
+            { key: 'AST', label: 'AST', fmt: (st) => num(st.AST), sum: true },
+            { key: 'STL', label: 'STL', fmt: (st) => num(st.STL), sum: true },
+            { key: 'BLK', label: 'BLK', fmt: (st) => num(st.BLK), sum: true },
+            { key: 'TO',  label: 'TO',  fmt: (st) => num(st.TO),  sum: true },
+            { key: 'PF',  label: 'PF',  fmt: (st) => num(st.PF),  sum: true },
+        ];
+    }
+    if (s === 'BASEBALL' || s === 'SOFTBALL') {
+        return [
+            { key: 'AB',  label: 'AB',  fmt: (st) => num(st.AB),  sum: true },
+            { key: 'R',   label: 'R',   fmt: (st) => num(st.R),   sum: true },
+            { key: 'H',   label: 'H',   fmt: (st) => num(st.H),   sum: true },
+            { key: 'RBI', label: 'RBI', fmt: (st) => num(st.RBI), sum: true },
+            { key: 'HR',  label: 'HR',  fmt: (st) => num(st.HR),  sum: true },
+            { key: 'BB',  label: 'BB',  fmt: (st) => num(st.BB),  sum: true },
+            { key: 'K',   label: 'K',   fmt: (st) => num(st.K),   sum: true },
+            { key: 'AVG', label: 'AVG',
+              fmt: (st) => (typeof st.AVG === 'number' ? st.AVG.toFixed(3) : '–'),
+              totalFmt: (t) => (t.AB > 0 ? (t.H / t.AB).toFixed(3) : '–') },
+        ];
+    }
+    if (s === 'VOLLEYBALL') {
+        return [
+            { key: 'kills',        label: 'K',    fmt: (st) => num(st.kills),        sum: true },
+            { key: 'aces',         label: 'A',    fmt: (st) => num(st.aces),         sum: true },
+            { key: 'assists',      label: 'AST',  fmt: (st) => num(st.assists),      sum: true },
+            { key: 'errors',       label: 'ERR',  fmt: (st) => num(st.errors),       sum: true },
+            { key: 'missedServes', label: 'MSV',  fmt: (st) => num(st.missedServes), sum: true },
+        ];
+    }
+    if (s === 'TENNIS' || s === 'PICKLEBALL') {
+        return [
+            { key: 'wins',   label: 'W', fmt: (st) => num(st.wins),   sum: true },
+            { key: 'losses', label: 'L', fmt: (st) => num(st.losses), sum: true },
+        ];
+    }
+    // Soccer/Hockey/Lacrosse: only team-level stats are tracked today,
+    // so per-player rows would all be zeros — skip the section.
+    return null;
+}
+
+function computeBoxTotals(players, cols, sportKey) {
+    const t = {};
+    let hasSum = false;
+    for (const c of cols) {
+        // Collect all numeric keys we sum + the FG/3P/FT pairs.
+        const keys = [];
+        if (c.sum) keys.push(c.key);
+        if (c.key === 'FG') keys.push('FGM', 'FGA');
+        if (c.key === '3P') keys.push('3PM', '3PA');
+        if (c.key === 'FT') keys.push('FTM', 'FTA');
+        if (c.key === 'AVG') keys.push('AB', 'H');
+        for (const k of keys) {
+            let sum = 0;
+            for (const p of players) {
+                const v = (p.stats && p.stats[k]);
+                if (typeof v === 'number') sum += v;
+            }
+            t[k] = sum;
+            if (sum > 0) hasSum = true;
+        }
+    }
+    return hasSum ? t : null;
 }
 
 function renderMeta(game, sport) {
