@@ -228,6 +228,22 @@ html, body {
 .player-position { font-size: 11px; color: var(--text-muted); }
 .player-stat { font-size: 11px; color: var(--accent); font-weight: 600; }
 
+/* 2026-06-02 — "Stats" pill on each roster row. Outlined orange,
+   right-aligned via the .player-info flex grow above. Tapping
+   pushes to player.html scoped to this team + player. */
+.player-stats-pill {
+    flex-shrink: 0; align-self: center;
+    padding: 5px 10px; border-radius: 999px;
+    border: 1px solid var(--accent);
+    color: var(--accent); background: transparent;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.04em;
+    text-decoration: none; text-transform: uppercase;
+    transition: background 0.12s ease;
+}
+.player-stats-pill:hover {
+    background: var(--accent); color: #1A1A1A;
+}
+
 /* Manager Edit Controls */
 .game-actions {
     display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;
@@ -1538,12 +1554,17 @@ async function loadRoster() {
             }
             const statHtml = stat ? `<div class="player-stat">${stat}</div>` : '';
 
+            // 2026-06-02 — "Stats" pill links to player.html scoped to
+            // this team. Use the doc ID (which IS the playerId) so the
+            // page's primary lookup resolves directly.
+            const playerHref = `/player.html?team=${encodeURIComponent(hubCode)}&player=${encodeURIComponent(d.id)}`;
             html += `<div class="player-card">
                 <div class="player-number">${num || '–'}</div>
                 <div class="player-info">
                     <div class="player-name">${p.name || 'Player'}</div>
                     ${pos}${statHtml}
                 </div>
+                <a class="player-stats-pill" href="${playerHref}">Stats</a>
             </div>`;
         });
         container.innerHTML = html;
