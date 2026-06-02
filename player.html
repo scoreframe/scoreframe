@@ -237,8 +237,14 @@ html, body {
 
 <div id="notFoundScreen" class="center-state" style="display:none;">
     <div class="emoji">🔒</div>
-    <div class="h">Player not found</div>
-    <div class="d">This player isn't on this team or hasn't been added yet.</div>
+    <div class="h" id="notFoundTitle">Player not found</div>
+    <div class="d" id="notFoundDesc">This player isn't on this team or hasn't been added yet.</div>
+    <button id="signInBtn" onclick="window.__doGoogleSignIn()" style="
+        display:none; margin-top: 16px; padding: 10px 22px;
+        border: none; border-radius: 999px; background: var(--accent);
+        color: #1A1A1A; font-size: 13px; font-weight: 800;
+        letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer;
+    ">Sign in with Google</button>
 </div>
 
 <div id="playerPage" style="display:none;">
@@ -281,12 +287,13 @@ html, body {
      I know if we're hitting the right version." Bump the date/letter
      suffix on every push so the visible text is the source of truth
      for "is this the latest" without opening dev tools. -->
-<div class="version-footer">build 2026-06-02c</div>
+<div class="version-footer">build 2026-06-02d</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
-    getAuth, onAuthStateChanged, signInWithCustomToken
+    getAuth, onAuthStateChanged, signInWithCustomToken,
+    GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import {
     getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit
@@ -306,7 +313,36 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-console.log('[player.html] build 2026-06-02c loaded');
+console.log('[player.html] build 2026-06-02d loaded');
+
+// 2026-06-02 — Google sign-in for when the visitor lands on this page
+// without an auth session. Safari/Chrome opened from an in-app link
+// won't carry your iOS/Android Firebase session unless you also signed
+// into Google in the browser. Trigger from the "Sign in with Google"
+// button on the notFound screen.
+const googleProvider = new GoogleAuthProvider();
+const _isIOSorSafari = /iP(hone|ad|od)/i.test(navigator.userAgent)
+    || (/Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent));
+window.__doGoogleSignIn = async function() {
+    try {
+        if (_isIOSorSafari) {
+            // Safari blocks the popup auth-handler postMessage; redirect
+            // back to the same URL after sign-in.
+            await signInWithRedirect(auth, googleProvider);
+            return;
+        }
+        await signInWithPopup(auth, googleProvider);
+        // onAuthStateChanged below will re-fire and retry loadPlayer.
+    } catch (e) {
+        console.error('[player.html] sign-in failed:', e);
+        if (e.code === 'auth/popup-blocked'
+            || e.code === 'auth/operation-not-supported-in-this-environment') {
+            try { await signInWithRedirect(auth, googleProvider); return; } catch (_) {}
+        }
+    }
+};
+// Pick up the post-redirect session on the next page load.
+getRedirectResult(auth).catch((e) => console.warn('[player.html] redirect-result:', e));
 
 // ── URL params ──
 const params = new URLSearchParams(location.search);
@@ -516,6 +552,22 @@ async function loadPlayer() {
 function showNotFound() {
     $('loadingScreen').style.display = 'none';
     $('notFoundScreen').style.display = 'block';
+    // 2026-06-02 — When the visitor is anon AND the team is private
+    // (we saw a permission-denied somewhere during loadPlayer), the
+    // right CTA is "sign in to view your team", not "player doesn't
+    // exist". Surface the Google sign-in button when anon; hide it
+    // when signed-in (in which case the page genuinely couldn't find
+    // the player on this team).
+    const anon = !currentUid;
+    if (anon) {
+        $('notFoundTitle').textContent = 'Sign in to view stats';
+        $('notFoundDesc').textContent = 'This team is private. Sign in with the account that has access.';
+        $('signInBtn').style.display = 'inline-block';
+    } else {
+        $('notFoundTitle').textContent = 'Player not found';
+        $('notFoundDesc').textContent = 'This player isn\'t on this team or hasn\'t been added yet.';
+        $('signInBtn').style.display = 'none';
+    }
 }
 
 function uniqueSportsFromGames(games) {
