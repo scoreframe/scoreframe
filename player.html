@@ -204,6 +204,16 @@ html, body {
     letter-spacing: 0.06em; text-transform: uppercase;
 }
 
+/* Version footer — tiny build marker so Eric can verify
+   he's looking at the deployed version without opening
+   dev tools. */
+.version-footer {
+    text-align: center; padding: 16px 16px 28px;
+    font-size: 10px; color: var(--text-muted);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    opacity: 0.7;
+}
+
 /* Empty + loading states */
 .center-state {
     padding: 60px 24px; text-align: center; color: var(--text-secondary);
@@ -267,6 +277,12 @@ html, body {
     </div>
 </div>
 
+<!-- Build marker. Eric: "put a version at the bottom of the page so
+     I know if we're hitting the right version." Bump the date/letter
+     suffix on every push so the visible text is the source of truth
+     for "is this the latest" without opening dev tools. -->
+<div class="version-footer">build 2026-06-02c</div>
+
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
@@ -290,7 +306,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-console.log('[player.html] build 2026-06-02a loaded');
+console.log('[player.html] build 2026-06-02c loaded');
 
 // ── URL params ──
 const params = new URLSearchParams(location.search);
