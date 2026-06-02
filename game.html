@@ -657,7 +657,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v30</span>
+    <span class="page-version">game.html v31</span>
 </div>
 
 <script type="module">
@@ -1906,11 +1906,16 @@ function renderBoxScore(hub, game, sport) {
     const card = $('boxScoreCard');
     const content = $('boxScoreContent');
     const parts = Array.isArray(game.participants) ? game.participants : [];
-    if (parts.length === 0) return;
     const s = String(sport || '').toUpperCase();
+    console.log('[box-score] sport=', s, 'participants=', parts.length,
+        'first=', parts[0]);
+    if (parts.length === 0) return;
     if (s === 'BOWLING') return; // already rendered per-frame above
     const cols = boxScoreColumnsForSport(s);
-    if (!cols || cols.length === 0) return;
+    if (!cols || cols.length === 0) {
+        console.log('[box-score] no columns defined for sport', s);
+        return;
+    }
     const home = parts.filter(p => String(p.side || '').toLowerCase() === 'home');
     const away = parts.filter(p => String(p.side || '').toLowerCase() === 'away');
     const homeName = game.homeTeam || hub.teamName || 'Home';
