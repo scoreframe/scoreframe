@@ -287,7 +287,7 @@ html, body {
      I know if we're hitting the right version." Bump the date/letter
      suffix on every push so the visible text is the source of truth
      for "is this the latest" without opening dev tools. -->
-<div class="version-footer">build 2026-06-02f</div>
+<div class="version-footer">build 2026-06-02g</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -319,7 +319,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-console.log('[player.html] build 2026-06-02f loaded');
+console.log('[player.html] build 2026-06-02g loaded');
 
 // 2026-06-02 — Google sign-in for when the visitor lands on this page
 // without an auth session. Safari/Chrome opened from an in-app link
@@ -995,12 +995,19 @@ function drawTrend(scores) {
     const stepX = w / Math.max(1, scores.length - 1);
     const yFor = (v) => h - ((v - minV) / range) * h;
 
-    // Dashed average baseline
+    // Dashed average baseline. 2026-06-02 — Use globalAlpha for the
+    // 60% transparency instead of string-concatenating a hex alpha
+    // (`muted + '99'` produced "#99999" → 5-char invalid hex →
+    // canvas fell back to black on the dark theme; user couldn't
+    // see the average line at all).
     const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    ctx.save();
+    ctx.globalAlpha = 0.6;
     ctx.beginPath();
-    ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.strokeStyle = muted + '99';
+    ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.strokeStyle = muted;
     ctx.moveTo(0, yFor(avg)); ctx.lineTo(w, yFor(avg)); ctx.stroke();
     ctx.setLineDash([]);
+    ctx.restore();
 
     // Trend line
     ctx.beginPath();
