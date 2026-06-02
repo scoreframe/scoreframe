@@ -337,7 +337,7 @@ html, body {
      I know if we're hitting the right version." Bump the date/letter
      suffix on every push so the visible text is the source of truth
      for "is this the latest" without opening dev tools. -->
-<div class="version-footer">build 2026-06-02m</div>
+<div class="version-footer">build 2026-06-02n</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -369,7 +369,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-console.log('[player.html] build 2026-06-02m loaded');
+console.log('[player.html] build 2026-06-02n loaded');
 
 // 2026-06-02 — Google sign-in for when the visitor lands on this page
 // without an auth session. Safari/Chrome opened from an in-app link
@@ -401,32 +401,16 @@ window.__doGoogleSignIn = async function() {
 getRedirectResult(auth).catch((e) => console.warn('[player.html] redirect-result:', e));
 
 // ── URL params ──
-// 2026-06-02 — `team=` is the primary scope hubCode; `player=` is
-// required. Plural is `teams=` (with an `s`). When `teams=all` is
-// set but `team=` is missing, we discover the player's first team
-// from the viewer's accessible roster and continue — supports the
-// bare URL form `player.html?teams=all&player=...`.
+// Only `player=` is required. `team=` is an optional default scope
+// — pick the team to show first when the viewer can see this player
+// on multiple teams. The Team picker always discovers every team
+// the signed-in viewer is allowed to read that has this player on
+// its roster, regardless of what `team=` says. If `team=` is
+// missing entirely, the first discovered team is selected.
 const params = new URLSearchParams(location.search);
 let hubCode = params.get('team') || '';
 const playerIdParam = params.get('player') || '';
-// 2026-06-02 — `teams=` controls the Team picker. Three modes:
-//   • `teams=all`   — discover every team the signed-in viewer has
-//                     access to that has this player on its roster
-//                     (preferred default; always fresh).
-//   • `teams=A,B`   — explicit comma-separated hubCode list (legacy
-//                     / offline-friendly fallback the app can use
-//                     when it has the player→teams mapping cached).
-//   • absent        — no picker; the URL's `team=` is the only scope.
-const teamsParam = params.get('teams') || '';
-const teamDiscoveryAll = teamsParam.toLowerCase() === 'all';
-const teamHubCodes = teamDiscoveryAll
-    ? [] // populated asynchronously by discoverTeamsForPlayer()
-    : teamsParam.split(',').map((s) => s.trim()).filter(Boolean);
-// Make sure the URL's primary `team=` value is in the explicit
-// picker list so the current selection is always representable.
-if (!teamDiscoveryAll && hubCode && !teamHubCodes.includes(hubCode)) {
-    teamHubCodes.unshift(hubCode);
-}
+const teamHubCodes = []; // populated by discoverTeamsForPlayer()
 const themeParam = params.get('theme');
 if (themeParam === 'light' || themeParam === 'dark') {
     document.body.setAttribute('data-theme', themeParam);
@@ -456,10 +440,9 @@ const sportLabel = (s) => {
 };
 
 // ── Boot ──
-// Bare URLs need at least playerId. team is optional when teams=all
-// is set — we'll discover the seed team from the viewer's myTeams /
-// subscribedHubs after auth resolves.
-if (!playerIdParam || (!hubCode && !teamDiscoveryAll)) {
+// Only playerId is required. team is optional — when missing, we
+// seed it from the viewer's accessible roster after auth resolves.
+if (!playerIdParam) {
     $('loadingScreen').style.display = 'none';
     $('notFoundScreen').style.display = 'block';
 } else {
@@ -497,18 +480,18 @@ if (!playerIdParam || (!hubCode && !teamDiscoveryAll)) {
         }
     });
     authReady.then(async () => {
-        // 2026-06-02 — When the URL didn't include team= but did say
-        // teams=all, find the first team the signed-in viewer can
-        // read that has this playerId in its roster. We don't have
-        // the player's name yet (no profile), so this seed pass only
-        // does exact-id matching; the wider name-fallback discovery
-        // still runs later inside loadPlayer.
-        if (!hubCode && teamDiscoveryAll) {
+        // No team= in URL → find the first team the signed-in viewer
+        // can read that has this playerId in its roster. The player
+        // profile (and name) isn't loaded yet, so this seed pass only
+        // does exact-id matching; loadPlayer's full discovery picks
+        // up sibling SavedPlayer UUIDs (cross-team identity drift)
+        // via name-fallback once the profile resolves.
+        if (!hubCode) {
             try {
                 const seed = await seedTeamForPlayer();
                 if (seed) {
                     hubCode = seed;
-                    console.log('[player.html] seeded team from teams=all:', seed);
+                    console.log('[player.html] seeded team:', seed);
                 }
             } catch (e) {
                 console.warn('[player.html] team seed failed:', e);
@@ -681,16 +664,14 @@ async function loadPlayer() {
         if (sports.length === 0 && teamProfile?.sport) sports.push(teamProfile.sport.toUpperCase());
         selectedSport = sports[0] || '';
 
-        // When `teams=all`, discover every team the viewer can read
-        // that has this player on its roster. Runs after playerProfile
+        // Always discover every team the viewer can read that has
+        // this player on its roster. Runs after playerProfile
         // resolves so the discovery function can match by name as a
         // fallback for cross-team SavedPlayer UUID drift.
-        const discoverTeamsP = teamDiscoveryAll
-            ? discoverTeamsForPlayer(playerProfile?.name || '').catch((e) => {
-                console.warn('[player.html] team discovery failed:', e);
-                return [];
-            })
-            : Promise.resolve(teamHubCodes);
+        const discoverTeamsP = discoverTeamsForPlayer(playerProfile?.name || '').catch((e) => {
+            console.warn('[player.html] team discovery failed:', e);
+            return [];
+        });
 
         renderHero();
         renderPills(sports);
