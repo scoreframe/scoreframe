@@ -227,6 +227,25 @@ html, body {
 .player-name { font-size: 14px; font-weight: 600; }
 .player-position { font-size: 11px; color: var(--text-muted); }
 .player-stat { font-size: 11px; color: var(--accent); font-weight: 600; }
+/* 2026-06-02 — Multi-stat chip grid per roster row. Each chip is a
+   stacked value+label, low-key so the row stays scannable but full
+   season-summary is at a glance. Per-sport fields chosen for the
+   biggest "what's this player about" signal: bowling AVG/HIGH/Strike%,
+   basketball PPG/3P%, baseball AVG/HR/RBI, volleyball K/A/AST,
+   net-sports W-L. */
+.player-stats-grid {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;
+}
+.player-stat-chip {
+    display: flex; flex-direction: column; align-items: flex-start;
+    background: var(--bg-elevated); padding: 3px 8px;
+    border-radius: 4px; min-width: 36px;
+}
+.player-stat-chip .pv { font-size: 12px; font-weight: 800; color: var(--accent); line-height: 1.1; }
+.player-stat-chip .pl {
+    font-size: 8px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.1;
+}
 
 /* 2026-06-02 — "Stats" pill on each roster row. Outlined orange,
    right-aligned via the .player-info flex grow above. Tapping
@@ -634,7 +653,7 @@ async function tryAppAuthHandoff() {
 }
 
 // 2026-06-01b — Page build marker for cache-debug. Visible in console.
-console.log('[team.html] build 2026-06-01b loaded');
+console.log('[team.html] build 2026-06-02c loaded');
 
 if (!hubCode || hubCode.length < 4) {
     $('loadingScreen').style.display = 'none';
@@ -1521,6 +1540,60 @@ async function loadSchedule() {
     }
 }
 
+// 2026-06-02 — Per-player stat chip builder for the team roster
+// section. Picks 3-4 stats per sport from the player's career doc
+// (teams/{teamId}/players/{id}) and renders them as compact value
+// + label chips. Returns '' when the player hasn't played a game
+// yet so untracked / brand-new entries stay clean.
+function buildPlayerStatChips(p, sport) {
+    if (!(p.gamesPlayed > 0)) return '';
+    const chip = (label, value) =>
+        `<div class="player-stat-chip"><div class="pv">${value}</div><div class="pl">${label}</div></div>`;
+    const chips = [];
+    const s = String(sport || '').toUpperCase();
+    const games = p.gamesPlayed || 0;
+    if (s === 'BOWLING') {
+        if (p.average > 0) chips.push(chip('AVG', (p.average).toFixed(1)));
+        if (p.highScore > 0) chips.push(chip('HIGH', p.highScore));
+        const frames = p.totalBowlingFrames || 0;
+        if (frames > 0 && p.totalStrikes > 0) {
+            const pct = Math.round((p.totalStrikes / frames) * 100);
+            chips.push(chip('STR%', pct + '%'));
+        }
+        if (games > 0) chips.push(chip('G', games));
+    } else if (s === 'BASKETBALL') {
+        const pts = p.totalBkPoints || 0;
+        if (pts > 0) chips.push(chip('PPG', (pts / games).toFixed(1)));
+        const tpa = p.totalBk3PA || 0;
+        const tpm = p.totalBk3PM || 0;
+        if (tpa > 0) chips.push(chip('3P%', Math.round((tpm / tpa) * 100) + '%'));
+        const reb = (p.totalBkOREB || 0) + (p.totalBkDREB || 0);
+        if (reb > 0) chips.push(chip('REB', (reb / games).toFixed(1)));
+        chips.push(chip('G', games));
+    } else if (s === 'BASEBALL' || s === 'SOFTBALL') {
+        if (p.battingAvg > 0) chips.push(chip('AVG', p.battingAvg.toFixed(3)));
+        if ((p.totalHR || 0) > 0) chips.push(chip('HR', p.totalHR));
+        if ((p.totalRBI || 0) > 0) chips.push(chip('RBI', p.totalRBI));
+        if ((p.totalHits || 0) > 0) chips.push(chip('H', p.totalHits));
+        chips.push(chip('G', games));
+    } else if (s === 'VOLLEYBALL') {
+        chips.push(chip('K', p.totalKills || 0));
+        chips.push(chip('A', p.totalAces || 0));
+        chips.push(chip('AST', p.totalAssists || 0));
+        chips.push(chip('G', games));
+    } else if (s === 'TENNIS' || s === 'PICKLEBALL') {
+        chips.push(chip('W-L', `${p.wins || 0}-${p.losses || 0}`));
+        chips.push(chip('G', games));
+    } else {
+        if ((p.wins || 0) > 0 || (p.losses || 0) > 0) {
+            chips.push(chip('W-L', `${p.wins || 0}-${p.losses || 0}`));
+        }
+        chips.push(chip('G', games));
+    }
+    if (chips.length === 0) return '';
+    return `<div class="player-stats-grid">${chips.join('')}</div>`;
+}
+
 async function loadRoster() {
     if (!teamId) return;
     try {
@@ -1538,21 +1611,13 @@ async function loadRoster() {
             const num = p.number || '';
             const pos = p.position ? `<div class="player-position">${p.position}</div>` : '';
 
-            // Pick the most relevant stat to show based on sport
-            let stat = '';
-            if (p.gamesPlayed > 0) {
-                const isVB = sport.toUpperCase() === 'VOLLEYBALL';
-                const isBowling = sport.toUpperCase() === 'BOWLING';
-                const isBaseball = sport.toUpperCase() === 'BASEBALL' || sport.toUpperCase() === 'SOFTBALL';
-                const isTennis = sport.toUpperCase() === 'TENNIS' || sport.toUpperCase() === 'PICKLEBALL';
-                if (isBowling && (p.average > 0 || p.highScore > 0)) stat = `Avg: ${(p.average || 0).toFixed(1)} · High: ${p.highScore || 0}`;
-                else if (isBaseball && p.battingAvg > 0) stat = `AVG: ${p.battingAvg.toFixed(3)} · ${p.totalHits || 0}H · ${p.totalRBI || 0}RBI`;
-                else if (isVB) stat = `${p.totalKills || 0}K · ${p.totalAces || 0}A · ${p.totalAssists || 0}AST`;
-                else if (isTennis && (p.wins > 0 || p.losses > 0)) stat = `${p.wins}W-${p.losses}L`;
-                else if (p.wins > 0 || p.losses > 0) stat = `${p.wins}W-${p.losses}L`;
-                else stat = `${p.gamesPlayed} games`;
-            }
-            const statHtml = stat ? `<div class="player-stat">${stat}</div>` : '';
+            // 2026-06-02 — Multi-chip career snapshot per roster row.
+            // Replaces the previous one-line summary. Per-sport stat
+            // sets prioritised: bowling (AVG/HIGH/STRK%/GAMES),
+            // basketball (PPG/3P%/REB/GAMES), baseball (AVG/HR/RBI/H),
+            // volleyball (K/A/AST/GAMES), tennis/pickleball (W-L/GAMES),
+            // fallback (W-L/GAMES).
+            const statHtml = buildPlayerStatChips(p, sport);
 
             // 2026-06-02 — "Stats" pill links to player.html scoped to
             // this team. Use the doc ID (which IS the playerId) so the
