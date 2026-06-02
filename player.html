@@ -346,11 +346,20 @@ async function loadPlayer() {
         if (!idx.exists()) return showNotFound();
         teamId = idx.data().teamId;
 
-        // Team profile + player profile in parallel
-        const [teamDoc, playerDoc] = await Promise.all([
-            getDoc(doc(db, 'teams', teamId)).catch(() => null),
-            getDoc(doc(db, 'teams', teamId, 'players', playerIdParam)).catch(() => null),
-        ]);
+        // 2026-06-02 — Defensive player-profile resolution. The
+        // teams/{teamId}/players/{id} doc is only written for TRACKED
+        // players that have accumulated stats on this team. A player
+        // who's only in the roster (or whose savedPlayerId differs
+        // between iOS/Android installs) won't have that doc — we'd
+        // dump them on "Player not found" even though we can clearly
+        // resolve their name from the roster + games. Tries in order:
+        //   1. teams/{teamId}/players/{playerIdParam} (canonical)
+        //   2. teams/{teamId}/roster scan for matching playerId
+        //   3. First participant on any team game matching the id /
+        //      name (last-resort; name picked off the URL would even
+        //      let us render a generic page if the player isn't on
+        //      the roster yet).
+        const teamDoc = await getDoc(doc(db, 'teams', teamId)).catch(() => null);
         if (teamDoc && teamDoc.exists()) {
             const t = teamDoc.data();
             teamProfile = {
@@ -360,10 +369,37 @@ async function loadPlayer() {
                 color2: t.color2 || '#FFFFFF',
             };
         }
+
+        const playerDoc = await getDoc(doc(db, 'teams', teamId, 'players', playerIdParam))
+            .catch(() => null);
         if (playerDoc && playerDoc.exists()) {
             playerProfile = { id: playerDoc.id, ...playerDoc.data() };
         }
-        if (!playerProfile) return showNotFound();
+        if (!playerProfile) {
+            try {
+                const rosterSnap = await getDocs(collection(db, 'teams', teamId, 'roster'));
+                for (const r of rosterSnap.docs) {
+                    const rd = r.data();
+                    if (rd.playerId === playerIdParam || r.id === playerIdParam) {
+                        playerProfile = {
+                            id: playerIdParam,
+                            name: rd.name || '',
+                            number: rd.number || '',
+                            position: rd.position || '',
+                            sports: teamProfile?.sport ? [teamProfile.sport] : [],
+                        };
+                        console.log('[player.html] resolved player from roster:', playerProfile);
+                        break;
+                    }
+                }
+            } catch (e) {
+                console.warn('[player.html] roster lookup failed:', e);
+            }
+        }
+        // Note: we DON'T bail yet on missing playerProfile — the games
+        // pass below can still match by playerIdParam, and if any
+        // game has Eric as a participant we'll synthesize a profile
+        // from the first matching participant entry below.
 
         // Seasons + games in parallel
         const [seasonsSnap, gamesSnap] = await Promise.all([
@@ -375,7 +411,7 @@ async function loadPlayer() {
                 .sort((a, b) => (b.startDate || 0) - (a.startDate || 0));
         }
         if (gamesSnap) {
-            const lowerName = (playerProfile.name || '').toLowerCase();
+            const lowerName = (playerProfile?.name || '').toLowerCase();
             for (const g of gamesSnap.docs) {
                 const data = g.data();
                 const status = data.status;
@@ -392,6 +428,28 @@ async function loadPlayer() {
                 if (!matched) continue;
                 allGames.push({ id: g.id, ...data, _participant: matched });
             }
+        }
+
+        // 2026-06-02 — Last-resort player profile from the first game's
+        // matched participant. Covers iOS/Android cross-install
+        // playerId drift: the apps may have shipped Eric with two
+        // different SavedPlayer UUIDs, but the participants in his
+        // bowling sessions still carry his name, so we can render the
+        // page off that.
+        if (!playerProfile && allGames.length > 0) {
+            const p = allGames[0]._participant;
+            playerProfile = {
+                id: playerIdParam,
+                name: p.name || '',
+                number: p.number || '',
+                position: p.position || '',
+                sports: [],
+            };
+            console.log('[player.html] synthesized player profile from game participant:', playerProfile);
+        }
+        if (!playerProfile) {
+            console.warn('[player.html] no profile + no matching games → notFound');
+            return showNotFound();
         }
 
         // Initial sport selection — prefer the team's sport when the
