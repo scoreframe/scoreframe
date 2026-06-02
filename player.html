@@ -329,14 +329,40 @@ if (!hubCode || !playerIdParam) {
     $('loadingScreen').style.display = 'none';
     $('notFoundScreen').style.display = 'block';
 } else {
-    // Auth handoff is handled the same way team.html does it — short of
-    // wiring it from scratch we just rely on Firebase auto-restoring
-    // the cached session. Read attempts that miss permissions get
-    // caught and routed to notFound. Most reads we need (team profile,
-    // games, players) are guarded by `canReadTeam` which checks
-    // public/owner/manager/subscriber. If the visitor's apps already
-    // signed them in, the cached session covers private teams too.
-    onAuthStateChanged(auth, () => loadPlayer());
+    // 2026-06-02 — Same auth-race fix team.html got. Firebase Auth
+    // rehydrates the cached signed-in session async from IndexedDB.
+    // The first `onAuthStateChanged` event can fire with user=null
+    // before the cache resolves; loadPlayer would then run
+    // unauthenticated, every private-team read would 401, and we'd
+    // dump on notFound before the real session lands. Strategy:
+    //   1. Wait for either the first onAuthStateChanged event OR a
+    //      2s safety timeout before kicking off loadPlayer.
+    //   2. If a later auth event populates the user AFTER we already
+    //      landed on notFound, retry loadPlayer.
+    let authResolved = false;
+    let authResolveFn = null;
+    const authReady = new Promise((resolve) => {
+        authResolveFn = resolve;
+        setTimeout(() => {
+            if (!authResolved) { authResolved = true; resolve(); }
+        }, 2000);
+    });
+    let currentUid = null;
+    onAuthStateChanged(auth, (user) => {
+        currentUid = user ? user.uid : null;
+        console.log('[player.html] auth state:', currentUid ? 'signed in' : 'anon');
+        if (!authResolved) {
+            authResolved = true;
+            authResolveFn && authResolveFn();
+        } else if (currentUid &&
+                   $('notFoundScreen').style.display === 'block') {
+            // Late auth event after a failed first pass — retry.
+            $('notFoundScreen').style.display = 'none';
+            $('loadingScreen').style.display = 'block';
+            loadPlayer();
+        }
+    });
+    authReady.then(() => loadPlayer());
 }
 
 async function loadPlayer() {
