@@ -657,7 +657,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v31</span>
+    <span class="page-version">game.html v32</span>
 </div>
 
 <script type="module">
@@ -1169,6 +1169,8 @@ function renderGame(hub, game) {
 
     // Game info card
     renderMeta(game, sport);
+    // Box score card — sport-specific per-player stat table.
+    renderBoxScore(hub, game, sport);
     // ✨ AI recap card (Labs feature, persisted from in-app generation).
     renderAiRecap(game);
 
