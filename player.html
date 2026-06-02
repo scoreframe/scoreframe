@@ -337,7 +337,7 @@ html, body {
      I know if we're hitting the right version." Bump the date/letter
      suffix on every push so the visible text is the source of truth
      for "is this the latest" without opening dev tools. -->
-<div class="version-footer">build 2026-06-02j</div>
+<div class="version-footer">build 2026-06-02k</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -369,7 +369,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-console.log('[player.html] build 2026-06-02j loaded');
+console.log('[player.html] build 2026-06-02k loaded');
 
 // 2026-06-02 — Google sign-in for when the visitor lands on this page
 // without an auth session. Safari/Chrome opened from an in-app link
@@ -404,16 +404,24 @@ getRedirectResult(auth).catch((e) => console.warn('[player.html] redirect-result
 const params = new URLSearchParams(location.search);
 const hubCode = params.get('team') || '';
 const playerIdParam = params.get('player') || '';
-// 2026-06-02 — `teams=` is a comma-separated list of hubCodes the
-// player is on, passed by the app when launching from cross-team
-// contexts (My Players list, etc.). When present + has 2+ entries,
-// we render a Team picker above the sport pills. Switching the
-// picker reloads the page with `team=` pinned to the new pick.
-const teamHubCodes = (params.get('teams') || '')
-    .split(',').map((s) => s.trim()).filter(Boolean);
-// Make sure the URL's primary `team=` value is in the picker list
-// so the current selection is always representable.
-if (hubCode && !teamHubCodes.includes(hubCode)) teamHubCodes.unshift(hubCode);
+// 2026-06-02 — `teams=` controls the Team picker. Three modes:
+//   • `teams=all`   — discover every team the signed-in viewer has
+//                     access to that has this player on its roster
+//                     (preferred default; always fresh).
+//   • `teams=A,B`   — explicit comma-separated hubCode list (legacy
+//                     / offline-friendly fallback the app can use
+//                     when it has the player→teams mapping cached).
+//   • absent        — no picker; the URL's `team=` is the only scope.
+const teamsParam = params.get('teams') || '';
+const teamDiscoveryAll = teamsParam.toLowerCase() === 'all';
+const teamHubCodes = teamDiscoveryAll
+    ? [] // populated asynchronously by discoverTeamsForPlayer()
+    : teamsParam.split(',').map((s) => s.trim()).filter(Boolean);
+// Make sure the URL's primary `team=` value is in the explicit
+// picker list so the current selection is always representable.
+if (!teamDiscoveryAll && hubCode && !teamHubCodes.includes(hubCode)) {
+    teamHubCodes.unshift(hubCode);
+}
 const themeParam = params.get('theme');
 if (themeParam === 'light' || themeParam === 'dark') {
     document.body.setAttribute('data-theme', themeParam);
@@ -603,11 +611,34 @@ async function loadPlayer() {
         if (sports.length === 0 && teamProfile?.sport) sports.push(teamProfile.sport.toUpperCase());
         selectedSport = sports[0] || '';
 
+        // When `teams=all`, discover every team the viewer can read
+        // that has this player on its roster. Runs in parallel with
+        // the first render so the picker pops in once it resolves
+        // instead of blocking everything else.
+        const discoverTeamsP = teamDiscoveryAll
+            ? discoverTeamsForPlayer().catch((e) => {
+                console.warn('[player.html] team discovery failed:', e);
+                return [];
+            })
+            : Promise.resolve(teamHubCodes);
+
         renderHero();
-        renderTeamPicker();
         renderPills(sports);
         renderSeasonPicker();
         renderEverything();
+
+        // Resolve the team list, then render the picker. We push the
+        // resolved hubCodes into `teamHubCodes` so renderTeamPicker
+        // can stay sync. Picker hides itself when only one option
+        // is known, so single-team players see no UI delta.
+        discoverTeamsP.then((codes) => {
+            teamHubCodes.length = 0;
+            for (const c of codes) teamHubCodes.push(c);
+            if (hubCode && !teamHubCodes.includes(hubCode)) {
+                teamHubCodes.unshift(hubCode);
+            }
+            renderTeamPicker();
+        });
         $('loadingScreen').style.display = 'none';
         $('playerPage').style.display = 'block';
     } catch (e) {
@@ -644,6 +675,62 @@ function uniqueSportsFromGames(games) {
         if (s) set.add(s);
     }
     return Array.from(set);
+}
+
+// 2026-06-02 — Discovery path for `teams=all`. Reads the signed-in
+// user's `myTeams` + `subscribedHubs` from `users/{uid}`, resolves
+// the subscribed hubCodes to teamIds via hubIndex, then checks each
+// team's `players/{playerIdParam}` doc + a roster query to see if
+// the player belongs to that team. Returns the matching hubCodes.
+// Anon visitors get an empty list — they can only see the team
+// passed in the URL.
+async function discoverTeamsForPlayer() {
+    if (!currentUid) return [];
+    const userDoc = await getDoc(doc(db, 'users', currentUid)).catch(() => null);
+    if (!userDoc || !userDoc.exists()) return [];
+    const data = userDoc.data() || {};
+    const ownedTeamIds = Array.isArray(data.myTeams) ? data.myTeams : [];
+    const subscribed = Array.isArray(data.subscribedHubs) ? data.subscribedHubs : [];
+
+    // Resolve subscribed hubCodes → teamIds in parallel.
+    const subTeamIds = await Promise.all(subscribed.map(async (code) => {
+        try {
+            const idx = await getDoc(doc(db, 'hubIndex', code));
+            return idx.exists() ? idx.data().teamId : null;
+        } catch (_) { return null; }
+    }));
+    const allTeamIds = Array.from(new Set([
+        ...ownedTeamIds,
+        ...subTeamIds.filter(Boolean),
+    ]));
+
+    // For each team, check membership + resolve hubCode in parallel.
+    const results = await Promise.all(allTeamIds.map(async (tid) => {
+        try {
+            const playerDoc = await getDoc(
+                doc(db, 'teams', tid, 'players', playerIdParam)
+            ).catch(() => null);
+            let hasPlayer = playerDoc?.exists() === true;
+            if (!hasPlayer) {
+                try {
+                    const { getDocs: gds, query: q, collection: c,
+                            where: w, limit: lim } =
+                        await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+                    const snap = await gds(q(
+                        c(db, 'teams', tid, 'roster'),
+                        w('playerId', '==', playerIdParam),
+                        lim(1)
+                    ));
+                    hasPlayer = !snap.empty;
+                } catch (_) { /* ignore */ }
+            }
+            if (!hasPlayer) return null;
+            const teamDoc = await getDoc(doc(db, 'teams', tid)).catch(() => null);
+            const hc = teamDoc?.data()?.hub?.hubCode;
+            return hc || null;
+        } catch (_) { return null; }
+    }));
+    return results.filter(Boolean);
 }
 
 // 2026-06-02 — Resolve each hubCode in `teamHubCodes` to a team name
