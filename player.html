@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
+<title>ScoreFrame — Player</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg-deepest: #0D0D0D; --bg-deep: #141414; --bg-surface: #1E1E1E;
+    --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
+    --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
+    --success: #4CAF50; --error: #F44336;
+    --win-green: #2E7D32; --loss-red: #C62828; --tie-grey: #777777;
+}
+body[data-theme="dark"] {
+    --bg-deepest: #0D0D0D !important; --bg-deep: #141414 !important; --bg-surface: #1E1E1E !important;
+    --bg-elevated: #272727 !important; --accent: #FF9640 !important; --accent-dim: rgba(255,150,64,0.15) !important;
+    --text-primary: #E0E0E0 !important; --text-secondary: #999 !important; --text-muted: #666 !important;
+    --win-green: #2E7D32 !important; --loss-red: #C62828 !important; --tie-grey: #777777 !important;
+}
+body[data-theme="light"] {
+    --bg-deepest: #F5F5F2 !important; --bg-deep: #FFFFFF !important; --bg-surface: #FFFFFF !important;
+    --bg-elevated: #ECECE8 !important; --accent: #E47A1F !important; --accent-dim: rgba(228,122,31,0.15) !important;
+    --text-primary: #1A1A1A !important; --text-secondary: #555 !important; --text-muted: #888 !important;
+    --win-green: #1B5E20 !important; --loss-red: #B71C1C !important; --tie-grey: #888888 !important;
+}
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg-deepest: #F5F5F2; --bg-deep: #FFFFFF; --bg-surface: #FFFFFF;
+        --bg-elevated: #ECECE8; --accent: #E47A1F; --accent-dim: rgba(228,122,31,0.15);
+        --text-primary: #1A1A1A; --text-secondary: #555; --text-muted: #888;
+        --win-green: #1B5E20; --loss-red: #B71C1C; --tie-grey: #888888;
+    }
+}
+body.app .top-bar { display: none; }
+html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-deepest); color: var(--text-primary);
+    min-height: 100vh; overflow-x: hidden;
+}
+
+/* Top bar — slim brand + back link (hidden in-app) */
+.top-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; background: var(--bg-deep);
+    border-bottom: 1px solid var(--bg-elevated);
+}
+.brand { text-decoration: none; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+.brand .accent { color: var(--accent); }
+.back-link {
+    margin-left: auto; font-size: 13px; color: var(--text-secondary);
+    text-decoration: none; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid var(--bg-elevated);
+}
+
+/* Hero — large faded sport-emoji watermark behind player name */
+.hero { position: relative; padding: 22px 24px 16px; text-align: center; overflow: hidden; }
+.hero-watermark {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) rotate(-12deg);
+    font-size: 220px; opacity: 0.06; pointer-events: none;
+    line-height: 1;
+}
+.hero-name {
+    position: relative; font-size: 26px; font-weight: 800;
+    letter-spacing: 0.02em; margin-bottom: 4px;
+}
+.hero-meta {
+    position: relative; font-size: 13px; color: var(--text-muted);
+}
+
+/* Sport pill row */
+.section { padding: 8px 16px 0; }
+.pills {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding: 4px 0 12px; scrollbar-width: none;
+}
+.pills::-webkit-scrollbar { display: none; }
+.pill {
+    flex: 0 0 auto; padding: 7px 14px; border-radius: 18px;
+    font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;
+    border: 1px solid var(--accent); background: transparent; color: var(--accent);
+    transition: background 0.12s ease;
+}
+.pill.selected { background: var(--accent); color: #1A1A1A; }
+
+/* Season picker */
+.season-select {
+    width: 100%; padding: 10px 14px; border-radius: 8px;
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+    color: var(--text-primary); font-size: 13px; font-weight: 600;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23FF9640' d='M0 0l5 6 5-6z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+}
+.section-label {
+    font-size: 11px; font-weight: 700; color: var(--text-secondary);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin: 14px 0 8px;
+}
+
+/* Stat card */
+.stat-card {
+    margin: 12px 16px; padding: 16px 18px;
+    background: var(--bg-surface); border: 2px solid var(--accent);
+    border-radius: 14px;
+}
+.stat-card-head {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 12px;
+}
+.stat-card-head .emoji { font-size: 28px; }
+.stat-card-head .who {
+    font-size: 16px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.stat-card-head .games { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.stat-divider {
+    height: 2px; background: var(--accent); margin: 4px 0 14px;
+}
+.big-row { display: flex; gap: 8px; }
+.big-stat {
+    flex: 1; text-align: center;
+}
+.big-stat .v {
+    display: block; font-size: 22px; font-weight: 800; color: var(--accent);
+    line-height: 1.1;
+}
+.big-stat .l {
+    display: block; font-size: 10px; color: var(--text-secondary);
+    letter-spacing: 0.08em; margin-top: 4px;
+}
+.stat-grid {
+    display: grid; gap: 6px 8px; margin-top: 12px;
+}
+.stat-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.stat-grid.cols-6 { grid-template-columns: repeat(6, 1fr); }
+.stat-cell { text-align: center; padding: 4px 0; }
+.stat-cell .v {
+    display: block; font-size: 15px; font-weight: 700; color: var(--text-primary);
+}
+.stat-cell .l {
+    display: block; font-size: 9px; color: var(--text-secondary);
+    letter-spacing: 0.04em; text-transform: uppercase; margin-top: 2px;
+}
+.record-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 12px;
+}
+.record-row .l {
+    font-size: 10px; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase;
+}
+.record-row .v {
+    font-size: 14px; font-weight: 800;
+}
+
+/* Trend chart */
+.trend-wrap {
+    margin: 8px 16px 0; padding: 12px;
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+    border-radius: 10px;
+}
+.trend-canvas { display: block; width: 100%; height: 110px; }
+.trend-footer {
+    display: flex; align-items: center; gap: 14px; padding: 4px 4px 0;
+    font-size: 10px; font-weight: 700; color: var(--text-secondary);
+    letter-spacing: 0.04em; text-transform: uppercase;
+}
+.trend-footer .high { color: var(--accent); }
+.trend-footer .games { margin-left: auto; }
+
+/* Past game cards (read-only) */
+.games-list { padding: 0 16px 32px; }
+.past-card {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+    border-radius: 10px; padding: 12px; margin-bottom: 8px;
+}
+.past-card .emoji { font-size: 22px; }
+.past-card .body { flex: 1; min-width: 0; }
+.past-card .title {
+    font-size: 14px; font-weight: 700; color: var(--text-primary);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.past-card .sub {
+    font-size: 11px; color: var(--text-muted); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.past-card .badge {
+    flex: 0 0 auto; font-size: 11px; font-weight: 800;
+    padding: 4px 8px; border-radius: 999px; color: white;
+    min-width: 28px; text-align: center;
+}
+.past-card .badge.W { background: var(--win-green); }
+.past-card .badge.L { background: var(--loss-red); }
+.past-card .badge.T { background: var(--tie-grey); }
+.not-counted-pill {
+    display: inline-block; font-size: 9px; font-weight: 800;
+    color: var(--text-muted); margin-left: 6px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+/* Empty + loading states */
+.center-state {
+    padding: 60px 24px; text-align: center; color: var(--text-secondary);
+}
+.center-state .emoji { font-size: 36px; margin-bottom: 12px; }
+.center-state .h { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+.center-state .d { font-size: 12px; }
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="top-bar">
+    <a href="/" class="brand">Score<span class="accent">Frame</span></a>
+    <a href="javascript:history.back()" class="back-link" id="backLink">← Back</a>
+</div>
+
+<div id="loadingScreen" class="center-state">
+    <div class="emoji">⏳</div>
+    <div class="h">Loading player…</div>
+</div>
+
+<div id="notFoundScreen" class="center-state" style="display:none;">
+    <div class="emoji">🔒</div>
+    <div class="h">Player not found</div>
+    <div class="d">This player isn't on this team or hasn't been added yet.</div>
+</div>
+
+<div id="playerPage" style="display:none;">
+    <div class="hero">
+        <div class="hero-watermark" id="heroWatermark"></div>
+        <div class="hero-name" id="heroName"></div>
+        <div class="hero-meta" id="heroMeta"></div>
+    </div>
+
+    <div class="section">
+        <div class="pills" id="pillsRow"></div>
+    </div>
+
+    <div id="seasonSection" class="section" style="display:none;">
+        <div class="section-label">Season</div>
+        <select id="seasonSelect" class="season-select"></select>
+    </div>
+
+    <div id="statCardSlot"></div>
+
+    <div id="trendSlot" style="display:none;">
+        <div class="section-label" style="padding: 0 16px;">Trend</div>
+        <div class="trend-wrap">
+            <canvas id="trendCanvas" class="trend-canvas"></canvas>
+            <div class="trend-footer">
+                <span class="high" id="trendHigh"></span>
+                <span id="trendAvg"></span>
+                <span class="games" id="trendGameCount"></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="gamesSection">
+        <div class="section-label" style="padding: 14px 16px 4px;">Game History</div>
+        <div class="games-list" id="gamesList"></div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+    getAuth, onAuthStateChanged, signInWithCustomToken
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import {
+    getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// Pages config — same project as the rest of the web pages.
+const firebaseConfig = {
+    apiKey: "AIzaSyDJ6XR1aDp1fcvJ_HyZk1u_3STDXgUW3kc",
+    authDomain: "scoreframe-deploy.firebaseapp.com",
+    databaseURL: "https://scoreframe-deploy-default-rtdb.firebaseio.com",
+    projectId: "scoreframe-deploy",
+    storageBucket: "scoreframe-deploy.firebasestorage.app",
+    messagingSenderId: "728886280072",
+    appId: "1:728886280072:web:0050478669b89fc76b043d"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+console.log('[player.html] build 2026-06-02a loaded');
+
+// ── URL params ──
+const params = new URLSearchParams(location.search);
+const hubCode = params.get('team') || '';
+const playerIdParam = params.get('player') || '';
+const themeParam = params.get('theme');
+if (themeParam === 'light' || themeParam === 'dark') {
+    document.body.setAttribute('data-theme', themeParam);
+}
+if (params.get('app') === '1') document.body.classList.add('app');
+
+let teamId = '';
+let playerProfile = null;
+let allGames = [];        // GameSummary-shaped docs filtered to this player
+let teamProfile = null;   // { name, sport, color, color2 }
+let teamSeasons = [];     // [{ id, name, startDate, isActive, teamId }]
+let selectedSport = '';
+let selectedSeasonId = '__ALL__';
+
+const $ = (id) => document.getElementById(id);
+
+// ── Sport helpers ──
+const SPORT_EMOJI = {
+    BOWLING: '🎳', VOLLEYBALL: '🏐', BASEBALL: '⚾', SOFTBALL: '🥎',
+    BASKETBALL: '🏀', FOOTBALL: '🏈', SOCCER: '⚽', HOCKEY: '🏒',
+    LACROSSE: '🥍', TENNIS: '🎾', PICKLEBALL: '🏓'
+};
+const sportEmoji = (s) => SPORT_EMOJI[String(s).toUpperCase()] || '🏆';
+const sportLabel = (s) => {
+    const u = String(s).toLowerCase();
+    return u.charAt(0).toUpperCase() + u.slice(1);
+};
+
+// ── Boot ──
+if (!hubCode || !playerIdParam) {
+    $('loadingScreen').style.display = 'none';
+    $('notFoundScreen').style.display = 'block';
+} else {
+    // Auth handoff is handled the same way team.html does it — short of
+    // wiring it from scratch we just rely on Firebase auto-restoring
+    // the cached session. Read attempts that miss permissions get
+    // caught and routed to notFound. Most reads we need (team profile,
+    // games, players) are guarded by `canReadTeam` which checks
+    // public/owner/manager/subscriber. If the visitor's apps already
+    // signed them in, the cached session covers private teams too.
+    onAuthStateChanged(auth, () => loadPlayer());
+}
+
+async function loadPlayer() {
+    try {
+        // Resolve hubCode → teamId
+        const idx = await getDoc(doc(db, 'hubIndex', hubCode));
+        if (!idx.exists()) return showNotFound();
+        teamId = idx.data().teamId;
+
+        // Team profile + player profile in parallel
+        const [teamDoc, playerDoc] = await Promise.all([
+            getDoc(doc(db, 'teams', teamId)).catch(() => null),
+            getDoc(doc(db, 'teams', teamId, 'players', playerIdParam)).catch(() => null),
+        ]);
+        if (teamDoc && teamDoc.exists()) {
+            const t = teamDoc.data();
+            teamProfile = {
+                name: t.name || '',
+                sport: t.sport || '',
+                color: t.color || '#1565C0',
+                color2: t.color2 || '#FFFFFF',
+            };
+        }
+        if (playerDoc && playerDoc.exists()) {
+            playerProfile = { id: playerDoc.id, ...playerDoc.data() };
+        }
+        if (!playerProfile) return showNotFound();
+
+        // Seasons + games in parallel
+        const [seasonsSnap, gamesSnap] = await Promise.all([
+            getDocs(collection(db, 'teams', teamId, 'seasons')).catch(() => null),
+            getDocs(collection(db, 'teams', teamId, 'games')).catch(() => null),
+        ]);
+        if (seasonsSnap) {
+            teamSeasons = seasonsSnap.docs.map((d) => ({ id: d.id, teamId, ...d.data() }))
+                .sort((a, b) => (b.startDate || 0) - (a.startDate || 0));
+        }
+        if (gamesSnap) {
+            const lowerName = (playerProfile.name || '').toLowerCase();
+            for (const g of gamesSnap.docs) {
+                const data = g.data();
+                const status = data.status;
+                if (status === 'scheduled' || status === 'live' || status === 'cancelled') continue;
+                // Match THIS player on the participant list. Mirrors
+                // the iOS/Android `loadPlayerGames` matching: savedPlayerId,
+                // playerId, or case-insensitive name.
+                const ps = Array.isArray(data.participants) ? data.participants : [];
+                const matched = ps.find((p) =>
+                    p && (p.savedPlayerId === playerIdParam
+                        || p.playerId === playerIdParam
+                        || (lowerName && (p.name || '').toLowerCase() === lowerName))
+                );
+                if (!matched) continue;
+                allGames.push({ id: g.id, ...data, _participant: matched });
+            }
+        }
+
+        // Initial sport selection — prefer the team's sport when the
+        // player only has games on this team; the page is scoped to a
+        // single team for now, so all games carry the same sport.
+        const sports = uniqueSportsFromGames(allGames);
+        if (sports.length === 0 && teamProfile?.sport) sports.push(teamProfile.sport.toUpperCase());
+        selectedSport = sports[0] || '';
+
+        renderHero();
+        renderPills(sports);
+        renderSeasonPicker();
+        renderEverything();
+        $('loadingScreen').style.display = 'none';
+        $('playerPage').style.display = 'block';
+    } catch (e) {
+        console.error('[player.html] load failed:', e);
+        showNotFound();
+    }
+}
+
+function showNotFound() {
+    $('loadingScreen').style.display = 'none';
+    $('notFoundScreen').style.display = 'block';
+}
+
+function uniqueSportsFromGames(games) {
+    const set = new Set();
+    for (const g of games) {
+        const s = String(g.sport || '').toUpperCase();
+        if (s) set.add(s);
+    }
+    return Array.from(set);
+}
+
+function renderHero() {
+    $('heroWatermark').textContent = sportEmoji(selectedSport);
+    $('heroName').textContent = playerProfile.name || 'Player';
+    const bits = [];
+    if (playerProfile.number) bits.push('#' + playerProfile.number);
+    if (playerProfile.position) bits.push(playerProfile.position);
+    if (teamProfile?.name) bits.push(teamProfile.name);
+    $('heroMeta').textContent = bits.join('  ·  ');
+    document.title = `${playerProfile.name || 'Player'} — ScoreFrame`;
+}
+
+function renderPills(sports) {
+    const row = $('pillsRow');
+    if (sports.length <= 1) {
+        row.parentElement.style.display = 'none';
+        return;
+    }
+    row.parentElement.style.display = 'block';
+    row.innerHTML = '';
+    for (const s of sports) {
+        const b = document.createElement('button');
+        b.className = 'pill' + (s === selectedSport ? ' selected' : '');
+        b.innerHTML = `${sportEmoji(s)} ${sportLabel(s)}`;
+        b.onclick = () => {
+            if (selectedSport === s) return;
+            selectedSport = s;
+            selectedSeasonId = '__ALL__';
+            renderHero();
+            renderPills(sports);
+            renderSeasonPicker();
+            renderEverything();
+        };
+        row.appendChild(b);
+    }
+}
+
+function renderSeasonPicker() {
+    // Only seasons that have at least one game in the current sport.
+    const sportGames = sportFilteredGames();
+    const idsInSport = new Set(sportGames.map((g) => g.seasonId).filter((x) => !!x));
+    const scoped = teamSeasons.filter((s) => idsInSport.has(s.id));
+    const hasPreSeason = sportGames.some((g) => !g.seasonId);
+
+    const sel = $('seasonSelect');
+    const section = $('seasonSection');
+    if (scoped.length === 0 && !hasPreSeason) {
+        section.style.display = 'none';
+        return;
+    }
+    section.style.display = 'block';
+    sel.innerHTML = '';
+    const all = document.createElement('option');
+    all.value = '__ALL__';
+    all.textContent = 'All Seasons';
+    sel.appendChild(all);
+    for (const s of scoped) {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        const baseName = s.name || 'Season';
+        // Pull the team name into the label so a player on multiple
+        // team-seasons in the same sport can tell them apart.
+        const teamName = teamProfile?.name || '';
+        opt.textContent = teamName ? `${baseName} — ${teamName}` : baseName;
+        sel.appendChild(opt);
+    }
+    if (hasPreSeason) {
+        const opt = document.createElement('option');
+        opt.value = '__NONE__';
+        opt.textContent = '(Pre-Seasons)';
+        sel.appendChild(opt);
+    }
+    sel.value = selectedSeasonId;
+    sel.onchange = () => {
+        selectedSeasonId = sel.value;
+        renderEverything();
+    };
+    // Hide the picker when only "All Seasons" would render — nothing to pick.
+    if (sel.options.length <= 1) section.style.display = 'none';
+}
+
+function sportFilteredGames() {
+    if (!selectedSport) return allGames;
+    return allGames.filter((g) => String(g.sport || '').toUpperCase() === selectedSport);
+}
+
+function filteredGames() {
+    const games = sportFilteredGames();
+    if (selectedSeasonId === '__ALL__') return games;
+    if (selectedSeasonId === '__NONE__') return games.filter((g) => !g.seasonId);
+    return games.filter((g) => g.seasonId === selectedSeasonId);
+}
+
+function renderEverything() {
+    renderStatCard();
+    renderTrend();
+    renderGameList();
+}
+
+// ── Per-game-score extraction (priority chain — Android/iOS parity) ──
+function bowlingScoresForGame(g) {
+    const p = g._participant || {};
+    const stats = p.stats || {};
+    // 1. game1..N keys (iOS-native + Android via coerceNumericStats splatting)
+    const keyed = [];
+    let i = 1;
+    while (true) {
+        const v = stats['game' + i];
+        if (typeof v !== 'number' || v <= 0) break;
+        keyed.push(v);
+        i++;
+    }
+    if (keyed.length) return keyed;
+    // 2. Android's raw individualGameScores array
+    if (Array.isArray(stats.individualGameScores)) {
+        const arr = stats.individualGameScores
+            .filter((x) => typeof x === 'number' && x > 0);
+        if (arr.length) return arr;
+    }
+    // 3. Top-level playerScores string fallback: "Name:g1,g2,g3:series;..."
+    const ps = g.playerScores;
+    if (typeof ps === 'string' && ps && p.name) {
+        const lower = p.name.toLowerCase();
+        for (const chunk of ps.split(';')) {
+            const parts = chunk.split(':');
+            if (parts.length < 2) continue;
+            if (parts[0].trim().toLowerCase() !== lower) continue;
+            const arr = parts[1].split(',')
+                .map((x) => parseInt(x.trim(), 10))
+                .filter((x) => !isNaN(x) && x > 0);
+            if (arr.length) return arr;
+            break;
+        }
+    }
+    // 4. seriesTotal/games estimate
+    const series = stats.seriesTotal || 0;
+    const gc = stats.games || 0;
+    if (series > 0 && gc > 0) {
+        const per = Math.round(series / gc);
+        return new Array(gc).fill(per);
+    }
+    // 5. single score (one-game session)
+    const score = stats.score || 0;
+    return score > 0 ? [score] : [];
+}
+
+function renderStatCard() {
+    const games = filteredGames().filter((g) => g.countTowardStats !== false);
+    const slot = $('statCardSlot');
+    if (games.length === 0) {
+        slot.innerHTML = `
+            <div class="center-state" style="padding: 32px 24px;">
+                <div class="h">No stats recorded yet</div>
+                <div class="d">Once games are played, the summary lands here.</div>
+            </div>`;
+        return;
+    }
+    const sportU = (selectedSport || '').toUpperCase();
+    const emoji = sportEmoji(sportU);
+    const playerName = (playerProfile.name || 'PLAYER').toUpperCase();
+
+    let body = '';
+    if (sportU === 'BOWLING') {
+        body = renderBowlingBody(games);
+    } else if (sportU === 'BASKETBALL') {
+        body = renderBasketballBody(games);
+    } else if (sportU === 'VOLLEYBALL') {
+        body = renderVolleyballBody(games);
+    } else if (sportU === 'BASEBALL' || sportU === 'SOFTBALL') {
+        body = renderBattingBody(games);
+    } else {
+        body = renderGenericBody(games);
+    }
+    slot.innerHTML = `
+        <div class="stat-card">
+            <div class="stat-card-head">
+                <div class="emoji">${emoji}</div>
+                <div>
+                    <div class="who">${playerName}</div>
+                    <div class="games">${games.length} session${games.length === 1 ? '' : 's'}</div>
+                </div>
+            </div>
+            <div class="stat-divider"></div>
+            ${body}
+        </div>`;
+}
+
+function renderBowlingBody(games) {
+    let totalPins = 0, gamesPlayed = 0, high = 0;
+    let strikes = 0, spares = 0, opens = 0, splits = 0, splitConv = 0, frames = 0;
+    for (const g of games) {
+        for (const s of bowlingScoresForGame(g)) {
+            gamesPlayed++; totalPins += s; if (s > high) high = s;
+        }
+        const ps = (g._participant && g._participant.stats) || {};
+        strikes += ps.strikes || 0;
+        spares += ps.spares || 0;
+        opens += ps.openFrames || 0;
+        splits += ps.splits || 0;
+        splitConv += ps.splitConversions || 0;
+        frames += ps.totalFrames || 0;
+    }
+    const avg = gamesPlayed > 0 ? (totalPins / gamesPlayed).toFixed(1) : '—';
+    let body = `
+        <div class="big-row">
+            <div class="big-stat"><span class="v">${avg}</span><span class="l">AVG</span></div>
+            <div class="big-stat"><span class="v">${high || '—'}</span><span class="l">HIGH</span></div>
+            <div class="big-stat"><span class="v">${totalPins || '—'}</span><span class="l">PINS</span></div>
+        </div>`;
+    if (frames > 0) {
+        const strikePct = ((strikes / frames) * 100).toFixed(0) + '%';
+        const sparePct = ((spares / frames) * 100).toFixed(0) + '%';
+        const openPct = ((opens / frames) * 100).toFixed(0) + '%';
+        body += `
+            <div class="stat-grid cols-3" style="margin-top:14px;">
+                <div class="stat-cell"><span class="v">${strikes} (${strikePct})</span><span class="l">STRIKES</span></div>
+                <div class="stat-cell"><span class="v">${spares} (${sparePct})</span><span class="l">SPARES</span></div>
+                <div class="stat-cell"><span class="v">${opens} (${openPct})</span><span class="l">OPEN</span></div>
+            </div>`;
+        if (splits > 0) {
+            const convPct = ((splitConv / splits) * 100).toFixed(0) + '%';
+            body += `
+                <div class="stat-grid cols-3" style="margin-top:8px;">
+                    <div class="stat-cell"><span class="v">${splitConv}/${splits}</span><span class="l">SPLITS</span></div>
+                    <div class="stat-cell"><span class="v">${convPct}</span><span class="l">CONVERT</span></div>
+                    <div class="stat-cell"><span class="v">${frames}</span><span class="l">FRAMES</span></div>
+                </div>`;
+        }
+    }
+    return body;
+}
+
+function renderBasketballBody(games) {
+    let pts = 0, twoM = 0, twoA = 0, threeM = 0, threeA = 0, ftM = 0, ftA = 0;
+    let oreb = 0, dreb = 0, ast = 0, stl = 0, blk = 0, to = 0, pf = 0;
+    let wins = 0, losses = 0;
+    for (const g of games) {
+        const s = (g._participant && g._participant.stats) || {};
+        pts += s.PTS || 0;
+        twoM += s['2PM'] || 0; twoA += s['2PA'] || 0;
+        threeM += s['3PM'] || 0; threeA += s['3PA'] || 0;
+        ftM += s.FTM || 0; ftA += s.FTA || 0;
+        oreb += s.OREB || 0; dreb += s.DREB || 0;
+        ast += s.AST || 0; stl += s.STL || 0; blk += s.BLK || 0;
+        to += s.TO || 0; pf += s.PF || 0;
+        // W-L based on side + scores
+        const side = g._participant.side;
+        if (side === 'home' && (g.homeScore || 0) > (g.awayScore || 0)) wins++;
+        else if (side === 'away' && (g.awayScore || 0) > (g.homeScore || 0)) wins++;
+        else if ((g.homeScore || 0) !== (g.awayScore || 0)) losses++;
+    }
+    const ppg = (pts / games.length).toFixed(1);
+    const reb = oreb + dreb;
+    const pct = (m, a) => a > 0 ? ((m / a) * 100).toFixed(0) + '%' : '—';
+    let body = `
+        <div class="big-row">
+            <div class="big-stat"><span class="v">${ppg}</span><span class="l">PPG</span></div>
+            <div class="big-stat"><span class="v">${reb}</span><span class="l">REB</span></div>
+            <div class="big-stat"><span class="v">${ast}</span><span class="l">AST</span></div>
+        </div>
+        <div class="stat-grid cols-6" style="margin-top:14px;">
+            <div class="stat-cell"><span class="v">${twoM}/${twoA}</span><span class="l">2P</span></div>
+            <div class="stat-cell"><span class="v">${pct(twoM, twoA)}</span><span class="l">2P%</span></div>
+            <div class="stat-cell"><span class="v">${threeM}/${threeA}</span><span class="l">3P</span></div>
+            <div class="stat-cell"><span class="v">${pct(threeM, threeA)}</span><span class="l">3P%</span></div>
+            <div class="stat-cell"><span class="v">${ftM}/${ftA}</span><span class="l">FT</span></div>
+            <div class="stat-cell"><span class="v">${pct(ftM, ftA)}</span><span class="l">FT%</span></div>
+        </div>
+        <div class="stat-grid cols-6" style="margin-top:8px;">
+            <div class="stat-cell"><span class="v">${oreb}</span><span class="l">OREB</span></div>
+            <div class="stat-cell"><span class="v">${dreb}</span><span class="l">DREB</span></div>
+            <div class="stat-cell"><span class="v">${stl}</span><span class="l">STL</span></div>
+            <div class="stat-cell"><span class="v">${blk}</span><span class="l">BLK</span></div>
+            <div class="stat-cell"><span class="v">${to}</span><span class="l">TO</span></div>
+            <div class="stat-cell"><span class="v">${pf}</span><span class="l">PF</span></div>
+        </div>`;
+    if (wins > 0 || losses > 0) {
+        body += `
+            <div class="record-row">
+                <span class="l">RECORD</span>
+                <span class="v">${wins}W-${losses}L</span>
+            </div>`;
+    }
+    return body;
+}
+
+function renderVolleyballBody(games) {
+    let kills = 0, aces = 0, assists = 0, errors = 0, missedServes = 0;
+    let wins = 0, losses = 0;
+    for (const g of games) {
+        const s = (g._participant && g._participant.stats) || {};
+        kills += s.kills || 0; aces += s.aces || 0; assists += s.assists || 0;
+        errors += s.errors || 0; missedServes += s.missedServes || 0;
+        const side = g._participant.side;
+        if (side === 'home' && (g.homeScore || 0) > (g.awayScore || 0)) wins++;
+        else if (side === 'away' && (g.awayScore || 0) > (g.homeScore || 0)) wins++;
+        else if ((g.homeScore || 0) !== (g.awayScore || 0)) losses++;
+    }
+    const n = games.length;
+    const kpg = (kills / n).toFixed(1), apg = (aces / n).toFixed(1), astpg = (assists / n).toFixed(1);
+    return `
+        <div class="big-row">
+            <div class="big-stat"><span class="v">${kpg}</span><span class="l">K/G</span></div>
+            <div class="big-stat"><span class="v">${apg}</span><span class="l">A/G</span></div>
+            <div class="big-stat"><span class="v">${astpg}</span><span class="l">AST/G</span></div>
+        </div>
+        <div class="stat-grid cols-3" style="margin-top:14px;">
+            <div class="stat-cell"><span class="v">${kills}</span><span class="l">KILLS</span></div>
+            <div class="stat-cell"><span class="v">${aces}</span><span class="l">ACES</span></div>
+            <div class="stat-cell"><span class="v">${assists}</span><span class="l">ASTS</span></div>
+        </div>
+        ${(wins > 0 || losses > 0) ? `
+            <div class="record-row">
+                <span class="l">RECORD</span>
+                <span class="v">${wins}W-${losses}L</span>
+            </div>` : ''}`;
+}
+
+function renderBattingBody(games) {
+    let ab = 0, hits = 0, rbi = 0, hr = 0, runs = 0, bb = 0, k = 0;
+    for (const g of games) {
+        const s = (g._participant && g._participant.stats) || {};
+        ab += s.AB || 0; hits += s.hits || s.H || 0;
+        rbi += s.RBI || 0; hr += s.HR || 0;
+        runs += s.runs || s.R || 0; bb += s.BB || 0; k += s.K || 0;
+    }
+    const avg = ab > 0 ? (hits / ab).toFixed(3).replace(/^0/, '') : '—';
+    return `
+        <div class="big-row">
+            <div class="big-stat"><span class="v">${avg}</span><span class="l">AVG</span></div>
+            <div class="big-stat"><span class="v">${hits}/${ab}</span><span class="l">H/AB</span></div>
+            <div class="big-stat"><span class="v">${rbi}</span><span class="l">RBI</span></div>
+        </div>
+        <div class="stat-grid cols-3" style="margin-top:14px;">
+            <div class="stat-cell"><span class="v">${hr}</span><span class="l">HR</span></div>
+            <div class="stat-cell"><span class="v">${runs}</span><span class="l">R</span></div>
+            <div class="stat-cell"><span class="v">${bb}/${k}</span><span class="l">BB/K</span></div>
+        </div>`;
+}
+
+function renderGenericBody(games) {
+    let wins = 0, losses = 0;
+    for (const g of games) {
+        const side = g._participant.side;
+        if (side === 'home' && (g.homeScore || 0) > (g.awayScore || 0)) wins++;
+        else if (side === 'away' && (g.awayScore || 0) > (g.homeScore || 0)) wins++;
+        else if ((g.homeScore || 0) !== (g.awayScore || 0)) losses++;
+    }
+    const total = wins + losses;
+    const winPct = total > 0 ? ((wins / total) * 100).toFixed(0) + '%' : '—';
+    return `
+        <div class="big-row">
+            <div class="big-stat"><span class="v">${games.length}</span><span class="l">GAMES</span></div>
+            <div class="big-stat"><span class="v">${wins}-${losses}</span><span class="l">W-L</span></div>
+            <div class="big-stat"><span class="v">${winPct}</span><span class="l">WIN%</span></div>
+        </div>`;
+}
+
+// ── Trend chart (bowling) ──
+function renderTrend() {
+    if ((selectedSport || '').toUpperCase() !== 'BOWLING') {
+        $('trendSlot').style.display = 'none';
+        return;
+    }
+    const games = filteredGames().filter((g) => g.countTowardStats !== false);
+    // Flatten + sort by game date so the trend reads left-to-right.
+    const points = [];
+    for (const g of games) {
+        for (const s of bowlingScoresForGame(g)) {
+            points.push({ d: g.date || 0, s });
+        }
+    }
+    points.sort((a, b) => a.d - b.d);
+    if (points.length < 2) {
+        $('trendSlot').style.display = 'none';
+        return;
+    }
+    $('trendSlot').style.display = 'block';
+    const scores = points.map((p) => p.s);
+    const high = Math.max(...scores);
+    const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+    $('trendHigh').textContent = `High ${high}`;
+    $('trendAvg').textContent = `Avg ${avg}`;
+    $('trendGameCount').textContent = `${scores.length} games`;
+    drawTrend(scores);
+}
+
+function drawTrend(scores) {
+    const c = $('trendCanvas');
+    const dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth, h = c.clientHeight;
+    c.width = w * dpr; c.height = h * dpr;
+    const ctx = c.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+    const minV = Math.max(0, Math.min(...scores) - 10);
+    const maxV = Math.max(...scores) + 10;
+    const range = Math.max(1, maxV - minV);
+    const accent = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#FF9640';
+    const muted = getComputedStyle(document.body).getPropertyValue('--text-secondary').trim() || '#999';
+    const stepX = w / Math.max(1, scores.length - 1);
+    const yFor = (v) => h - ((v - minV) / range) * h;
+
+    // Dashed average baseline
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.strokeStyle = muted + '99';
+    ctx.moveTo(0, yFor(avg)); ctx.lineTo(w, yFor(avg)); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Trend line
+    ctx.beginPath();
+    ctx.lineWidth = 2; ctx.strokeStyle = accent;
+    scores.forEach((s, i) => {
+        const x = i * stepX, y = yFor(s);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Dots
+    ctx.fillStyle = accent;
+    scores.forEach((s, i) => {
+        const x = i * stepX, y = yFor(s);
+        ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
+    });
+}
+
+// ── Game list (read-only) ──
+function renderGameList() {
+    const list = $('gamesList');
+    const games = filteredGames().slice().sort((a, b) => (b.date || 0) - (a.date || 0));
+    if (games.length === 0) {
+        list.innerHTML = '<div class="center-state"><div class="d">No games for this sport yet.</div></div>';
+        return;
+    }
+    list.innerHTML = '';
+    for (const g of games) {
+        list.appendChild(buildPastCard(g));
+    }
+}
+
+function buildPastCard(g) {
+    const card = document.createElement('div');
+    card.className = 'past-card';
+    const emoji = sportEmoji(g.sport);
+    const dateLabel = g.date ? new Date(g.date).toLocaleDateString(undefined,
+        { weekday: 'short', month: 'short', day: 'numeric' }) : 'TBD';
+
+    let title = '';
+    const sportU = String(g.sport || '').toUpperCase();
+    if (sportU === 'BOWLING') {
+        const series = bowlingScoresForGame(g).reduce((a, b) => a + b, 0);
+        const event = (g.sportSpecificStats && g.sportSpecificStats.eventName) || g.eventLabel || '';
+        title = event
+            ? `${event} · <span style="color:var(--accent);font-weight:800;">${series || '—'}</span>`
+            : `Bowling · <span style="color:var(--accent);font-weight:800;">${series || '—'}</span>`;
+    } else {
+        const home = g.homeTeam || '';
+        const away = g.awayTeam || '';
+        title = `${home} ${g.homeScore || 0} – ${g.awayScore || 0} ${away}`;
+    }
+
+    let badge = '';
+    if (sportU !== 'BOWLING' && g._participant) {
+        const side = g._participant.side;
+        const won = (side === 'home' && (g.homeScore || 0) > (g.awayScore || 0))
+            || (side === 'away' && (g.awayScore || 0) > (g.homeScore || 0));
+        const tie = (g.homeScore || 0) === (g.awayScore || 0);
+        const letter = tie ? 'T' : (won ? 'W' : 'L');
+        badge = `<div class="badge ${letter}">${letter}</div>`;
+    }
+
+    const notCounted = g.countTowardStats === false
+        ? '<span class="not-counted-pill">⊘ NOT COUNTED</span>' : '';
+
+    card.innerHTML = `
+        <div class="emoji">${emoji}</div>
+        <div class="body">
+            <div class="title">${title}${notCounted}</div>
+            <div class="sub">${dateLabel} · ${sportLabel(g.sport || 'Game')}</div>
+        </div>
+        ${badge}`;
+    return card;
+}
+
+// Re-render the trend chart on resize so the canvas matches the new width.
+let resizeRaf = 0;
+window.addEventListener('resize', () => {
+    cancelAnimationFrame(resizeRaf);
+    resizeRaf = requestAnimationFrame(() => {
+        if ((selectedSport || '').toUpperCase() === 'BOWLING') renderTrend();
+    });
+});
+</script>
+</body>
+</html>
