@@ -295,6 +295,7 @@ html, body {
     <div id="teamSection" class="section" style="display:none;">
         <div class="section-label">Team</div>
         <select id="teamSelect" class="season-select"></select>
+        <div id="teamDiscoveryStatus" style="font-size:11px;color:var(--text-muted);margin-top:6px;"></div>
     </div>
 
     <div class="section">
@@ -337,7 +338,7 @@ html, body {
      I know if we're hitting the right version." Bump the date/letter
      suffix on every push so the visible text is the source of truth
      for "is this the latest" without opening dev tools. -->
-<div class="version-footer">build 2026-06-02o</div>
+<div class="version-footer">build 2026-06-02p</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -369,7 +370,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-console.log('[player.html] build 2026-06-02o loaded');
+console.log('[player.html] build 2026-06-02p loaded');
 
 // 2026-06-02 — Google sign-in for when the visitor lands on this page
 // without an auth session. Safari/Chrome opened from an in-app link
@@ -845,10 +846,24 @@ async function resolveHubCodeForTeam(tid) {
 async function renderTeamPicker() {
     const section = $('teamSection');
     const sel = $('teamSelect');
+    const status = $('teamDiscoveryStatus');
+    // Always show the section after discovery — even with 1 team — so
+    // the user has visible feedback that discovery ran. If discovery
+    // missed a team Eric expects to see, this surfaces the gap
+    // instead of silently hiding the picker.
+    section.style.display = 'block';
     if (teamHubCodes.length <= 1) {
-        section.style.display = 'none';
+        sel.style.display = 'none';
+        if (currentUid) {
+            status.textContent = 'Only one team found for this player on your account. ' +
+                '(Other teams may not have synced this player to the cloud yet.)';
+        } else {
+            status.textContent = 'Sign in to see this player on all your teams.';
+        }
         return;
     }
+    sel.style.display = '';
+    status.textContent = `${teamHubCodes.length} teams found.`;
     // Resolve hubCode → teamName via hubIndex → teams/{teamId}.
     // Slow on first paint but cached after; for now we accept the
     // round-trip since the picker is rare.
