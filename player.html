@@ -287,7 +287,7 @@ html, body {
      I know if we're hitting the right version." Bump the date/letter
      suffix on every push so the visible text is the source of truth
      for "is this the latest" without opening dev tools. -->
-<div class="version-footer">build 2026-06-02e</div>
+<div class="version-footer">build 2026-06-02f</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -319,7 +319,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-console.log('[player.html] build 2026-06-02e loaded');
+console.log('[player.html] build 2026-06-02f loaded');
 
 // 2026-06-02 — Google sign-in for when the visitor lands on this page
 // without an auth session. Safari/Chrome opened from an in-app link
@@ -703,8 +703,16 @@ function bowlingScoresForGame(g) {
             .filter((x) => typeof x === 'number' && x > 0);
         if (arr.length) return arr;
     }
-    // 3. Top-level playerScores string fallback: "Name:g1,g2,g3:series;..."
-    const ps = g.playerScores;
+    // 3. playerScores string fallback: "Name:g1,g2,g3:series;..."
+    // 2026-06-02 — Some sessions carry this at the TOP level of the
+    // GameSummary doc; others nest it inside `sportSpecificStats`
+    // depending on save vintage. Android's tryFindPlayerScoresOnSummary
+    // checks both — mirror that here. Without the sport-stats lookup
+    // we'd silently miss every older bowling session and revert to
+    // the seriesTotal estimate.
+    const ps = g.playerScores
+        || (g.sportSpecificStats && g.sportSpecificStats.playerScores)
+        || '';
     if (typeof ps === 'string' && ps && p.name) {
         const lower = p.name.toLowerCase();
         for (const chunk of ps.split(';')) {
