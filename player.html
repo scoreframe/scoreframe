@@ -160,11 +160,35 @@ html, body {
 
 /* Trend chart */
 .trend-wrap {
+    position: relative; /* anchor for the calculating overlay */
     margin: 8px 16px 0; padding: 12px;
     background: var(--bg-surface); border: 1px solid var(--bg-elevated);
     border-radius: 10px;
 }
 .trend-canvas { display: block; width: 100%; height: 110px; }
+/* "Calculating…" overlay — covers the canvas + footer while we're
+   still extracting per-game scores from the participants. Removed
+   the moment drawTrend completes. */
+.trend-loading {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-surface); border-radius: 10px;
+    color: var(--text-secondary); font-size: 12px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    transition: opacity 0.18s ease;
+}
+.trend-loading.hidden { opacity: 0; pointer-events: none; }
+.trend-loading .dots::after {
+    display: inline-block; content: '…'; width: 1.2em; text-align: left;
+    animation: trendDots 1.2s steps(4, end) infinite;
+}
+@keyframes trendDots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+}
 .trend-footer {
     display: flex; align-items: center; gap: 14px; padding: 4px 4px 0;
     font-size: 10px; font-weight: 700; color: var(--text-secondary);
@@ -274,6 +298,13 @@ html, body {
                 <span id="trendAvg"></span>
                 <span class="games" id="trendGameCount"></span>
             </div>
+            <!-- Calculating overlay — shown while the per-game score
+                 extraction is still running, hidden once drawTrend
+                 paints. Eric: "the trend takes a while to show up,
+                 can we put a 'calculating...' animation". -->
+            <div class="trend-loading" id="trendLoading">
+                <span>Calculating<span class="dots"></span></span>
+            </div>
         </div>
     </div>
 
@@ -287,7 +318,7 @@ html, body {
      I know if we're hitting the right version." Bump the date/letter
      suffix on every push so the visible text is the source of truth
      for "is this the latest" without opening dev tools. -->
-<div class="version-footer">build 2026-06-02g</div>
+<div class="version-footer">build 2026-06-02h</div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -319,7 +350,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-console.log('[player.html] build 2026-06-02g loaded');
+console.log('[player.html] build 2026-06-02h loaded');
 
 // 2026-06-02 — Google sign-in for when the visitor lands on this page
 // without an auth session. Safari/Chrome opened from an in-app link
@@ -952,31 +983,41 @@ function renderGenericBody(games) {
 
 // ── Trend chart (bowling) ──
 function renderTrend() {
+    const slot = $('trendSlot');
+    const loadingEl = $('trendLoading');
     if ((selectedSport || '').toUpperCase() !== 'BOWLING') {
-        $('trendSlot').style.display = 'none';
+        slot.style.display = 'none';
         return;
     }
-    const games = filteredGames().filter((g) => g.countTowardStats !== false);
-    // Flatten + sort by game date so the trend reads left-to-right.
-    const points = [];
-    for (const g of games) {
-        for (const s of bowlingScoresForGame(g)) {
-            points.push({ d: g.date || 0, s });
+    // Reveal the slot immediately with the "Calculating…" overlay so
+    // the user sees something land instead of a blank gap while the
+    // per-game extraction runs. Two-frame defer keeps the overlay
+    // painted BEFORE the heavier draw work runs.
+    slot.style.display = 'block';
+    if (loadingEl) loadingEl.classList.remove('hidden');
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        const games = filteredGames().filter((g) => g.countTowardStats !== false);
+        const points = [];
+        for (const g of games) {
+            for (const s of bowlingScoresForGame(g)) {
+                points.push({ d: g.date || 0, s });
+            }
         }
-    }
-    points.sort((a, b) => a.d - b.d);
-    if (points.length < 2) {
-        $('trendSlot').style.display = 'none';
-        return;
-    }
-    $('trendSlot').style.display = 'block';
-    const scores = points.map((p) => p.s);
-    const high = Math.max(...scores);
-    const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-    $('trendHigh').textContent = `High ${high}`;
-    $('trendAvg').textContent = `Avg ${avg}`;
-    $('trendGameCount').textContent = `${scores.length} games`;
-    drawTrend(scores);
+        points.sort((a, b) => a.d - b.d);
+        if (points.length < 2) {
+            slot.style.display = 'none';
+            return;
+        }
+        const scores = points.map((p) => p.s);
+        const high = Math.max(...scores);
+        const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+        $('trendHigh').textContent = `High ${high}`;
+        $('trendAvg').textContent = `Avg ${avg}`;
+        $('trendGameCount').textContent = `${scores.length} games`;
+        drawTrend(scores);
+        if (loadingEl) loadingEl.classList.add('hidden');
+    }));
 }
 
 function drawTrend(scores) {
