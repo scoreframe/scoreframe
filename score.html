@@ -1102,9 +1102,24 @@ function listenForState(code) {
             // New sport = new roster; drop any pinned stat-attribution player.
             vbActivePlayer.home = null; vbActivePlayer.away = null;
         }
+        // v7 — Soft handling for meta.status='ended'. Old code alerted
+        // and forced location.reload() the instant the camera dropped its
+        // RTDB connection. Combined with the (now-removed) onDisconnect
+        // setValue('ended'), every background/network blip kicked the
+        // web scorer out mid-game. Now: only treat as final when the
+        // camera EXPLICITLY ended the game (status='ended' written by
+        // the stop() path, not by onDisconnect). Show a soft banner and
+        // let the user choose to rejoin or wait — never force a reload.
         if (meta.status === 'ended') {
-            alert('Game has ended.');
-            location.reload();
+            // Camera may rewrite status='waiting' or 'active' on next
+            // game start. Show a non-blocking notice instead of a hard
+            // alert + reload — keeps the scorer's local state alive in
+            // case the host restarts a game with the same code.
+            const wgt = $('waitingForGameText');
+            if (wgt) wgt.textContent = 'Game ended on the camera. Waiting for next game…';
+            if (!document.querySelector('#waitingForGameScreen.active')) {
+                showWaitingForGame();
+            }
         }
     });
 
