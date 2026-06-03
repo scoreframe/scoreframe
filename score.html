@@ -1552,10 +1552,14 @@ window.bbStatTap = (side, statKey) => {
     const roster = (side === 'home' ? currentState.homeRoster : currentState.awayRoster) || {};
     const ids = Object.keys(roster);
     if (ids.length === 0) {
-        // No roster — fall back to team-only fouls (the only BB stat
-        // that has a team field on the live state today). Other stats
-        // require a player attribution, so we silently no-op rather
-        // than dropping the increment.
+        // No roster pushed from camera yet (pre-v1.1.566 camera, or
+        // game started without saved teams set). Team fouls still work
+        // — silently bump for PF, surface a brief toast for everything
+        // else so the user knows why nothing happened. v7-prior code
+        // opened the picker with zero rows, which painted a fullscreen
+        // scrim that swallowed subsequent score taps until cancelled
+        // (Eric repro 2026-06-03: "click a stat → everything stops
+        // updating"). Returning here keeps the input alive.
         if (statKey === 'PF') {
             updateAndSend(s => {
                 const key = side === 'home' ? 'homeFouls' : 'awayFouls';
@@ -1567,6 +1571,8 @@ window.bbStatTap = (side, statKey) => {
                 if (side === 'home') s.homeFoulsByPeriod = byP;
                 else s.awayFoulsByPeriod = byP;
             });
+        } else {
+            showToast('Add a saved team with roster on the camera to track per-player stats.');
         }
         return;
     }
@@ -1620,6 +1626,14 @@ function bbApplyStat(side, statKey, playerId) {
 
 function openBbPlayerPicker(side, statKey) {
     const roster = (side === 'home' ? currentState.homeRoster : currentState.awayRoster) || {};
+    if (Object.keys(roster).length === 0) {
+        // Defensive: never paint an empty modal scrim — the v6 picker
+        // did, which blocked input until cancelled. Caller already
+        // gates this in bbStatTap, but bail here too in case some
+        // future code path opens directly.
+        showToast('Add a saved team with roster on the camera to track per-player stats.');
+        return;
+    }
     const teamName = side === 'home' ? (currentState.homeName || 'HOME') : (currentState.awayName || 'AWAY');
     const statTitle = (BB_STATS.find(s => s.key === statKey) || {}).title || statKey;
 
