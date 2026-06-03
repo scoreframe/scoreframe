@@ -1857,8 +1857,55 @@ window.closeVbPlayerPicker = () => {
 };
 
 // ══════════════════════════════════════════════════════════════════════
+// ── Shared: Team-only stat section ───────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
+// Used by sports whose protocol carries team-stat totals as
+// `home<Stat>` / `away<Stat>` fields (soccer, baseball, hockey,
+// lacrosse). The stat object shape is:
+//   { key: 'ShotsOnGoal', label: 'SOG', title: 'Shot on Goal' }
+// `sportPrefix` is the window.<prefix>StatTap / <prefix>StatDecrement
+// pair (e.g. "soccer", "lax", "hk", "bsbl"). Counts read from
+// `state[side+key]`. Long-press / right-click decrements without
+// dropping below zero (matches VB stat behavior).
+function buildTeamStatSection(side, s, color, statList, sportPrefix) {
+    const teamName = side === 'home' ? (s.homeName || 'HOME') : (s.awayName || 'AWAY');
+    let gridHtml = '<div class="stat-grid">';
+    statList.forEach(st => {
+        const field = side + st.key;
+        const count = s[field] || 0;
+        const cls = count > 0 ? 'has-count' : '';
+        gridHtml += `<button class="stat-btn ${cls}"
+                        onclick="${sportPrefix}StatTap('${side}','${st.key}')"
+                        oncontextmenu="${sportPrefix}StatDecrement(event,'${side}','${st.key}')"
+                        title="${esc(st.title)} — long-press / right-click to remove">
+            ${esc(st.label)}<span class="stat-count">${count}</span>
+        </button>`;
+    });
+    gridHtml += '</div>';
+    return `
+        <div class="stat-section" style="border-left-color:${color};">
+            <div class="stat-section-title">
+                <span><span class="team-dot" style="background:${color};"></span>${esc(teamName)} Stats</span>
+                <span style="font-size:10px;color:var(--text-muted);">tap +1 • long-press −1</span>
+            </div>
+            ${gridHtml}
+        </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // ── SOCCER ───────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════
+// Soccer team stats wired on the protocol (RemoteScoringProtocol.kt):
+// shots on goal, corners, fouls, offsides, saves. Per-player not on
+// the wire \u2014 so this is a team-totals stat panel only.
+const SOCCER_STATS = [
+    { key: 'ShotsOnGoal', label: 'SOG', title: 'Shot on Goal' },
+    { key: 'Corners',     label: 'CK',  title: 'Corner Kick' },
+    { key: 'Fouls',       label: 'FOUL', title: 'Foul' },
+    { key: 'Offsides',    label: 'OFF', title: 'Offside' },
+    { key: 'Saves',       label: 'SV',  title: 'Save' },
+];
+
 function renderSoccer() {
     const s = currentState;
     const halfLabel = s.currentHalf <= 2 ? `H${s.currentHalf}` : `ET${s.currentHalf-2}`;
@@ -1898,7 +1945,9 @@ function renderSoccer() {
             <button class="score-btn small" style="background:#C62828;" onclick="soccerCard('away','red')">
                 \u{1F7E5} ${s.awayRedCards}
             </button>
-        </div>`;
+        </div>
+        ${buildTeamStatSection('home', s, hc, SOCCER_STATS, 'soccer')}
+        ${buildTeamStatSection('away', s, ac, SOCCER_STATS, 'soccer')}`;
 }
 window.soccerGoal = (team, d=1) => updateAndSend(s => {
     if (team==='home') s.homeScore = Math.max(0, s.homeScore+d);
@@ -1909,6 +1958,17 @@ window.soccerCard = (team, color) => updateAndSend(s => {
     if (team==='home') { if(color==='yellow') s.homeYellowCards++; else s.homeRedCards++; }
     else { if(color==='yellow') s.awayYellowCards++; else s.awayRedCards++; }
 });
+window.soccerStatTap = (side, statKey) => updateAndSend(s => {
+    const field = (side==='home' ? 'home' : 'away') + statKey;
+    s[field] = (s[field]||0) + 1;
+});
+window.soccerStatDecrement = (ev, side, statKey) => {
+    ev.preventDefault();
+    updateAndSend(s => {
+        const field = (side==='home' ? 'home' : 'away') + statKey;
+        s[field] = Math.max(0, (s[field]||0) - 1);
+    });
+};
 
 // ══════════════════════════════════════════════════════════════════════
 // ── BOWLING ──────────────────────────────────────────────────────────
@@ -2154,6 +2214,10 @@ function renderBaseball() {
             <button class="score-btn neutral-btn small" onclick="bbHit('home')">Hit ${esc(s.homeName||'')}</button>
             <button class="score-btn neutral-btn small" onclick="bbHit('away')">Hit ${esc(s.awayName||'')}</button>
         </div>
+        <div class="btn-row">
+            <button class="score-btn neutral-btn small" onclick="bbError('home')">Error ${esc(s.homeName||'')}</button>
+            <button class="score-btn neutral-btn small" onclick="bbError('away')">Error ${esc(s.awayName||'')}</button>
+        </div>
         <div class="section-label">Inning</div>
         <div class="btn-row">
             <button class="score-btn neutral-btn small" onclick="bbToggleHalf()">
@@ -2162,6 +2226,10 @@ function renderBaseball() {
             <button class="score-btn neutral-btn small" onclick="bbNextInning()">Next Inning</button>
         </div>`;
 }
+window.bbError = (team) => updateAndSend(s => {
+    if (team==='home') s.homeErrors = (s.homeErrors||0) + 1;
+    else s.awayErrors = (s.awayErrors||0) + 1;
+});
 window.bbBall = () => updateAndSend(s => {
     s.balls++;
     if (s.balls >= 4) { s.balls = 0; s.strikes = 0; /* walk — runner logic simplified */ }
@@ -2411,6 +2479,14 @@ window.pbScoreMinus = (team) => updateAndSend(s => {
 // ══════════════════════════════════════════════════════════════════════
 // ── HOCKEY ───────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════
+// Hockey team stats wired on the protocol: shots on goal, penalty
+// minutes, power-play flag. SOG tap +1, PIM tap +2 (standard minor —
+// long-press subtracts the same step to preserve symmetry).
+const HOCKEY_STATS = [
+    { key: 'ShotsOnGoal',    label: 'SOG',   title: 'Shot on Goal (+1)',      step: 1 },
+    { key: 'PenaltyMinutes', label: 'PIM+2', title: 'Minor Penalty (+2 min)', step: 2 },
+];
+
 function renderHockey() {
     const s = currentState;
     const pLabel = s.currentPeriod <= 3 ? `P${s.currentPeriod}` : (s.currentPeriod === 4 ? 'OT' : 'SO');
@@ -2418,6 +2494,8 @@ function renderHockey() {
         `SOG:${s.homeShotsOnGoal} PIM:${s.homePenaltyMinutes}`,
         `SOG:${s.awayShotsOnGoal} PIM:${s.awayPenaltyMinutes}`);
     const hc = s.homeColor||'#1565C0', ac = s.awayColor||'#C62828';
+    const hpp = s.homePowerPlay ? 'accent-btn' : 'neutral-btn';
+    const app = s.awayPowerPlay ? 'accent-btn' : 'neutral-btn';
     $('scoringPanel').innerHTML = `
         <div class="section-label">Goals</div>
         <div class="btn-row">
@@ -2432,22 +2510,23 @@ function renderHockey() {
             <button class="score-btn neutral-btn small" onclick="hkGoal('home',-1)">-1</button>
             <button class="score-btn neutral-btn small" onclick="hkGoal('away',-1)">-1</button>
         </div>
-        <div class="section-label">Shots on Goal</div>
+        <div class="section-label">Power Play</div>
         <div class="btn-row">
-            <button class="score-btn neutral-btn small" onclick="hkStat('homeShotsOnGoal',1)">SOG +1 ${esc(s.homeName||'H')}</button>
-            <button class="score-btn neutral-btn small" onclick="hkStat('awayShotsOnGoal',1)">SOG +1 ${esc(s.awayName||'A')}</button>
-        </div>
-        <div class="section-label">Penalties (minutes)</div>
-        <div class="btn-row">
-            <button class="score-btn neutral-btn small" onclick="hkStat('homePenaltyMinutes',2)">PIM +2 ${esc(s.homeName||'H')}</button>
-            <button class="score-btn neutral-btn small" onclick="hkStat('awayPenaltyMinutes',2)">PIM +2 ${esc(s.awayName||'A')}</button>
+            <button class="score-btn ${hpp} small" onclick="hkTogglePp('home')">
+                ${s.homePowerPlay ? '⚡ PP ON' : 'PP'} ${esc(s.homeName||'H')}
+            </button>
+            <button class="score-btn ${app} small" onclick="hkTogglePp('away')">
+                ${s.awayPowerPlay ? '⚡ PP ON' : 'PP'} ${esc(s.awayName||'A')}
+            </button>
         </div>
         <div class="section-label">Period</div>
         <div class="btn-row">
             <button class="score-btn neutral-btn small" onclick="hkPeriod(-1)">-</button>
             <button class="score-btn accent-btn small">${pLabel}</button>
             <button class="score-btn neutral-btn small" onclick="hkPeriod(1)">+</button>
-        </div>`;
+        </div>
+        ${buildTeamStatSection('home', s, hc, HOCKEY_STATS, 'hk')}
+        ${buildTeamStatSection('away', s, ac, HOCKEY_STATS, 'hk')}`;
 }
 window.hkGoal = (team, d=1) => updateAndSend(s => {
     if (team==='home') {
@@ -2458,12 +2537,38 @@ window.hkGoal = (team, d=1) => updateAndSend(s => {
         if (d>0 && s.currentPeriod<=3) { s.awayScoreByPeriod[s.currentPeriod-1] = (s.awayScoreByPeriod[s.currentPeriod-1]||0)+1; }
     }
 });
-window.hkStat = (field, d) => updateAndSend(s => { s[field] = Math.max(0, (s[field]||0)+d); });
 window.hkPeriod = d => updateAndSend(s => { s.currentPeriod = Math.max(1, s.currentPeriod+d); });
+window.hkTogglePp = side => updateAndSend(s => {
+    const field = side==='home' ? 'homePowerPlay' : 'awayPowerPlay';
+    s[field] = !s[field];
+});
+window.hkStatTap = (side, statKey) => updateAndSend(s => {
+    const step = (HOCKEY_STATS.find(st => st.key === statKey) || {}).step || 1;
+    const field = (side==='home' ? 'home' : 'away') + statKey;
+    s[field] = (s[field]||0) + step;
+});
+window.hkStatDecrement = (ev, side, statKey) => {
+    ev.preventDefault();
+    updateAndSend(s => {
+        const step = (HOCKEY_STATS.find(st => st.key === statKey) || {}).step || 1;
+        const field = (side==='home' ? 'home' : 'away') + statKey;
+        s[field] = Math.max(0, (s[field]||0) - step);
+    });
+};
 
 // ══════════════════════════════════════════════════════════════════════
 // ── LACROSSE ─────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════
+// Lacrosse team stats wired on the protocol: shots on goal, ground
+// balls, faceoffs won, penalties. All taps +1; long-press / right-
+// click subtracts 1 (matches the shared helper contract).
+const LAX_STATS = [
+    { key: 'ShotsOnGoal',  label: 'SOG',  title: 'Shot on Goal' },
+    { key: 'GroundBalls',  label: 'GB',   title: 'Ground Ball' },
+    { key: 'FaceoffsWon',  label: 'FO',   title: 'Faceoff Won' },
+    { key: 'Penalties',    label: 'PEN',  title: 'Penalty' },
+];
+
 function renderLacrosse() {
     const s = currentState;
     const qLabel = s.currentQuarter <= 4 ? `Q${s.currentQuarter}` : 'OT';
@@ -2485,23 +2590,14 @@ function renderLacrosse() {
             <button class="score-btn neutral-btn small" onclick="laxGoal('home',-1)">-1</button>
             <button class="score-btn neutral-btn small" onclick="laxGoal('away',-1)">-1</button>
         </div>
-        <div class="section-label">Stats</div>
-        <div class="btn-row">
-            <button class="score-btn neutral-btn small" onclick="laxStat('homeShotsOnGoal',1)">SOG +1</button>
-            <button class="score-btn neutral-btn small" onclick="laxStat('homeGroundBalls',1)">GB +1</button>
-            <button class="score-btn neutral-btn small" onclick="laxStat('homeFaceoffsWon',1)">FO +1</button>
-        </div>
-        <div class="btn-row">
-            <button class="score-btn neutral-btn small" onclick="laxStat('awayShotsOnGoal',1)">SOG +1</button>
-            <button class="score-btn neutral-btn small" onclick="laxStat('awayGroundBalls',1)">GB +1</button>
-            <button class="score-btn neutral-btn small" onclick="laxStat('awayFaceoffsWon',1)">FO +1</button>
-        </div>
         <div class="section-label">Quarter</div>
         <div class="btn-row">
             <button class="score-btn neutral-btn small" onclick="laxQtr(-1)">-</button>
             <button class="score-btn accent-btn small">${qLabel}</button>
             <button class="score-btn neutral-btn small" onclick="laxQtr(1)">+</button>
-        </div>`;
+        </div>
+        ${buildTeamStatSection('home', s, hc, LAX_STATS, 'lax')}
+        ${buildTeamStatSection('away', s, ac, LAX_STATS, 'lax')}`;
 }
 window.laxGoal = (team, d=1) => updateAndSend(s => {
     if (team==='home') {
@@ -2512,8 +2608,18 @@ window.laxGoal = (team, d=1) => updateAndSend(s => {
         if (d>0 && s.currentQuarter<=4) { s.awayScoreByQuarter[s.currentQuarter-1] = (s.awayScoreByQuarter[s.currentQuarter-1]||0)+1; }
     }
 });
-window.laxStat = (field, d) => updateAndSend(s => { s[field] = Math.max(0, (s[field]||0)+d); });
 window.laxQtr = d => updateAndSend(s => { s.currentQuarter = Math.max(1, s.currentQuarter+d); });
+window.laxStatTap = (side, statKey) => updateAndSend(s => {
+    const field = (side==='home' ? 'home' : 'away') + statKey;
+    s[field] = (s[field]||0) + 1;
+});
+window.laxStatDecrement = (ev, side, statKey) => {
+    ev.preventDefault();
+    updateAndSend(s => {
+        const field = (side==='home' ? 'home' : 'away') + statKey;
+        s[field] = Math.max(0, (s[field]||0) - 1);
+    });
+};
 
 // ══════════════════════════════════════════════════════════════════════
 // ── INIT ─────────────────────────────────────────────────────────────
@@ -2548,6 +2654,6 @@ init();
 </script>
 <!-- Web version footer — bumped on every Pages push so we can see at a
      glance whether a phone's cached page is stale. -->
-<div style="position:fixed;bottom:4px;right:8px;font-size:9px;color:var(--text-muted);opacity:0.55;pointer-events:none;font-family:-apple-system,monospace;letter-spacing:0.5px;z-index:9999;">score v4</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:9px;color:var(--text-muted);opacity:0.55;pointer-events:none;font-family:-apple-system,monospace;letter-spacing:0.5px;z-index:9999;">score v5</div>
 </body>
 </html>
