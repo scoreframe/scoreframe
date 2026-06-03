@@ -315,6 +315,123 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
 .score-btn.danger { background: rgba(244, 67, 54, 0.2); color: var(--error); }
 .score-btn.success-btn { background: rgba(76, 175, 80, 0.2); color: var(--success); }
 
+/* ── Per-player stat grid (VB + BB) ──────────────────────────────────
+   Smaller buttons than the main score buttons so 6-13 stats fit
+   without scrolling. Two rows of player chips above the grid let the
+   scorer pin an active player; tapping a stat then bumps for that
+   player. With no active player, the stat tap opens a roster picker
+   modal. */
+.stat-section {
+    background: var(--bg-surface);
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-top: 6px;
+    border-left: 3px solid transparent;
+}
+.stat-section .stat-section-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.6px; color: var(--text-secondary); margin-bottom: 6px;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+}
+.stat-section .stat-section-title .team-dot {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    margin-right: 4px; vertical-align: middle;
+}
+.player-chip-row {
+    display: flex; gap: 4px; flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+.player-chip {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border: 1px solid var(--bg-elevated);
+    border-radius: 999px;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-size: 12px; font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.08s, filter 0.08s;
+    -webkit-user-select: none; user-select: none;
+}
+.player-chip:active { transform: scale(0.94); }
+.player-chip.active {
+    background: var(--accent);
+    color: #1A1A1A;
+    border-color: var(--accent);
+}
+.player-chip .chip-num {
+    font-weight: 700;
+    opacity: 0.7;
+    margin-right: 3px;
+}
+.player-chip.active .chip-num { opacity: 0.85; }
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+}
+.stat-grid.bb { grid-template-columns: repeat(5, 1fr); }
+.stat-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 40px; padding: 4px 2px;
+    border: 1px solid var(--bg-elevated); border-radius: 8px;
+    background: var(--bg-deep); color: var(--text-primary);
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.08s, filter 0.08s;
+    -webkit-user-select: none; user-select: none;
+}
+.stat-btn:active { transform: scale(0.93); filter: brightness(0.8); }
+.stat-btn[disabled] { opacity: 0.35; cursor: not-allowed; }
+.stat-btn .stat-count {
+    font-size: 10px; font-weight: 500; opacity: 0.7; margin-top: 1px;
+}
+.stat-btn.has-count .stat-count { color: var(--accent); opacity: 1; font-weight: 700; }
+.stat-btn.tinted { color: #fff; }
+.stat-empty-hint {
+    font-size: 11px; color: var(--text-muted); padding: 4px 2px; text-align: center;
+}
+
+/* Player picker modal (shared by VB roster picks) */
+.modal-scrim {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 250; display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+}
+.modal-card {
+    background: var(--bg-elevated); border-radius: 14px;
+    padding: 18px 16px; width: 100%; max-width: 320px; max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+}
+.modal-title {
+    font-size: 14px; font-weight: 700; color: var(--text-primary);
+    margin-bottom: 10px; text-align: center;
+}
+.modal-roster-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-deep);
+    border-radius: 8px;
+    margin-bottom: 4px;
+    cursor: pointer;
+}
+.modal-roster-row:active { transform: scale(0.98); filter: brightness(0.85); }
+.modal-roster-row .roster-num {
+    font-size: 14px; font-weight: 700; color: var(--accent);
+    min-width: 28px; text-align: center;
+}
+.modal-roster-row .roster-name {
+    flex: 1; font-size: 14px; color: var(--text-primary);
+}
+.modal-actions { display: flex; gap: 8px; margin-top: 10px; }
+.modal-actions .modal-btn {
+    flex: 1; padding: 10px; border: 0; border-radius: 8px;
+    background: var(--bg-deep); color: var(--text-secondary);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.modal-actions .modal-btn.primary { background: var(--accent); color: #1A1A1A; }
+
 /* Section label */
 .section-label {
     font-size: 11px; font-weight: 600; text-transform: uppercase;
@@ -982,6 +1099,8 @@ function listenForState(code) {
         if (meta.sport && meta.sport !== currentSport) {
             currentSport = meta.sport;
             currentState = null; // Will be set by state listener
+            // New sport = new roster; drop any pinned stat-attribution player.
+            vbActivePlayer.home = null; vbActivePlayer.away = null;
         }
         if (meta.status === 'ended') {
             alert('Game has ended.');
@@ -1184,6 +1303,7 @@ window.cancelJoin = function() {
     if (metaListener) off(ref(db, `sessions/${currentCode}/meta`));
     if (scorerListener) off(ref(db, `sessions/${currentCode}/scorerRequest/status`));
     currentCode = null; currentSport = null; currentState = null;
+    vbActivePlayer.home = null; vbActivePlayer.away = null;
     showScreen('joinScreen');
     $('joinBtn').disabled = false;
 };
@@ -1284,6 +1404,33 @@ window.genPeriod = (d) => updateAndSend(s => { s.currentPeriod = Math.max(1, s.c
 // ══════════════════════════════════════════════════════════════════════
 // ── BASKETBALL ───────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════
+// BB stat config — drawn from ScoreboardType.BasketballPlayerStats.
+// IMPORTANT: there is currently NO wire protocol for shipping these
+// taps to the camera. Android's BasketballPlayerStats state isn't
+// included in the basketball state serializer (verified in
+// RemoteScoringProtocol.kt v1.1.537 — only team fouls/timeouts/period
+// are on the wire), and there's no per-stat command type analogous
+// to VOLLEYBALL_STAT either. Rendering the buttons disabled until
+// Eric extends the protocol; the visual scaffold + statKey names
+// stay aligned with the Android model so the only thing needed
+// later is to wire the camera-side handler and remove the disabled
+// flag here.
+const BB_STATS = [
+    { key: 'FTM',   label: '+1 FT', title: 'Made Free Throw' },
+    { key: '2PM',   label: '+2 FG', title: 'Made 2-Pointer' },
+    { key: '3PM',   label: '+3 FG', title: 'Made 3-Pointer' },
+    { key: 'FTA',   label: 'Miss FT', title: 'Missed Free Throw' },
+    { key: '2PA',   label: 'Miss 2', title: 'Missed 2-Pointer' },
+    { key: '3PA',   label: 'Miss 3', title: 'Missed 3-Pointer' },
+    { key: 'OREB',  label: 'O-Reb', title: 'Offensive Rebound' },
+    { key: 'DREB',  label: 'D-Reb', title: 'Defensive Rebound' },
+    { key: 'AST',   label: 'AST',   title: 'Assist' },
+    { key: 'STL',   label: 'STL',   title: 'Steal' },
+    { key: 'BLK',   label: 'BLK',   title: 'Block' },
+    { key: 'TO',    label: 'TO',    title: 'Turnover' },
+    { key: 'PF',    label: 'PF',    title: 'Personal Foul' },
+];
+
 function renderBasketball() {
     const s = currentState;
     const pLabel = s.useQuarters ? 'QTR' : 'HALF';
@@ -1313,6 +1460,31 @@ function renderBasketball() {
             <button class="score-btn neutral-btn small" onclick="bbPeriod(-1)">-</button>
             <button class="score-btn accent-btn small">${s.currentPeriod}</button>
             <button class="score-btn neutral-btn small" onclick="bbPeriod(1)">+</button>
+        </div>
+        ${buildBbStatStub('home', s, hc)}
+        ${buildBbStatStub('away', s, ac)}`;
+}
+
+// TODO: wire to camera when a basketball per-player stat protocol
+// exists. Today the buttons render disabled so the scorer can see
+// the planned UX and Eric can decide whether to extend the protocol.
+// The disabled buttons short-circuit silently on tap.
+function buildBbStatStub(side, s, color) {
+    const teamName = side === 'home' ? (s.homeName || 'HOME') : (s.awayName || 'AWAY');
+    let gridHtml = '<div class="stat-grid bb">';
+    BB_STATS.forEach(st => {
+        gridHtml += `<button class="stat-btn" disabled title="${esc(st.title)} — not yet supported by camera">
+            ${esc(st.label)}
+        </button>`;
+    });
+    gridHtml += '</div>';
+    return `
+        <div class="stat-section" style="border-left-color:${color};">
+            <div class="stat-section-title">
+                <span><span class="team-dot" style="background:${color};"></span>${esc(teamName)} Stats</span>
+                <span style="font-size:10px;color:var(--text-muted);">camera protocol pending</span>
+            </div>
+            ${gridHtml}
         </div>`;
 }
 window.bbScore = (team, pts) => updateAndSend(s => {
@@ -1410,6 +1582,26 @@ window.fbQtr = d => updateAndSend(s => { s.currentQuarter = Math.max(1, s.curren
 // ══════════════════════════════════════════════════════════════════════
 // ── VOLLEYBALL ───────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════
+
+// VB stat config — order matches the camera-side scoring panel.
+// statName values match Android's `incrementVbStat` switch keys exactly
+// so the camera deserializes them without any mapping layer.
+const VB_STATS = [
+    { key: 'kills',        label: 'K',   title: 'Kill' },
+    { key: 'aces',         label: 'A',   title: 'Ace' },
+    { key: 'assists',      label: 'AST', title: 'Assist' },
+    { key: 'digs',         label: 'D',   title: 'Dig' },
+    { key: 'blocks',       label: 'B',   title: 'Block' },
+    { key: 'errors',       label: 'ERR', title: 'Error' },
+    { key: 'missedServes', label: 'MSV', title: 'Missed Serve' },
+];
+
+// Active player per side — clicking a roster chip pins that player as
+// the destination for the next stat tap. Pinning a chip on one side
+// clears the active player on the other side (mirrors the Android
+// chip-row behavior). Cleared on sport switch / disconnect.
+const vbActivePlayer = { home: null, away: null };
+
 function renderVolleyball() {
     const s = currentState;
     const servingHome = s.serving === 'HOME';
@@ -1451,8 +1643,79 @@ function renderVolleyball() {
                 ${!servingHome?'\u{1F3D0} ':''} ${esc(s.awayName||'AWAY')}
             </button>
         </div>
+        ${buildVbStatSection('home', s, hc)}
+        ${buildVbStatSection('away', s, ac)}
         ${setsHtml}`;
 }
+
+// Build the per-side stat block: title with team-color dot, roster
+// chip row (only if the camera pushed a roster), then a 4-col stat
+// grid. Counts shown on each button come from homeStats/awayStats
+// (team totals) so the scorer can sanity-check before/after taps.
+function buildVbStatSection(side, s, color) {
+    const teamName = side === 'home' ? (s.homeName || 'HOME') : (s.awayName || 'AWAY');
+    const stats = (side === 'home' ? s.homeStats : s.awayStats) || {};
+    const roster = (side === 'home' ? s.homeRoster : s.awayRoster) || {};
+    const rosterIds = Object.keys(roster);
+    const activeId = vbActivePlayer[side];
+    // If the active player is no longer in roster (camera removed
+    // them), drop the selection silently so we don't push a bump for
+    // a stale id.
+    if (activeId && !roster[activeId]) vbActivePlayer[side] = null;
+
+    let chipHtml = '';
+    if (rosterIds.length > 0) {
+        chipHtml = '<div class="player-chip-row">';
+        rosterIds.forEach(pid => {
+            const display = roster[pid] || '';
+            const { num, name } = splitRosterEntry(display);
+            const isActive = vbActivePlayer[side] === pid;
+            chipHtml += `<div class="player-chip ${isActive?'active':''}"
+                            onclick="vbPickPlayer('${side}','${escAttr(pid)}')">
+                ${num ? `<span class="chip-num">#${esc(num)}</span>` : ''}<span>${esc(name || display)}</span>
+            </div>`;
+        });
+        chipHtml += '</div>';
+    } else {
+        chipHtml = '<div class="stat-empty-hint">No roster from camera — stats apply to team only.</div>';
+    }
+
+    let gridHtml = '<div class="stat-grid">';
+    VB_STATS.forEach(st => {
+        const count = stats[st.key] || 0;
+        const cls = count > 0 ? 'has-count' : '';
+        gridHtml += `<button class="stat-btn ${cls}"
+                        onclick="vbStatTap('${side}','${st.key}')"
+                        oncontextmenu="vbStatDecrement(event,'${side}','${st.key}')"
+                        title="${esc(st.title)} — long-press / right-click to remove">
+            ${esc(st.label)}<span class="stat-count">${count}</span>
+        </button>`;
+    });
+    gridHtml += '</div>';
+
+    return `
+        <div class="stat-section" style="border-left-color:${color};">
+            <div class="stat-section-title">
+                <span><span class="team-dot" style="background:${color};"></span>${esc(teamName)} Stats</span>
+                <span style="font-size:10px;color:var(--text-muted);">tap stat → assign</span>
+            </div>
+            ${chipHtml}
+            ${gridHtml}
+        </div>`;
+}
+
+// Roster entries from the camera are stored as plain strings — they
+// can be either "#12 Audrey" / "12 Audrey" / just "Audrey". Split out
+// the leading number (if any) so the chip can show a styled #N badge.
+function splitRosterEntry(display) {
+    const m = String(display).match(/^#?\s*(\d{1,3})\s+(.+)$/);
+    if (m) return { num: m[1], name: m[2].trim() };
+    return { num: '', name: display };
+}
+function escAttr(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+}
+
 window.vbScore = (team) => updateAndSend(s => {
     if (s.matchComplete) return;
     if (team==='home') s.homeScore++; else s.awayScore++;
@@ -1464,6 +1727,134 @@ window.vbScoreMinus = (team) => updateAndSend(s => {
     else s.awayScore = Math.max(0, s.awayScore-1);
 });
 window.vbServe = (team) => updateAndSend(s => { s.serving = team; });
+
+// Active-player chip tap: toggle pin for this side, clear the other
+// side's pin (matches Android's mutual-exclusion behavior).
+window.vbPickPlayer = (side, playerId) => {
+    if (vbActivePlayer[side] === playerId) {
+        vbActivePlayer[side] = null;
+    } else {
+        vbActivePlayer[side] = playerId;
+        vbActivePlayer[side === 'home' ? 'away' : 'home'] = null;
+    }
+    renderScoring();
+};
+
+// Stat button tap → if a player is pinned, bump for that player;
+// otherwise show the roster picker modal. Team totals are bumped in
+// both cases so the team-level stats stay in sync with player stats.
+window.vbStatTap = (side, statName) => {
+    const activeId = vbActivePlayer[side];
+    if (activeId) {
+        vbApplyStat(side, statName, activeId);
+    } else {
+        const roster = (side === 'home' ? currentState.homeRoster : currentState.awayRoster) || {};
+        const ids = Object.keys(roster);
+        if (ids.length === 0) {
+            // No roster pushed from camera — fall back to team-only bump.
+            vbApplyStat(side, statName, null);
+        } else {
+            openVbPlayerPicker(side, statName);
+        }
+    }
+};
+
+// Long-press / right-click: subtract from the team total (mirrors
+// Android's decrementVbStat behavior — does NOT touch any pinned
+// player's per-player stats).
+window.vbStatDecrement = (ev, side, statName) => {
+    ev.preventDefault();
+    updateAndSend(s => {
+        const key = side === 'home' ? 'homeStats' : 'awayStats';
+        const cur = s[key] || {};
+        const next = Object.assign({}, cur);
+        next[statName] = Math.max(0, (cur[statName] || 0) - 1);
+        s[key] = next;
+    });
+};
+
+// Core mutator — mirrors RemoteScoringProtocol's wire shape for VB
+// stats so the camera's FULL_STATE_SYNC handler accepts this state
+// without any web-side adapter:
+//   homeStats / awayStats           — team totals
+//   homePlayerStats / awayPlayerStats — { playerId: { kills, aces, … } }
+//   statUndoStack                   — append a VbStatAction record
+function vbApplyStat(side, statName, playerId) {
+    updateAndSend(s => {
+        const teamKey   = side === 'home' ? 'homeStats'       : 'awayStats';
+        const playerKey = side === 'home' ? 'homePlayerStats' : 'awayPlayerStats';
+        const team = Object.assign({}, s[teamKey] || {});
+        team[statName] = (team[statName] || 0) + 1;
+        s[teamKey] = team;
+        if (playerId) {
+            const pm = Object.assign({}, s[playerKey] || {});
+            const cur = pm[playerId] || {};
+            const next = Object.assign({}, cur);
+            next[statName] = (cur[statName] || 0) + 1;
+            pm[playerId] = next;
+            s[playerKey] = pm;
+        }
+        // Push onto the undo stack so the camera's Undo Stat button
+        // can reverse it. Shape matches ScoreboardType.VbStatAction:
+        // { side, statName, playerId? }.
+        const stack = Array.isArray(s.statUndoStack) ? s.statUndoStack.slice() : [];
+        const action = { side, statName };
+        if (playerId) action.playerId = playerId;
+        stack.push(action);
+        s.statUndoStack = stack;
+    });
+}
+
+// Modal roster picker — shown when scorer taps a stat without first
+// pinning an active player. Picking a player applies the stat and
+// also pins them as active so subsequent taps go straight through.
+function openVbPlayerPicker(side, statName) {
+    const roster = (side === 'home' ? currentState.homeRoster : currentState.awayRoster) || {};
+    const teamName = side === 'home' ? (currentState.homeName || 'HOME') : (currentState.awayName || 'AWAY');
+    const statTitle = (VB_STATS.find(s => s.key === statName) || {}).title || statName;
+
+    let rows = '';
+    Object.keys(roster).forEach(pid => {
+        const display = roster[pid] || '';
+        const { num, name } = splitRosterEntry(display);
+        rows += `<div class="modal-roster-row" onclick="vbPickerSelect('${side}','${escAttr(pid)}','${escAttr(statName)}')">
+            <div class="roster-num">${num ? '#'+esc(num) : ''}</div>
+            <div class="roster-name">${esc(name || display)}</div>
+        </div>`;
+    });
+    rows += `<div class="modal-roster-row" onclick="vbPickerSelect('${side}','','${escAttr(statName)}')">
+        <div class="roster-num" style="color:var(--text-muted);">—</div>
+        <div class="roster-name" style="color:var(--text-secondary);">Team only (no player)</div>
+    </div>`;
+
+    const scrim = document.createElement('div');
+    scrim.id = 'vbPlayerPickerScrim';
+    scrim.className = 'modal-scrim';
+    scrim.innerHTML = `
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-title">${esc(teamName)} — ${esc(statTitle)}</div>
+            ${rows}
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeVbPlayerPicker()">Cancel</button>
+            </div>
+        </div>`;
+    scrim.addEventListener('click', closeVbPlayerPicker);
+    document.body.appendChild(scrim);
+}
+window.vbPickerSelect = (side, playerId, statName) => {
+    closeVbPlayerPicker();
+    const pid = playerId || null;
+    vbApplyStat(side, statName, pid);
+    if (pid) {
+        vbActivePlayer[side] = pid;
+        vbActivePlayer[side === 'home' ? 'away' : 'home'] = null;
+        renderScoring();
+    }
+};
+window.closeVbPlayerPicker = () => {
+    const el = $('vbPlayerPickerScrim');
+    if (el) el.remove();
+};
 
 // ══════════════════════════════════════════════════════════════════════
 // ── SOCCER ───────────────────────────────────────────────────────────
@@ -2157,6 +2548,6 @@ init();
 </script>
 <!-- Web version footer — bumped on every Pages push so we can see at a
      glance whether a phone's cached page is stale. -->
-<div style="position:fixed;bottom:4px;right:8px;font-size:9px;color:var(--text-muted);opacity:0.55;pointer-events:none;font-family:-apple-system,monospace;letter-spacing:0.5px;z-index:9999;">score v3</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:9px;color:var(--text-muted);opacity:0.55;pointer-events:none;font-family:-apple-system,monospace;letter-spacing:0.5px;z-index:9999;">score v4</div>
 </body>
 </html>
