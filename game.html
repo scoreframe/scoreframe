@@ -657,7 +657,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v32</span>
+    <span class="page-version">game.html v33</span>
 </div>
 
 <script type="module">
@@ -1996,6 +1996,8 @@ function boxScoreColumnsForSport(s) {
             { key: 'kills',        label: 'K',    fmt: (st) => num(st.kills),        sum: true },
             { key: 'aces',         label: 'A',    fmt: (st) => num(st.aces),         sum: true },
             { key: 'assists',      label: 'AST',  fmt: (st) => num(st.assists),      sum: true },
+            { key: 'digs',         label: 'D',    fmt: (st) => num(st.digs),         sum: true },
+            { key: 'blocks',       label: 'B',    fmt: (st) => num(st.blocks),       sum: true },
             { key: 'errors',       label: 'ERR',  fmt: (st) => num(st.errors),       sum: true },
             { key: 'missedServes', label: 'MSV',  fmt: (st) => num(st.missedServes), sum: true },
         ];
