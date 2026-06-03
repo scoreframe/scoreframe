@@ -633,7 +633,15 @@ async function loadPlayer() {
                         || (lowerName && (p.name || '').toLowerCase() === lowerName))
                 );
                 if (!matched) continue;
-                allGames.push({ id: g.id, ...data, _participant: matched });
+                // 2026-06-03 — Tag each game with the source hub/team
+                // so the card can link straight to game.html and show
+                // the team name when games come from multiple teams.
+                allGames.push({
+                    id: g.id, ...data,
+                    _participant: matched,
+                    _hubCode: hubCode || '',
+                    _teamName: teamProfile?.name || '',
+                });
             }
         }
 
@@ -684,7 +692,7 @@ async function loadPlayer() {
         // resolved hubCodes into `teamHubCodes` so renderTeamPicker
         // can stay sync. Picker hides itself when only one option
         // is known, so single-team players see no UI delta.
-        discoverTeamsP.then((codes) => {
+        discoverTeamsP.then(async (codes) => {
             teamHubCodes.length = 0;
             for (const c of codes) teamHubCodes.push(c);
             if (hubCode && !teamHubCodes.includes(hubCode)) {
@@ -692,6 +700,26 @@ async function loadPlayer() {
             }
             console.log('[player.html] picker teams =', teamHubCodes);
             renderTeamPicker();
+            // 2026-06-03 — Cross-team game gather. Pull this player's
+            // games from every OTHER team they're rostered on and
+            // merge into allGames so the past-games list represents
+            // their full ScoreFrame history, not just the one team
+            // passed in the URL. De-dups by id since the URL team's
+            // games already landed in the initial pull above.
+            const otherCodes = teamHubCodes.filter((c) => c !== hubCode);
+            if (otherCodes.length > 0) {
+                const added = await gatherCrossTeamGames(otherCodes,
+                    playerProfile?.name || '');
+                if (added > 0) {
+                    // Sport set may have grown — refresh pills + season
+                    // picker. Then full re-render so the new games
+                    // appear alongside the original team's.
+                    const refreshedSports = uniqueSportsFromGames(allGames);
+                    renderPills(refreshedSports);
+                    renderSeasonPicker();
+                    renderEverything();
+                }
+            }
         });
         $('loadingScreen').style.display = 'none';
         $('playerPage').style.display = 'block';
@@ -837,6 +865,56 @@ async function resolveHubCodeForTeam(tid) {
         const hc = teamDoc?.data()?.hub?.hubCode;
         return hc || null;
     } catch (_) { return null; }
+}
+
+// 2026-06-03 — Pull this player's games from each `hubCode` in the
+// list, dedup by game id (so the initial team's games don't get
+// duplicated when included), and append matches to `allGames`. Tags
+// each appended game with `_hubCode` and `_teamName` so the past-
+// games card can link to the right `game.html?team=&game=` and
+// display the team source. Returns the number of games appended.
+async function gatherCrossTeamGames(hubCodes, playerName) {
+    const lowerName = (playerName || '').toLowerCase().trim();
+    const existingIds = new Set(allGames.map((g) => g.id));
+    let added = 0;
+    for (const code of hubCodes) {
+        if (!code) continue;
+        try {
+            const idx = await getDoc(doc(db, 'hubIndex', code));
+            if (!idx.exists()) continue;
+            const tid = idx.data().teamId;
+            const td = await getDoc(doc(db, 'teams', tid)).catch(() => null);
+            const tname = td?.data()?.name || '';
+            const gs = await getDocs(collection(db, 'teams', tid, 'games'))
+                .catch(() => null);
+            if (!gs) continue;
+            for (const g of gs.docs) {
+                if (existingIds.has(g.id)) continue;
+                const data = g.data();
+                const status = data.status;
+                if (status === 'scheduled' || status === 'live' || status === 'cancelled') continue;
+                const ps = Array.isArray(data.participants) ? data.participants : [];
+                const matched = ps.find((p) =>
+                    p && (p.savedPlayerId === playerIdParam
+                        || p.playerId === playerIdParam
+                        || (lowerName && (p.name || '').toLowerCase() === lowerName))
+                );
+                if (!matched) continue;
+                allGames.push({
+                    id: g.id, ...data,
+                    _participant: matched,
+                    _hubCode: code,
+                    _teamName: tname,
+                });
+                existingIds.add(g.id);
+                added++;
+            }
+        } catch (e) {
+            console.warn('[player.html] cross-team gather failed for', code, e);
+        }
+    }
+    console.log('[player.html] cross-team gather added', added, 'games');
+    return added;
 }
 
 // 2026-06-02 — Resolve each hubCode in `teamHubCodes` to a team name
@@ -1368,8 +1446,22 @@ function renderGameList() {
 }
 
 function buildPastCard(g) {
-    const card = document.createElement('div');
+    // 2026-06-03 — Past-game card now navigates to game.html when
+    // the source team's hubCode is known. Renders as an <a> so
+    // browser native cmd-click / right-click open in new tab work.
+    // Falls back to a plain div when there's no hubCode (e.g.
+    // legacy data where the team has no hub set).
+    const href = g._hubCode
+        ? `/game.html?team=${encodeURIComponent(g._hubCode)}&game=${encodeURIComponent(g.id)}`
+        : '';
+    const card = document.createElement(href ? 'a' : 'div');
     card.className = 'past-card' + (g.countTowardStats === false ? ' muted' : '');
+    if (href) {
+        card.href = href;
+        card.style.textDecoration = 'none';
+        card.style.color = 'inherit';
+        card.style.cursor = 'pointer';
+    }
     const emoji = sportEmoji(g.sport);
     const dateLabel = g.date ? new Date(g.date).toLocaleDateString(undefined,
         { weekday: 'short', month: 'short', day: 'numeric' }) : 'TBD';
@@ -1401,14 +1493,27 @@ function buildPastCard(g) {
     const notCounted = g.countTowardStats === false
         ? '<span class="not-counted-pill">⊘ NOT COUNTED</span>' : '';
 
+    // 2026-06-03 — Surface the source team when this player has games
+    // on multiple teams so the user can tell which team each game
+    // belongs to without opening it.
+    const teamSuffix = (g._teamName && teamHubCodes.length > 1)
+        ? ` · ${escapeHtml(g._teamName)}`
+        : '';
+
     card.innerHTML = `
         <div class="emoji">${emoji}</div>
         <div class="body">
             <div class="title">${title}${notCounted}</div>
-            <div class="sub">${dateLabel} · ${sportLabel(g.sport || 'Game')}</div>
+            <div class="sub">${dateLabel} · ${sportLabel(g.sport || 'Game')}${teamSuffix}</div>
         </div>
         ${badge}`;
     return card;
+}
+
+function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
 }
 
 // Re-render the trend chart on resize so the canvas matches the new width.
