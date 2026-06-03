@@ -1977,10 +1977,14 @@ function vbApplyStat(side, statName, playerId) {
             s[playerKey] = pm;
         }
         // Push onto the undo stack so the camera's Undo Stat button
-        // can reverse it. Shape matches ScoreboardType.VbStatAction:
-        // { side, statName, playerId? }.
+        // can reverse it. Wire shape is { side, stat, playerId? } —
+        // the phone's deserialize uses `a.getString("stat")` which
+        // throws if missing, so the entire FULL_STATE_SYNC was being
+        // silently dropped (Eric 2026-06-03 repro: click a stat →
+        // everything stops updating). Earlier web revs sent
+        // `statName` instead, never reaching the camera.
         const stack = Array.isArray(s.statUndoStack) ? s.statUndoStack.slice() : [];
-        const action = { side, statName };
+        const action = { side, stat: statName };
         if (playerId) action.playerId = playerId;
         stack.push(action);
         s.statUndoStack = stack;
