@@ -690,7 +690,7 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
 
 <!-- Footer (no game control buttons — phone controls the game) -->
 <div id="footer" style="display:none;">
-    <div class="brand">Score<span>Frame</span></div>
+    <div class="brand">Score<span>Frame</span> <span style="font-weight:400;color:var(--text-muted);">v6</span></div>
     <div class="footer-actions">
         <button class="footer-btn" onclick="showDisconnectDialog()">Disconnect</button>
     </div>
@@ -1465,28 +1465,181 @@ function renderBasketball() {
         ${buildBbStatStub('away', s, ac)}`;
 }
 
-// TODO: wire to camera when a basketball per-player stat protocol
-// exists. Today the buttons render disabled so the scorer can see
-// the planned UX and Eric can decide whether to extend the protocol.
-// The disabled buttons short-circuit silently on tap.
-function buildBbStatStub(side, s, color) {
+// v6 — Wired BB per-player stats (Android v1.1.554+). Mirrors the
+// VB approach: tap a stat → if no active player pinned, open the
+// roster picker → mutate state.homePlayerStats[playerId][field]++
+// and push via updateAndSend. The camera's FULL_STATE_SYNC handler
+// mirrors the maps into basketballHomePlayerStats / basketballAway-
+// PlayerStats, so the per-player career stat persistence and End
+// Game stat sheet pick up everything seamlessly.
+//
+// BB_STATS.key is the user-facing label key (FTM / 2PM / etc.).
+// We translate to the BasketballPlayerStats wire field names below
+// in bbApplyStat. Pre-v1.1.554 cameras simply ignore the unknown
+// homePlayerStats / awayPlayerStats keys (additive protocol shape).
+const BB_STAT_FIELD = {
+    FTM:  'ftm',   FTA:  'fta',
+    '2PM': 'twoPM', '2PA': 'twoPA',
+    '3PM': 'threePM', '3PA': 'threePA',
+    OREB: 'oReb', DREB: 'dReb',
+    AST:  'assists', STL: 'steals',
+    BLK:  'blocks', TO:  'turnovers', PF: 'fouls',
+};
+
+let bbActivePlayer = { home: null, away: null };
+
+function buildBbStatPanel(side, s, color) {
     const teamName = side === 'home' ? (s.homeName || 'HOME') : (s.awayName || 'AWAY');
+    const roster = (side === 'home' ? s.homeRoster : s.awayRoster) || {};
+    const activeId = bbActivePlayer[side];
+    const activeName = activeId ? roster[activeId] : '';
+    const rosterCount = Object.keys(roster).length;
+
     let gridHtml = '<div class="stat-grid bb">';
     BB_STATS.forEach(st => {
-        gridHtml += `<button class="stat-btn" disabled title="${esc(st.title)} — not yet supported by camera">
-            ${esc(st.label)}
-        </button>`;
+        gridHtml += `<button class="stat-btn" onclick="bbStatTap('${side}','${st.key}')"
+            title="${esc(st.title)}">${esc(st.label)}</button>`;
     });
     gridHtml += '</div>';
+
+    const activeChip = activeId
+        ? `<span style="font-size:11px;background:${color};color:white;padding:2px 8px;border-radius:10px;">
+                ${esc(activeName)}
+                <span onclick="bbClearActivePlayer('${side}')" style="cursor:pointer;margin-left:6px;">×</span>
+            </span>`
+        : (rosterCount > 0
+            ? `<span style="font-size:10px;color:var(--text-muted);">tap a stat → pick player</span>`
+            : `<span style="font-size:10px;color:var(--text-muted);">team-only · no roster pushed</span>`);
+
     return `
         <div class="stat-section" style="border-left-color:${color};">
             <div class="stat-section-title">
                 <span><span class="team-dot" style="background:${color};"></span>${esc(teamName)} Stats</span>
-                <span style="font-size:10px;color:var(--text-muted);">camera protocol pending</span>
+                ${activeChip}
             </div>
             ${gridHtml}
         </div>`;
 }
+
+// Compatibility shim — old function name still referenced by
+// renderBasketball below until we wire the new panel in. Now
+// returns the enabled panel.
+function buildBbStatStub(side, s, color) {
+    return buildBbStatPanel(side, s, color);
+}
+
+window.bbStatTap = (side, statKey) => {
+    const activeId = bbActivePlayer[side];
+    if (activeId) {
+        bbApplyStat(side, statKey, activeId);
+        return;
+    }
+    const roster = (side === 'home' ? currentState.homeRoster : currentState.awayRoster) || {};
+    const ids = Object.keys(roster);
+    if (ids.length === 0) {
+        // No roster — fall back to team-only fouls (the only BB stat
+        // that has a team field on the live state today). Other stats
+        // require a player attribution, so we silently no-op rather
+        // than dropping the increment.
+        if (statKey === 'PF') {
+            updateAndSend(s => {
+                const key = side === 'home' ? 'homeFouls' : 'awayFouls';
+                s[key] = (s[key] || 0) + 1;
+                const byP = (side === 'home' ? s.homeFoulsByPeriod : s.awayFoulsByPeriod) || [];
+                const idx = (s.currentPeriod || 1) - 1;
+                while (byP.length <= idx) byP.push(0);
+                byP[idx] = (byP[idx] || 0) + 1;
+                if (side === 'home') s.homeFoulsByPeriod = byP;
+                else s.awayFoulsByPeriod = byP;
+            });
+        }
+        return;
+    }
+    openBbPlayerPicker(side, statKey);
+};
+
+window.bbClearActivePlayer = (side) => {
+    bbActivePlayer[side] = null;
+    render();
+};
+
+function bbApplyStat(side, statKey, playerId) {
+    const field = BB_STAT_FIELD[statKey];
+    if (!field) return;
+    updateAndSend(s => {
+        const mapKey = side === 'home' ? 'homePlayerStats' : 'awayPlayerStats';
+        const pm = Object.assign({}, s[mapKey] || {});
+        const cur = pm[playerId] || {};
+        const next = Object.assign({}, cur);
+        next[field] = (cur[field] || 0) + 1;
+        pm[playerId] = next;
+        s[mapKey] = pm;
+        // BB scoring stats also bump the team score so the scoreboard
+        // and per-quarter line stays in sync without a second tap.
+        // Mirrors the camera-side basketball flow.
+        if (statKey === 'FTM' || statKey === '2PM' || statKey === '3PM') {
+            const pts = statKey === 'FTM' ? 1 : (statKey === '2PM' ? 2 : 3);
+            const scoreKey = side === 'home' ? 'homeScore' : 'awayScore';
+            s[scoreKey] = (s[scoreKey] || 0) + pts;
+            const byP = (side === 'home' ? s.homeScoreByPeriod : s.awayScoreByPeriod) || [];
+            const idx = (s.currentPeriod || 1) - 1;
+            while (byP.length <= idx) byP.push(0);
+            byP[idx] = (byP[idx] || 0) + pts;
+            if (side === 'home') s.homeScoreByPeriod = byP;
+            else s.awayScoreByPeriod = byP;
+        }
+        // Personal fouls also drive the team-foul total + per-quarter
+        // line that the camera uses to flip the bonus indicator.
+        if (statKey === 'PF') {
+            const key = side === 'home' ? 'homeFouls' : 'awayFouls';
+            s[key] = (s[key] || 0) + 1;
+            const byP = (side === 'home' ? s.homeFoulsByPeriod : s.awayFoulsByPeriod) || [];
+            const idx = (s.currentPeriod || 1) - 1;
+            while (byP.length <= idx) byP.push(0);
+            byP[idx] = (byP[idx] || 0) + 1;
+            if (side === 'home') s.homeFoulsByPeriod = byP;
+            else s.awayFoulsByPeriod = byP;
+        }
+    });
+}
+
+function openBbPlayerPicker(side, statKey) {
+    const roster = (side === 'home' ? currentState.homeRoster : currentState.awayRoster) || {};
+    const teamName = side === 'home' ? (currentState.homeName || 'HOME') : (currentState.awayName || 'AWAY');
+    const statTitle = (BB_STATS.find(s => s.key === statKey) || {}).title || statKey;
+
+    let rows = '';
+    Object.keys(roster).forEach(pid => {
+        const display = roster[pid] || '';
+        const { num, name } = splitRosterEntry(display);
+        rows += `<div class="modal-roster-row" onclick="bbPickerSelect('${side}','${escAttr(pid)}','${escAttr(statKey)}')">
+            ${num ? `<span class="modal-roster-num">${esc(num)}</span>` : ''}
+            <span class="modal-roster-name">${esc(name || display)}</span>
+        </div>`;
+    });
+    const scrim = document.createElement('div');
+    scrim.id = 'bbPlayerPickerScrim';
+    scrim.className = 'modal-scrim';
+    scrim.innerHTML = `
+        <div class="modal-card">
+            <div class="modal-title">${esc(teamName)} · ${esc(statTitle)}</div>
+            <div class="modal-subtitle">Tap a player to credit this stat</div>
+            <div class="modal-roster-list">${rows}</div>
+            <button class="modal-close" onclick="bbPickerClose()">Cancel</button>
+        </div>`;
+    document.body.appendChild(scrim);
+}
+
+window.bbPickerSelect = (side, playerId, statKey) => {
+    bbActivePlayer[side] = playerId;
+    bbApplyStat(side, statKey, playerId);
+    bbPickerClose();
+};
+
+window.bbPickerClose = () => {
+    const el = document.getElementById('bbPlayerPickerScrim');
+    if (el) el.remove();
+};
 window.bbScore = (team, pts) => updateAndSend(s => {
     if (team === 'home') { s.homeScore += pts; s.homeScoreByPeriod[s.currentPeriod-1] = (s.homeScoreByPeriod[s.currentPeriod-1]||0) + pts; }
     else { s.awayScore += pts; s.awayScoreByPeriod[s.currentPeriod-1] = (s.awayScoreByPeriod[s.currentPeriod-1]||0) + pts; }
