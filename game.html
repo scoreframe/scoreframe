@@ -207,6 +207,19 @@ html, body {
     font-size: 12px;
     color: var(--text-muted);
 }
+.prestream-actions {
+    margin-top: 12px;
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+}
+.prestream-actions button {
+    padding: 6px 12px; border-radius: 6px;
+    font-size: 12px; font-weight: 700;
+    color: var(--accent); background: transparent;
+    border: 1px solid var(--accent);
+    cursor: pointer;
+}
+.prestream-actions button:hover { background: var(--accent-dim); }
+.prestream-actions button:active { transform: scale(0.98); }
 
 /* Body — game summary + stats stacked under the player */
 .body {
@@ -657,7 +670,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v33</span>
+    <span class="page-version">game.html v34</span>
 </div>
 
 <script type="module">
@@ -1017,6 +1030,10 @@ function renderUpcomingGame(hub, game) {
                 Watch on YouTube
             </a>
             <div class="prestream-hint">Tap "Set reminder" on YouTube — same link goes live at game time.</div>
+            <div class="prestream-actions">
+                <button type="button" class="prestream-copy" data-copy="${escapeHtml(preStreamUrl)}">📋 Copy link</button>
+                <button type="button" class="prestream-share" data-share="${escapeHtml(preStreamUrl)}" data-title="${escapeHtml(title || 'ScoreFrame stream')}">🔗 Share</button>
+            </div>
         </div>` : '';
     const countdownHtml = `
         <div class="countdown-card">
@@ -1050,6 +1067,12 @@ function renderUpcomingGame(hub, game) {
     };
     tick();
     setInterval(tick, 1000);
+
+    // v33b — Copy + Share handlers for the pre-stream actions block.
+    // Bound after the innerHTML write so the buttons exist. Native
+    // share sheet on mobile via navigator.share; clipboard via
+    // navigator.clipboard with a textarea fallback for older browsers.
+    setupPreStreamActions();
 
     renderMeta(game, sport);
     renderBoxScore(hub, game, sport);
@@ -2035,6 +2058,53 @@ function computeBoxTotals(players, cols, sportKey) {
         }
     }
     return hasSum ? t : null;
+}
+
+// v33b — Copy + Share handlers for the pre-stream card. Buttons carry
+// the URL on data-copy / data-share and the event name on data-title;
+// rendered via innerHTML so we have to bind after each write.
+function setupPreStreamActions() {
+    const copyBtn = document.querySelector('.prestream-copy');
+    const shareBtn = document.querySelector('.prestream-share');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', async () => {
+            const url = copyBtn.dataset.copy || '';
+            if (!url) return;
+            try {
+                await navigator.clipboard.writeText(url);
+            } catch (e) {
+                // Fallback for older browsers.
+                const ta = document.createElement('textarea');
+                ta.value = url;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch (_) {}
+                ta.remove();
+            }
+            const original = copyBtn.textContent;
+            copyBtn.textContent = '✓ Copied';
+            setTimeout(() => { copyBtn.textContent = original; }, 1500);
+        });
+    }
+    if (shareBtn) {
+        shareBtn.addEventListener('click', async () => {
+            const url = shareBtn.dataset.share || '';
+            const title = shareBtn.dataset.title || 'ScoreFrame stream';
+            if (!url) return;
+            if (navigator.share) {
+                try {
+                    await navigator.share({ title, text: `Watch live: ${url}`, url });
+                    return;
+                } catch (_) { /* user dismissed or share unavailable */ }
+            }
+            // Desktop / unsupported — fall back to copying.
+            try {
+                await navigator.clipboard.writeText(url);
+                shareBtn.textContent = '✓ Link copied';
+                setTimeout(() => { shareBtn.textContent = '🔗 Share'; }, 1500);
+            } catch (_) {}
+        });
+    }
 }
 
 function renderMeta(game, sport) {
