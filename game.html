@@ -1795,8 +1795,18 @@ function renderBowlingScore(game) {
     // specific bowler's hcap is 0 (rendered as "+hcp +0/g"). Keeps the
     // column visually consistent across the lineup and surfaces the
     // adjusted total next to scratch for every contributor.
+    // v22 — Solo-team handicap fallback. The h2h+stats.hasHandicap gate
+    // above only fires for head-to-head games where the camera stamped
+    // both flags. A solo-team bowling night with per-bowler handicap
+    // (e.g. Carter and Eric league night 2026-06-03, Carter +9/g,
+    // Eric +67/g) leaves both flags off, so the per-bowler row dropped
+    // the +hcp split. Broaden the rendering gate to ALSO fire when any
+    // bowler in the rendered list carries a non-zero handicap. The H2H
+    // header logic above is unaffected — it stays inside `if (isH2H)`.
+    const anyBowlerHcap = rows.some(r => Number(r.bowlerHcap) > 0);
+    const showHcapColumn = hasHandicap || anyBowlerHcap;
     const seriesCell = r => {
-        if (hasHandicap) {
+        if (showHcapColumn) {
             return `<div class="bowling-series" style="text-align:right;">
                         <div style="font-size:13px;color:var(--text-secondary);">scratch ${r.series}</div>
                         <div><strong>${r.bowlerAdj}</strong> <span style="font-size:11px;color:var(--text-secondary);">+hcp +${r.bowlerHcap || 0}/g</span></div>
