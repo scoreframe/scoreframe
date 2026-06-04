@@ -229,6 +229,15 @@ html, body {
 .card {
     background: var(--bg-surface); border-radius: 12px;
     padding: 16px 18px; border: 1px solid var(--bg-elevated);
+    /* 2026-06-04 — Grid children have min-width: auto by default,
+       which means the card refuses to shrink below its intrinsic
+       content width. On narrow screens a wide stats table (BB has 11
+       columns, VB 9) pushed the entire card past viewport, even
+       though .box-table-wrap had overflow-x: auto — the wrap was
+       never constrained, so its scroll never triggered. min-width: 0
+       lets the card honor its grid track width; the inner wrap then
+       actually scrolls horizontally as designed. */
+    min-width: 0;
 }
 .card .label {
     font-size: 11px; font-weight: 700; color: var(--accent);
@@ -670,7 +679,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v34</span>
+    <span class="page-version">game.html v35</span>
 </div>
 
 <script type="module">
