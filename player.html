@@ -469,7 +469,7 @@ if (!playerIdParam) {
     // currentUid hoisted to module scope above
     onAuthStateChanged(auth, (user) => {
         currentUid = user ? user.uid : null;
-        console.log('[player.html] auth state:', currentUid ? 'signed in' : 'anon');
+        console.log('[player.html] auth state:', currentUid ? 'signed in (uid=' + currentUid + ')' : 'anon');
         if (!authResolved) {
             authResolved = true;
             authResolveFn && authResolveFn();
@@ -550,8 +550,12 @@ async function loadPlayer() {
     try {
         // Resolve hubCode → teamId
         const idx = await getDoc(doc(db, 'hubIndex', hubCode));
-        if (!idx.exists()) return showNotFound();
+        if (!idx.exists()) {
+            console.warn('[player.html] hubIndex/' + hubCode + ' does not exist');
+            return showNotFound();
+        }
         teamId = idx.data().teamId;
+        console.log('[player.html] resolved hubCode=' + hubCode + ' -> teamId=' + teamId);
 
         // 2026-06-02 — Defensive player-profile resolution. The
         // teams/{teamId}/players/{id} doc is only written for TRACKED
@@ -566,7 +570,15 @@ async function loadPlayer() {
         //      name (last-resort; name picked off the URL would even
         //      let us render a generic page if the player isn't on
         //      the roster yet).
-        const teamDoc = await getDoc(doc(db, 'teams', teamId)).catch(() => null);
+        const teamDoc = await getDoc(doc(db, 'teams', teamId)).catch((err) => {
+            console.warn('[player.html] team doc read failed for teamId=' + teamId + ':', err?.code, err?.message);
+            return null;
+        });
+        if (teamDoc && teamDoc.exists()) {
+            console.log('[player.html] team doc ok: name=' + (teamDoc.data().name || '?') + ' ownerUid=' + (teamDoc.data().ownerUid || '(missing)') + ' visibility=' + (teamDoc.data().hub?.visibility || '(private)'));
+        } else if (teamDoc) {
+            console.warn('[player.html] team doc not found at teams/' + teamId);
+        }
         if (teamDoc && teamDoc.exists()) {
             const t = teamDoc.data();
             teamProfile = {
