@@ -410,6 +410,14 @@ html, body {
 
     <!-- Content (visible to approved subscribers + managers for private, everyone for public) -->
     <div id="teamContent" style="display:none;">
+        <!-- 2026-06-08 — Pending follower requests (owner/managers only).
+             Surfaced from the email notification's "manage on the web" link
+             so owners can approve/block without opening the app. -->
+        <div class="section" id="pendingRequestsSection" style="display:none;">
+            <div class="section-title">👋 Pending follower requests</div>
+            <div id="pendingRequestsList"></div>
+        </div>
+
         <!-- Live Now -->
         <div id="liveSection" style="display:none;" class="section">
             <div class="section-title">🔴 Live Now</div>
@@ -960,6 +968,7 @@ function showContent() {
         loadRoster();
             loadPastGames();
         listenForLive();
+        loadPendingRequests();
     } else if (isManager || isSubscriber) {
         // Private hub but user has access
         $('accessGate').style.display = 'none';
@@ -969,6 +978,7 @@ function showContent() {
         loadRoster();
             loadPastGames();
         listenForLive();
+        loadPendingRequests();
     } else {
         // Private hub, no access — show gate
         $('teamContent').style.display = 'none';
@@ -1379,6 +1389,117 @@ function renderSeasonSwitcher() {
 function matchesSelectedSeason(game) {
     if (!selectedSeasonId) return true;
     return game.seasonId === selectedSeasonId;
+}
+
+// 2026-06-08 — Pending follower request management on the web. Mirrors the
+// in-app TeamHubActivity owner flow so an owner who gets the
+// "New follow request" email (sent by the notifyOwnerOfFollowRequest CF)
+// can approve / block right from the web page without opening the app.
+// Only renders for the team's owner / managers.
+async function loadPendingRequests() {
+    const isOwner = currentUser && hubProfile && currentUser.uid === hubProfile.ownerUid;
+    if (!isOwner && !isManager) {
+        $('pendingRequestsSection').style.display = 'none';
+        return;
+    }
+    try {
+        const snap = await getDocs(collection(db, 'teams', teamId, 'subscribers'));
+        const pending = snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((s) => s.status === 'pending');
+        if (pending.length === 0) {
+            $('pendingRequestsSection').style.display = 'none';
+            return;
+        }
+        $('pendingRequestsSection').style.display = 'block';
+        const list = $('pendingRequestsList');
+        list.innerHTML = '';
+        for (const p of pending) {
+            const row = document.createElement('div');
+            row.style.cssText = 'padding:12px 14px; margin-bottom:8px; border:1px solid var(--sf-outline,#444); border-radius:10px; display:flex; align-items:center; gap:10px;';
+            const info = document.createElement('div');
+            info.style.cssText = 'flex:1;';
+            const name = document.createElement('div');
+            name.textContent = p.name || 'Unknown';
+            name.style.cssText = 'font-weight:700; font-size:14px;';
+            info.appendChild(name);
+            if (p.email) {
+                const email = document.createElement('div');
+                email.textContent = p.email;
+                email.style.cssText = 'font-size:12px; color:#888;';
+                info.appendChild(email);
+            }
+            if (p.requestedAt) {
+                const when = document.createElement('div');
+                when.textContent = 'Requested ' + new Date(p.requestedAt).toLocaleDateString();
+                when.style.cssText = 'font-size:11px; color:#999; margin-top:2px;';
+                info.appendChild(when);
+            }
+            row.appendChild(info);
+            const approveBtn = document.createElement('button');
+            approveBtn.textContent = 'Approve';
+            approveBtn.style.cssText = 'padding:8px 14px; background:#FF9640; color:#1A1A1A; border:0; border-radius:6px; font-weight:700; cursor:pointer;';
+            approveBtn.onclick = () => approvePendingRequest(p.id, p.name || 'Follower', row);
+            row.appendChild(approveBtn);
+            const blockBtn = document.createElement('button');
+            blockBtn.textContent = 'Block';
+            blockBtn.style.cssText = 'padding:8px 14px; background:transparent; color:#888; border:1px solid #555; border-radius:6px; font-weight:700; cursor:pointer; margin-left:6px;';
+            blockBtn.onclick = () => blockPendingRequest(p.id, p.name || 'Follower', row);
+            row.appendChild(blockBtn);
+            list.appendChild(row);
+        }
+    } catch (e) {
+        console.error('[team.html] loadPendingRequests failed:', e);
+        $('pendingRequestsSection').style.display = 'none';
+    }
+}
+
+async function approvePendingRequest(subUid, displayName, rowEl) {
+    if (!confirm('Approve ' + displayName + ' to follow this team?')) return;
+    rowEl.style.opacity = '0.5';
+    try {
+        const now = Date.now();
+        const { updateDoc, arrayUnion } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+        await updateDoc(doc(db, 'teams', teamId, 'subscribers', subUid), {
+            status: 'approved',
+            approvedAt: now,
+        });
+        // Add hubCode to the subscriber's subscribedHubs so the app picks it up.
+        const hubCode = hubProfile?.hubCode || '';
+        if (hubCode) {
+            try {
+                await setDoc(doc(db, 'users', subUid), { subscribedHubs: arrayUnion(hubCode) }, { merge: true });
+            } catch (e) { console.warn('subscribedHubs write failed:', e); }
+        }
+        rowEl.remove();
+        // Hide the section if no more rows.
+        if ($('pendingRequestsList').children.length === 0) {
+            $('pendingRequestsSection').style.display = 'none';
+        }
+    } catch (e) {
+        console.error('approve failed:', e);
+        alert('Approve failed. Please try again.');
+        rowEl.style.opacity = '1';
+    }
+}
+
+async function blockPendingRequest(subUid, displayName, rowEl) {
+    if (!confirm('Block ' + displayName + ' from following this team?')) return;
+    rowEl.style.opacity = '0.5';
+    try {
+        const { updateDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+        await updateDoc(doc(db, 'teams', teamId, 'subscribers', subUid), {
+            status: 'blocked',
+        });
+        rowEl.remove();
+        if ($('pendingRequestsList').children.length === 0) {
+            $('pendingRequestsSection').style.display = 'none';
+        }
+    } catch (e) {
+        console.error('block failed:', e);
+        alert('Block failed. Please try again.');
+        rowEl.style.opacity = '1';
+    }
 }
 
 async function loadSchedule() {
