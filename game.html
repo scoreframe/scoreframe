@@ -2024,29 +2024,50 @@ function renderScoringSummary(hub, game, sport) {
         { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
     ));
 
+    // 2026-06-09 — Each goal row lines up on the scoring team's side
+    // (HOME left, AWAY right) with the team color as background tint +
+    // border. Per Eric: "put the score for the other team to the right
+    // side of the screen and apply the color for that team that was
+    // selected on setup."
+    const hexToRgba = (hex, alpha) => {
+        const h = hex.replace('#', '');
+        const norm = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+        const r = parseInt(norm.slice(0, 2), 16);
+        const g = parseInt(norm.slice(2, 4), 16);
+        const b = parseInt(norm.slice(4, 6), 16);
+        return `rgba(${r},${g},${b},${alpha})`;
+    };
+
     const rows = sorted.map(ev => {
         const side = (ev.side || 'HOME').toUpperCase();
         const isHome = side === 'HOME';
         const accent = isHome ? homeColor : awayColor;
+        const tint = hexToRgba(accent, 0.16);
         const teamName = ev.teamName || (isHome ? homeName : awayName);
         const playerName = (ev.playerName || '').trim();
-        const playerLine = playerName
-            ? `<div style="font-size:13px;color:var(--text-secondary);margin-top:2px;">${escapeHtml(playerName)}</div>`
-            : '';
         const clock = fmtClock(ev.gameClockSeconds);
         const watchHtml = (typeof ev.highlightUrl === 'string' && ev.highlightUrl.startsWith('http'))
             ? `<a href="${escapeHtml(ev.highlightUrl)}" target="_blank" rel="noopener" style="font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;white-space:nowrap;">▶ Watch</a>`
             : '';
-        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--bg-elevated,#1e1e1e);">
-            <div style="width:4px;align-self:stretch;background:${escapeHtml(accent)};border-radius:2px;"></div>
-            <div style="font-size:18px;line-height:1;flex-shrink:0;">${meta.emoji}</div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:14px;font-weight:700;color:var(--text-primary);">${escapeHtml(teamName)}</div>
-                ${playerLine}
-            </div>
-            <div style="font-size:13px;font-weight:700;color:var(--text-muted,#888);min-width:36px;text-align:right;">${clock}</div>
-            ${watchHtml}
-        </div>`;
+        // Card content. We build the same blocks for both sides; the
+        // outer wrapper flips the visual order so the home card hugs
+        // the left edge and the away card hugs the right.
+        const playerLine = playerName
+            ? `<div style="font-size:13px;color:var(--text-secondary);margin-top:2px;text-align:${isHome ? 'left' : 'right'};">${escapeHtml(playerName)}</div>`
+            : '';
+        const teamLine = `<div style="font-size:14px;font-weight:700;color:var(--text-primary);text-align:${isHome ? 'left' : 'right'};">${escapeHtml(teamName)}</div>`;
+        const clockBlock = `<div style="font-size:13px;font-weight:700;color:var(--text-muted,#888);min-width:36px;text-align:${isHome ? 'right' : 'left'};">${clock}</div>`;
+        const emojiBlock = `<div style="font-size:18px;line-height:1;flex-shrink:0;">${meta.emoji}</div>`;
+        const infoBlock = `<div style="flex:1;min-width:0;">${teamLine}${playerLine}</div>`;
+        const accentBar = `<div style="width:4px;align-self:stretch;background:${escapeHtml(accent)};border-radius:2px;"></div>`;
+        // Card itself, with team-tinted background + leading border on
+        // the scoring side.
+        const cardInner = isHome
+            ? `${accentBar}${emojiBlock}${infoBlock}${clockBlock}${watchHtml}`
+            : `${watchHtml}${clockBlock}${infoBlock}${emojiBlock}${accentBar}`;
+        const card = `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:${tint};max-width:88%;">${cardInner}</div>`;
+        // Outer wrapper: justify left for HOME, right for AWAY.
+        return `<div style="display:flex;justify-content:${isHome ? 'flex-start' : 'flex-end'};padding:6px 0;">${card}</div>`;
     }).join('');
 
     $('scoringSummaryContent').innerHTML = rows;
