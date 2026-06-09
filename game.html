@@ -898,6 +898,15 @@ function buildEmbedSrc(url, platform) {
         const ps = new URLSearchParams({
             modestbranding: '1', rel: '0', playsinline: '1',
             color: 'white', iv_load_policy: '3', enablejsapi: '1',
+            // 2026-06-09 — `origin` is required by the YouTube IFrame API
+            // for postMessage between iframe and parent to be trusted in
+            // strict-tracking-prevention browsers (Safari, Firefox with
+            // enhanced protection). Without it, onReady never fires and
+            // ytPlayerReady stays false — which routed seekToHighlight()
+            // straight into its window.open() fallback. In WebView the
+            // tracking-prevention rules are softer so the API worked
+            // there even without `origin`, masking the bug in-app.
+            origin: window.location.origin,
         });
         return `https://www.youtube.com/embed/${id}?${ps.toString()}`;
     }
@@ -2010,12 +2019,52 @@ function seekToHighlight(seconds, platform, baseUrl) {
             document.querySelector('.video-embed-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             return;
         } catch (e) {
-            console.warn('YT seekTo failed, falling back to URL nav:', e);
+            console.warn('YT seekTo failed, falling back to inline remount:', e);
         }
     }
-    // Fallback: deep-link with ?t=<seconds>. YouTube and Twitch both
-    // honor this pattern; opens in a new tab so the user doesn't lose
-    // their spot on the team hub.
+
+    // 2026-06-09 — Inline-remount fallback. Eric: "in my browser outside
+    // of the app I click on the watch links for each goal it's taking me
+    // to YouTube directly. but it works correctly inside the app." The
+    // old fallback used window.open() against the highlight URL which
+    // landed straight on the YouTube site. Now we mount a fresh embed
+    // into the existing player slot, autoplay starting at the goal
+    // timestamp — the goal plays inline regardless of YT API state.
+    const playerSlot = $('playerSlot');
+    if (platform === 'youtube' && baseUrl && playerSlot) {
+        const id = extractYouTubeId(baseUrl);
+        if (id) {
+            const allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+            const ps = new URLSearchParams({
+                modestbranding: '1', rel: '0', playsinline: '1',
+                color: 'white', iv_load_policy: '3', enablejsapi: '1',
+                origin: window.location.origin,
+                autoplay: '1', start: String(seconds),
+            });
+            const src = `https://www.youtube.com/embed/${id}?${ps.toString()}`;
+            const iframeId = 'sf-primary-player';
+            playerSlot.innerHTML = `
+                <div class="video-embed-wrap">
+                    <iframe id="${iframeId}" src="${src}" allow="${allow}" allowfullscreen loading="eager"></iframe>
+                </div>`;
+            ytPlayer = null;
+            ytPlayerReady = false;
+            ensureYouTubeApi(() => {
+                try {
+                    ytPlayer = new YT.Player(iframeId, {
+                        events: { onReady: () => { ytPlayerReady = true; } }
+                    });
+                } catch (e) { /* embed plays fine without API */ }
+            });
+            document.querySelector('.video-embed-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+    }
+
+    // Last-resort fallback: open the stream URL in a new tab. Only
+    // reaches here when there's no player slot (headless layout) or the
+    // stream isn't YouTube (Twitch / Facebook). Non-YouTube embed
+    // remount could be added later when those highlights ship.
     if (baseUrl) {
         const sep = baseUrl.includes('?') ? '&' : '?';
         window.open(`${baseUrl}${sep}t=${seconds}`, '_blank', 'noopener');
