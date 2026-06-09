@@ -654,6 +654,16 @@ html, body {
             <div id="scoringSummaryContent"></div>
         </div>
 
+        <!-- 2026-06-09 — Match Stats card (sport-specific team totals).
+             Soccer first: SOG / Corners / Fouls / Offsides / Cards /
+             Saves rendered as a side-by-side comparison with team
+             colors. Hidden by default; renderMatchStats() reveals it
+             when the sport has a stat payload to show. -->
+        <div class="card" id="matchStatsCard" style="display:none;">
+            <div class="label" id="matchStatsLabel">Match Stats</div>
+            <div id="matchStatsContent"></div>
+        </div>
+
         <!-- ✨ AI Recap — generated in-app via the Labs feature and
              persisted on the game doc. Hidden by default; revealed by
              load() when game.aiRecap is present. -->
@@ -1241,6 +1251,8 @@ function renderGame(hub, game) {
     renderBoxScore(hub, game, sport);
     // 2026-06-09 — Per-event scoring summary (Soccer's first user).
     renderScoringSummary(hub, game, sport);
+    // 2026-06-09 — Team-level match stats (Soccer first user).
+    renderMatchStats(hub, game, sport);
     // ✨ AI recap card (Labs feature, persisted from in-app generation).
     renderAiRecap(game);
 
@@ -2102,6 +2114,81 @@ function renderScoringSummary(hub, game, sport) {
             seekToHighlight(sec, platform, baseUrl);
         });
     });
+    card.style.display = '';
+}
+
+// 2026-06-09 — Match Stats card. Sport-specific team totals from
+// game.sportSpecificStats (written by the Android/iOS end-game save).
+// Soccer is the first user: SOG / Corners / Fouls / Offsides /
+// Yellow / Red / Saves. Renders as a horizontal table with the
+// HOME number on the left, AWAY number on the right, and the stat
+// label in the middle. Each row gets a colored bar showing relative
+// dominance — wider bar on the side that has the larger value.
+// Hidden when the sport has no stat payload OR when every value is
+// zero (boring 0-0 row strip just clutters the page).
+function renderMatchStats(hub, game, sport) {
+    const card = $('matchStatsCard');
+    if (!card) return;
+    const sportKey = String(sport || '').toUpperCase();
+    const stats = (game && typeof game.sportSpecificStats === 'object' && game.sportSpecificStats) || {};
+    // Per-sport row spec: { label, homeKey, awayKey, prefix? }
+    const ROWS_BY_SPORT = {
+        SOCCER: [
+            { label: 'Shots on Goal',  hk: 'homeShotsOnGoal',  ak: 'awayShotsOnGoal' },
+            { label: 'Corners',        hk: 'homeCorners',      ak: 'awayCorners' },
+            { label: 'Fouls',          hk: 'homeFouls',        ak: 'awayFouls' },
+            { label: 'Offsides',       hk: 'homeOffsides',     ak: 'awayOffsides' },
+            { label: '🟨 Yellow Cards', hk: 'homeYellowCards',  ak: 'awayYellowCards' },
+            { label: '🟥 Red Cards',    hk: 'homeRedCards',     ak: 'awayRedCards' },
+            { label: 'Saves',          hk: 'homeSaves',        ak: 'awaySaves' },
+        ],
+    };
+    const spec = ROWS_BY_SPORT[sportKey];
+    if (!spec) { card.style.display = 'none'; return; }
+    const rows = spec
+        .map(r => ({ label: r.label, home: Number(stats[r.hk] || 0), away: Number(stats[r.ak] || 0) }))
+        .filter(r => r.home > 0 || r.away > 0);
+    if (rows.length === 0) { card.style.display = 'none'; return; }
+
+    const homeColor = hub?.color || '#FF9640';
+    const awayColor = hub?.color2 || '#FFFFFF';
+    const homeName = game.homeTeam || 'Home';
+    const awayName = game.awayTeam || 'Away';
+    const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => (
+        { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+    ));
+
+    // Header row: team name + color swatch on each side.
+    const headerHtml = `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0 12px 0;border-bottom:1px solid var(--bg-elevated,#1e1e1e);margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${escapeHtml(homeColor)};"></span>
+            <span style="font-size:13px;font-weight:700;color:var(--text-primary);">${escapeHtml(homeName)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:13px;font-weight:700;color:var(--text-primary);">${escapeHtml(awayName)}</span>
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${escapeHtml(awayColor)};"></span>
+        </div>
+    </div>`;
+
+    // Stat rows: HOME number — colored relative bar — AWAY number.
+    const rowsHtml = rows.map(r => {
+        const total = r.home + r.away;
+        const homePct = total > 0 ? Math.round((r.home / total) * 100) : 50;
+        const awayPct = 100 - homePct;
+        return `<div style="padding:8px 0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;">
+                <div style="font-weight:700;color:var(--text-primary);min-width:36px;text-align:left;">${r.home}</div>
+                <div style="flex:1;text-align:center;color:var(--text-secondary);font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">${r.label}</div>
+                <div style="font-weight:700;color:var(--text-primary);min-width:36px;text-align:right;">${r.away}</div>
+            </div>
+            <div style="display:flex;margin-top:6px;height:6px;border-radius:3px;overflow:hidden;background:var(--bg-elevated,#1e1e1e);">
+                <div style="width:${homePct}%;background:${escapeHtml(homeColor)};"></div>
+                <div style="width:${awayPct}%;background:${escapeHtml(awayColor)};"></div>
+            </div>
+        </div>`;
+    }).join('');
+
+    $('matchStatsContent').innerHTML = headerHtml + rowsHtml;
     card.style.display = '';
 }
 
