@@ -2038,6 +2038,27 @@ function renderScoringSummary(hub, game, sport) {
         return `rgba(${r},${g},${b},${alpha})`;
     };
 
+    // Build the watch-button HTML for one event. Eric: tapping a watch
+    // link inside the WebView was opening the YouTube site instead of
+    // seeking the inline player. We now mirror the Highlights chips —
+    // parse the `t=Ns` offset out of the highlightUrl, look up the
+    // matching entry in game.streams[] (most often the YouTube live
+    // broadcast), and emit a button that drives the existing
+    // seekToHighlight() helper. That helper seeks the IFrame API
+    // player when ready and falls back to a new tab only when we
+    // can't reach it (non-embed platform, late call, etc.).
+    const buildWatchHtml = (ev) => {
+        const url = typeof ev.highlightUrl === 'string' ? ev.highlightUrl : '';
+        if (!url.startsWith('http')) return '';
+        const tMatch = url.match(/[?&]t=(\d+)s?/);
+        const seconds = tMatch ? parseInt(tMatch[1], 10) : 0;
+        const streams = Array.isArray(game.streams) ? game.streams : [];
+        const matched = streams.find(s => typeof s?.url === 'string' && url.startsWith(s.url)) || streams[0] || {};
+        const platform = matched.platform || 'youtube';
+        const baseUrl = matched.url || url.split(/[?#]/)[0];
+        return `<button type="button" class="scoring-watch-btn" data-seek-sec="${seconds}" data-stream-platform="${escapeHtml(platform)}" data-stream-url="${escapeHtml(baseUrl)}" style="font-size:12px;font-weight:700;color:var(--accent);background:transparent;border:0;cursor:pointer;white-space:nowrap;padding:0;">▶ Watch</button>`;
+    };
+
     const rows = sorted.map(ev => {
         const side = (ev.side || 'HOME').toUpperCase();
         const isHome = side === 'HOME';
@@ -2046,9 +2067,7 @@ function renderScoringSummary(hub, game, sport) {
         const teamName = ev.teamName || (isHome ? homeName : awayName);
         const playerName = (ev.playerName || '').trim();
         const clock = fmtClock(ev.gameClockSeconds);
-        const watchHtml = (typeof ev.highlightUrl === 'string' && ev.highlightUrl.startsWith('http'))
-            ? `<a href="${escapeHtml(ev.highlightUrl)}" target="_blank" rel="noopener" style="font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;white-space:nowrap;">▶ Watch</a>`
-            : '';
+        const watchHtml = buildWatchHtml(ev);
         // Card content. We build the same blocks for both sides; the
         // outer wrapper flips the visual order so the home card hugs
         // the left edge and the away card hugs the right.
@@ -2071,6 +2090,18 @@ function renderScoringSummary(hub, game, sport) {
     }).join('');
 
     $('scoringSummaryContent').innerHTML = rows;
+    // Wire the watch buttons through seekToHighlight so they drive the
+    // inline player rather than the external YouTube site (Eric repro:
+    // tapping ▶ Watch was popping the YouTube web app inside the
+    // WebView). Mirrors the Highlights-chip wiring at line 1950-ish.
+    card.querySelectorAll('.scoring-watch-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const sec = parseInt(btn.dataset.seekSec, 10) || 0;
+            const platform = btn.dataset.streamPlatform || 'youtube';
+            const baseUrl = btn.dataset.streamUrl || '';
+            seekToHighlight(sec, platform, baseUrl);
+        });
+    });
     card.style.display = '';
 }
 
