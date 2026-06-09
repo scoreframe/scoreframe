@@ -908,6 +908,11 @@ async function load() {
             color: t.color || '#FF9640',
             color2: t.color2 || '#FFFFFF',
             hub: t.hub || {},
+            // v1.1.643 — Firebase Storage download URL for the team logo.
+            // Only carried forward into renderTeamScore / renderBowlingScore
+            // when it's a valid http URL; pre-v643 docs may have a phone-
+            // local path which we ignore.
+            logoUrl: (typeof t.logoUrl === 'string' && t.logoUrl.startsWith('http')) ? t.logoUrl : '',
         };
     } catch (e) {
         // v1.1.389 — Private-hub reads bounce as permission-denied for any
@@ -1430,10 +1435,17 @@ function renderTeamScore(hub, game) {
         setLine = `<div class="set-line">${parts.join('<span class="set-sep">·</span>')}</div>`;
     }
 
+    // v1.1.643 — Inline team logo on the score card. Hub (home) logo comes
+    // from the hub doc's logoUrl. Away logo would need a separate team-doc
+    // lookup, deferred. Only render when the URL is a valid http link.
+    const hubLogo = hub && hub.logoUrl && hub.logoUrl.startsWith('http') ? hub.logoUrl : null;
+    const homeLogoHtml = hubLogo
+        ? `<img src="${hubLogo}" alt="" style="width:36px;height:36px;border-radius:18px;object-fit:cover;display:inline-block;vertical-align:middle;margin-right:8px;box-shadow:0 1px 4px rgba(0,0,0,0.4);" />`
+        : '';
     $('scoreContent').innerHTML = `
         <div class="scoreline">
             <div class="team-block">
-                <div class="name">${home}</div>
+                <div class="name">${homeLogoHtml}${home}</div>
                 <div class="score ${homeWin ? 'winner' : (awayWin ? 'loser' : '')}">${hs}</div>
             </div>
             <div class="vs">VS</div>

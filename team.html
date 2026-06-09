@@ -382,6 +382,10 @@ html, body {
     <!-- Team Header -->
     <div class="team-header">
         <div class="team-color-bar" id="colorBar"></div>
+        <!-- v1.1.643 — Team logo. Rendered as a circular thumb above the
+             sport emoji whenever the team doc carries a `logoUrl` field
+             that's a Firebase Storage download URL. Hidden when empty. -->
+        <img id="teamLogo" alt="" style="display:none; width:72px; height:72px; border-radius:36px; object-fit:cover; margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.4);" />
         <div class="team-emoji" id="teamEmoji"></div>
         <div class="team-name" id="teamName"></div>
         <div class="team-sport" id="teamSport"></div>
@@ -1068,6 +1072,18 @@ function updateUserBar() {
 function renderHeader() {
     const p = hubProfile;
     $('colorBar').style.background = `linear-gradient(90deg, ${p.color || '#1565C0'}, ${p.color2 || '#FFFFFF'})`;
+    // v1.1.643 — Team logo. `logoUrl` is the Firebase Storage public download
+    // URL; only render when it actually starts with http(s) since pre-v643
+    // docs may still carry phone-local paths.
+    const teamLogoEl = $('teamLogo');
+    const rawLogo = p.logoUrl || p.logoCloudUrl || '';
+    if (rawLogo && rawLogo.startsWith('http')) {
+        teamLogoEl.src = rawLogo;
+        teamLogoEl.style.display = 'block';
+    } else {
+        teamLogoEl.style.display = 'none';
+        teamLogoEl.removeAttribute('src');
+    }
     $('teamEmoji').textContent = sportEmoji(p.sport);
     $('teamName').textContent = p.teamName || 'Team';
     $('teamSport').textContent = sportName(p.sport);
