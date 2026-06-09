@@ -2031,6 +2031,13 @@ function renderScoringSummary(hub, game, sport) {
         const m = Math.floor(s / 60);
         return `${m}'`;  // soccer convention: minute marker, e.g. "23'"
     };
+    // 2026-06-09 — Half label (1st / 2nd / ET / PK) stamped on the
+    // ScoringEvent at tap time. Empty for legacy events.
+    const fmtHalf = (h) => {
+        const s = String(h || '').trim();
+        if (!s) return '';
+        return s === 'PK' ? 'PKs' : s;
+    };
 
     const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => (
         { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
@@ -2079,6 +2086,7 @@ function renderScoringSummary(hub, game, sport) {
         const teamName = ev.teamName || (isHome ? homeName : awayName);
         const playerName = (ev.playerName || '').trim();
         const clock = fmtClock(ev.gameClockSeconds);
+        const half = fmtHalf(ev.halfLabel);
         const watchHtml = buildWatchHtml(ev);
         // Card content. We build the same blocks for both sides; the
         // outer wrapper flips the visual order so the home card hugs
@@ -2087,7 +2095,13 @@ function renderScoringSummary(hub, game, sport) {
             ? `<div style="font-size:13px;color:var(--text-secondary);margin-top:2px;text-align:${isHome ? 'left' : 'right'};">${escapeHtml(playerName)}</div>`
             : '';
         const teamLine = `<div style="font-size:14px;font-weight:700;color:var(--text-primary);text-align:${isHome ? 'left' : 'right'};">${escapeHtml(teamName)}</div>`;
-        const clockBlock = `<div style="font-size:13px;font-weight:700;color:var(--text-muted,#888);min-width:36px;text-align:${isHome ? 'right' : 'left'};">${clock}</div>`;
+        // Clock block: minute + (when present) the half label as a
+        // small secondary line so the reader can see *when* the goal
+        // happened in the full game flow, not just the minute.
+        const halfLine = half
+            ? `<div style="font-size:10px;font-weight:700;color:var(--text-muted,#666);letter-spacing:0.04em;text-transform:uppercase;margin-top:2px;text-align:${isHome ? 'right' : 'left'};">${escapeHtml(half)}</div>`
+            : '';
+        const clockBlock = `<div style="min-width:44px;text-align:${isHome ? 'right' : 'left'};"><div style="font-size:13px;font-weight:700;color:var(--text-muted,#888);">${clock}</div>${halfLine}</div>`;
         const emojiBlock = `<div style="font-size:18px;line-height:1;flex-shrink:0;">${meta.emoji}</div>`;
         const infoBlock = `<div style="flex:1;min-width:0;">${teamLine}${playerLine}</div>`;
         const accentBar = `<div style="width:4px;align-self:stretch;background:${escapeHtml(accent)};border-radius:2px;"></div>`;
