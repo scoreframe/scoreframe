@@ -664,6 +664,13 @@ html, body {
             <div id="matchStatsContent"></div>
         </div>
 
+        <!-- 2026-06-09 — Penalty shootout card (soccer playoffs).
+             Hidden unless game.sportSpecificStats has PK attempts. -->
+        <div class="card" id="pkShootoutCard" style="display:none;">
+            <div class="label">Penalty Shootout</div>
+            <div id="pkShootoutContent"></div>
+        </div>
+
         <!-- ✨ AI Recap — generated in-app via the Labs feature and
              persisted on the game doc. Hidden by default; revealed by
              load() when game.aiRecap is present. -->
@@ -1253,6 +1260,8 @@ function renderGame(hub, game) {
     renderScoringSummary(hub, game, sport);
     // 2026-06-09 — Team-level match stats (Soccer first user).
     renderMatchStats(hub, game, sport);
+    // 2026-06-09 — PK shootout strip + win-method label.
+    renderPkShootout(hub, game, sport);
     // ✨ AI recap card (Labs feature, persisted from in-app generation).
     renderAiRecap(game);
 
@@ -2203,6 +2212,76 @@ function renderMatchStats(hub, game, sport) {
     }).join('');
 
     $('matchStatsContent').innerHTML = headerHtml + rowsHtml;
+    card.style.display = '';
+}
+
+// 2026-06-09 — Penalty shootout rendering. Soccer playoff PKs come
+// across in game.sportSpecificStats as `homePkAttempts` /
+// `awayPkAttempts` lists ("MADE" / "MISSED") and a corresponding
+// `endingMethod` flag ("regulation" / "playoff" / "playoff_sudden_death")
+// stamped at end-game. Card is hidden when no PKs were attempted.
+function renderPkShootout(hub, game, sport) {
+    const card = $('pkShootoutCard');
+    if (!card) return;
+    const stats = (game && typeof game.sportSpecificStats === 'object' && game.sportSpecificStats) || {};
+    const home = Array.isArray(stats.homePkAttempts) ? stats.homePkAttempts : [];
+    const away = Array.isArray(stats.awayPkAttempts) ? stats.awayPkAttempts : [];
+    if (home.length === 0 && away.length === 0) { card.style.display = 'none'; return; }
+
+    const homeColor = hub?.color || '#FF9640';
+    const awayColor = hub?.color2 || '#FFFFFF';
+    const homeName = game.homeTeam || 'Home';
+    const awayName = game.awayTeam || 'Away';
+    const homeMade = home.filter(x => x === 'MADE').length;
+    const awayMade = away.filter(x => x === 'MADE').length;
+    const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => (
+        { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+    ));
+
+    const slots = Math.max(5, home.length, away.length);
+    const buildDots = (list, color) => {
+        let html = '';
+        for (let i = 0; i < slots; i++) {
+            const v = list[i] || '';
+            const fill = v === 'MADE' ? '#22C55E' : v === 'MISSED' ? '#EF4444' : 'transparent';
+            const border = v ? fill : 'var(--text-muted,#888)';
+            const sym = v === 'MADE' ? '✓' : v === 'MISSED' ? '✗' : (i + 1);
+            const dotColor = v ? '#fff' : 'var(--text-muted,#888)';
+            html += `<div style="width:26px;height:26px;border-radius:50%;border:2px solid ${border};background:${fill};color:${dotColor};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-right:6px;">${sym}</div>`;
+        }
+        return html;
+    };
+
+    const rowHome = `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${escapeHtml(homeColor)};"></span>
+            <span style="font-size:13px;font-weight:700;color:var(--text-primary);">${escapeHtml(homeName)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">${buildDots(home, homeColor)}<span style="font-size:14px;font-weight:700;color:var(--accent);margin-left:6px;">${homeMade}</span></div>
+    </div>`;
+    const rowAway = `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${escapeHtml(awayColor)};"></span>
+            <span style="font-size:13px;font-weight:700;color:var(--text-primary);">${escapeHtml(awayName)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">${buildDots(away, awayColor)}<span style="font-size:14px;font-weight:700;color:var(--accent);margin-left:6px;">${awayMade}</span></div>
+    </div>`;
+
+    // Win label — pulled from endingMethod, or derived from the
+    // attempts length when an older save didn't stamp it.
+    const ending = (stats.endingMethod ||
+        (home.length > 5 || away.length > 5 ? 'playoff_sudden_death'
+        : home.length || away.length ? 'playoff' : 'regulation'));
+    const endingLabel = {
+        regulation: 'Decided in regulation',
+        playoff: 'Decided on penalties',
+        playoff_sudden_death: 'Decided on penalties (sudden death)',
+    }[ending] || '';
+    const labelHtml = endingLabel
+        ? `<div style="margin-top:10px;font-size:12px;color:var(--text-muted,#888);text-transform:uppercase;letter-spacing:0.06em;text-align:center;">${escapeHtml(endingLabel)}</div>`
+        : '';
+
+    $('pkShootoutContent').innerHTML = rowHome + rowAway + labelHtml;
     card.style.display = '';
 }
 
