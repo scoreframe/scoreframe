@@ -720,6 +720,27 @@ getRedirectResult(auth).catch(e => {
 });
 let currentUser = null;
 
+// 2026-06-09 — Token-refresh-retry wrapper for Firestore reads. See
+// team.html for the full rationale; in short, the in-app WebView
+// wrapper re-executes the page on `wv.goBack()` and the cached ID
+// token can race the subcollection queries, surfacing as a permission-
+// denied even for managers + approved subscribers. This wrapper catches
+// permission-denied, force-refreshes the token via getIdToken(true),
+// and retries once.
+async function retryOnAuthDeny(label, fn) {
+    try {
+        return await fn();
+    } catch (e) {
+        const code = String(e?.code || e?.message || '').toLowerCase();
+        const looksLikeDeny = code.includes('permission') || code.includes('denied');
+        if (!looksLikeDeny || !currentUser) throw e;
+        console.warn(`[${label}] permission-denied — refreshing ID token + retrying once`);
+        try { await currentUser.getIdToken(true); }
+        catch (refreshErr) { console.warn(`[${label}] token refresh failed:`, refreshErr); }
+        return await fn();
+    }
+}
+
 // v1.1.389 — SSO bridge. The native app appends #auth=<firebaseIdToken>
 // to the WebView URL before loading. We detect that hash, exchange the
 // ID token for a custom token via Cloud Function, then signInWithCustom
@@ -898,7 +919,7 @@ async function load() {
         const idx = await getDoc(doc(db, 'hubIndex', hubCode));
         if (!idx.exists()) { showNotFound(); return; }
         teamId = idx.data().teamId;
-        const team = await getDoc(doc(db, 'teams', teamId));
+        const team = await retryOnAuthDeny('game.html team', () => getDoc(doc(db, 'teams', teamId)));
         if (!team.exists()) { showNotFound(); return; }
         const t = team.data();
         hubProfile = {
@@ -958,7 +979,7 @@ async function load() {
     let game = null;
     let isScheduledOnly = false;
     try {
-        const snap = await getDoc(doc(db, 'teams', teamId, 'games', gameId));
+        const snap = await retryOnAuthDeny('game.html game', () => getDoc(doc(db, 'teams', teamId, 'games', gameId)));
         if (!snap.exists()) { showNotFound(); return; }
         game = { id: snap.id, ...snap.data() };
         const status = game.status || '';
@@ -1877,10 +1898,10 @@ async function loadHighlights(teamId, gameId, primaryStream) {
     if (!teamId || !gameId) return;
     let docs = [];
     try {
-        const snap = await getDocs(query(
+        const snap = await retryOnAuthDeny('loadHighlights', () => getDocs(query(
             collection(db, 'teams', teamId, 'games', gameId, 'highlights'),
             orderBy('videoTimeSec', 'asc')
-        ));
+        )));
         snap.forEach(d => docs.push({ id: d.id, ...d.data() }));
     } catch (e) {
         // Most likely cause: no highlights subcollection yet for this game.

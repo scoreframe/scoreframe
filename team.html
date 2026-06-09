@@ -596,6 +596,34 @@ let subStatus = null;  // null, 'pending', 'approved', 'blocked'
 
 const $ = id => document.getElementById(id);
 
+// 2026-06-09 — Token-refresh-retry wrapper for Firestore reads. The
+// in-app WebView wrapper (TeamPageActivity / GamePageActivity / etc.)
+// re-executes the page on `wv.goBack()`. The cached Firebase ID token
+// from the first mount can race the subcollection queries fired right
+// after the team-doc read: the team doc happens to refresh the token,
+// but the rapid follow-up reads (loadSchedule + loadPastGames + roster
+// + pendingRequests) land in the window before the new token propagates,
+// and the security rule sees an anonymous request → permission-denied.
+// Symptom: "Unable to load schedule" + "Unable to load past games" on
+// the second visit after a back-nav from player.html / game.html, even
+// though the user is a manager. This wrapper catches permission-denied,
+// force-refreshes the ID token via getIdToken(true), and retries the
+// read once. If the retry still fails, the caller's existing catch
+// path shows the "Unable to load …" string as before.
+async function retryOnAuthDeny(label, fn) {
+    try {
+        return await fn();
+    } catch (e) {
+        const code = String(e?.code || e?.message || '').toLowerCase();
+        const looksLikeDeny = code.includes('permission') || code.includes('denied');
+        if (!looksLikeDeny || !currentUser) throw e;
+        console.warn(`[${label}] permission-denied — refreshing ID token + retrying once`);
+        try { await currentUser.getIdToken(true); }
+        catch (refreshErr) { console.warn(`[${label}] token refresh failed:`, refreshErr); }
+        return await fn();
+    }
+}
+
 const sportEmoji = s => ({
     GENERIC:'🎯', VOLLEYBALL:'🏐', BOWLING:'🎳', BASKETBALL:'🏀',
     SOCCER:'⚽', FOOTBALL:'🏈', BASEBALL:'⚾', SOFTBALL:'🥎',
@@ -1419,7 +1447,9 @@ async function loadPendingRequests() {
         return;
     }
     try {
-        const snap = await getDocs(collection(db, 'teams', teamId, 'subscribers'));
+        const snap = await retryOnAuthDeny('loadPendingRequests', () =>
+            getDocs(collection(db, 'teams', teamId, 'subscribers'))
+        );
         const pending = snap.docs
             .map((d) => ({ id: d.id, ...d.data() }))
             .filter((s) => s.status === 'pending');
@@ -1530,7 +1560,7 @@ async function loadSchedule() {
             where('status', 'in', ['scheduled', 'live', 'cancelled']),
             orderBy('date')
         );
-        const snap = await getDocs(q2);
+        const snap = await retryOnAuthDeny('loadSchedule', () => getDocs(q2));
         // 6-hour cutoff so a game that just started (or just ended) still
         // shows in upcoming until it gets cleared, instead of disappearing
         // the second it passes "now". Mirrors the app's tolerant grace
@@ -1734,7 +1764,9 @@ function buildPlayerStatChips(p, sport) {
 async function loadRoster() {
     if (!teamId) return;
     try {
-        const snap = await getDocs(collection(db, 'teams', teamId, 'players'));
+        const snap = await retryOnAuthDeny('loadRoster', () =>
+            getDocs(collection(db, 'teams', teamId, 'players'))
+        );
         if (snap.empty) return;
 
         const section = $('rosterSection');
@@ -1786,11 +1818,15 @@ async function loadPastGames() {
         // miss them).
         let snap;
         try {
-            snap = await getDocs(query(collection(db, 'teams', teamId, 'games'), orderBy('date', 'desc'), fbLimit(40)));
+            snap = await retryOnAuthDeny('loadPastGames', () =>
+                getDocs(query(collection(db, 'teams', teamId, 'games'), orderBy('date', 'desc'), fbLimit(40)))
+            );
         } catch (e) {
             // orderBy may fail without index — fall back to unordered
             console.warn('Past games orderBy failed, fallback:', e.message);
-            snap = await getDocs(query(collection(db, 'teams', teamId, 'games'), fbLimit(40)));
+            snap = await retryOnAuthDeny('loadPastGames-fallback', () =>
+                getDocs(query(collection(db, 'teams', teamId, 'games'), fbLimit(40)))
+            );
         }
         const container = $('pastGames');
 
