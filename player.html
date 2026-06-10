@@ -409,7 +409,20 @@ getRedirectResult(auth).catch((e) => console.warn('[player.html] redirect-result
 // its roster, regardless of what `team=` says. If `team=` is
 // missing entirely, the first discovered team is selected.
 const params = new URLSearchParams(location.search);
-let hubCode = params.get('team') || '';
+// 2026-06-09 — `team=__all` means "show this player across every team
+// they're on" — the original behavior. Anything else means "single
+// team scope" (only that team's games + stats). Eric: "in the team
+// picker we should have a selector for all teams that shows that, but
+// when I select a single team I should just see the stats and graphs
+// for her results and stats for just the game associated with that
+// team." The seed/profile load still needs a real team to read from
+// (teams/{teamId}/players/...), so when viewAllTeams is true we still
+// resolve `hubCode` to a real team via discovery — the difference is
+// whether we ALSO pull other teams' games.
+const TEAM_ALL = '__all';
+const urlTeamParam = params.get('team') || '';
+const viewAllTeams = urlTeamParam === TEAM_ALL;
+let hubCode = viewAllTeams ? '' : urlTeamParam;
 const playerIdParam = params.get('player') || '';
 const teamHubCodes = []; // populated by discoverTeamsForPlayer()
 const themeParam = params.get('theme');
@@ -710,26 +723,31 @@ async function loadPlayer() {
             if (hubCode && !teamHubCodes.includes(hubCode)) {
                 teamHubCodes.unshift(hubCode);
             }
-            console.log('[player.html] picker teams =', teamHubCodes);
+            console.log('[player.html] picker teams =', teamHubCodes,
+                'viewAllTeams=', viewAllTeams);
             renderTeamPicker();
-            // 2026-06-03 — Cross-team game gather. Pull this player's
-            // games from every OTHER team they're rostered on and
-            // merge into allGames so the past-games list represents
-            // their full ScoreFrame history, not just the one team
-            // passed in the URL. De-dups by id since the URL team's
-            // games already landed in the initial pull above.
-            const otherCodes = teamHubCodes.filter((c) => c !== hubCode);
-            if (otherCodes.length > 0) {
-                const added = await gatherCrossTeamGames(otherCodes,
-                    playerProfile?.name || '');
-                if (added > 0) {
-                    // Sport set may have grown — refresh pills + season
-                    // picker. Then full re-render so the new games
-                    // appear alongside the original team's.
-                    const refreshedSports = uniqueSportsFromGames(allGames);
-                    renderPills(refreshedSports);
-                    renderSeasonPicker();
-                    renderEverything();
+            // 2026-06-09 — Cross-team gather is now gated on the picker.
+            // In single-team mode (URL has `team=<code>`), we only show
+            // games for that team — even if the player is rostered on
+            // other teams. Eric: "when I select a single team I should
+            // just see the stats and graphs for her results and stats
+            // for just the game associated with that team." All-teams
+            // mode (`team=__all` or first-time picker selection)
+            // restores the original cross-team merge.
+            if (viewAllTeams) {
+                const otherCodes = teamHubCodes.filter((c) => c !== hubCode);
+                if (otherCodes.length > 0) {
+                    const added = await gatherCrossTeamGames(otherCodes,
+                        playerProfile?.name || '');
+                    if (added > 0) {
+                        // Sport set may have grown — refresh pills +
+                        // season picker. Then full re-render so the new
+                        // games appear alongside the original team's.
+                        const refreshedSports = uniqueSportsFromGames(allGames);
+                        renderPills(refreshedSports);
+                        renderSeasonPicker();
+                        renderEverything();
+                    }
                 }
             }
         });
@@ -977,13 +995,20 @@ async function renderTeamPicker() {
         options.push({ code, label });
     }
     section.style.display = 'block';
-    sel.innerHTML = options
-        .map((o) => `<option value="${o.code}">${o.label}</option>`)
-        .join('');
-    sel.value = hubCode;
+    // 2026-06-09 — Prepend an "All teams" option so the viewer can pull
+    // every team's games + stats into one view when desired. The
+    // explicit team options below restrict the view to just that team.
+    const optionHtml = [
+        `<option value="${TEAM_ALL}">All teams</option>`,
+        ...options.map((o) => `<option value="${o.code}">${o.label}</option>`),
+    ];
+    sel.innerHTML = optionHtml.join('');
+    sel.value = viewAllTeams ? TEAM_ALL : hubCode;
     sel.onchange = () => {
         const next = sel.value;
-        if (!next || next === hubCode) return;
+        if (!next) return;
+        const currentSel = viewAllTeams ? TEAM_ALL : hubCode;
+        if (next === currentSel) return;
         // Rebuild the URL with the new `team=` pinned. Keep the rest
         // (player, teams, theme, app) intact so context preserves.
         const url = new URL(location.href);
@@ -998,7 +1023,10 @@ function renderHero() {
     const bits = [];
     if (playerProfile.number) bits.push('#' + playerProfile.number);
     if (playerProfile.position) bits.push(playerProfile.position);
-    if (teamProfile?.name) bits.push(teamProfile.name);
+    // 2026-06-09 — In all-teams view we'd be showing the seed team's
+    // name even though stats span every team — misleading. The picker
+    // itself surfaces the active scope, so omit team name in that case.
+    if (teamProfile?.name && !viewAllTeams) bits.push(teamProfile.name);
     $('heroMeta').textContent = bits.join('  ·  ');
     document.title = `${playerProfile.name || 'Player'} — ScoreFrame`;
 }
@@ -1507,8 +1535,10 @@ function buildPastCard(g) {
 
     // 2026-06-03 — Surface the source team when this player has games
     // on multiple teams so the user can tell which team each game
-    // belongs to without opening it.
-    const teamSuffix = (g._teamName && teamHubCodes.length > 1)
+    // belongs to without opening it. Only render the suffix in all-
+    // teams mode (single-team mode means every row belongs to the
+    // selected team — adding the team name would be redundant).
+    const teamSuffix = (g._teamName && teamHubCodes.length > 1 && viewAllTeams)
         ? ` · ${escapeHtml(g._teamName)}`
         : '';
 
