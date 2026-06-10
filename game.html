@@ -2391,6 +2391,27 @@ function renderBoxScore(hub, game, sport) {
     }
     const home = parts.filter(p => String(p.side || '').toLowerCase() === 'home');
     const away = parts.filter(p => String(p.side || '').toLowerCase() === 'away');
+
+    // 2026-06-09 — Soccer per-player stats only get captured when the
+    // user has the Pro-gated Advanced Soccer mode + chip stat strip.
+    // Free-user games have a complete roster but every stat at zero —
+    // rendering a "box score" of all-zero rows reads like the app
+    // broke. Eric: "in free mode since we can't score any stats we
+    // should not put the box score on the game page for a game that
+    // has scored from a free user." Skip the card unless at least
+    // one participant has a non-zero stat tracked.
+    if (s === 'SOCCER') {
+        const everyone = home.concat(away);
+        const anyStats = everyone.some(p => {
+            const st = (p && p.stats && typeof p.stats === 'object') ? p.stats : {};
+            return cols.some(c => {
+                const v = st[c.key];
+                return typeof v === 'number' && v > 0;
+            });
+        });
+        if (!anyStats) return;
+    }
+
     const homeName = game.homeTeam || hub.teamName || 'Home';
     const awayName = game.awayTeam || 'Away';
     const homeColor = game.homeColor || hub.color || '#1565C0';
