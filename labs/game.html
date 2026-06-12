@@ -1079,7 +1079,20 @@ function labsAttach(hub, game) {
     document.getElementById('labsPill').style.display = '';
     const sport = (game.sport || hub.sport || '').toUpperCase();
     const events = Array.isArray(game.events) ? game.events.slice() : [];
-    if (sport !== 'VOLLEYBALL' || events.length === 0) return;
+    // Always surface a labs status banner so when nothing happens, the user
+    // can see *why* (vs an empty page that looks broken). The banner is
+    // visible at the top of the score card and reports the current state
+    // of the replay engine — sport, event count, whether YT is ready.
+    labsEnsureStatusBanner();
+    if (sport !== 'VOLLEYBALL') {
+        labsSetStatus(`⚠️ Labs L1 is volleyball-only. This is a ${sport.toLowerCase() || 'unknown'} game. Try a VB game.`);
+        return;
+    }
+    if (events.length === 0) {
+        labsSetStatus('⚠️ No Labs timeline events on this game. Record a new VB game with "🧪 Video-Synced Game Page" enabled under Labs to see the replay.');
+        return;
+    }
+    labsSetStatus(`✅ ${events.length} timeline events loaded. Waiting for YouTube player…`);
     events.sort((a, b) => (a.streamTimeMs ?? -1) - (b.streamTimeMs ?? -1));
     _labsState.events = events;
     _labsState.lastEventIdx = -1;
@@ -1097,10 +1110,16 @@ function labsAttach(hub, game) {
     labsTick();
 }
 function labsTick() {
-    if (!ytPlayer || !ytPlayerReady) return;
+    if (!ytPlayer || !ytPlayerReady) {
+        labsSetStatus(`⏳ Waiting for YouTube player (events: ${_labsState.events.length})…`);
+        return;
+    }
     let currentMs;
     try { currentMs = (ytPlayer.getCurrentTime() || 0) * 1000; }
     catch (_) { return; }
+    const firstMs = _labsState.events[0]?.streamTimeMs ?? 0;
+    const lastMs = _labsState.events[_labsState.events.length - 1]?.streamTimeMs ?? 0;
+    labsSetStatus(`▶ Video ${Math.floor(currentMs / 1000)}s · events span ${Math.floor(firstMs / 1000)}s–${Math.floor(lastMs / 1000)}s · ${_labsState.events.length} events`);
     const evs = _labsState.events;
     let idx = -1;
     for (let i = evs.length - 1; i >= 0; i--) {
@@ -1180,6 +1199,23 @@ function labsPaint(idx) {
     if (idx >= 0 && _labsState.rowRefs[idx]) {
         _labsState.rowRefs[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
+}
+function labsEnsureStatusBanner() {
+    if (document.getElementById('labsStatusBanner')) return;
+    const scoreCard = document.getElementById('scoreCard');
+    if (!scoreCard) return;
+    const b = document.createElement('div');
+    b.id = 'labsStatusBanner';
+    b.style.cssText = 'margin-top:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);font-size:12px;line-height:1.4;color:var(--text-secondary);font-variant-numeric:tabular-nums;';
+    b.textContent = '🧪 Labs replay initializing…';
+    // Make sure the score card is visible — for VB-no-events games the
+    // production renderer may still leave it hidden if scores are 0.
+    scoreCard.style.display = '';
+    scoreCard.appendChild(b);
+}
+function labsSetStatus(text) {
+    const b = document.getElementById('labsStatusBanner');
+    if (b) b.textContent = text;
 }
 function labsBuildScoreboard() {
     const scoreCard = document.getElementById('scoreCard');
