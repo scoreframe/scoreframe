@@ -1069,22 +1069,32 @@ async function load() {
 // setIndex), so the renderer just finds the last event whose streamTimeMs
 // <= ytPlayer.getCurrentTime() and paints its payload into the score card.
 // No reducer / cursor needed since events are absolute, not deltas.
-let _labsState = { events: [], pollId: null, rowRefs: [], lastEventIdx: -1 };
+let _labsState = {
+    events: [], pollId: null, rowRefs: [], lastEventIdx: -1,
+    maxSetIdx: 0, game: null, hub: null,
+    homeName: 'Home', awayName: 'Away',
+    homeColor: '#1565C0', awayColor: '#C62828',
+};
 function labsAttach(hub, game) {
     document.getElementById('labsPill').style.display = '';
     const sport = (game.sport || hub.sport || '').toUpperCase();
     const events = Array.isArray(game.events) ? game.events.slice() : [];
-    if (sport !== 'VOLLEYBALL' || events.length === 0) {
-        // Page still renders fine in production mode for non-VB / no-events
-        // games; just no replay overlay.
-        return;
-    }
+    if (sport !== 'VOLLEYBALL' || events.length === 0) return;
     events.sort((a, b) => (a.streamTimeMs ?? -1) - (b.streamTimeMs ?? -1));
     _labsState.events = events;
     _labsState.lastEventIdx = -1;
-    labsBuildTimelinePanel(game);
+    _labsState.game = game;
+    _labsState.hub = hub;
+    _labsState.homeName = game.homeTeam || hub.teamName || 'Home';
+    _labsState.awayName = game.awayTeam || 'Away';
+    _labsState.homeColor = game.homeColor || '#1565C0';
+    _labsState.awayColor = game.awayColor || '#C62828';
+    _labsState.maxSetIdx = events.reduce((m, e) => Math.max(m, (e.payload || {}).setIndex ?? 0), 0);
+    labsBuildScoreboard();
+    labsBuildTimelinePanel();
     if (_labsState.pollId) clearInterval(_labsState.pollId);
     _labsState.pollId = setInterval(labsTick, 200);
+    labsTick();
 }
 function labsTick() {
     if (!ytPlayer || !ytPlayerReady) return;
@@ -1100,22 +1110,69 @@ function labsTick() {
     _labsState.lastEventIdx = idx;
     labsPaint(idx);
 }
-function labsPaint(idx) {
-    const sc = document.getElementById('scoreContent');
-    if (!sc) return;
-    const homeEl = sc.querySelector('.team-block:nth-child(1) .score');
-    const awayEl = sc.querySelector('.team-block:nth-child(3) .score');
-    if (idx < 0) {
-        if (homeEl) homeEl.textContent = '0';
-        if (awayEl) awayEl.textContent = '0';
-    } else {
-        const p = _labsState.events[idx].payload || {};
-        if (homeEl) homeEl.textContent = String(p.homeScore ?? 0);
-        if (awayEl) awayEl.textContent = String(p.awayScore ?? 0);
+// Derive scoreboard state from events[0..idx]: for each set seen, track the
+// last (max) home/away points; the highest setIdx is the current set; sets
+// won = count of prior sets whose final score went to that side.
+function labsDeriveState(idx) {
+    const perSet = {}; // setIdx → { h, a, lastEventIdx }
+    let currentSet = 0;
+    for (let i = 0; i <= idx; i++) {
+        const p = _labsState.events[i].payload || {};
+        const s = p.setIndex ?? 0;
+        perSet[s] = { h: p.homeScore ?? 0, a: p.awayScore ?? 0 };
+        if (s > currentSet) currentSet = s;
     }
-    const setIdx = idx < 0 ? 0 : ((_labsState.events[idx].payload || {}).setIndex ?? 0);
+    let homeSets = 0, awaySets = 0;
+    for (let s = 0; s < currentSet; s++) {
+        const r = perSet[s];
+        if (!r) continue;
+        if (r.h > r.a) homeSets++;
+        else if (r.a > r.h) awaySets++;
+    }
+    const cur = perSet[currentSet] || { h: 0, a: 0 };
+    return { perSet, currentSet, homeSets, awaySets, curHome: cur.h, curAway: cur.a };
+}
+function labsPaint(idx) {
+    const st = (idx < 0)
+        ? { perSet: {}, currentSet: 0, homeSets: 0, awaySets: 0, curHome: 0, curAway: 0 }
+        : labsDeriveState(idx);
+
+    // Production score-card headline → sets won (matches VB broadcast convention).
+    const sc = document.getElementById('scoreContent');
+    if (sc) {
+        const homeEl = sc.querySelector('.team-block:nth-child(1) .score');
+        const awayEl = sc.querySelector('.team-block:nth-child(3) .score');
+        if (homeEl) homeEl.textContent = String(st.homeSets);
+        if (awayEl) awayEl.textContent = String(st.awaySets);
+    }
+    // Scoreboard grid: fill in points for each set; highlight current.
+    for (let s = 0; s <= _labsState.maxSetIdx; s++) {
+        const cell = document.getElementById('labsSetCell_' + s);
+        if (!cell) continue;
+        const r = st.perSet[s];
+        const homeCell = cell.querySelector('.labs-h');
+        const awayCell = cell.querySelector('.labs-a');
+        if (r) {
+            homeCell.textContent = String(r.h);
+            awayCell.textContent = String(r.a);
+        } else {
+            homeCell.textContent = '–';
+            awayCell.textContent = '–';
+        }
+        cell.classList.toggle('labs-current', s === st.currentSet && idx >= 0);
+        // Past-set winner highlight
+        const finished = s < st.currentSet && r;
+        homeCell.style.color = finished && r.h > r.a ? 'var(--accent)' : '';
+        awayCell.style.color = finished && r.a > r.h ? 'var(--accent)' : '';
+        homeCell.style.fontWeight = finished && r.h > r.a ? '900' : '700';
+        awayCell.style.fontWeight = finished && r.a > r.h ? '900' : '700';
+    }
     const tag = document.getElementById('labsLiveTag');
-    if (tag) tag.textContent = `🧪 Set ${setIdx + 1} · synced to video time`;
+    if (tag) {
+        tag.textContent = idx < 0
+            ? '🧪 Pre-game · synced to video time'
+            : `🧪 Set ${st.currentSet + 1} · ${st.curHome}–${st.curAway} · synced to video time`;
+    }
     _labsState.rowRefs.forEach((row, i) => {
         row.style.background = (i === idx) ? 'rgba(255,150,64,0.18)' : '';
         row.style.borderLeft = (i === idx) ? '3px solid var(--accent)' : '3px solid transparent';
@@ -1124,15 +1181,54 @@ function labsPaint(idx) {
         _labsState.rowRefs[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 }
-function labsBuildTimelinePanel(game) {
+function labsBuildScoreboard() {
     const scoreCard = document.getElementById('scoreCard');
     if (!scoreCard) return;
     const tagDiv = document.createElement('div');
     tagDiv.id = 'labsLiveTag';
     tagDiv.style.cssText = 'margin-top:8px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--accent);';
-    tagDiv.textContent = '🧪 Set 1 · synced to video time';
+    tagDiv.textContent = '🧪 Pre-game · synced to video time';
     scoreCard.appendChild(tagDiv);
 
+    // Build per-set columns. `maxSetIdx + 1` cells; each has a SET header
+    // and stacked home / away points. The label rows on the left mirror the
+    // home/away color strip so it reads like a broadcast scoreboard.
+    const board = document.createElement('div');
+    board.id = 'labsScoreboard';
+    board.style.cssText = 'margin-top:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden;font-variant-numeric:tabular-nums;';
+    const colTpl = (s) => `
+        <div id="labsSetCell_${s}" class="labs-set-cell" style="flex:1;min-width:56px;text-align:center;padding:6px 4px;border-left:1px solid var(--border);">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);">Set ${s + 1}</div>
+            <div class="labs-h" style="font-size:22px;font-weight:700;line-height:1.15;color:var(--text-primary);">–</div>
+            <div class="labs-a" style="font-size:22px;font-weight:700;line-height:1.15;color:var(--text-primary);">–</div>
+        </div>`;
+    let cols = '';
+    for (let s = 0; s <= _labsState.maxSetIdx; s++) cols += colTpl(s);
+    board.innerHTML = `
+        <style>
+            #labsScoreboard .labs-current { background: rgba(255,150,64,0.10); }
+            #labsScoreboard .labs-current > div:first-child { color: var(--accent); }
+        </style>
+        <div style="display:flex;align-items:stretch;">
+            <div style="flex:0 0 110px;display:flex;flex-direction:column;border-right:1px solid var(--border);">
+                <div style="padding:6px 8px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);background:var(--surface-2);">Team</div>
+                <div style="padding:6px 8px;font-size:14px;font-weight:700;color:var(--text-primary);border-top:1px solid var(--border);border-left:4px solid ${_labsState.homeColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_labsState.homeName}</div>
+                <div style="padding:6px 8px;font-size:14px;font-weight:700;color:var(--text-primary);border-top:1px solid var(--border);border-left:4px solid ${_labsState.awayColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_labsState.awayName}</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;">
+                <div style="display:flex;background:var(--surface-2);"><div style="flex:1;text-align:center;padding:6px 4px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);">Sets &amp; Points</div></div>
+                <div id="labsSetRow" style="display:flex;border-top:1px solid var(--border);">${cols}</div>
+            </div>
+        </div>
+    `;
+    scoreCard.appendChild(board);
+    // After insertion, restructure each cell so the home row sits on top
+    // of the away row but they live in the same flex column (already done
+    // by the .labs-h / .labs-a divs above).
+}
+function labsBuildTimelinePanel() {
+    const scoreCard = document.getElementById('scoreCard');
+    if (!scoreCard) return;
     const panel = document.createElement('div');
     panel.className = 'card';
     panel.style.cssText = 'margin-top:14px;';
@@ -1151,7 +1247,7 @@ function labsBuildTimelinePanel(game) {
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--border);cursor:pointer;border-left:3px solid transparent;';
         row.innerHTML = `
-            <span style="font-size:13px;">Set ${(p.setIndex ?? 0) + 1} · ${p.side === 'AWAY' ? 'Away' : 'Home'} +1 → <strong>${p.homeScore ?? 0}–${p.awayScore ?? 0}</strong></span>
+            <span style="font-size:13px;">Set ${(p.setIndex ?? 0) + 1} · ${p.side === 'AWAY' ? _labsState.awayName : _labsState.homeName} +1 → <strong>${p.homeScore ?? 0}–${p.awayScore ?? 0}</strong></span>
             <span style="font-size:12px;color:var(--text-secondary);font-variant-numeric:tabular-nums;">${mm}:${ss}</span>
         `;
         row.addEventListener('click', () => {
