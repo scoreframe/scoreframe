@@ -1079,7 +1079,7 @@ let _labsState = {
     // forward replay path.
     announceWatermark: -1,
 };
-const LABS_ANNOUNCE_MAX = 4;
+const LABS_ANNOUNCE_MAX = 2;
 function labsAttach(hub, game) {
     document.getElementById('labsPill').style.display = '';
     const sport = (game.sport || hub.sport || '').toUpperCase();
@@ -1246,15 +1246,24 @@ function labsPaint(idx) {
 // to the video. Generator cycles variants and surfaces streaks / ties /
 // set boundaries with a different tone class so the feed feels alive.
 function labsBuildAnnounceFeed() {
-    if (document.getElementById('labsAnnounceFeed')) return;
+    if (document.getElementById('labsAnnouncePanel')) return;
     const stage = document.querySelector('.stage');
     if (!stage) return;
-    // Reserved-height container so adding rows never pushes the video
-    // down. Rows fill from the bottom up; empty slots stay invisible.
-    // 4 rows × ~46px (incl. gap) ≈ 184px — locked from the first render.
+    // Card-style panel labeled PLAY BY PLAY, visible from initial render
+    // so the area doesn't read as "empty space" before the first event.
+    // Fixed height: header (~28px) + 2 rows (~46px each, incl. gap) +
+    // padding ≈ 134px. Rows fill bottom-up inside the inner feed div.
+    const panel = document.createElement('div');
+    panel.id = 'labsAnnouncePanel';
+    panel.style.cssText = 'margin:8px 16px 0;padding:10px 12px 12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,150,64,0.10), rgba(255,150,64,0.04));border:1px solid rgba(255,150,64,0.30);box-shadow:0 2px 10px rgba(0,0,0,0.20);';
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:800;letter-spacing:0.10em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;';
+    header.innerHTML = `<span>🎙️ Play-by-Play</span><span style="font-size:10px;color:var(--text-secondary);font-weight:600;">Labs · synced to video</span>`;
+    panel.appendChild(header);
     const wrap = document.createElement('div');
     wrap.id = 'labsAnnounceFeed';
-    wrap.style.cssText = 'margin:8px 16px 0;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;overflow:hidden;height:184px;flex:0 0 184px;';
+    wrap.style.cssText = 'display:flex;flex-direction:column;justify-content:flex-end;gap:6px;overflow:hidden;height:92px;flex:0 0 92px;';
+    panel.appendChild(wrap);
     // Build the bottom-of-video overlay popup container at the same time.
     labsBuildVideoOverlay(stage);
     // Inject row animation CSS once.
@@ -1294,7 +1303,7 @@ function labsBuildAnnounceFeed() {
       #labsAnnounceFeed .lf-row[data-pos="1"] { opacity: 0.90; }
     `;
     document.head.appendChild(style);
-    stage.parentNode.insertBefore(wrap, stage);
+    stage.parentNode.insertBefore(panel, stage);
     _labsState.announceFeed = wrap;
 }
 // Bottom-of-video popup overlay. Lives inside `.stage` so a YouTube
@@ -1311,9 +1320,30 @@ function labsBuildVideoOverlay(stage) {
     if (cs.position === 'static') stage.style.position = 'relative';
     const ov = document.createElement('div');
     ov.id = 'labsVideoOverlay';
-    ov.style.cssText = 'position:absolute;left:14px;right:14px;bottom:14px;display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:5;align-items:flex-start;';
+    // display:none from the start — only revealed when a fullscreenchange
+    // event flips _labsState.inFullscreen=true. Two reasons: (1) clutter
+    // over the inline video, and (2) hidden = zero pointer-events surface
+    // = zero chance of intercepting YT controls in window mode.
+    ov.style.cssText = 'position:absolute;left:14px;right:14px;bottom:14px;display:none;flex-direction:column;gap:6px;pointer-events:none;z-index:5;align-items:flex-start;';
     stage.appendChild(ov);
     _labsState.videoOverlay = ov;
+    // Listen for fullscreen transitions to swap visibility. We only show
+    // when SOMETHING in our subtree is fullscreen. When YouTube's native
+    // fullscreen targets the iframe itself, the iframe covers everything
+    // and our overlay is irrelevant — gracefully no-op in that case.
+    const onFsChange = () => {
+        const fe = document.fullscreenElement || document.webkitFullscreenElement;
+        const inFs = !!fe && stage.contains(fe);
+        _labsState.inFullscreen = inFs;
+        ov.style.display = inFs ? 'flex' : 'none';
+        if (!inFs) {
+            // Clear queued popups so we don't reveal a stale stack on the
+            // next fullscreen entry.
+            while (ov.firstChild) ov.removeChild(ov.firstChild);
+        }
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
 
     const style = document.createElement('style');
     style.textContent = `
@@ -1424,6 +1454,20 @@ function labsGenerateAnnounceMessage(idx) {
 function labsGenerateVbStatMessage(idx, p, sideName) {
     const stat = p.stat || '';
     const name = (p.playerName || '').trim();
+    // If a same-side point follows within ~2.5s, this stat IS that point.
+    // Compose a "to make it 5–4" tail so the user reads one play, not two.
+    const paired = labsLookaheadScoreForStat(idx);
+    const buildScoreTail = (paired) => {
+        if (!paired) return '';
+        const { homeScore: h, awayScore: a } = paired;
+        const side = p.side === 'AWAY' ? 'AWAY' : 'HOME';
+        const tied = h === a;
+        const leading = (side === 'HOME' && h > a) || (side === 'AWAY' && a > h);
+        if (tied) return ` — tied at ${h}`;
+        if (leading) return ` — ${sideName} lead ${h}–${a}`;
+        return ` — ${h}–${a}`;
+    };
+    const tail = buildScoreTail(paired);
     // Count this player's previous occurrences of THIS stat up to idx-1.
     let playerCount = 1;
     if (name) {
@@ -1438,65 +1482,65 @@ function labsGenerateVbStatMessage(idx, p, sideName) {
     // ── Aces ──────────────────────────────────────────────────────
     if (stat === 'aces') {
         if (name && playerCount >= 4) {
-            return { text: `🔥🔥 ${name} unstoppable — ${playerCount} aces!`, tone: 'fire' };
+            return { text: `🔥🔥 ${name} unstoppable — ${playerCount} aces!${tail}`, tone: 'fire' };
         }
         if (name && playerCount === 3) {
-            return { text: `🔥 ${name} on a serving spree — 3 aces!`, tone: 'fire' };
+            return { text: `🔥 ${name} on a serving spree — 3 aces!${tail}`, tone: 'fire' };
         }
         if (name && playerCount === 2) {
             const v = [
-                `Another ACE by ${name}!`,
-                `${name} with ace #2!`,
-                `Back-to-back aces — ${name}!`,
+                `Another ACE by ${name}!${tail}`,
+                `${name} with ace #2!${tail}`,
+                `Back-to-back aces — ${name}!${tail}`,
             ];
             return { text: v[idx % v.length], tone: 'fire' };
         }
         if (name) {
             const v = [
-                `ACE by ${name}! 🏐`,
-                `Service ACE — ${name}!`,
-                `${name} with the ACE!`,
-                `Unreturnable from ${name} — ACE!`,
+                `ACE by ${name}!${tail}`,
+                `Service ACE — ${name}!${tail}`,
+                `${name} with the ACE!${tail}`,
+                `Unreturnable from ${name} — ACE!${tail}`,
             ];
             return { text: v[idx % v.length], tone: 'fire' };
         }
-        return { text: `Ace · ${sideName}`, tone: 'fire' };
+        return { text: `Ace · ${sideName}${tail}`, tone: 'fire' };
     }
     // ── Kills ─────────────────────────────────────────────────────
     if (stat === 'kills') {
         if (name && playerCount >= 5) {
-            return { text: `💥 ${name} is the show — ${playerCount} kills!`, tone: 'fire' };
+            return { text: `💥 ${name} is the show — ${playerCount} kills!${tail}`, tone: 'fire' };
         }
         if (name && playerCount >= 3) {
-            return { text: `🔨 ${name} hammering — kill #${playerCount}!`, tone: 'fire' };
+            return { text: `🔨 ${name} hammering — kill #${playerCount}!${tail}`, tone: 'fire' };
         }
         if (name) {
             const v = [
-                `KILL by ${name}!`,
-                `${name} puts it away`,
-                `Hammer from ${name}`,
-                `${name} crushes it`,
-                `Big swing from ${name} — kill`,
+                `KILL by ${name}!${tail}`,
+                `${name} puts it away${tail}`,
+                `Hammer from ${name}${tail}`,
+                `${name} crushes it${tail}`,
+                `Big swing from ${name} — kill${tail}`,
             ];
             return { text: v[idx % v.length], tone: 'normal' };
         }
-        return { text: `Kill · ${sideName}`, tone: 'normal' };
+        return { text: `Kill · ${sideName}${tail}`, tone: 'normal' };
     }
     // ── Blocks ────────────────────────────────────────────────────
     if (stat === 'blocks') {
         if (name && playerCount >= 3) {
-            return { text: `🧱 ${name} a wall — ${playerCount} blocks!`, tone: 'fire' };
+            return { text: `🧱 ${name} a wall — ${playerCount} blocks!${tail}`, tone: 'fire' };
         }
         if (name) {
             const v = [
-                `BLOCK by ${name}! 🧱`,
-                `${name} stuffs it`,
-                `Big block from ${name}`,
-                `${name} rejects it!`,
+                `BLOCK by ${name}!${tail}`,
+                `${name} stuffs it${tail}`,
+                `Big block from ${name}${tail}`,
+                `${name} rejects it!${tail}`,
             ];
             return { text: v[idx % v.length], tone: 'fire' };
         }
-        return { text: `Block · ${sideName}`, tone: 'fire' };
+        return { text: `Block · ${sideName}${tail}`, tone: 'fire' };
     }
     // ── Assists ───────────────────────────────────────────────────
     if (stat === 'assists') {
@@ -1516,6 +1560,47 @@ function labsGenerateVbStatMessage(idx, p, sideName) {
         return { text: name ? `Service miss · ${name}` : `${sideName} service miss`, tone: 'normal' };
     }
     return { text: `${sideName} · ${stat}`, tone: 'normal' };
+}
+// When a vb_stat (ace/kill/block) is immediately followed by a same-side
+// point event within ~2s, the two represent ONE play. Return the trailing
+// score from that paired point so we can fold "to take the lead 5-4"
+// into the stat headline.
+function labsLookaheadScoreForStat(idx) {
+    const cur = _labsState.events[idx];
+    if (!cur || (cur.eventType || '') !== 'vb_stat') return null;
+    const curSide = (cur.payload || {}).side;
+    for (let j = idx + 1; j < _labsState.events.length && j <= idx + 3; j++) {
+        const nxt = _labsState.events[j];
+        if (!nxt) break;
+        const dt = (nxt.streamTimeMs ?? 0) - (cur.streamTimeMs ?? 0);
+        if (dt > 2500) break;
+        if ((nxt.eventType || 'point') !== 'point') continue;
+        if ((nxt.payload || {}).side !== curSide) continue;
+        return {
+            homeScore: (nxt.payload || {}).homeScore ?? 0,
+            awayScore: (nxt.payload || {}).awayScore ?? 0,
+            pairedPointIdx: j,
+        };
+    }
+    return null;
+}
+// True if THIS event is a point that's already accounted for by a stat
+// event right before it (same side, ≤2.5s). Caller skips emitting an
+// announce for the duplicate.
+function labsIsPairedPointDuplicate(idx) {
+    const cur = _labsState.events[idx];
+    if (!cur || (cur.eventType || 'point') !== 'point') return false;
+    for (let j = idx - 1; j >= 0 && j >= idx - 3; j--) {
+        const prev = _labsState.events[j];
+        if (!prev) break;
+        const dt = (cur.streamTimeMs ?? 0) - (prev.streamTimeMs ?? 0);
+        if (dt > 2500) break;
+        if ((prev.eventType || '') !== 'vb_stat') continue;
+        if ((prev.payload || {}).side !== (cur.payload || {}).side) continue;
+        const stat = (prev.payload || {}).stat || '';
+        if (stat === 'aces' || stat === 'kills' || stat === 'blocks') return true;
+    }
+    return false;
 }
 function labsEmitAnnounceForEvent(idx) {
     // Set boundary → emit a "Set N to X" call BEFORE the first event of
@@ -1537,6 +1622,9 @@ function labsEmitAnnounceForEvent(idx) {
             });
         }
     }
+    // Skip the +1 announce when the prior stat event already accounts
+    // for this point (same side, within 2.5s window).
+    if (labsIsPairedPointDuplicate(idx)) return;
     const msg = labsGenerateAnnounceMessage(idx);
     labsPushAnnounceRow({
         text: msg.text,
@@ -1574,6 +1662,10 @@ function labsPushAnnounceRow({ text, tone, streamTimeMs }) {
 function labsShowVideoOverlayPopup(text, tone) {
     const ov = _labsState.videoOverlay;
     if (!ov) return;
+    // Window mode: don't spawn popups at all. They were creating zombie
+    // DOM nodes during rapid-fire scoring and may have been the source of
+    // the YT-controls-becoming-unresponsive symptom.
+    if (!_labsState.inFullscreen) return;
     const pop = document.createElement('div');
     pop.className = `lov${tone ? ' lov-' + tone : ''}`;
     pop.textContent = text;
