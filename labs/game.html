@@ -1217,35 +1217,47 @@ function labsPaint(idx) {
         row.style.background = (i === idx) ? 'rgba(255,150,64,0.18)' : '';
         row.style.borderLeft = (i === idx) ? '3px solid var(--accent)' : '3px solid transparent';
     });
-    if (idx >= 0 && _labsState.rowRefs[idx]) {
-        _labsState.rowRefs[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
+    // Intentionally NOT calling row.scrollIntoView — pulling page focus
+    // every time an event fires steals the user's attention away from
+    // the video. The user can scroll the timeline manually.
+}
+function labsEnsureBoardCard() {
+    let card = document.getElementById('labsBoardCard');
+    if (card) return card;
+    // Insert a brand-new card immediately under the video stage so the
+    // synced scoreboard sits right under the player — not buried below
+    // the hero/meta where the prod scoreCard lives.
+    const stage = document.querySelector('.stage');
+    if (!stage) return null;
+    card = document.createElement('div');
+    card.id = 'labsBoardCard';
+    card.className = 'card';
+    card.style.cssText = 'margin:12px 16px 4px;';
+    stage.parentNode.insertBefore(card, stage.nextSibling);
+    return card;
 }
 function labsEnsureStatusBanner() {
     if (document.getElementById('labsStatusBanner')) return;
-    const scoreCard = document.getElementById('scoreCard');
-    if (!scoreCard) return;
+    const card = labsEnsureBoardCard();
+    if (!card) return;
     const b = document.createElement('div');
     b.id = 'labsStatusBanner';
-    b.style.cssText = 'margin-top:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);font-size:12px;line-height:1.4;color:var(--text-secondary);font-variant-numeric:tabular-nums;';
+    b.style.cssText = 'padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);font-size:12px;line-height:1.4;color:var(--text-secondary);font-variant-numeric:tabular-nums;';
     b.textContent = '🧪 Labs replay initializing…';
-    // Make sure the score card is visible — for VB-no-events games the
-    // production renderer may still leave it hidden if scores are 0.
-    scoreCard.style.display = '';
-    scoreCard.appendChild(b);
+    card.appendChild(b);
 }
 function labsSetStatus(text) {
     const b = document.getElementById('labsStatusBanner');
     if (b) b.textContent = text;
 }
 function labsBuildScoreboard() {
-    const scoreCard = document.getElementById('scoreCard');
-    if (!scoreCard) return;
+    const card = labsEnsureBoardCard();
+    if (!card) return;
     const tagDiv = document.createElement('div');
     tagDiv.id = 'labsLiveTag';
     tagDiv.style.cssText = 'margin-top:8px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--accent);';
     tagDiv.textContent = '🧪 Pre-game · synced to video time';
-    scoreCard.appendChild(tagDiv);
+    card.appendChild(tagDiv);
 
     // Build per-set columns. `maxSetIdx + 1` cells; each has a SET header
     // and stacked home / away points. The label rows on the left mirror the
@@ -1278,7 +1290,7 @@ function labsBuildScoreboard() {
             </div>
         </div>
     `;
-    scoreCard.appendChild(board);
+    card.appendChild(board);
     // After insertion, restructure each cell so the home row sits on top
     // of the away row but they live in the same flex column (already done
     // by the .labs-h / .labs-a divs above).
