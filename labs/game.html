@@ -1453,7 +1453,18 @@ function labsGenerateAnnounceMessage(idx) {
 // crowded match doesn't smear streaks across sides.
 function labsGenerateVbStatMessage(idx, p, sideName) {
     const stat = p.stat || '';
-    const name = (p.playerName || '').trim();
+    // Prefer the event's own playerName (Android resolves at capture).
+    // When missing (iOS until a name resolver is wired, or any older
+    // doc), fall back to game.participants by playerId.
+    let name = (p.playerName || '').trim();
+    if (!name && p.playerId) {
+        const parts = Array.isArray(_labsState.game && _labsState.game.participants)
+            ? _labsState.game.participants : [];
+        const hit = parts.find(x => x && x.playerId === p.playerId);
+        if (hit && (hit.name || hit.displayName)) {
+            name = ((hit.name || hit.displayName) + '').trim();
+        }
+    }
     // If a same-side point follows within ~2.5s, this stat IS that point.
     // Compose a "to make it 5–4" tail so the user reads one play, not two.
     const paired = labsLookaheadScoreForStat(idx);
