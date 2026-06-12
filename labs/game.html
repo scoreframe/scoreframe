@@ -1092,6 +1092,27 @@ function labsAttach(hub, game) {
         labsSetStatus('⚠️ No Labs timeline events on this game. Record a new VB game with "🧪 Video-Synced Game Page" enabled under Labs to see the replay.');
         return;
     }
+    // Repair streamTimeMs for events captured by Android <= v1.1.695, which
+    // subtracted SystemClock.elapsedRealtime() (boot uptime) from a wall-
+    // clock streamStartTimeMs, producing huge negative values. When the
+    // event carries a wallClockMs AND we know the stream's startedAt (also
+    // wall-clock), the true stream-relative time is wallClockMs-startedAt.
+    // Fixed Android 696+ stamps streamTimeMs directly in wall-clock space
+    // so the repair becomes a no-op. We still apply it defensively in case
+    // future capture paths ever stamp the wrong clock again.
+    const streams = Array.isArray(game.streams) ? game.streams : [];
+    const ytStream = streams.find(s => s && /(?:youtube\.com|youtu\.be)/.test(s.url || ''));
+    const streamStartedAt = (ytStream && Number.isFinite(ytStream.startedAt))
+        ? Number(ytStream.startedAt)
+        : null;
+    events.forEach(ev => {
+        const raw = Number(ev.streamTimeMs);
+        const wall = Number(ev.wallClockMs);
+        const looksBad = !Number.isFinite(raw) || raw < -1;
+        if (looksBad && streamStartedAt && Number.isFinite(wall)) {
+            ev.streamTimeMs = wall - streamStartedAt;
+        }
+    });
     labsSetStatus(`✅ ${events.length} timeline events loaded. Waiting for YouTube player…`);
     events.sort((a, b) => (a.streamTimeMs ?? -1) - (b.streamTimeMs ?? -1));
     _labsState.events = events;
