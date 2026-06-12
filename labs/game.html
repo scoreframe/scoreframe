@@ -1128,7 +1128,7 @@ function labsAttach(hub, game) {
     _labsState.awayName = game.awayTeam || 'Away';
     _labsState.homeColor = game.homeColor || '#1565C0';
     _labsState.awayColor = game.awayColor || '#C62828';
-    _labsState.maxSetIdx = events.reduce((m, e) => Math.max(m, (e.payload || {}).setIndex ?? 0), 0);
+    _labsState.maxSetIdx = events.reduce((m, e) => Math.max(m, (e.payload || {}).setIndex ?? 1), 1);
     labsBuildAnnounceFeed();
     labsBuildScoreboard();
     labsBuildTimelinePanel();
@@ -1172,16 +1172,18 @@ function labsTick() {
 // last (max) home/away points; the highest setIdx is the current set; sets
 // won = count of prior sets whose final score went to that side.
 function labsDeriveState(idx) {
-    const perSet = {}; // setIdx → { h, a, lastEventIdx }
-    let currentSet = 0;
+    const perSet = {}; // setIdx (1-indexed) → { h, a }
+    let currentSet = 1;
     for (let i = 0; i <= idx; i++) {
         const p = _labsState.events[i].payload || {};
-        const s = p.setIndex ?? 0;
+        const s = p.setIndex ?? 1;
+        // For each set, keep the latest event's post-state (idempotent
+        // since each event's payload carries the absolute score).
         perSet[s] = { h: p.homeScore ?? 0, a: p.awayScore ?? 0 };
         if (s > currentSet) currentSet = s;
     }
     let homeSets = 0, awaySets = 0;
-    for (let s = 0; s < currentSet; s++) {
+    for (let s = 1; s < currentSet; s++) {
         const r = perSet[s];
         if (!r) continue;
         if (r.h > r.a) homeSets++;
@@ -1204,7 +1206,8 @@ function labsPaint(idx) {
         if (awayEl) awayEl.textContent = String(st.awaySets);
     }
     // Scoreboard grid: fill in points for each set; highlight current.
-    for (let s = 0; s <= _labsState.maxSetIdx; s++) {
+    // setIndex is 1-indexed (matches Android/iOS state.currentSet default of 1).
+    for (let s = 1; s <= Math.max(_labsState.maxSetIdx, 1); s++) {
         const cell = document.getElementById('labsSetCell_' + s);
         if (!cell) continue;
         const r = st.perSet[s];
@@ -1229,7 +1232,7 @@ function labsPaint(idx) {
     if (tag) {
         tag.textContent = idx < 0
             ? '🧪 Pre-game · synced to video time'
-            : `🧪 Set ${st.currentSet + 1} · ${st.curHome}–${st.curAway} · synced to video time`;
+            : `🧪 Set ${st.currentSet} · ${st.curHome}–${st.curAway} · synced to video time`;
     }
     _labsState.rowRefs.forEach((row, i) => {
         if (!row) return;  // paired-point duplicate, skipped at build time
@@ -1328,21 +1331,17 @@ function labsBuildVideoOverlay(stage) {
     ov.style.cssText = 'position:absolute;left:14px;right:14px;bottom:14px;display:none;flex-direction:column;gap:6px;pointer-events:none;z-index:5;align-items:flex-start;';
     stage.appendChild(ov);
     _labsState.videoOverlay = ov;
-    // Theater button — fullscreens the .stage container (not the iframe
-    // alone) so the over-video overlay rides along. YT's own fullscreen
-    // button still targets the iframe and hides our overlay; that's the
-    // structural limit we work around here.
-    const theaterBtn = document.createElement('button');
-    theaterBtn.id = 'labsTheaterBtn';
-    theaterBtn.type = 'button';
-    theaterBtn.title = 'Theater (fullscreen with play-by-play overlay)';
-    theaterBtn.setAttribute('aria-label', 'Theater mode');
-    theaterBtn.style.cssText = 'position:absolute;top:8px;right:8px;width:36px;height:36px;border-radius:8px;background:rgba(0,0,0,0.65);color:#fff;border:1px solid rgba(255,255,255,0.20);font-size:18px;line-height:1;cursor:pointer;z-index:6;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:background 0.2s ease;';
-    theaterBtn.textContent = '⛶';
-    theaterBtn.addEventListener('mouseenter', () => { theaterBtn.style.background = 'rgba(0,0,0,0.85)'; });
-    theaterBtn.addEventListener('mouseleave', () => { theaterBtn.style.background = 'rgba(0,0,0,0.65)'; });
-    theaterBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
+    // External "Watch in full screen" button placed BELOW the video stage
+    // (not as an overlay icon). Fullscreens the .stage element so the
+    // YT iframe + our popup overlay both ride into fullscreen together.
+    // The CSS rules injected below preserve 16:9 aspect ratio inside the
+    // fullscreen viewport so the video doesn't stretch off-screen.
+    const fsBtn = document.createElement('button');
+    fsBtn.id = 'labsFullscreenBtn';
+    fsBtn.type = 'button';
+    fsBtn.style.cssText = 'display:block;width:calc(100% - 32px);margin:10px 16px 0;padding:11px 14px;border-radius:10px;border:1px solid rgba(255,150,64,0.45);background:linear-gradient(180deg, rgba(255,150,64,0.18), rgba(255,150,64,0.08));color:var(--text-primary);font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.02em;';
+    fsBtn.innerHTML = '⛶ &nbsp;Watch in full screen';
+    fsBtn.addEventListener('click', () => {
         const fe = document.fullscreenElement || document.webkitFullscreenElement;
         if (fe) {
             (document.exitFullscreen || document.webkitExitFullscreen).call(document);
@@ -1350,18 +1349,50 @@ function labsBuildVideoOverlay(stage) {
             (stage.requestFullscreen || stage.webkitRequestFullscreen).call(stage);
         }
     });
-    stage.appendChild(theaterBtn);
+    // Insert right after the stage (before the announce panel injected
+    // earlier by labsBuildAnnounceFeed, which is the stage's sibling).
+    stage.parentNode.insertBefore(fsBtn, stage.nextSibling);
+
+    // CSS for the .stage when it's the fullscreen element. Aspect-ratio
+    // preserved with `width:auto; height:auto; max-width/height: 100v*`
+    // so portrait phones get letterboxing top+bottom instead of a
+    // stretched-and-clipped video. The iframe gets the same treatment.
+    const fsStyle = document.createElement('style');
+    fsStyle.textContent = `
+      .stage:fullscreen, .stage:-webkit-full-screen {
+        background:#000;
+        display:flex; align-items:center; justify-content:center;
+      }
+      .stage:fullscreen #playerSlot, .stage:-webkit-full-screen #playerSlot {
+        width:100vw; max-width:100vw;
+        height:auto; max-height:100vh;
+        aspect-ratio: 16 / 9;
+        display:flex; align-items:center; justify-content:center;
+      }
+      .stage:fullscreen #playerSlot iframe,
+      .stage:-webkit-full-screen #playerSlot iframe {
+        width:100%; height:100%; max-width:100vw; max-height:100vh;
+        object-fit:contain;
+      }
+      /* Hide the prod video caption + playlist controls in fullscreen
+         so they don't sit beside the video on the black canvas. */
+      .stage:fullscreen .video-cap,
+      .stage:fullscreen #playlistControls,
+      .stage:-webkit-full-screen .video-cap,
+      .stage:-webkit-full-screen #playlistControls { display:none; }
+    `;
+    document.head.appendChild(fsStyle);
 
     // Listen for fullscreen transitions to swap visibility. We only show
-    // when SOMETHING in our subtree is fullscreen. When YouTube's native
-    // fullscreen targets the iframe itself, the iframe covers everything
-    // and our overlay is irrelevant — gracefully no-op in that case.
+    // when SOMETHING in our subtree is fullscreen. When YouTube's own
+    // fullscreen button targets the iframe directly, the iframe covers
+    // everything and our overlay is irrelevant — gracefully no-op.
     const onFsChange = () => {
         const fe = document.fullscreenElement || document.webkitFullscreenElement;
         const inFs = !!fe && stage.contains(fe);
         _labsState.inFullscreen = inFs;
         ov.style.display = inFs ? 'flex' : 'none';
-        theaterBtn.textContent = inFs ? '⛶✕' : '⛶';
+        fsBtn.innerHTML = inFs ? '⛶ &nbsp;Exit full screen' : '⛶ &nbsp;Watch in full screen';
         if (!inFs) {
             // Clear queued popups so we don't reveal a stale stack on the
             // next fullscreen entry.
@@ -1400,7 +1431,7 @@ function labsBuildVideoOverlay(stage) {
 function labsGenerateAnnounceMessage(idx) {
     const ev = _labsState.events[idx];
     const p = ev.payload || {};
-    const setIdx = p.setIndex ?? 0;
+    const setIdx = p.setIndex ?? 1;
     const sideName = p.side === 'AWAY' ? _labsState.awayName : _labsState.homeName;
     if (ev.eventType === 'vb_stat') {
         return labsGenerateVbStatMessage(idx, p, sideName);
@@ -1411,11 +1442,11 @@ function labsGenerateAnnounceMessage(idx) {
     let streak = 1;
     for (let i = idx - 1; i >= 0; i--) {
         const q = _labsState.events[i].payload || {};
-        if ((q.setIndex ?? 0) !== setIdx) break;
+        if ((q.setIndex ?? 1) !== setIdx) break;
         if (q.side === p.side) streak++; else break;
     }
     const prev = idx > 0 ? (_labsState.events[idx - 1].payload || {}) : null;
-    const prevSet = prev ? (prev.setIndex ?? 0) : -1;
+    const prevSet = prev ? (prev.setIndex ?? 1) : -1;
     const prevHome = prev ? (prev.homeScore ?? 0) : 0;
     const prevAway = prev ? (prev.awayScore ?? 0) : 0;
     const tied = homeScore === awayScore;
@@ -1462,7 +1493,7 @@ function labsGenerateAnnounceMessage(idx) {
     }
     // First point of the match / set kickoff
     if (homeScore + awayScore === 1) {
-        return { text: `First point of Set ${setIdx + 1} — ${sideName}!`, tone: 'normal' };
+        return { text: `First point of Set ${setIdx} — ${sideName}!`, tone: 'normal' };
     }
     // Default play-by-play, cycled
     const v = [
@@ -1645,15 +1676,15 @@ function labsEmitAnnounceForEvent(idx) {
     if (idx > 0) {
         const prev = _labsState.events[idx - 1].payload || {};
         const cur = _labsState.events[idx].payload || {};
-        const prevSet = prev.setIndex ?? 0;
-        const curSet = cur.setIndex ?? 0;
+        const prevSet = prev.setIndex ?? 1;
+        const curSet = cur.setIndex ?? 1;
         if (curSet > prevSet) {
             const winner = (prev.homeScore ?? 0) > (prev.awayScore ?? 0)
                 ? _labsState.homeName
                 : (prev.awayScore ?? 0) > (prev.homeScore ?? 0)
                     ? _labsState.awayName : 'Tie';
             labsPushAnnounceRow({
-                text: `🏐 Set ${prevSet + 1} to ${winner} · ${prev.homeScore ?? 0}–${prev.awayScore ?? 0}`,
+                text: `🏐 Set ${prevSet} to ${winner} · ${prev.homeScore ?? 0}–${prev.awayScore ?? 0}`,
                 tone: 'set',
                 streamTimeMs: _labsState.events[idx].streamTimeMs - 500,
             });
@@ -1789,20 +1820,22 @@ function labsBuildScoreboard() {
     tagDiv.textContent = '🧪 Pre-game · synced to video time';
     card.appendChild(tagDiv);
 
-    // Build per-set columns. `maxSetIdx + 1` cells; each has a SET header
-    // and stacked home / away points. The label rows on the left mirror the
-    // home/away color strip so it reads like a broadcast scoreboard.
+    // Build per-set columns. Set indices are 1-indexed to match the
+    // Android/iOS state's `currentSet` field (which defaults to 1 and
+    // ticks up as sets complete). Render Set 1 … maxSetIdx inclusive.
     const board = document.createElement('div');
     board.id = 'labsScoreboard';
     board.style.cssText = 'margin-top:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden;font-variant-numeric:tabular-nums;';
     const colTpl = (s) => `
         <div id="labsSetCell_${s}" class="labs-set-cell" style="flex:1;min-width:56px;text-align:center;padding:6px 4px;border-left:1px solid var(--border);">
-            <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);">Set ${s + 1}</div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);">Set ${s}</div>
             <div class="labs-h" style="font-size:22px;font-weight:700;line-height:1.15;color:var(--text-primary);">–</div>
             <div class="labs-a" style="font-size:22px;font-weight:700;line-height:1.15;color:var(--text-primary);">–</div>
         </div>`;
     let cols = '';
-    for (let s = 0; s <= _labsState.maxSetIdx; s++) cols += colTpl(s);
+    const firstSet = Math.max(1, 1);
+    const lastSet = Math.max(_labsState.maxSetIdx, 1);
+    for (let s = firstSet; s <= lastSet; s++) cols += colTpl(s);
     board.innerHTML = `
         <style>
             #labsScoreboard .labs-current { background: rgba(255,150,64,0.10); }
@@ -1849,7 +1882,7 @@ function labsBuildTimelinePanel() {
         const mm = Math.floor(t / 60000);
         const ss = Math.floor((t % 60000) / 1000).toString().padStart(2, '0');
         const sideName = p.side === 'AWAY' ? _labsState.awayName : _labsState.homeName;
-        const setLabel = `Set ${(p.setIndex ?? 0) + 1}`;
+        const setLabel = `Set ${p.setIndex ?? 1}`;
         let label;
         let muted = false;
         if (ev.eventType === 'vb_stat') {
