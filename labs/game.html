@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScoreFrame Labs — Video-Synced Game Page</title>
+<style>
+  :root {
+    --bg: #0D0D0D; --surface: #1A1A1A; --surface-2: #272727;
+    --on-surface: #F5F5F2; --on-surface-variant: #B5B5B5; --outline: #444444;
+    --primary: #FF9640; --live-red: #FF3B3B;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #F5F5F2; --surface: #FFFFFF; --surface-2: #EFEFEF;
+      --on-surface: #1A1A1A; --on-surface-variant: #555555; --outline: #CCCCCC; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0; background: var(--bg); color: var(--on-surface);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .header { padding: 14px 16px; border-bottom: 1px solid var(--outline);
+    display: flex; align-items: center; gap: 10px; }
+  .labs-pill { background: var(--primary); color: #1A1A1A; padding: 3px 9px;
+    border-radius: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+  .header h1 { font-size: 17px; font-weight: 600; margin: 0; flex: 1; }
+  .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+  .video-wrap { position: relative; aspect-ratio: 16/9; background: #000;
+    border-radius: 12px; overflow: hidden; }
+  .video-wrap iframe { width: 100%; height: 100%; border: 0; }
+  .score-card { background: var(--surface); border: 1px solid var(--outline);
+    border-radius: 12px; padding: 18px; margin-top: 14px; }
+  .score-row { display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; }
+  .team { flex: 1; text-align: center; }
+  .team .name { font-size: 13px; color: var(--on-surface-variant); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 0.4px; }
+  .team .score { font-size: 64px; font-weight: 800; line-height: 1; }
+  .vs { font-size: 14px; color: var(--on-surface-variant); padding: 0 8px; }
+  .sets-row { display: flex; justify-content: center; gap: 8px; margin-top: 14px;
+    font-size: 13px; color: var(--on-surface-variant); }
+  .set-pill { padding: 4px 9px; background: var(--surface-2); border-radius: 6px;
+    border: 1px solid var(--outline); }
+  .set-pill.current { color: var(--on-surface); font-weight: 600;
+    border-color: var(--primary); }
+  .status-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+    background: var(--surface); border: 1px solid var(--outline); border-radius: 10px;
+    margin-top: 14px; font-size: 12px; }
+  .live-dot { width: 8px; height: 8px; background: var(--live-red); border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(255, 59, 59, 0.55); animation: pulse 1.4s infinite; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 59, 59, 0.55); }
+    70% { box-shadow: 0 0 0 8px rgba(255, 59, 59, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 59, 59, 0); }
+  }
+  .timeline { background: var(--surface); border: 1px solid var(--outline);
+    border-radius: 10px; margin-top: 14px; padding: 12px; max-height: 320px;
+    overflow-y: auto; }
+  .timeline h3 { margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase;
+    color: var(--on-surface-variant); letter-spacing: 0.4px; }
+  .event-row { display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 4px; border-bottom: 1px solid var(--outline); cursor: pointer;
+    font-size: 13px; }
+  .event-row:last-child { border-bottom: 0; }
+  .event-row:hover { background: var(--surface-2); }
+  .event-row.future { opacity: 0.4; }
+  .event-time { color: var(--on-surface-variant); font-variant-numeric: tabular-nums;
+    font-size: 12px; }
+  .empty-state { padding: 30px 16px; text-align: center; color: var(--on-surface-variant);
+    font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="labs-pill">LABS</span>
+  <h1>Video-Synced Game</h1>
+</div>
+
+<div class="container" id="root">
+  <div class="empty-state">Loading…</div>
+</div>
+
+<!-- Firebase v8 compat (matches production game.html) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+<script>
+/**
+ * ScoreFrame Labs — Video-Synced Game Page.
+ *
+ * Reads gameDoc.events (array of TimelineEvent) and the embedded YouTube
+ * watch URL. Subscribes to the YT player's currentTime via the iframe
+ * API and renders state in lockstep with the video.
+ *
+ * Phase 1: volleyball only. Other sports get a "this feature is volleyball-
+ * only in Labs Phase 1" message.
+ *
+ * Event shape (matches TimelineEvent.kt / TimelineEvent.swift):
+ *   { id, sport, eventType, streamTimeMs, wallClockMs, videoIndex, payload }
+ *
+ * For VB "point" events, payload carries:
+ *   { side: "HOME"|"AWAY", setIndex: Int, homeScore: Int, awayScore: Int }
+ */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDc-vY8XmgI3z0_tD4o5w-RcL6tvSeIE-A",
+  authDomain: "scoreframe-deploy.firebaseapp.com",
+  projectId: "scoreframe-deploy",
+  storageBucket: "scoreframe-deploy.appspot.com",
+  messagingSenderId: "728886280072",
+  appId: "1:728886280072:web:0050478669b89fc76b043d"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ── State ────────────────────────────────────────────────────────────
+const state = {
+  gameDoc: null,
+  events: [],
+  renderIndex: 0,
+  ytPlayer: null,
+  ytPlayerReady: false,
+  syncTimer: null,
+  initialState: { homeScore: 0, awayScore: 0, currentSet: 1, homeSets: 0, awaySets: 0 },
+  live: { homeScore: 0, awayScore: 0, currentSet: 1, homeSets: 0, awaySets: 0,
+    homeScoreBySet: [], awayScoreBySet: [] },
+};
+
+// ── Entry ────────────────────────────────────────────────────────────
+async function main() {
+  const params = new URLSearchParams(window.location.search);
+  const hubCode = params.get('team') || params.get('hub') || '';
+  const gameId = params.get('game') || '';
+  if (!hubCode || !gameId) {
+    showError('Missing team or game URL parameters. Expected: ?team=HUBCODE&game=GAMEID');
+    return;
+  }
+  try {
+    const teamId = await resolveTeamIdFromHubCode(hubCode);
+    if (!teamId) { showError('Team hub not found.'); return; }
+    const snap = await db.collection('teams').doc(teamId).collection('games').doc(gameId).get();
+    if (!snap.exists) { showError('Game not found.'); return; }
+    state.gameDoc = snap.data();
+    state.gameDoc.id = gameId;
+    boot();
+  } catch (e) {
+    console.error(e);
+    showError('Error loading game: ' + (e.message || e));
+  }
+}
+
+async function resolveTeamIdFromHubCode(code) {
+  const hub = await db.collection('hubIndex').doc(code).get();
+  if (hub.exists) return hub.data().teamId;
+  return null;
+}
+
+function boot() {
+  const g = state.gameDoc;
+  if ((g.sport || '').toUpperCase() !== 'VOLLEYBALL') {
+    showError('Labs Phase 1: video-sync is volleyball-only. This is a ' +
+      (g.sport || 'unknown sport') + ' game. Try a VB game with a YouTube broadcast.');
+    return;
+  }
+  state.events = Array.isArray(g.events) ? g.events.slice() : [];
+  if (state.events.length === 0) {
+    showError('No timeline events on this game. Either the scorer didn\'t have Labs ' +
+      '"Video-Synced Game Page" enabled, or the game wasn\'t streamed.');
+    return;
+  }
+  state.events.sort((a, b) => (a.streamTimeMs ?? -1) - (b.streamTimeMs ?? -1));
+
+  // Find a YouTube stream — first match wins.
+  const streams = Array.isArray(g.streams) ? g.streams : [];
+  const ytStream = streams.find(s => /(?:youtube\.com|youtu\.be)/.test(s.url || ''));
+  if (!ytStream) {
+    // No video: still render final state from events.
+    renderShell(g, /* hasVideo */ false);
+    applyAllEvents();
+    drawTimeline(/* tMs */ Infinity);
+    return;
+  }
+
+  renderShell(g, /* hasVideo */ true);
+  mountYouTubePlayer(ytStream.url);
+}
+
+// ── Render: shell ──────────────────────────────────────────────────
+function renderShell(g, hasVideo) {
+  const root = document.getElementById('root');
+  const homeName = g.homeTeam || 'HOME';
+  const awayName = g.awayTeam || 'AWAY';
+  root.innerHTML = `
+    ${hasVideo ? '<div class="video-wrap" id="video-wrap"></div>' : ''}
+    <div class="score-card">
+      <div class="score-row">
+        <div class="team">
+          <div class="name" id="home-name">${escapeHtml(homeName)}</div>
+          <div class="score" id="home-score">0</div>
+        </div>
+        <div class="vs">vs</div>
+        <div class="team">
+          <div class="name" id="away-name">${escapeHtml(awayName)}</div>
+          <div class="score" id="away-score">0</div>
+        </div>
+      </div>
+      <div class="sets-row" id="sets-row"></div>
+    </div>
+    <div class="status-bar">
+      <span class="live-dot"></span>
+      <span id="status-text">${hasVideo ? 'Synced to video' : 'Video unavailable — showing final state'}</span>
+    </div>
+    <div class="timeline">
+      <h3>Timeline (${state.events.length} events)</h3>
+      <div id="event-list"></div>
+    </div>
+  `;
+  drawTimeline(0);
+}
+
+// ── YouTube iframe API ─────────────────────────────────────────────
+function mountYouTubePlayer(watchUrl) {
+  const videoId = extractYtId(watchUrl);
+  if (!videoId) {
+    document.getElementById('status-text').textContent = 'Could not parse YouTube URL';
+    applyAllEvents();
+    return;
+  }
+  const wrap = document.getElementById('video-wrap');
+  wrap.innerHTML = `<div id="yt-player"></div>`;
+
+  if (!window.YT || !window.YT.Player) {
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+    window.onYouTubeIframeAPIReady = () => createPlayer(videoId);
+  } else {
+    createPlayer(videoId);
+  }
+}
+
+function createPlayer(videoId) {
+  state.ytPlayer = new YT.Player('yt-player', {
+    videoId,
+    playerVars: { autoplay: 0, modestbranding: 1, rel: 0 },
+    events: {
+      onReady: () => { state.ytPlayerReady = true; startSync(); },
+      onStateChange: () => syncToVideoTime(),
+    },
+  });
+}
+
+function extractYtId(url) {
+  if (!url) return null;
+  const m1 = url.match(/[?&]v=([\w-]{6,})/);
+  if (m1) return m1[1];
+  const m2 = url.match(/youtu\.be\/([\w-]{6,})/);
+  if (m2) return m2[1];
+  return null;
+}
+
+// ── Sync loop ──────────────────────────────────────────────────────
+function startSync() {
+  if (state.syncTimer) clearInterval(state.syncTimer);
+  state.syncTimer = setInterval(syncToVideoTime, 200);
+}
+
+function syncToVideoTime() {
+  if (!state.ytPlayerReady || !state.ytPlayer || !state.ytPlayer.getCurrentTime) return;
+  let tMs;
+  try { tMs = Math.floor(state.ytPlayer.getCurrentTime() * 1000); }
+  catch (e) { return; }
+
+  // Backwards seek: reset + replay.
+  if (state.renderIndex > 0) {
+    const lastRendered = state.events[state.renderIndex - 1];
+    if (lastRendered && (lastRendered.streamTimeMs - 500) > tMs) {
+      resetRenderedState();
+      state.renderIndex = 0;
+    }
+  }
+
+  while (state.renderIndex < state.events.length &&
+         (state.events[state.renderIndex].streamTimeMs ?? -1) <= tMs) {
+    applyEvent(state.events[state.renderIndex]);
+    state.renderIndex++;
+  }
+  paintScore();
+  drawTimeline(tMs);
+}
+
+// ── Reducer ────────────────────────────────────────────────────────
+function resetRenderedState() {
+  state.live.homeScore = state.initialState.homeScore;
+  state.live.awayScore = state.initialState.awayScore;
+  state.live.currentSet = state.initialState.currentSet;
+  state.live.homeSets = state.initialState.homeSets;
+  state.live.awaySets = state.initialState.awaySets;
+  state.live.homeScoreBySet = [];
+  state.live.awayScoreBySet = [];
+}
+
+function applyEvent(ev) {
+  if (!ev || ev.eventType !== 'point') return;
+  const p = ev.payload || {};
+  // The payload carries the authoritative homeScore/awayScore AT THE TIME of
+  // this event — single source of truth, idempotent over forward replay.
+  if (typeof p.homeScore === 'number') state.live.homeScore = p.homeScore;
+  if (typeof p.awayScore === 'number') state.live.awayScore = p.awayScore;
+  if (typeof p.setIndex === 'number') state.live.currentSet = p.setIndex;
+}
+
+function applyAllEvents() {
+  resetRenderedState();
+  for (const ev of state.events) applyEvent(ev);
+  state.renderIndex = state.events.length;
+  paintScore();
+}
+
+// ── Paint ──────────────────────────────────────────────────────────
+function paintScore() {
+  const hs = document.getElementById('home-score');
+  const as = document.getElementById('away-score');
+  if (hs) hs.textContent = state.live.homeScore;
+  if (as) as.textContent = state.live.awayScore;
+  const row = document.getElementById('sets-row');
+  if (row) {
+    row.innerHTML = `<span class="set-pill current">Set ${state.live.currentSet}</span>`;
+  }
+}
+
+function drawTimeline(tMs) {
+  const list = document.getElementById('event-list');
+  if (!list) return;
+  list.innerHTML = state.events.map((ev, i) => {
+    const future = (ev.streamTimeMs ?? -1) > tMs;
+    const t = formatMs(ev.streamTimeMs);
+    const side = (ev.payload && ev.payload.side) || '';
+    const score = ev.payload ? `${ev.payload.homeScore}-${ev.payload.awayScore}` : '';
+    return `<div class="event-row ${future ? 'future' : ''}" data-i="${i}">
+      <span>Point — ${side} (${score})</span>
+      <span class="event-time">${t}</span>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.event-row').forEach(el => {
+    el.addEventListener('click', () => {
+      const i = parseInt(el.dataset.i, 10);
+      const ev = state.events[i];
+      if (state.ytPlayer && state.ytPlayer.seekTo && (ev.streamTimeMs ?? -1) > 0) {
+        state.ytPlayer.seekTo(ev.streamTimeMs / 1000, true);
+      }
+    });
+  });
+}
+
+function formatMs(ms) {
+  if (ms === undefined || ms === null || ms < 0) return '—';
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  return `${m}:${ss}`;
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function showError(msg) {
+  const root = document.getElementById('root');
+  root.innerHTML = `<div class="empty-state">${escapeHtml(msg)}</div>`;
+}
+
+main();
+</script>
+</body>
+</html>
