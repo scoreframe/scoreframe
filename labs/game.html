@@ -1327,6 +1327,30 @@ function labsBuildVideoOverlay(stage) {
     ov.style.cssText = 'position:absolute;left:14px;right:14px;bottom:14px;display:none;flex-direction:column;gap:6px;pointer-events:none;z-index:5;align-items:flex-start;';
     stage.appendChild(ov);
     _labsState.videoOverlay = ov;
+    // Theater button — fullscreens the .stage container (not the iframe
+    // alone) so the over-video overlay rides along. YT's own fullscreen
+    // button still targets the iframe and hides our overlay; that's the
+    // structural limit we work around here.
+    const theaterBtn = document.createElement('button');
+    theaterBtn.id = 'labsTheaterBtn';
+    theaterBtn.type = 'button';
+    theaterBtn.title = 'Theater (fullscreen with play-by-play overlay)';
+    theaterBtn.setAttribute('aria-label', 'Theater mode');
+    theaterBtn.style.cssText = 'position:absolute;top:8px;right:8px;width:36px;height:36px;border-radius:8px;background:rgba(0,0,0,0.65);color:#fff;border:1px solid rgba(255,255,255,0.20);font-size:18px;line-height:1;cursor:pointer;z-index:6;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:background 0.2s ease;';
+    theaterBtn.textContent = '⛶';
+    theaterBtn.addEventListener('mouseenter', () => { theaterBtn.style.background = 'rgba(0,0,0,0.85)'; });
+    theaterBtn.addEventListener('mouseleave', () => { theaterBtn.style.background = 'rgba(0,0,0,0.65)'; });
+    theaterBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const fe = document.fullscreenElement || document.webkitFullscreenElement;
+        if (fe) {
+            (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        } else {
+            (stage.requestFullscreen || stage.webkitRequestFullscreen).call(stage);
+        }
+    });
+    stage.appendChild(theaterBtn);
+
     // Listen for fullscreen transitions to swap visibility. We only show
     // when SOMETHING in our subtree is fullscreen. When YouTube's native
     // fullscreen targets the iframe itself, the iframe covers everything
@@ -1336,6 +1360,7 @@ function labsBuildVideoOverlay(stage) {
         const inFs = !!fe && stage.contains(fe);
         _labsState.inFullscreen = inFs;
         ov.style.display = inFs ? 'flex' : 'none';
+        theaterBtn.textContent = inFs ? '⛶✕' : '⛶';
         if (!inFs) {
             // Clear queued popups so we don't reveal a stale stack on the
             // next fullscreen entry.
