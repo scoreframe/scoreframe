@@ -1232,6 +1232,7 @@ function labsPaint(idx) {
             : `🧪 Set ${st.currentSet + 1} · ${st.curHome}–${st.curAway} · synced to video time`;
     }
     _labsState.rowRefs.forEach((row, i) => {
+        if (!row) return;  // paired-point duplicate, skipped at build time
         row.style.background = (i === idx) ? 'rgba(255,150,64,0.18)' : '';
         row.style.borderLeft = (i === idx) ? '3px solid var(--accent)' : '3px solid transparent';
     });
@@ -1837,15 +1838,43 @@ function labsBuildTimelinePanel() {
     `;
     scoreCard.parentNode.insertBefore(panel, scoreCard.nextSibling);
     const rows = document.getElementById('labsTimelineRows');
+    const STAT_LABEL = {
+        kills: 'KILL', aces: 'ACE', blocks: 'BLOCK',
+        assists: 'assist', digs: 'dig',
+        errors: 'error', missedServes: 'service miss',
+    };
     _labsState.rowRefs = _labsState.events.map((ev, i) => {
         const p = ev.payload || {};
         const t = ev.streamTimeMs ?? 0;
         const mm = Math.floor(t / 60000);
         const ss = Math.floor((t % 60000) / 1000).toString().padStart(2, '0');
+        const sideName = p.side === 'AWAY' ? _labsState.awayName : _labsState.homeName;
+        const setLabel = `Set ${(p.setIndex ?? 0) + 1}`;
+        let label;
+        let muted = false;
+        if (ev.eventType === 'vb_stat') {
+            const stat = STAT_LABEL[p.stat] || p.stat || 'stat';
+            // Resolve player name: prefer payload, fall back to participants.
+            let name = (p.playerName || '').trim();
+            if (!name && p.playerId) {
+                const parts = Array.isArray(_labsState.game && _labsState.game.participants)
+                    ? _labsState.game.participants : [];
+                const hit = parts.find(x => x && x.playerId === p.playerId);
+                if (hit) name = ((hit.name || hit.displayName) + '').trim();
+            }
+            const who = name || sideName;
+            label = `${setLabel} · ${stat} — ${who}`;
+        } else {
+            // Suppress duplicate point rows when the stat right before
+            // accounts for the same-side score within 2.5s.
+            if (labsIsPairedPointDuplicate(i)) muted = true;
+            label = `${setLabel} · ${sideName} +1 → <strong>${p.homeScore ?? 0}–${p.awayScore ?? 0}</strong>`;
+        }
+        if (muted) return null;  // skip — duplicate paired point
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--border);cursor:pointer;border-left:3px solid transparent;';
         row.innerHTML = `
-            <span style="font-size:13px;">Set ${(p.setIndex ?? 0) + 1} · ${p.side === 'AWAY' ? _labsState.awayName : _labsState.homeName} +1 → <strong>${p.homeScore ?? 0}–${p.awayScore ?? 0}</strong></span>
+            <span style="font-size:13px;">${label}</span>
             <span style="font-size:12px;color:var(--text-secondary);font-variant-numeric:tabular-nums;">${mm}:${ss}</span>
         `;
         row.addEventListener('click', () => {
@@ -1856,6 +1885,8 @@ function labsBuildTimelinePanel() {
         rows.appendChild(row);
         return row;
     });
+    // labsPaint() iterates rowRefs by event index — for skipped paired
+    // points we keep the slot as `null` to preserve indexing alignment.
 }
 
 // Pre-game render path. Shows the team header + a countdown card in the
