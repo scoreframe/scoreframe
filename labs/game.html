@@ -1074,7 +1074,12 @@ let _labsState = {
     maxSetIdx: 0, game: null, hub: null,
     homeName: 'Home', awayName: 'Away',
     homeColor: '#1565C0', awayColor: '#C62828',
+    announceFeed: null, announceRows: [],
+    // Reset when seeking backward so the announce feed doesn't fight the
+    // forward replay path.
+    announceWatermark: -1,
 };
+const LABS_ANNOUNCE_MAX = 4;
 function labsAttach(hub, game) {
     document.getElementById('labsPill').style.display = '';
     const sport = (game.sport || hub.sport || '').toUpperCase();
@@ -1124,6 +1129,7 @@ function labsAttach(hub, game) {
     _labsState.homeColor = game.homeColor || '#1565C0';
     _labsState.awayColor = game.awayColor || '#C62828';
     _labsState.maxSetIdx = events.reduce((m, e) => Math.max(m, (e.payload || {}).setIndex ?? 0), 0);
+    labsBuildAnnounceFeed();
     labsBuildScoreboard();
     labsBuildTimelinePanel();
     if (_labsState.pollId) clearInterval(_labsState.pollId);
@@ -1147,7 +1153,19 @@ function labsTick() {
         if ((evs[i].streamTimeMs ?? -1) <= currentMs) { idx = i; break; }
     }
     if (idx === _labsState.lastEventIdx) return;
+    const prevIdx = _labsState.lastEventIdx;
     _labsState.lastEventIdx = idx;
+    // Forward progress → animate each newly-crossed event into the feed.
+    // Backward seek → instant rebuild from the trailing window, no anim.
+    if (idx > prevIdx) {
+        for (let i = Math.max(prevIdx, _labsState.announceWatermark) + 1; i <= idx; i++) {
+            labsEmitAnnounceForEvent(i);
+        }
+        _labsState.announceWatermark = idx;
+    } else {
+        labsRebuildAnnounceFromIndex(idx);
+        _labsState.announceWatermark = idx;
+    }
     labsPaint(idx);
 }
 // Derive scoreboard state from events[0..idx]: for each set seen, track the
@@ -1221,6 +1239,218 @@ function labsPaint(idx) {
     // every time an event fires steals the user's attention away from
     // the video. The user can scroll the timeline manually.
 }
+// ─── Labs announce feed ───────────────────────────────────────────────
+// Broadcast-style play-by-play above the video. Newest row enters at the
+// bottom; older rows slide up + fade as the stack fills. Each row carries
+// a stream-time stamp on the right so the viewer can correlate the call
+// to the video. Generator cycles variants and surfaces streaks / ties /
+// set boundaries with a different tone class so the feed feels alive.
+function labsBuildAnnounceFeed() {
+    if (document.getElementById('labsAnnounceFeed')) return;
+    const stage = document.querySelector('.stage');
+    if (!stage) return;
+    const wrap = document.createElement('div');
+    wrap.id = 'labsAnnounceFeed';
+    wrap.style.cssText = 'margin:8px 16px 0;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;overflow:hidden;min-height:0;';
+    // Inject row animation CSS once.
+    const style = document.createElement('style');
+    style.textContent = `
+      #labsAnnounceFeed .lf-row {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:8px 12px; border-radius:10px;
+        background: linear-gradient(90deg, rgba(255,150,64,0.10), rgba(255,150,64,0.02));
+        border:1px solid rgba(255,150,64,0.25);
+        font-size:14px; font-weight:600; color: var(--text-primary);
+        font-variant-numeric: tabular-nums;
+        transition: transform 0.45s cubic-bezier(.2,.7,.2,1), opacity 0.45s ease;
+      }
+      #labsAnnounceFeed .lf-row.lf-enter { transform: translateY(16px); opacity: 0; }
+      #labsAnnounceFeed .lf-row.lf-leave { transform: translateY(-24px); opacity: 0; }
+      #labsAnnounceFeed .lf-row.lf-tone-fire {
+        background: linear-gradient(90deg, rgba(255,90,40,0.20), rgba(255,150,64,0.06));
+        border-color: rgba(255,90,40,0.45);
+      }
+      #labsAnnounceFeed .lf-row.lf-tone-set {
+        background: linear-gradient(90deg, rgba(255,215,0,0.18), rgba(255,215,0,0.04));
+        border-color: rgba(255,215,0,0.45);
+        font-weight:800; letter-spacing:0.02em;
+      }
+      #labsAnnounceFeed .lf-row.lf-tone-tie {
+        background: linear-gradient(90deg, rgba(80,160,255,0.15), rgba(80,160,255,0.02));
+        border-color: rgba(80,160,255,0.40);
+      }
+      #labsAnnounceFeed .lf-stamp {
+        font-size:11px; color: var(--text-secondary); font-weight:500;
+        margin-left:12px; white-space:nowrap;
+      }
+      /* Older rows fade so the newest reads as the active call. */
+      #labsAnnounceFeed .lf-row[data-pos="3"] { opacity: 0.55; transform: scale(0.97); }
+      #labsAnnounceFeed .lf-row[data-pos="2"] { opacity: 0.75; transform: scale(0.98); }
+      #labsAnnounceFeed .lf-row[data-pos="1"] { opacity: 0.90; }
+    `;
+    document.head.appendChild(style);
+    stage.parentNode.insertBefore(wrap, stage);
+    _labsState.announceFeed = wrap;
+}
+// Produce a message (text + tone) for an event from its payload + the
+// running window of prior events. Deterministic: same idx always yields
+// the same message so seek-and-resume stays consistent.
+function labsGenerateAnnounceMessage(idx) {
+    const ev = _labsState.events[idx];
+    const p = ev.payload || {};
+    const setIdx = p.setIndex ?? 0;
+    const sideName = p.side === 'AWAY' ? _labsState.awayName : _labsState.homeName;
+    const homeScore = p.homeScore ?? 0;
+    const awayScore = p.awayScore ?? 0;
+    // Streak: how many consecutive same-side points in this set ending at idx.
+    let streak = 1;
+    for (let i = idx - 1; i >= 0; i--) {
+        const q = _labsState.events[i].payload || {};
+        if ((q.setIndex ?? 0) !== setIdx) break;
+        if (q.side === p.side) streak++; else break;
+    }
+    const prev = idx > 0 ? (_labsState.events[idx - 1].payload || {}) : null;
+    const prevSet = prev ? (prev.setIndex ?? 0) : -1;
+    const prevHome = prev ? (prev.homeScore ?? 0) : 0;
+    const prevAway = prev ? (prev.awayScore ?? 0) : 0;
+    const tied = homeScore === awayScore;
+    const wasTied = prev && prevSet === setIdx && prevHome === prevAway;
+    const tookLead = (prev && prevSet === setIdx) && (
+        (p.side === 'HOME' && prevHome <= prevAway && homeScore > awayScore) ||
+        (p.side === 'AWAY' && prevAway <= prevHome && awayScore > homeScore)
+    );
+    // Pick text. Order matters — most flavorful rules win.
+    if (streak >= 5) {
+        const v = [
+            `🔥🔥 ${sideName} on a TEAR — ${streak} straight!`,
+            `🔥 ${sideName} cooking — ${streak} in a row!`,
+            `🚀 ${streak} unanswered for ${sideName}!`,
+        ];
+        return { text: v[idx % v.length], tone: 'fire' };
+    }
+    if (streak === 4) {
+        return { text: `🔥 ${sideName} +4 straight — Spikers… err, ${sideName} on fire!`, tone: 'fire' };
+    }
+    if (streak === 3) {
+        const v = [
+            `🔥 ${sideName} rolling — 3 in a row`,
+            `${sideName} catching fire · 3 straight`,
+            `Threepeat for ${sideName}`,
+        ];
+        return { text: v[idx % v.length], tone: 'fire' };
+    }
+    if (tied && wasTied === false && (homeScore + awayScore) > 0) {
+        const v = [
+            `${sideName} ties it · ${homeScore}–${awayScore}`,
+            `Knotted up at ${homeScore} — ${sideName} answers`,
+            `All square · ${sideName} levels it`,
+        ];
+        return { text: v[idx % v.length], tone: 'tie' };
+    }
+    if (tookLead) {
+        const v = [
+            `${sideName} take the lead · ${homeScore}–${awayScore}`,
+            `Lead change — ${sideName} ahead ${homeScore}–${awayScore}`,
+            `${sideName} flip it · ${homeScore}–${awayScore}`,
+        ];
+        return { text: v[idx % v.length], tone: 'normal' };
+    }
+    // First point of the match / set kickoff
+    if (homeScore + awayScore === 1) {
+        return { text: `First point of Set ${setIdx + 1} — ${sideName}!`, tone: 'normal' };
+    }
+    // Default play-by-play, cycled
+    const v = [
+        `Point ${sideName} · ${homeScore}–${awayScore}`,
+        `${sideName} +1 · ${homeScore}–${awayScore}`,
+        `${sideName} cash in · ${homeScore}–${awayScore}`,
+        `${sideName} answer · ${homeScore}–${awayScore}`,
+    ];
+    return { text: v[idx % v.length], tone: 'normal' };
+}
+function labsEmitAnnounceForEvent(idx) {
+    // Set boundary → emit a "Set N to X" call BEFORE the first event of
+    // the new set. Derived from the doc state, not from a dedicated event.
+    if (idx > 0) {
+        const prev = _labsState.events[idx - 1].payload || {};
+        const cur = _labsState.events[idx].payload || {};
+        const prevSet = prev.setIndex ?? 0;
+        const curSet = cur.setIndex ?? 0;
+        if (curSet > prevSet) {
+            const winner = (prev.homeScore ?? 0) > (prev.awayScore ?? 0)
+                ? _labsState.homeName
+                : (prev.awayScore ?? 0) > (prev.homeScore ?? 0)
+                    ? _labsState.awayName : 'Tie';
+            labsPushAnnounceRow({
+                text: `🏐 Set ${prevSet + 1} to ${winner} · ${prev.homeScore ?? 0}–${prev.awayScore ?? 0}`,
+                tone: 'set',
+                streamTimeMs: _labsState.events[idx].streamTimeMs - 500,
+            });
+        }
+    }
+    const msg = labsGenerateAnnounceMessage(idx);
+    labsPushAnnounceRow({
+        text: msg.text,
+        tone: msg.tone,
+        streamTimeMs: _labsState.events[idx].streamTimeMs,
+    });
+}
+function labsPushAnnounceRow({ text, tone, streamTimeMs }) {
+    const feed = _labsState.announceFeed;
+    if (!feed) return;
+    const t = Math.max(0, streamTimeMs ?? 0);
+    const mm = Math.floor(t / 60000);
+    const ss = Math.floor((t % 60000) / 1000).toString().padStart(2, '0');
+    const row = document.createElement('div');
+    row.className = `lf-row lf-enter${tone ? ' lf-tone-' + tone : ''}`;
+    row.innerHTML = `
+      <span class="lf-text">${text}</span>
+      <span class="lf-stamp">${mm}:${ss}</span>
+    `;
+    feed.appendChild(row);
+    _labsState.announceRows.push(row);
+    // Trim: leave LABS_ANNOUNCE_MAX visible.
+    while (_labsState.announceRows.length > LABS_ANNOUNCE_MAX) {
+        const old = _labsState.announceRows.shift();
+        old.classList.add('lf-leave');
+        setTimeout(() => { try { old.remove(); } catch (_) {} }, 460);
+    }
+    // Trigger enter animation on next frame.
+    requestAnimationFrame(() => row.classList.remove('lf-enter'));
+    labsRecomputeAnnouncePositions();
+}
+function labsRecomputeAnnouncePositions() {
+    // Newest row is at the bottom — give it pos=0 (full opacity), older
+    // rows get progressively dimmer via data-pos. Driven by CSS above.
+    const rows = _labsState.announceRows;
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].dataset.pos = String(rows.length - 1 - i);
+    }
+}
+function labsRebuildAnnounceFromIndex(idx) {
+    const feed = _labsState.announceFeed;
+    if (!feed) return;
+    feed.innerHTML = '';
+    _labsState.announceRows = [];
+    if (idx < 0) return;
+    // Recompute the most recent LABS_ANNOUNCE_MAX messages (skipping set
+    // boundaries so we don't burn slots with derived headers when the user
+    // jumps backward).
+    const start = Math.max(0, idx - LABS_ANNOUNCE_MAX + 1);
+    for (let i = start; i <= idx; i++) {
+        const msg = labsGenerateAnnounceMessage(i);
+        const t = _labsState.events[i].streamTimeMs ?? 0;
+        const mm = Math.floor(Math.max(0, t) / 60000);
+        const ss = Math.floor((Math.max(0, t) % 60000) / 1000).toString().padStart(2, '0');
+        const row = document.createElement('div');
+        row.className = `lf-row${msg.tone ? ' lf-tone-' + msg.tone : ''}`;
+        row.innerHTML = `<span class="lf-text">${msg.text}</span><span class="lf-stamp">${mm}:${ss}</span>`;
+        feed.appendChild(row);
+        _labsState.announceRows.push(row);
+    }
+    labsRecomputeAnnouncePositions();
+}
+
 function labsEnsureBoardCard() {
     let card = document.getElementById('labsBoardCard');
     if (card) return card;
