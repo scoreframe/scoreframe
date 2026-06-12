@@ -714,7 +714,7 @@ html, body {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy }
+import { getFirestore, doc, getDoc, getDocs, collection, query, orderBy, onSnapshot }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 // v1.1.389 — Auth imports added so private-hub games (visibility !== 'public')
 // can be viewed by their owner / approved subscribers after signing in.
@@ -1061,6 +1061,13 @@ async function load() {
 
     renderGame(hubProfile, game);
     try { labsAttach(hubProfile, game); } catch (e) { console.warn('[labs] attach failed', e); }
+    // Live subscription: when the game is still in progress (status
+    // != "completed") OR labs is engaged at all, listen for updates to
+    // the game doc so newly-scored events stream into the announce feed
+    // without a page reload. Same source of truth that powers replay —
+    // no duplicate writes, no RTDB session to manage.
+    try { labsSubscribeToLive(teamId, gameId, hubProfile); }
+    catch (e) { console.warn('[labs] live subscribe failed', e); }
 }
 
 // ─── Labs video-sync replay ────────────────────────────────────────────
@@ -1078,6 +1085,12 @@ let _labsState = {
     // Reset when seeking backward so the announce feed doesn't fight the
     // forward replay path.
     announceWatermark: -1,
+    // Live subscription unsub function (set when subscribed). Lets us
+    // tear down the listener if the user navigates away.
+    liveUnsub: null,
+    // True once labsAttach has built its UI; live updates short-circuit
+    // before this flips so they don't try to mutate non-existent DOM.
+    attached: false,
 };
 const LABS_ANNOUNCE_MAX = 2;
 function labsAttach(hub, game) {
@@ -1134,7 +1147,163 @@ function labsAttach(hub, game) {
     labsBuildTimelinePanel();
     if (_labsState.pollId) clearInterval(_labsState.pollId);
     _labsState.pollId = setInterval(labsTick, 200);
+    _labsState.attached = true;
     labsTick();
+}
+
+// Subscribe to live updates on the game doc. As the scorer keeps tapping
+// during an in-progress game, the events[] array grows in Firestore; the
+// listener pushes those new entries into _labsState.events. The existing
+// 200ms tick loop already gates announce firing on getCurrentTime() >=
+// streamTimeMs, so live events just slot into the same pipeline a viewer
+// behind the live edge will see them at the right moment.
+function labsSubscribeToLive(teamId, gameId, hub) {
+    if (_labsState.liveUnsub) {
+        try { _labsState.liveUnsub(); } catch (_) {}
+        _labsState.liveUnsub = null;
+    }
+    const ref = doc(db, 'teams', teamId, 'games', gameId);
+    _labsState.liveUnsub = onSnapshot(ref, (snap) => {
+        if (!snap.exists()) return;
+        const game = { id: snap.id, ...snap.data() };
+        // First snapshot before labsAttach finished, or non-VB / no-events
+        // game — let the initial path handle it; no live merge to do.
+        if (!_labsState.attached) return;
+        labsApplyLiveUpdate(game, hub);
+    }, (err) => {
+        console.warn('[labs] onSnapshot error', err);
+    });
+}
+
+// Merge the latest game doc into _labsState. Idempotent: only NEW events
+// (by wallClockMs OR set+score+side identity) are appended; existing
+// events are not duplicated. New sets dynamically add scoreboard columns.
+function labsApplyLiveUpdate(game, hub) {
+    _labsState.game = game;
+    _labsState.hub = hub;
+    const incoming = Array.isArray(game.events) ? game.events.slice() : [];
+    if (incoming.length === 0) return;
+    // Repair bogus streamTimeMs the same way labsAttach does for legacy
+    // Android <= v1.1.695 events.
+    const streams = Array.isArray(game.streams) ? game.streams : [];
+    const ytStream = streams.find(s => s && /(?:youtube\.com|youtu\.be)/.test(s.url || ''));
+    const streamStartedAt = (ytStream && Number.isFinite(ytStream.startedAt))
+        ? Number(ytStream.startedAt) : null;
+    incoming.forEach(ev => {
+        const raw = Number(ev.streamTimeMs);
+        const wall = Number(ev.wallClockMs);
+        if ((!Number.isFinite(raw) || raw < -1) && streamStartedAt && Number.isFinite(wall)) {
+            ev.streamTimeMs = wall - streamStartedAt;
+        }
+    });
+    incoming.sort((a, b) => (a.streamTimeMs ?? -1) - (b.streamTimeMs ?? -1));
+
+    // Dedupe by identity tuple. Existing events should already be in
+    // _labsState.events sorted; just walk both and append any that
+    // weren't already present.
+    const have = new Set(_labsState.events.map(labsEventKey));
+    const newOnes = [];
+    for (const ev of incoming) {
+        const k = labsEventKey(ev);
+        if (!have.has(k)) newOnes.push(ev);
+    }
+    if (newOnes.length === 0) return;
+
+    // Append to events array (kept sorted).
+    for (const ev of newOnes) _labsState.events.push(ev);
+    _labsState.events.sort((a, b) => (a.streamTimeMs ?? -1) - (b.streamTimeMs ?? -1));
+
+    // If the running max set index grew, add scoreboard columns for the
+    // new sets and re-fill so cells exist before labsPaint touches them.
+    const newMax = _labsState.events.reduce((m, e) => Math.max(m, (e.payload || {}).setIndex ?? 1), 1);
+    if (newMax > _labsState.maxSetIdx) {
+        labsExtendScoreboardSets(_labsState.maxSetIdx, newMax);
+        _labsState.maxSetIdx = newMax;
+    }
+
+    // Append timeline rows for each new event (skipping paired-point
+    // duplicates the same way labsBuildTimelinePanel does).
+    labsAppendTimelineRows(newOnes);
+
+    // Force a tick so labsPaint re-derives state and the new events
+    // become eligible to fire announces as soon as video time crosses
+    // their streamTimeMs. The tick loop is already running; this just
+    // doesn't make the user wait up to 200ms for the next poll.
+    try { labsTick(); } catch (_) {}
+}
+function labsEventKey(ev) {
+    const p = ev.payload || {};
+    return `${ev.eventType || 'point'}|${p.side || ''}|${p.setIndex ?? ''}|${p.homeScore ?? ''}|${p.awayScore ?? ''}|${p.stat || ''}|${p.playerId || ''}|${ev.wallClockMs ?? ''}`;
+}
+function labsExtendScoreboardSets(oldMax, newMax) {
+    const setRow = document.getElementById('labsSetRow');
+    if (!setRow) return;
+    for (let s = oldMax + 1; s <= newMax; s++) {
+        const cell = document.createElement('div');
+        cell.id = 'labsSetCell_' + s;
+        cell.className = 'labs-set-cell';
+        cell.style.cssText = 'flex:1;min-width:56px;text-align:center;padding:6px 4px;border-left:1px solid var(--border);';
+        cell.innerHTML = `
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);">Set ${s}</div>
+            <div class="labs-h" style="font-size:22px;font-weight:700;line-height:1.15;color:var(--text-primary);">–</div>
+            <div class="labs-a" style="font-size:22px;font-weight:700;line-height:1.15;color:var(--text-primary);">–</div>
+        `;
+        setRow.appendChild(cell);
+    }
+}
+function labsAppendTimelineRows(newEvents) {
+    const rowsEl = document.getElementById('labsTimelineRows');
+    if (!rowsEl) return;
+    const STAT_LABEL = {
+        kills: 'KILL', aces: 'ACE', blocks: 'BLOCK',
+        assists: 'assist', digs: 'dig',
+        errors: 'error', missedServes: 'service miss',
+    };
+    // Recompute paired-point dedupe over the FULL events array since
+    // a same-side point arriving live could pair with a stat we already
+    // rendered. Easier: only append rows for events that pass the dedupe.
+    const startIdx = _labsState.rowRefs.length;
+    const endIdx = _labsState.events.length;
+    for (let i = startIdx; i < endIdx; i++) {
+        const ev = _labsState.events[i];
+        const p = ev.payload || {};
+        const t = ev.streamTimeMs ?? 0;
+        const mm = Math.floor(t / 60000);
+        const ss = Math.floor((t % 60000) / 1000).toString().padStart(2, '0');
+        const sideName = p.side === 'AWAY' ? _labsState.awayName : _labsState.homeName;
+        const setLabel = `Set ${p.setIndex ?? 1}`;
+        let label;
+        if (ev.eventType === 'vb_stat') {
+            const stat = STAT_LABEL[p.stat] || p.stat || 'stat';
+            let name = (p.playerName || '').trim();
+            if (!name && p.playerId) {
+                const parts = Array.isArray(_labsState.game && _labsState.game.participants)
+                    ? _labsState.game.participants : [];
+                const hit = parts.find(x => x && x.playerId === p.playerId);
+                if (hit) name = ((hit.name || hit.displayName) + '').trim();
+            }
+            label = `${setLabel} · ${stat} — ${name || sideName}`;
+        } else {
+            if (labsIsPairedPointDuplicate(i)) {
+                _labsState.rowRefs.push(null);
+                continue;
+            }
+            label = `${setLabel} · ${sideName} +1 → <strong>${p.homeScore ?? 0}–${p.awayScore ?? 0}</strong>`;
+        }
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--border);cursor:pointer;border-left:3px solid transparent;';
+        row.innerHTML = `
+            <span style="font-size:13px;">${label}</span>
+            <span style="font-size:12px;color:var(--text-secondary);font-variant-numeric:tabular-nums;">${mm}:${ss}</span>
+        `;
+        row.addEventListener('click', () => {
+            if (ytPlayer && ytPlayerReady) {
+                try { ytPlayer.seekTo(Math.max(0, (ev.streamTimeMs ?? 0) / 1000), true); ytPlayer.playVideo(); } catch (_) {}
+            }
+        });
+        rowsEl.appendChild(row);
+        _labsState.rowRefs.push(row);
+    }
 }
 function labsTick() {
     if (!ytPlayer || !ytPlayerReady) {
