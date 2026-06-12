@@ -112,6 +112,36 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
+
+// SSO bridge — native app appends #auth=<firebaseIdToken> to the WebView URL.
+// Mirrors production game.html's tryAppAuthHandoff so the labs page authenticates
+// as the same UID and the Firestore reads pass the team security rules.
+async function tryAppAuthHandoff() {
+  const hash = window.location.hash || '';
+  const m = hash.match(/[#&]auth=([^&]+)/);
+  if (!m) return false;
+  const idToken = decodeURIComponent(m[1]);
+  try {
+    const cleanHash = hash.replace(/[#&]auth=[^&]+/, '').replace(/^#$/, '');
+    history.replaceState(null, '', window.location.pathname + window.location.search + cleanHash);
+  } catch (_) {}
+  try {
+    const resp = await fetch('https://us-central1-scoreframe-deploy.cloudfunctions.net/mintAuthToken', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + idToken }
+    });
+    if (!resp.ok) { console.warn('[auth] mintAuthToken responded ' + resp.status); return false; }
+    const data = await resp.json();
+    if (!data.customToken) return false;
+    await auth.signInWithCustomToken(data.customToken);
+    console.log('[auth] SSO handoff complete');
+    return true;
+  } catch (e) {
+    console.warn('[auth] SSO handoff failed:', e);
+    return false;
+  }
+}
 
 // ── State ────────────────────────────────────────────────────────────
 const state = {
@@ -371,7 +401,10 @@ function showError(msg) {
   root.innerHTML = `<div class="empty-state">${escapeHtml(msg)}</div>`;
 }
 
-main();
+(async () => {
+  await tryAppAuthHandoff();
+  main();
+})();
 </script>
 </body>
 </html>
