@@ -1249,9 +1249,14 @@ function labsBuildAnnounceFeed() {
     if (document.getElementById('labsAnnounceFeed')) return;
     const stage = document.querySelector('.stage');
     if (!stage) return;
+    // Reserved-height container so adding rows never pushes the video
+    // down. Rows fill from the bottom up; empty slots stay invisible.
+    // 4 rows × ~46px (incl. gap) ≈ 184px — locked from the first render.
     const wrap = document.createElement('div');
     wrap.id = 'labsAnnounceFeed';
-    wrap.style.cssText = 'margin:8px 16px 0;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;overflow:hidden;min-height:0;';
+    wrap.style.cssText = 'margin:8px 16px 0;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;overflow:hidden;height:184px;flex:0 0 184px;';
+    // Build the bottom-of-video overlay popup container at the same time.
+    labsBuildVideoOverlay(stage);
     // Inject row animation CSS once.
     const style = document.createElement('style');
     style.textContent = `
@@ -1292,6 +1297,47 @@ function labsBuildAnnounceFeed() {
     stage.parentNode.insertBefore(wrap, stage);
     _labsState.announceFeed = wrap;
 }
+// Bottom-of-video popup overlay. Lives inside `.stage` so a YouTube
+// fullscreen toggle on our own "Theater" button (which fullscreens the
+// stage container, not the iframe directly) keeps the popups visible.
+// Native YT fullscreen button targets the iframe alone and unavoidably
+// covers our overlay — that's a structural limit of cross-origin iframes.
+function labsBuildVideoOverlay(stage) {
+    if (document.getElementById('labsVideoOverlay')) return;
+    // Make sure the stage is the positioning context for the absolute
+    // overlay; production CSS already has position:relative, but set
+    // defensively in case it changes upstream.
+    const cs = window.getComputedStyle(stage);
+    if (cs.position === 'static') stage.style.position = 'relative';
+    const ov = document.createElement('div');
+    ov.id = 'labsVideoOverlay';
+    ov.style.cssText = 'position:absolute;left:14px;right:14px;bottom:14px;display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:5;align-items:flex-start;';
+    stage.appendChild(ov);
+    _labsState.videoOverlay = ov;
+
+    const style = document.createElement('style');
+    style.textContent = `
+      #labsVideoOverlay .lov {
+        max-width: min(560px, 90%);
+        padding: 9px 14px; border-radius: 10px;
+        background: rgba(0,0,0,0.78);
+        color: #fff; font-size: 14px; font-weight: 700;
+        line-height: 1.2;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+        transform: translateY(12px); opacity: 0;
+        transition: transform 0.4s cubic-bezier(.2,.7,.2,1), opacity 0.4s ease;
+        border-left: 4px solid var(--accent);
+      }
+      #labsVideoOverlay .lov.lov-show { transform: translateY(0); opacity: 1; }
+      #labsVideoOverlay .lov.lov-fade { transform: translateY(-8px); opacity: 0; }
+      #labsVideoOverlay .lov.lov-fire { border-left-color: #FF5A28; }
+      #labsVideoOverlay .lov.lov-set  { border-left-color: #FFD700; background: rgba(20,15,0,0.82); }
+      #labsVideoOverlay .lov.lov-tie  { border-left-color: #50A0FF; }
+    `;
+    document.head.appendChild(style);
+}
 // Produce a message (text + tone) for an event from its payload + the
 // running window of prior events. Deterministic: same idx always yields
 // the same message so seek-and-resume stays consistent.
@@ -1300,6 +1346,9 @@ function labsGenerateAnnounceMessage(idx) {
     const p = ev.payload || {};
     const setIdx = p.setIndex ?? 0;
     const sideName = p.side === 'AWAY' ? _labsState.awayName : _labsState.homeName;
+    if (ev.eventType === 'vb_stat') {
+        return labsGenerateVbStatMessage(idx, p, sideName);
+    }
     const homeScore = p.homeScore ?? 0;
     const awayScore = p.awayScore ?? 0;
     // Streak: how many consecutive same-side points in this set ending at idx.
@@ -1368,6 +1417,106 @@ function labsGenerateAnnounceMessage(idx) {
     ];
     return { text: v[idx % v.length], tone: 'normal' };
 }
+// Stat-specific flavor. Counts repeat plays from the same player across
+// the events array so we can switch tone from "first hit" → "another one"
+// → "on fire". Per-player counts are scoped to the named player so a
+// crowded match doesn't smear streaks across sides.
+function labsGenerateVbStatMessage(idx, p, sideName) {
+    const stat = p.stat || '';
+    const name = (p.playerName || '').trim();
+    // Count this player's previous occurrences of THIS stat up to idx-1.
+    let playerCount = 1;
+    if (name) {
+        for (let i = 0; i < idx; i++) {
+            const q = _labsState.events[i];
+            if ((q.eventType || '') !== 'vb_stat') continue;
+            const qp = q.payload || {};
+            if ((qp.stat || '') !== stat) continue;
+            if ((qp.playerName || '').trim() === name) playerCount++;
+        }
+    }
+    // ── Aces ──────────────────────────────────────────────────────
+    if (stat === 'aces') {
+        if (name && playerCount >= 4) {
+            return { text: `🔥🔥 ${name} unstoppable — ${playerCount} aces!`, tone: 'fire' };
+        }
+        if (name && playerCount === 3) {
+            return { text: `🔥 ${name} on a serving spree — 3 aces!`, tone: 'fire' };
+        }
+        if (name && playerCount === 2) {
+            const v = [
+                `Another ACE by ${name}!`,
+                `${name} with ace #2!`,
+                `Back-to-back aces — ${name}!`,
+            ];
+            return { text: v[idx % v.length], tone: 'fire' };
+        }
+        if (name) {
+            const v = [
+                `ACE by ${name}! 🏐`,
+                `Service ACE — ${name}!`,
+                `${name} with the ACE!`,
+                `Unreturnable from ${name} — ACE!`,
+            ];
+            return { text: v[idx % v.length], tone: 'fire' };
+        }
+        return { text: `Ace · ${sideName}`, tone: 'fire' };
+    }
+    // ── Kills ─────────────────────────────────────────────────────
+    if (stat === 'kills') {
+        if (name && playerCount >= 5) {
+            return { text: `💥 ${name} is the show — ${playerCount} kills!`, tone: 'fire' };
+        }
+        if (name && playerCount >= 3) {
+            return { text: `🔨 ${name} hammering — kill #${playerCount}!`, tone: 'fire' };
+        }
+        if (name) {
+            const v = [
+                `KILL by ${name}!`,
+                `${name} puts it away`,
+                `Hammer from ${name}`,
+                `${name} crushes it`,
+                `Big swing from ${name} — kill`,
+            ];
+            return { text: v[idx % v.length], tone: 'normal' };
+        }
+        return { text: `Kill · ${sideName}`, tone: 'normal' };
+    }
+    // ── Blocks ────────────────────────────────────────────────────
+    if (stat === 'blocks') {
+        if (name && playerCount >= 3) {
+            return { text: `🧱 ${name} a wall — ${playerCount} blocks!`, tone: 'fire' };
+        }
+        if (name) {
+            const v = [
+                `BLOCK by ${name}! 🧱`,
+                `${name} stuffs it`,
+                `Big block from ${name}`,
+                `${name} rejects it!`,
+            ];
+            return { text: v[idx % v.length], tone: 'fire' };
+        }
+        return { text: `Block · ${sideName}`, tone: 'fire' };
+    }
+    // ── Assists ───────────────────────────────────────────────────
+    if (stat === 'assists') {
+        if (name) return { text: `${name} with the dish · assist`, tone: 'normal' };
+        return { text: `Assist · ${sideName}`, tone: 'normal' };
+    }
+    // ── Digs ──────────────────────────────────────────────────────
+    if (stat === 'digs') {
+        if (name) return { text: `${name} keeps it alive — dig`, tone: 'normal' };
+        return { text: `Dig · ${sideName}`, tone: 'normal' };
+    }
+    // ── Errors / missed serves (intentionally subdued) ────────────
+    if (stat === 'errors') {
+        return { text: name ? `Error from ${name}` : `${sideName} error`, tone: 'normal' };
+    }
+    if (stat === 'missedServes') {
+        return { text: name ? `Service miss · ${name}` : `${sideName} service miss`, tone: 'normal' };
+    }
+    return { text: `${sideName} · ${stat}`, tone: 'normal' };
+}
 function labsEmitAnnounceForEvent(idx) {
     // Set boundary → emit a "Set N to X" call BEFORE the first event of
     // the new set. Derived from the doc state, not from a dedicated event.
@@ -1418,6 +1567,28 @@ function labsPushAnnounceRow({ text, tone, streamTimeMs }) {
     // Trigger enter animation on next frame.
     requestAnimationFrame(() => row.classList.remove('lf-enter'));
     labsRecomputeAnnouncePositions();
+    // Also fire a transient popup over the video's lower edge for
+    // broadcast feel. Independent lifecycle — auto-fades after ~5s.
+    labsShowVideoOverlayPopup(text, tone);
+}
+function labsShowVideoOverlayPopup(text, tone) {
+    const ov = _labsState.videoOverlay;
+    if (!ov) return;
+    const pop = document.createElement('div');
+    pop.className = `lov${tone ? ' lov-' + tone : ''}`;
+    pop.textContent = text;
+    ov.appendChild(pop);
+    // Cap to 2 visible popups so the overlay never crowds the video.
+    while (ov.children.length > 2) {
+        const oldest = ov.firstChild;
+        oldest.classList.add('lov-fade');
+        setTimeout(() => { try { oldest.remove(); } catch (_) {} }, 420);
+    }
+    requestAnimationFrame(() => pop.classList.add('lov-show'));
+    setTimeout(() => {
+        pop.classList.add('lov-fade');
+        setTimeout(() => { try { pop.remove(); } catch (_) {} }, 420);
+    }, 5000);
 }
 function labsRecomputeAnnouncePositions() {
     // Newest row is at the bottom — give it pos=0 (full opacity), older
