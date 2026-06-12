@@ -2,409 +2,2815 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ScoreFrame Labs — Video-Synced Game Page</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
+<title>ScoreFrame — Game</title>
 <style>
-  :root {
-    --bg: #0D0D0D; --surface: #1A1A1A; --surface-2: #272727;
-    --on-surface: #F5F5F2; --on-surface-variant: #B5B5B5; --outline: #444444;
-    --primary: #FF9640; --live-red: #FF3B3B;
-  }
-  @media (prefers-color-scheme: light) {
-    :root { --bg: #F5F5F2; --surface: #FFFFFF; --surface-2: #EFEFEF;
-      --on-surface: #1A1A1A; --on-surface-variant: #555555; --outline: #CCCCCC; }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; padding: 0; background: var(--bg); color: var(--on-surface);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  .header { padding: 14px 16px; border-bottom: 1px solid var(--outline);
-    display: flex; align-items: center; gap: 10px; }
-  .labs-pill { background: var(--primary); color: #1A1A1A; padding: 3px 9px;
-    border-radius: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
-  .header h1 { font-size: 17px; font-weight: 600; margin: 0; flex: 1; }
-  .container { max-width: 900px; margin: 0 auto; padding: 16px; }
-  .video-wrap { position: relative; aspect-ratio: 16/9; background: #000;
-    border-radius: 12px; overflow: hidden; }
-  .video-wrap iframe { width: 100%; height: 100%; border: 0; }
-  .score-card { background: var(--surface); border: 1px solid var(--outline);
-    border-radius: 12px; padding: 18px; margin-top: 14px; }
-  .score-row { display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; }
-  .team { flex: 1; text-align: center; }
-  .team .name { font-size: 13px; color: var(--on-surface-variant); margin-bottom: 6px;
-    text-transform: uppercase; letter-spacing: 0.4px; }
-  .team .score { font-size: 64px; font-weight: 800; line-height: 1; }
-  .vs { font-size: 14px; color: var(--on-surface-variant); padding: 0 8px; }
-  .sets-row { display: flex; justify-content: center; gap: 8px; margin-top: 14px;
-    font-size: 13px; color: var(--on-surface-variant); }
-  .set-pill { padding: 4px 9px; background: var(--surface-2); border-radius: 6px;
-    border: 1px solid var(--outline); }
-  .set-pill.current { color: var(--on-surface); font-weight: 600;
-    border-color: var(--primary); }
-  .status-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
-    background: var(--surface); border: 1px solid var(--outline); border-radius: 10px;
-    margin-top: 14px; font-size: 12px; }
-  .live-dot { width: 8px; height: 8px; background: var(--live-red); border-radius: 50%;
-    box-shadow: 0 0 0 0 rgba(255, 59, 59, 0.55); animation: pulse 1.4s infinite; }
-  @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(255, 59, 59, 0.55); }
-    70% { box-shadow: 0 0 0 8px rgba(255, 59, 59, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 59, 59, 0); }
-  }
-  .timeline { background: var(--surface); border: 1px solid var(--outline);
-    border-radius: 10px; margin-top: 14px; padding: 12px; max-height: 320px;
-    overflow-y: auto; }
-  .timeline h3 { margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase;
-    color: var(--on-surface-variant); letter-spacing: 0.4px; }
-  .event-row { display: flex; align-items: center; justify-content: space-between;
-    padding: 7px 4px; border-bottom: 1px solid var(--outline); cursor: pointer;
-    font-size: 13px; }
-  .event-row:last-child { border-bottom: 0; }
-  .event-row:hover { background: var(--surface-2); }
-  .event-row.future { opacity: 0.4; }
-  .event-time { color: var(--on-surface-variant); font-variant-numeric: tabular-nums;
-    font-size: 12px; }
-  .empty-state { padding: 30px 16px; text-align: center; color: var(--on-surface-variant);
-    font-size: 13px; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg-deepest: #0D0D0D; --bg-deep: #141414; --bg-surface: #1E1E1E;
+    --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
+    --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
+    --success: #4CAF50; --error: #F44336; --recording-red: #CC2222;
+    --win-green: #2E7D32; --loss-red: #C62828; --tie-grey: #777777;
+}
+/* v14 — When this page is rendered inside the app (?theme=light|dark
+   appended by GamePageActivity / GamePageView), force that theme regardless
+   of the OS setting so the in-app WebView matches the app chrome instead
+   of whatever the phone happens to be doing. body[data-theme] is set
+   from the URL param before any rendering. */
+body[data-theme="dark"] {
+    --bg-deepest: #0D0D0D !important; --bg-deep: #141414 !important; --bg-surface: #1E1E1E !important;
+    --bg-elevated: #272727 !important; --accent: #FF9640 !important; --accent-dim: rgba(255,150,64,0.15) !important;
+    --text-primary: #E0E0E0 !important; --text-secondary: #999 !important; --text-muted: #666 !important;
+    --win-green: #2E7D32 !important; --loss-red: #C62828 !important; --tie-grey: #777777 !important;
+}
+body[data-theme="light"] {
+    --bg-deepest: #F5F5F2 !important; --bg-deep: #FFFFFF !important; --bg-surface: #FFFFFF !important;
+    --bg-elevated: #ECECE8 !important; --accent: #E47A1F !important; --accent-dim: rgba(228,122,31,0.15) !important;
+    --text-primary: #1A1A1A !important; --text-secondary: #555 !important; --text-muted: #888 !important;
+    --win-green: #1B5E20 !important; --loss-red: #B71C1C !important; --tie-grey: #888888 !important;
+}
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg-deepest: #F5F5F2; --bg-deep: #FFFFFF; --bg-surface: #FFFFFF;
+        --bg-elevated: #ECECE8; --accent: #E47A1F; --accent-dim: rgba(228,122,31,0.15);
+        --text-primary: #1A1A1A; --text-secondary: #555; --text-muted: #888;
+        --win-green: #1B5E20; --loss-red: #B71C1C; --tie-grey: #888888;
+    }
+}
+body.app .top-bar { display: none; }
+html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-deepest); color: var(--text-primary);
+    min-height: 100vh; overflow-x: hidden;
+}
+
+/* Top bar — slim brand + "Back to team" link */
+.top-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; background: var(--bg-deep);
+    border-bottom: 1px solid var(--bg-elevated);
+}
+.brand { text-decoration: none; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+.brand .accent { color: var(--accent); }
+.back-link {
+    margin-left: auto; font-size: 13px; color: var(--text-secondary);
+    text-decoration: none; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid var(--bg-elevated);
+}
+.back-link:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Hero — team identity + game title */
+.hero {
+    padding: 20px 24px; text-align: center;
+    background: linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-deepest) 100%);
+    border-bottom: 1px solid var(--bg-elevated);
+}
+.team-color-bar { height: 4px; border-radius: 2px; margin-bottom: 14px; max-width: 480px; margin-left: auto; margin-right: auto; }
+.hero-team { font-size: 13px; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+.hero-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+.hero-meta { font-size: 13px; color: var(--text-muted); }
+.live-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--recording-red); color: white; padding: 3px 10px;
+    border-radius: 10px; font-size: 11px; font-weight: 700; margin-bottom: 8px;
+    animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+
+/* Player stage — wraps the iframe with breathing room and a subtle accent.
+   Capped at 1100px so on big monitors the embed doesn't sprawl edge-to-edge
+   and lose its "broadcast" feel. */
+.stage {
+    max-width: 1100px; margin: 0 auto; padding: 20px 16px 0;
+}
+.video-embed-wrap {
+    position: relative; width: 100%; padding-bottom: 56.25%; /* 16:9 */
+    background: #000; border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--bg-elevated);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+}
+.video-embed-wrap iframe {
+    position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+}
+.video-cap {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    margin-top: 8px; padding: 0 4px; font-size: 12px; color: var(--text-secondary);
+}
+.platform-pill {
+    padding: 2px 8px; border-radius: 4px; font-size: 10px;
+    background: var(--bg-elevated); color: var(--text-secondary); font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+/* Playlist controls — shown below the iframe when a game has 2+ streams.
+   Lets viewers manually jump to the next stream and toggles auto-advance
+   on YouTube end-of-video events. */
+.playlist-controls {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-top: 10px; padding: 10px 12px;
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+    border-radius: 10px; font-size: 12px;
+}
+.playlist-pos { color: var(--text-secondary); font-weight: 600; letter-spacing: 0.04em; }
+.playlist-pos .current { color: var(--accent); }
+.playlist-btn {
+    background: var(--bg-elevated); color: var(--text-primary);
+    border: 1px solid var(--bg-elevated); border-radius: 8px;
+    padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.playlist-btn:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
+.playlist-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+.playlist-autoplay {
+    display: inline-flex; align-items: center; gap: 6px; margin-left: auto;
+    color: var(--text-secondary); cursor: pointer; user-select: none;
+}
+.playlist-autoplay input { accent-color: var(--accent); cursor: pointer; }
+.no-stream-card {
+    width: 100%; padding: 48px 24px; text-align: center;
+    background: var(--bg-surface); border-radius: 14px;
+    border: 1px solid var(--bg-elevated);
+}
+.no-stream-card .emoji { font-size: 36px; margin-bottom: 8px; }
+.no-stream-card .label { font-size: 14px; color: var(--text-secondary); }
+
+/* Upcoming-game pill in the hero (mirrors .live-pill but uses the
+   accent orange instead of recording red). Used when the page is
+   loaded for a future scheduled game that hasn't kicked off yet. */
+.upcoming-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent); color: #1A1A1A; padding: 3px 10px;
+    border-radius: 10px; font-size: 11px; font-weight: 700; margin-bottom: 8px;
+    letter-spacing: 0.04em;
+}
+
+/* Countdown card replacing the player when a game hasn't started yet. */
+.countdown-card {
+    width: 100%; padding: 36px 20px; text-align: center;
+    background: var(--bg-surface); border-radius: 14px;
+    border: 1px solid var(--bg-elevated);
+}
+.countdown-card .label-top {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px;
+}
+.countdown-card .matchup {
+    font-size: 18px; font-weight: 700; margin-bottom: 4px;
+}
+.countdown-card .when {
+    font-size: 13px; color: var(--text-secondary); margin-bottom: 18px;
+}
+.countdown-card .count {
+    display: flex; justify-content: center; gap: 18px; flex-wrap: wrap;
+}
+.countdown-card .count .seg { min-width: 64px; }
+.countdown-card .count .num {
+    font-size: 32px; font-weight: 800; color: var(--accent);
+    font-variant-numeric: tabular-nums; line-height: 1;
+}
+.countdown-card .count .unit {
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px;
+}
+
+/* Pre-stream card — shows the YouTube link a broadcaster pre-set at
+   schedule time so fans can bookmark / set reminder before the game.
+   Same URL gets reused at match start (MainActivity reuses ytBroadcastId). */
+.prestream-card {
+    margin-top: 12px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--accent);
+    text-align: center;
+}
+.prestream-label {
+    font-size: 12px; font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 8px;
+}
+.prestream-link {
+    display: inline-block;
+    padding: 10px 18px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #1A1A1A;
+    font-size: 15px; font-weight: 700;
+    text-decoration: none;
+}
+.prestream-link:hover { filter: brightness(1.08); }
+.prestream-hint {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.prestream-actions {
+    margin-top: 12px;
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+}
+.prestream-actions button {
+    padding: 6px 12px; border-radius: 6px;
+    font-size: 12px; font-weight: 700;
+    color: var(--accent); background: transparent;
+    border: 1px solid var(--accent);
+    cursor: pointer;
+}
+.prestream-actions button:hover { background: var(--accent-dim); }
+.prestream-actions button:active { transform: scale(0.98); }
+
+/* Body — game summary + stats stacked under the player */
+.body {
+    max-width: 1100px; margin: 0 auto; padding: 16px 16px 32px;
+    display: grid; gap: 14px;
+}
+.card {
+    background: var(--bg-surface); border-radius: 12px;
+    padding: 16px 18px; border: 1px solid var(--bg-elevated);
+    /* 2026-06-04 — Grid children have min-width: auto by default,
+       which means the card refuses to shrink below its intrinsic
+       content width. On narrow screens a wide stats table (BB has 11
+       columns, VB 9) pushed the entire card past viewport, even
+       though .box-table-wrap had overflow-x: auto — the wrap was
+       never constrained, so its scroll never triggered. min-width: 0
+       lets the card honor its grid track width; the inner wrap then
+       actually scrolls horizontally as designed. */
+    min-width: 0;
+}
+.card .label {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px;
+}
+
+.scoreline { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.team-block { flex: 1; min-width: 140px; }
+.team-block .name { font-size: 16px; font-weight: 700; }
+.team-block .score { font-size: 38px; font-weight: 800; line-height: 1; margin-top: 4px; }
+.team-block .score.winner { color: var(--accent); }
+.team-block .score.loser { color: var(--text-muted); }
+.vs { font-size: 12px; color: var(--text-muted); padding: 0 8px; }
+
+/* Per-set line score for VB games — sets-won is the big number above; this is
+   the points-per-set breakdown rendered as winner-coloured pairs. */
+.set-line {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px;
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid var(--bg-elevated);
+    font-size: 14px; font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
+}
+.set-line .set-pair { font-weight: 700; }
+.set-line .set-pair.set-home { color: var(--accent); }
+.set-line .set-pair.set-away { color: var(--text-secondary); }
+.set-line .set-pair.set-tie { color: var(--text-muted); }
+.set-line .set-sep { color: var(--text-muted); }
+
+.bowling-list { display: grid; gap: 10px; }
+.bowling-row {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: baseline;
+    padding: 8px 12px; background: var(--bg-elevated); border-radius: 8px;
+}
+.bowling-name { font-weight: 700; }
+.bowling-series { color: var(--accent); font-weight: 700; }
+.bowling-detail { font-size: 11px; color: var(--text-secondary); }
+/* v1.1.390 — Per-bowler frame-level stats row. Sits below the per-game
+   scores. Comma-separated chips. Muted color so the series total stays
+   the visual headline. */
+.bowling-stats {
+    grid-column: 1 / -1; font-size: 11px; color: var(--text-secondary);
+    margin-top: 2px; display: flex; flex-wrap: wrap; gap: 8px;
+}
+.bowling-stats .chip { white-space: nowrap; }
+.bowling-stats .chip strong { color: var(--text-primary); font-weight: 700; }
+
+/* v15 — Traditional 10-frame bowling scoreboard. Renders when a bowler's
+   stats include `framesByGame` (Pro feature, persisted by Android v1.1.391+).
+   Each game gets its own row of 10 frame cells with roll marks (X/spare/dash)
+   in the top half and cumulative score in the bottom half. Frame 10 is wider
+   to fit the 3-roll bonus columns. Split pins get a circle outline; converted
+   splits show the circle in the accent color. */
+.bowling-frames-wrap {
+    grid-column: 1 / -1; margin-top: 6px;
+    display: grid; gap: 6px;
+}
+/* v1.1.510 — Grid layout (was flex) so frames 1-9 are mathematically
+   equal width and frame 10 is exactly 1.5x. Content-driven sizing
+   couldn't guarantee this with flex when some rolls had pin-circles or
+   wider numeric values. The has-label / no-label variants are split out
+   so the column count matches whether the per-game label cell renders. */
+.bowling-frames-row {
+    display: grid;
+    grid-template-columns: auto repeat(9, 1fr) 1.5fr;
+    align-items: stretch;
+    background: var(--bg-deep); border: 1px solid var(--bg-elevated);
+    border-radius: 4px; overflow: hidden;
+    font-variant-numeric: tabular-nums;
+}
+.bowling-frames-row.no-label { grid-template-columns: repeat(9, 1fr) 1.5fr; }
+.bowling-frames-row .game-label {
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 6px;
+    background: var(--bg-elevated); color: var(--text-secondary);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+}
+/* Rolls on top, score on bottom — traditional scoresheet shape.
+   Earlier we used `aspect-ratio: 1 / 1` to force square frames, but
+   on mobile that compressed the rolls row down to ~12px, which was
+   shorter than the roll glyph height — content then overflowed
+   visually into the cum row below (Eric: "putting dashes in the
+   wrong row"). Fixed-height rows guarantee each section has room
+   regardless of frame width. Frames end up slightly wider than tall
+   on narrow viewports; that's the trade for legibility. */
+/* v26 — Reverted inner-frame layout to the original flex-column with
+   18px rolls. The CSS Grid + aspect-ratio + flex-column iterations I
+   tried (v23-v25) each broke the layout in a different way; rolling
+   back to the pre-v22 inner-frame structure that was visually correct
+   before. The OUTER row stays on grid (added in v23) since that's
+   what fixed Eric's original "frames all different sizes" complaint
+   — grid guarantees mathematical equal column widths.
+   The only intentional changes vs pre-v22:
+     • outer row is grid not flex (column equality)
+     • dash fallback for missing rolls in tallied frames (JS) */
+.bowling-frame {
+    display: flex; flex-direction: column;
+    border-left: 1px solid var(--bg-elevated);
+    min-width: 0;
+}
+.bowling-frame .rolls {
+    display: flex; height: 18px; border-bottom: 1px solid var(--bg-elevated);
+}
+.bowling-frame .roll {
+    flex: 1 1 0; min-width: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--text-primary);
+    border-left: 1px solid var(--bg-elevated);
+}
+.bowling-frame .roll:first-child { border-left: none; }
+.bowling-frame .roll.strike { color: var(--accent); }
+.bowling-frame .roll.spare { color: var(--accent); }
+/* v30 — Per-type roll styling. The earlier all-using-`empty` rule
+   ran into the global `.empty, .loading { padding: 60px 24px }` page-
+   state rule which clipped the marks out of view. New classes split
+   the roles:
+     • .roll.gutter (-) and .roll.dot (·) — quietly muted grey
+     • .roll.foul (F) — loud red, bowler took a step over the line
+     • split pin-circle — red outline (open split = warning)
+     • split pin-circle.converted — accent orange (picked up = good)
+*/
+.bowling-frame .roll.gutter,
+.bowling-frame .roll.dot { color: var(--text-muted); }
+.bowling-frame .roll.foul {
+    color: #FF4747;
+    font-weight: 900;
+}
+/* Strike that spans the entire frame width (non-frame-10). Bigger glyph,
+   centered — easier to scan a strike across the strip. */
+.bowling-frame .roll.strike-full {
+    flex: 1 1 100%;
+    font-size: 13px;
+}
+.bowling-frame .roll .pin-circle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 13px; height: 13px; border-radius: 50%;
+    border: 1.5px solid #FF4747; color: #FF4747; line-height: 1;
+    font-size: 9px;
+    flex-shrink: 0;
+    font-weight: 800;
+}
+.bowling-frame .roll .pin-circle.converted { border-color: var(--accent); color: var(--accent); }
+.bowling-frame .cum {
+    flex: 1 1 auto;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--text-primary);
+    padding: 2px 0; min-height: 20px;
+}
+.bowling-frame .cum.empty {
+    color: var(--text-muted);
+    font-weight: 500;
+    padding: 0 !important; /* v29 — same .empty/.loading padding-bomb fix */
+}
+@media (max-width: 540px) {
+    .bowling-frame .roll { font-size: 10px; }
+    .bowling-frame .cum { font-size: 12px; }
+    .bowling-frames-row .game-label { font-size: 9px; padding: 0 4px; }
+    .bowling-frame .roll .pin-circle { width: 11px; height: 11px; font-size: 8px; }
+}
+
+.meta-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;
+}
+.meta-item { background: var(--bg-elevated); border-radius: 8px; padding: 10px 12px; }
+.meta-item .k { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.meta-item .v { font-size: 14px; color: var(--text-primary); margin-top: 2px; }
+
+/* 2026-06-02 — Box score. Two side-stacked tables (HOME / AWAY) with
+   sport-specific columns. Header row uses the team color as the
+   accent so HOME / AWAY read at a glance. Player rows scrollable
+   horizontally on narrow screens — the column set is intentionally
+   wide for stats-heavy sports (basketball, baseball). */
+.box-side {
+    margin-bottom: 16px;
+}
+.box-side:last-child { margin-bottom: 0; }
+.box-side-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 13px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    color: white;
+}
+.box-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.box-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 12px; min-width: 100%;
+}
+.box-table th, .box-table td {
+    padding: 6px 8px; text-align: right;
+    border-bottom: 1px solid var(--bg-elevated);
+    white-space: nowrap;
+}
+.box-table th {
+    font-size: 10px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--bg-elevated);
+}
+.box-table td.bx-name, .box-table th.bx-name {
+    text-align: left;
+    color: var(--text-primary); font-weight: 600;
+    min-width: 110px;
+}
+.box-table td.bx-num, .box-table th.bx-num {
+    width: 28px; text-align: center;
+    color: var(--text-muted); font-weight: 700;
+}
+.box-table td.bx-stat { font-variant-numeric: tabular-nums; }
+.box-table tfoot td {
+    font-weight: 800; color: var(--accent);
+    border-top: 2px solid var(--accent);
+    border-bottom: none;
+    background: rgba(255,150,64,0.08);
+}
+
+/* Highlights — clickable chips that seek the YouTube/Twitch player to the
+   moment the broadcaster tagged. Each chip is a pill with description,
+   score-at-time, and a HH:MM:SS timestamp on the right. */
+.highlights-list { display: grid; gap: 8px; }
+.highlight-chip {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+    padding: 10px 14px; border-radius: 10px;
+    background: var(--bg-elevated); border: 1px solid var(--bg-elevated);
+    color: var(--text-primary); cursor: pointer;
+    text-align: left; font-size: 13px;
+    transition: border-color 120ms ease, transform 80ms ease;
+}
+.highlight-chip:hover { border-color: var(--accent); }
+.highlight-chip:active { transform: scale(0.99); }
+.highlight-chip .star { font-size: 18px; }
+.highlight-chip .body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.highlight-chip .desc { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.highlight-chip .score { color: var(--text-secondary); font-size: 11px; }
+.highlight-chip .time {
+    font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 700;
+    font-size: 12px; padding: 4px 8px; border-radius: 6px;
+    background: var(--accent-dim);
+}
+.highlights-empty {
+    color: var(--text-muted); font-size: 12px; padding: 8px 0;
+}
+
+.stream-grid {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+}
+.stream-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    text-decoration: none; padding: 8px 12px; border-radius: 8px;
+    background: var(--bg-elevated); color: var(--text-primary);
+    font-size: 12px; font-weight: 600;
+    border: 1px solid var(--bg-elevated);
+}
+.stream-link:hover { border-color: var(--accent); color: var(--accent); }
+.stream-link.primary { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+.share-row {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;
+}
+.share-btn {
+    flex: 1; min-width: 140px;
+    padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 700;
+    border: 1px solid var(--bg-elevated); background: var(--bg-elevated);
+    color: var(--text-primary); cursor: pointer;
+}
+.share-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.empty, .loading { text-align: center; padding: 60px 24px; color: var(--text-muted); font-size: 14px; }
+.spinner {
+    width: 32px; height: 32px; border: 3px solid var(--bg-elevated);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.footer {
+    text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px;
+    border-top: 1px solid var(--bg-elevated); margin-top: 12px;
+}
+.footer a { color: var(--accent); text-decoration: none; }
+.footer .page-version {
+    display: inline-block; margin-left: 8px;
+    font-size: 10px; color: var(--text-muted); opacity: 0.6;
+}
+
+/* Mobile tweaks — at narrow widths we lose the side-by-side scoreline
+   and stack everything vertically for thumb-readability. */
+@media (max-width: 540px) {
+    .hero-title { font-size: 19px; }
+    .scoreline { flex-direction: column; align-items: stretch; }
+    .vs { display: none; }
+}
 </style>
+<script>
+// v14 — App-injected theme override. GamePageActivity (Android) and
+// GamePageView (iOS) append `?theme=light|dark` so the embedded WebView
+// follows the *app's* current state instead of the OS setting. Runs
+// inline before paint so there's no flash of wrong theme.
+(function() {
+    try {
+        var t = new URLSearchParams(location.search).get('theme');
+        if (t === 'light' || t === 'dark') {
+            // Set on <html> first so the document-root cascade picks it up
+            // immediately; the body[data-theme] CSS selectors will resolve
+            // once <body> exists.
+            document.documentElement.setAttribute('data-theme', t);
+            document.addEventListener('DOMContentLoaded', function() {
+                document.body.setAttribute('data-theme', t);
+            });
+        }
+    } catch (e) {}
+})();
+</script>
 </head>
 <body>
 
-<div class="header">
-  <span class="labs-pill">LABS</span>
-  <h1>Video-Synced Game</h1>
+<div class="top-bar">
+    <a class="brand" href="/">Score<span class="accent">Frame</span></a>
+    <a class="back-link" id="backLink" href="/">← Back</a>
 </div>
 
-<div class="container" id="root">
-  <div class="empty-state">Loading…</div>
+<div id="loadingState" class="loading">
+    <div class="spinner"></div>
+    <div>Loading game...</div>
 </div>
 
-<!-- Firebase v8 compat (matches production game.html) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<div id="notFound" style="display:none;" class="loading">
+    <div style="font-size:36px;margin-bottom:8px;">🤷</div>
+    <div>We couldn't find this game.</div>
+    <div style="margin-top:12px;"><a id="notFoundBack" class="back-link" href="/">← Back to team hub</a></div>
+</div>
 
-<script>
-/**
- * ScoreFrame Labs — Video-Synced Game Page.
- *
- * Reads gameDoc.events (array of TimelineEvent) and the embedded YouTube
- * watch URL. Subscribes to the YT player's currentTime via the iframe
- * API and renders state in lockstep with the video.
- *
- * Phase 1: volleyball only. Other sports get a "this feature is volleyball-
- * only in Labs Phase 1" message.
- *
- * Event shape (matches TimelineEvent.kt / TimelineEvent.swift):
- *   { id, sport, eventType, streamTimeMs, wallClockMs, videoIndex, payload }
- *
- * For VB "point" events, payload carries:
- *   { side: "HOME"|"AWAY", setIndex: Int, homeScore: Int, awayScore: Int }
- */
+<!-- v1.1.389 — Sign-in card for private hubs. Shown when the Firestore
+     read returns permission-denied AND the user isn't signed in. -->
+<div id="signInState" style="display:none;" class="loading">
+    <div style="font-size:36px;margin-bottom:8px;">🔒</div>
+    <div style="font-weight:700;font-size:16px;color:var(--text-primary);margin-bottom:4px;">Private team page</div>
+    <div style="margin-bottom:16px;">Sign in to view this team's games. You'll need to be the team owner, a manager, or an approved follower.</div>
+    <button id="signInGoogleBtn" type="button" style="
+        background:#FFFFFF;color:#1A1A1A;border:none;border-radius:8px;
+        padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;
+        display:inline-flex;align-items:center;gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.98 10.98 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A10.98 10.98 0 0 0 1 12c0 1.77.42 3.44 1.18 4.93l3.66-2.83z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.83C6.71 7.31 9.14 5.38 12 5.38z"/></svg>
+        Sign in with Google
+    </button>
+</div>
 
+<div id="gameView" style="display:none;">
+    <!-- Hero (team identity + game title) -->
+    <div class="hero">
+        <div id="liveSlot"></div>
+        <div class="team-color-bar" id="colorBar"></div>
+        <!-- v18 — Event banner above the team identity. Populated from
+             game.eventLabel / eventName when present; hidden otherwise.
+             Sits above heroTeam so a tournament / conference label is
+             the first thing the viewer sees on the page. -->
+        <div id="labsPill" style="display:none;margin-bottom:8px;">
+            <span style="display:inline-block;padding:3px 9px;border-radius:8px;background:var(--accent);color:#1A1A1A;font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;">🧪 Labs · Video-Synced Game Page</span>
+        </div>
+        <div id="heroEvent" style="display:none;font-size:13px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;"></div>
+        <div class="hero-team" id="heroTeam"></div>
+        <div class="hero-title" id="heroTitle"></div>
+        <div class="hero-meta" id="heroMeta"></div>
+    </div>
+
+    <!-- Player stage -->
+    <div class="stage">
+        <div id="playerSlot"></div>
+        <div class="video-cap">
+            <div id="streamPlatformPill"></div>
+            <div id="streamCaption"></div>
+        </div>
+        <!-- Playlist controls (only shown when multiple streams) -->
+        <div id="playlistControls" class="playlist-controls" style="display:none;">
+            <div class="playlist-pos" id="playlistPos"></div>
+            <button class="playlist-btn" id="playlistPrevBtn" type="button">‹ Prev</button>
+            <button class="playlist-btn" id="playlistNextBtn" type="button">Next ›</button>
+            <label class="playlist-autoplay">
+                <input type="checkbox" id="playlistAutoplay" checked>
+                <span>Auto-play next</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Body -->
+    <div class="body">
+        <!-- Final score / scoreline -->
+        <div class="card" id="scoreCard" style="display:none;">
+            <div class="label">Final</div>
+            <div id="scoreContent"></div>
+        </div>
+
+        <!-- Game info -->
+        <div class="card" id="metaCard" style="display:none;">
+            <div class="label">Game Info</div>
+            <div class="meta-grid" id="metaGrid"></div>
+        </div>
+
+        <!-- 2026-06-02 — Box score per sport. Lists every participant
+             (HOME side first, then AWAY) with a sport-specific column
+             set built from participants[].stats. Bowling already has
+             its own per-frame visualization in the score card so this
+             section stays hidden for bowling games. -->
+        <div class="card" id="boxScoreCard" style="display:none;">
+            <div class="label">Box Score</div>
+            <div id="boxScoreContent"></div>
+        </div>
+
+        <!-- 2026-06-09 — Per-event scoring summary (Soccer's first user).
+             Hidden by default; renderScoringSummary() reveals it when the
+             game doc carries a non-empty scoringEvents[] array. Each row
+             renders team / scorer / clock and (when present) a ▶ link to
+             the goal moment inside the recorded video. -->
+        <div class="card" id="scoringSummaryCard" style="display:none;">
+            <div class="label" id="scoringSummaryLabel">Goals</div>
+            <div id="scoringSummaryContent"></div>
+        </div>
+
+        <!-- 2026-06-09 — Match Stats card (sport-specific team totals).
+             Soccer first: SOG / Corners / Fouls / Offsides / Cards /
+             Saves rendered as a side-by-side comparison with team
+             colors. Hidden by default; renderMatchStats() reveals it
+             when the sport has a stat payload to show. -->
+        <div class="card" id="matchStatsCard" style="display:none;">
+            <div class="label" id="matchStatsLabel">Match Stats</div>
+            <div id="matchStatsContent"></div>
+        </div>
+
+        <!-- 2026-06-09 — Penalty shootout card (soccer playoffs).
+             Hidden unless game.sportSpecificStats has PK attempts. -->
+        <div class="card" id="pkShootoutCard" style="display:none;">
+            <div class="label">Penalty Shootout</div>
+            <div id="pkShootoutContent"></div>
+        </div>
+
+        <!-- ✨ AI Recap — generated in-app via the Labs feature and
+             persisted on the game doc. Hidden by default; revealed by
+             load() when game.aiRecap is present. -->
+        <div class="card" id="aiRecapCard" style="display:none;">
+            <div class="label">✨ AI Recap</div>
+            <div id="aiRecapText" style="font-size:15px;line-height:1.55;color:var(--text-primary);"></div>
+        </div>
+
+        <!-- Highlights — chips that seek the YouTube embed to the moment
+             the broadcaster tagged during the live stream. -->
+        <div class="card" id="highlightsCard" style="display:none;">
+            <div class="label">Highlights</div>
+            <div class="highlights-list" id="highlightsList"></div>
+        </div>
+
+        <!-- Streams (all platforms) -->
+        <div class="card" id="streamsCard" style="display:none;">
+            <div class="label">Watch &amp; Replays</div>
+            <div class="stream-grid" id="streamGrid"></div>
+        </div>
+
+        <!-- Share -->
+        <div class="card">
+            <div class="label">Share This Game</div>
+            <div class="share-row">
+                <button class="share-btn" onclick="copyLink(this)">🔗 Copy Link</button>
+                <button class="share-btn" onclick="shareNative()">📤 Share</button>
+                <a class="share-btn" id="hubLink" href="/" style="text-align:center;text-decoration:none;line-height:1;">🏟️ View Team Page</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    Powered by <a href="https://scoreframe.app">ScoreFrame</a>
+    <span class="page-version">game.html v35</span>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+// v1.1.389 — Auth imports added so private-hub games (visibility !== 'public')
+// can be viewed by their owner / approved subscribers after signing in.
+// Without this, the v1.1.372 Firestore privacy rules block every browser
+// read against a private team and game.html silently shows "not found."
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
+    signInWithCustomToken,
+    GoogleAuthProvider, onAuthStateChanged,
+    setPersistence, browserLocalPersistence }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+// Same Firebase project as team.html / watch.html — single source of truth.
 const firebaseConfig = {
-  apiKey: "AIzaSyDc-vY8XmgI3z0_tD4o5w-RcL6tvSeIE-A",
-  authDomain: "scoreframe-deploy.firebaseapp.com",
-  projectId: "scoreframe-deploy",
-  storageBucket: "scoreframe-deploy.appspot.com",
-  messagingSenderId: "728886280072",
-  appId: "1:728886280072:web:0050478669b89fc76b043d"
+    apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+    authDomain: "scoreframe-deploy.firebaseapp.com",
+    databaseURL: "https://scoreframe-deploy-default-rtdb.firebaseio.com",
+    projectId: "scoreframe-deploy",
+    storageBucket: "scoreframe-deploy.firebasestorage.app",
+    messagingSenderId: "728886280072",
+    appId: "1:728886280072:android:0050478669b89fc76b043d"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence:', e));
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+// Safari / iOS / in-app browsers block popup auth; fall back to redirect there.
+const _ua = navigator.userAgent || '';
+const _useRedirectAuth = /iP(hone|ad|od)|Safari/i.test(_ua) && !/Chrome|CriOS|FxiOS/i.test(_ua);
+getRedirectResult(auth).catch(e => {
+    if (e && e.code !== 'auth/no-auth-event') console.warn('[auth] Redirect result:', e);
+});
+let currentUser = null;
 
-// SSO bridge — native app appends #auth=<firebaseIdToken> to the WebView URL.
-// Mirrors production game.html's tryAppAuthHandoff so the labs page authenticates
-// as the same UID and the Firestore reads pass the team security rules.
+// 2026-06-09 — Token-refresh-retry wrapper for Firestore reads. See
+// team.html for the full rationale; in short, the in-app WebView
+// wrapper re-executes the page on `wv.goBack()` and the cached ID
+// token can race the subcollection queries, surfacing as a permission-
+// denied even for managers + approved subscribers. This wrapper catches
+// permission-denied, force-refreshes the token via getIdToken(true),
+// and retries once.
+async function retryOnAuthDeny(label, fn) {
+    try {
+        return await fn();
+    } catch (e) {
+        const code = String(e?.code || e?.message || '').toLowerCase();
+        const looksLikeDeny = code.includes('permission') || code.includes('denied');
+        if (!looksLikeDeny || !currentUser) throw e;
+        console.warn(`[${label}] permission-denied — refreshing ID token + retrying once`);
+        try { await currentUser.getIdToken(true); }
+        catch (refreshErr) { console.warn(`[${label}] token refresh failed:`, refreshErr); }
+        return await fn();
+    }
+}
+
+// v1.1.389 — SSO bridge. The native app appends #auth=<firebaseIdToken>
+// to the WebView URL before loading. We detect that hash, exchange the
+// ID token for a custom token via Cloud Function, then signInWithCustom
+// Token so the WebView authenticates as the same UID as the app.
+// Returns a promise that resolves to true if a token was found AND
+// successfully consumed (callers should defer load() until then).
 async function tryAppAuthHandoff() {
-  const hash = window.location.hash || '';
-  const m = hash.match(/[#&]auth=([^&]+)/);
-  if (!m) return false;
-  const idToken = decodeURIComponent(m[1]);
-  try {
-    const cleanHash = hash.replace(/[#&]auth=[^&]+/, '').replace(/^#$/, '');
-    history.replaceState(null, '', window.location.pathname + window.location.search + cleanHash);
-  } catch (_) {}
-  try {
-    const resp = await fetch('https://us-central1-scoreframe-deploy.cloudfunctions.net/mintAuthToken', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + idToken }
+    const hash = window.location.hash || '';
+    const m = hash.match(/[#&]auth=([^&]+)/);
+    if (!m) return false;
+    const idToken = decodeURIComponent(m[1]);
+    // Strip the hash immediately so it doesn't linger in browser history,
+    // get re-shared via copy-link, or accidentally end up in screen
+    // recordings of the page.
+    try {
+        const cleanHash = hash.replace(/[#&]auth=[^&]+/, '').replace(/^#$/, '');
+        history.replaceState(null, '', window.location.pathname + window.location.search + cleanHash);
+    } catch (_) {}
+    try {
+        const resp = await fetch('https://us-central1-scoreframe-deploy.cloudfunctions.net/mintAuthToken', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + idToken }
+        });
+        if (!resp.ok) {
+            console.warn('[auth] mintAuthToken responded ' + resp.status);
+            return false;
+        }
+        const data = await resp.json();
+        if (!data.customToken) return false;
+        await signInWithCustomToken(auth, data.customToken);
+        console.log('[auth] SSO handoff complete');
+        return true;
+    } catch (e) {
+        console.warn('[auth] SSO handoff failed:', e);
+        return false;
+    }
+}
+
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const hubCode = (params.get('team') || params.get('hub') || '').trim().toUpperCase();
+const gameId = (params.get('game') || params.get('id') || '').trim();
+// v13 — Android WebView wrapper appends ?app=1; hide the in-page top-bar
+// since the app already shows its own chrome.
+if (params.get('app') === '1') document.body.classList.add('app');
+
+const sportEmoji = s => ({
+    GENERIC:'🎯', VOLLEYBALL:'🏐', BOWLING:'🎳', BASKETBALL:'🏀',
+    SOCCER:'⚽', FOOTBALL:'🏈', BASEBALL:'⚾', SOFTBALL:'🥎',
+    TENNIS:'🎾', PICKLEBALL:'🏓', HOCKEY:'🏒', LACROSSE:'🥍'
+}[s] || '🏟️');
+
+const sportName = s => ({
+    GENERIC:'Game', VOLLEYBALL:'Volleyball', BOWLING:'Bowling', BASKETBALL:'Basketball',
+    SOCCER:'Soccer', FOOTBALL:'Football', BASEBALL:'Baseball', SOFTBALL:'Softball',
+    TENNIS:'Tennis', PICKLEBALL:'Pickleball', HOCKEY:'Hockey', LACROSSE:'Lacrosse'
+}[s] || 'Sport');
+
+function formatDate(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return d.toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit'
     });
-    if (!resp.ok) { console.warn('[auth] mintAuthToken responded ' + resp.status); return false; }
-    const data = await resp.json();
-    if (!data.customToken) return false;
-    await auth.signInWithCustomToken(data.customToken);
-    console.log('[auth] SSO handoff complete');
-    return true;
-  } catch (e) {
-    console.warn('[auth] SSO handoff failed:', e);
+}
+
+// ── Embed helpers ─────────────────────────────────────────────────────
+// Same shape as team.html so the experience is consistent. Extracted into
+// game.html so this page is self-contained and doesn't break if team.html
+// changes.
+
+function detectPlatform(url) {
+    if (!url) return 'custom';
+    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+    if (url.includes('twitch.tv')) return 'twitch';
+    if (url.includes('facebook.com') || url.includes('fb.watch')) return 'facebook';
+    if (url.includes('photos.app.goo.gl') || url.includes('photos.google.com')) return 'google_photos';
+    return 'custom';
+}
+
+function platformLabel(p) {
+    return { youtube: 'YouTube', twitch: 'Twitch', facebook: 'Facebook',
+             google_photos: 'Google Photos', ivs: 'ScoreFrame Live' }[p] || 'Link';
+}
+
+function extractYouTubeId(url) {
+    if (!url) return null;
+    const patterns = [
+        /[?&]v=([A-Za-z0-9_-]{11})/,
+        /youtu\.be\/([A-Za-z0-9_-]{11})/,
+        /youtube\.com\/live\/([A-Za-z0-9_-]{11})/,
+        /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/,
+        /youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/,
+    ];
+    for (const r of patterns) {
+        const m = url.match(r);
+        if (m) return m[1];
+    }
+    return null;
+}
+
+function extractTwitchTarget(url) {
+    if (!url) return null;
+    let m = url.match(/twitch\.tv\/videos\/(\d+)/);
+    if (m) return { type: 'video', id: m[1] };
+    m = url.match(/twitch\.tv\/[^/]+\/clip\/([A-Za-z0-9_-]+)/);
+    if (m) return { type: 'clip', id: m[1] };
+    m = url.match(/twitch\.tv\/([A-Za-z0-9_]+)\/?$/);
+    if (m) return { type: 'channel', id: m[1] };
+    return null;
+}
+
+function embedParentHost() { return window.location.hostname || 'scoreframe.app'; }
+
+function canEmbed(url, platform) {
+    const p = platform || detectPlatform(url || '');
+    if (p === 'youtube') return !!extractYouTubeId(url);
+    if (p === 'twitch')  return !!extractTwitchTarget(url);
     return false;
-  }
 }
 
-// ── State ────────────────────────────────────────────────────────────
-const state = {
-  gameDoc: null,
-  events: [],
-  renderIndex: 0,
-  ytPlayer: null,
-  ytPlayerReady: false,
-  syncTimer: null,
-  initialState: { homeScore: 0, awayScore: 0, currentSet: 1, homeSets: 0, awaySets: 0 },
-  live: { homeScore: 0, awayScore: 0, currentSet: 1, homeSets: 0, awaySets: 0,
-    homeScoreBySet: [], awayScoreBySet: [] },
-};
-
-// ── Entry ────────────────────────────────────────────────────────────
-async function main() {
-  const params = new URLSearchParams(window.location.search);
-  const hubCode = params.get('team') || params.get('hub') || '';
-  const gameId = params.get('game') || '';
-  if (!hubCode || !gameId) {
-    showError('Missing team or game URL parameters. Expected: ?team=HUBCODE&game=GAMEID');
-    return;
-  }
-  try {
-    const teamId = await resolveTeamIdFromHubCode(hubCode);
-    if (!teamId) { showError('Team hub not found.'); return; }
-    const snap = await db.collection('teams').doc(teamId).collection('games').doc(gameId).get();
-    if (!snap.exists) { showError('Game not found.'); return; }
-    state.gameDoc = snap.data();
-    state.gameDoc.id = gameId;
-    boot();
-  } catch (e) {
-    console.error(e);
-    showError('Error loading game: ' + (e.message || e));
-  }
+function buildEmbedSrc(url, platform) {
+    const p = platform || detectPlatform(url || '');
+    if (p === 'youtube') {
+        const id = extractYouTubeId(url);
+        if (!id) return null;
+        const ps = new URLSearchParams({
+            modestbranding: '1', rel: '0', playsinline: '1',
+            color: 'white', iv_load_policy: '3', enablejsapi: '1',
+            // 2026-06-09 — `origin` is required by the YouTube IFrame API
+            // for postMessage between iframe and parent to be trusted in
+            // strict-tracking-prevention browsers (Safari, Firefox with
+            // enhanced protection). Without it, onReady never fires and
+            // ytPlayerReady stays false — which routed seekToHighlight()
+            // straight into its window.open() fallback. In WebView the
+            // tracking-prevention rules are softer so the API worked
+            // there even without `origin`, masking the bug in-app.
+            origin: window.location.origin,
+        });
+        return `https://www.youtube.com/embed/${id}?${ps.toString()}`;
+    }
+    if (p === 'twitch') {
+        const t = extractTwitchTarget(url);
+        if (!t) return null;
+        const parent = embedParentHost();
+        if (t.type === 'video')   return `https://player.twitch.tv/?video=${t.id}&parent=${parent}&autoplay=false`;
+        if (t.type === 'clip')    return `https://clips.twitch.tv/embed?clip=${t.id}&parent=${parent}`;
+        if (t.type === 'channel') return `https://player.twitch.tv/?channel=${t.id}&parent=${parent}&muted=true`;
+    }
+    return null;
 }
 
-async function resolveTeamIdFromHubCode(code) {
-  const hub = await db.collection('hubIndex').doc(code).get();
-  if (hub.exists) return hub.data().teamId;
-  return null;
+// Pick which stream gets the big embed at the top of the page. Preference:
+// YouTube → Twitch → first embeddable. Anything else just shows up in the
+// "Watch & Replays" card as a link.
+function pickPrimaryStream(streams) {
+    const list = (streams || []).filter(s => s && s.url);
+    const yt = list.find(s => detectPlatform(s.url) === 'youtube');
+    if (yt) return yt;
+    const tw = list.find(s => detectPlatform(s.url) === 'twitch');
+    if (tw) return tw;
+    return list.find(s => canEmbed(s.url, s.platform)) || null;
 }
 
-function boot() {
-  const g = state.gameDoc;
-  if ((g.sport || '').toUpperCase() !== 'VOLLEYBALL') {
-    showError('Labs Phase 1: video-sync is volleyball-only. This is a ' +
-      (g.sport || 'unknown sport') + ' game. Try a VB game with a YouTube broadcast.');
-    return;
-  }
-  state.events = Array.isArray(g.events) ? g.events.slice() : [];
-  if (state.events.length === 0) {
-    showError('No timeline events on this game. Either the scorer didn\'t have Labs ' +
-      '"Video-Synced Game Page" enabled, or the game wasn\'t streamed.');
-    return;
-  }
-  state.events.sort((a, b) => (a.streamTimeMs ?? -1) - (b.streamTimeMs ?? -1));
-
-  // Find a YouTube stream — first match wins.
-  const streams = Array.isArray(g.streams) ? g.streams : [];
-  const ytStream = streams.find(s => /(?:youtube\.com|youtu\.be)/.test(s.url || ''));
-  if (!ytStream) {
-    // No video: still render final state from events.
-    renderShell(g, /* hasVideo */ false);
-    applyAllEvents();
-    drawTimeline(/* tMs */ Infinity);
-    return;
-  }
-
-  renderShell(g, /* hasVideo */ true);
-  mountYouTubePlayer(ytStream.url);
+function platformIcon(platform) {
+    if (platform === 'youtube') return '<svg width="18" height="13" viewBox="0 0 24 17" style="vertical-align:-2px;"><path fill="#FF0000" d="M23.5 2.5A3 3 0 0 0 21.4.4C19.5 0 12 0 12 0S4.5 0 2.6.4A3 3 0 0 0 .5 2.5 31 31 0 0 0 0 8.5a31 31 0 0 0 .5 6A3 3 0 0 0 2.6 16.6C4.5 17 12 17 12 17s7.5 0 9.4-.4a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-6 31 31 0 0 0-.5-6z"/><path fill="#FFF" d="M9.6 12.2l6.3-3.7-6.3-3.7z"/></svg>';
+    if (platform === 'twitch') return '<svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:-2px;"><path fill="#9146FF" d="M2 2v18h6v4l4-4h6l8-8V2H2zm20 9l-4 4h-6l-4 4v-4H4V4h18v7zm-5-7h-2v6h2V4zm-6 0h2v6h-2V4z"/></svg>';
+    if (platform === 'google_photos') return '🖼️';
+    if (platform === 'facebook') return '📘';
+    return '🔗';
 }
 
-// ── Render: shell ──────────────────────────────────────────────────
-function renderShell(g, hasVideo) {
-  const root = document.getElementById('root');
-  const homeName = g.homeTeam || 'HOME';
-  const awayName = g.awayTeam || 'AWAY';
-  root.innerHTML = `
-    ${hasVideo ? '<div class="video-wrap" id="video-wrap"></div>' : ''}
-    <div class="score-card">
-      <div class="score-row">
-        <div class="team">
-          <div class="name" id="home-name">${escapeHtml(homeName)}</div>
-          <div class="score" id="home-score">0</div>
-        </div>
-        <div class="vs">vs</div>
-        <div class="team">
-          <div class="name" id="away-name">${escapeHtml(awayName)}</div>
-          <div class="score" id="away-score">0</div>
-        </div>
-      </div>
-      <div class="sets-row" id="sets-row"></div>
-    </div>
-    <div class="status-bar">
-      <span class="live-dot"></span>
-      <span id="status-text">${hasVideo ? 'Synced to video' : 'Video unavailable — showing final state'}</span>
-    </div>
-    <div class="timeline">
-      <h3>Timeline (${state.events.length} events)</h3>
-      <div id="event-list"></div>
-    </div>
-  `;
-  drawTimeline(0);
+// ── Load + render ─────────────────────────────────────────────────────
+
+async function load() {
+    if (!hubCode) {
+        showNotFound();
+        return;
+    }
+
+    let teamId = null;
+    let hubProfile = null;
+    try {
+        const idx = await getDoc(doc(db, 'hubIndex', hubCode));
+        if (!idx.exists()) { showNotFound(); return; }
+        teamId = idx.data().teamId;
+        const team = await retryOnAuthDeny('game.html team', () => getDoc(doc(db, 'teams', teamId)));
+        if (!team.exists()) { showNotFound(); return; }
+        const t = team.data();
+        hubProfile = {
+            teamId,
+            teamName: t.name || 'Team',
+            sport: t.sport || 'GENERIC',
+            color: t.color || '#FF9640',
+            color2: t.color2 || '#FFFFFF',
+            hub: t.hub || {},
+            // v1.1.643 — Firebase Storage download URL for the team logo.
+            // Only carried forward into renderTeamScore / renderBowlingScore
+            // when it's a valid http URL; pre-v643 docs may have a phone-
+            // local path which we ignore.
+            logoUrl: (typeof t.logoUrl === 'string' && t.logoUrl.startsWith('http')) ? t.logoUrl : '',
+        };
+    } catch (e) {
+        // v1.1.389 — Private-hub reads bounce as permission-denied for any
+        // unauthenticated browser visitor. Show the sign-in card instead
+        // of the generic "not found" so owners + approved followers have
+        // a path to view their team's games. Once auth state changes the
+        // onAuthStateChanged listener below re-fires load() and the
+        // Firestore read succeeds (subject to the canReadTeam rule).
+        if (e && e.code === 'permission-denied' && !currentUser) {
+            showSignIn();
+            return;
+        }
+        console.error('Hub load failed:', e);
+        showNotFound();
+        return;
+    }
+
+    // Set "back to hub" links + page chrome that doesn't depend on the game.
+    $('backLink').href = `/team.html?code=${encodeURIComponent(hubCode)}`;
+    $('hubLink').href = `/team.html?code=${encodeURIComponent(hubCode)}`;
+    $('notFoundBack').href = `/team.html?code=${encodeURIComponent(hubCode)}`;
+    $('colorBar').style.background = `linear-gradient(90deg, ${hubProfile.color}, ${hubProfile.color2})`;
+    $('heroTeam').textContent = `${sportEmoji(hubProfile.sport)} ${hubProfile.teamName} · ${sportName(hubProfile.sport)}`;
+
+    // If no gameId, treat the page as "the active live stream" for this team
+    // — useful for FCM links that point at /game.html?team=ABC without a
+    // specific game id. Falls back to a not-found if no live stream either.
+    if (!gameId) {
+        const liveUrl = (hubProfile.hub && hubProfile.hub.activeStreamUrl) || '';
+        if (liveUrl) {
+            renderLiveOnly(hubProfile, liveUrl);
+            return;
+        }
+        showNotFound();
+        return;
+    }
+
+    // Post-cutover: scheduled and completed games share the games/ collection
+    // distinguished by `status`. A single get() fetches either; we then
+    // classify by status so the upcoming/countdown vs replay paths still
+    // diverge correctly. The legacy schedule/ fallback is no longer needed —
+    // backfill writes scheduled docs into games/ with status="scheduled".
+    let game = null;
+    let isScheduledOnly = false;
+    try {
+        const snap = await retryOnAuthDeny('game.html game', () => getDoc(doc(db, 'teams', teamId, 'games', gameId)));
+        if (!snap.exists()) { showNotFound(); return; }
+        game = { id: snap.id, ...snap.data() };
+        const status = game.status || '';
+        if (status === 'scheduled' || status === 'live' || status === 'cancelled') {
+            isScheduledOnly = true;
+        }
+    } catch (e) {
+        console.error('Game load failed:', e);
+        showNotFound();
+        return;
+    }
+
+    // If this is still in the schedule (not yet ended into games/{id})
+    // but the broadcaster is already live AND that live stream is the
+    // one pre-created for this scheduled game, treat it as live. This
+    // is the "started early" path: fans tap the live notification, the
+    // game's `date` is still in the future, but we've actually gone
+    // live — show the embed, not a countdown.
+    if (isScheduledOnly) {
+        const liveUrl = (hubProfile.hub && hubProfile.hub.activeStreamUrl) || '';
+        const goneLive = !!(liveUrl && (
+            liveUrl === game.streamUrl ||
+            liveUrl === game.ytWatchUrl ||
+            (game.streams || []).some(s => s.url === liveUrl)
+        ));
+        if (goneLive) {
+            // Use the merged view (live pill + embed + meta) by faking the
+            // game into the live path. renderGame inspects game.streams /
+            // game.streamUrl to mount the player, so the schedule's own
+            // ytWatchUrl is enough.
+            renderGame(hubProfile, game);
+            try { labsAttach(hubProfile, game); } catch (e) { console.warn('[labs] attach failed', e); }
+            return;
+        }
+        if ((game.date || 0) > Date.now()) {
+            renderUpcomingGame(hubProfile, game);
+            return;
+        }
+    }
+
+    renderGame(hubProfile, game);
+    try { labsAttach(hubProfile, game); } catch (e) { console.warn('[labs] attach failed', e); }
 }
 
-// ── YouTube iframe API ─────────────────────────────────────────────
-function mountYouTubePlayer(watchUrl) {
-  const videoId = extractYtId(watchUrl);
-  if (!videoId) {
-    document.getElementById('status-text').textContent = 'Could not parse YouTube URL';
-    applyAllEvents();
-    return;
-  }
-  const wrap = document.getElementById('video-wrap');
-  wrap.innerHTML = `<div id="yt-player"></div>`;
+// ─── Labs video-sync replay ────────────────────────────────────────────
+// Wedge on top of the production render path. Idempotent VB replay: each
+// "point" TimelineEvent carries the post-state (homeScore/awayScore/
+// setIndex), so the renderer just finds the last event whose streamTimeMs
+// <= ytPlayer.getCurrentTime() and paints its payload into the score card.
+// No reducer / cursor needed since events are absolute, not deltas.
+let _labsState = { events: [], pollId: null, rowRefs: [], lastEventIdx: -1 };
+function labsAttach(hub, game) {
+    document.getElementById('labsPill').style.display = '';
+    const sport = (game.sport || hub.sport || '').toUpperCase();
+    const events = Array.isArray(game.events) ? game.events.slice() : [];
+    if (sport !== 'VOLLEYBALL' || events.length === 0) {
+        // Page still renders fine in production mode for non-VB / no-events
+        // games; just no replay overlay.
+        return;
+    }
+    events.sort((a, b) => (a.streamTimeMs ?? -1) - (b.streamTimeMs ?? -1));
+    _labsState.events = events;
+    _labsState.lastEventIdx = -1;
+    labsBuildTimelinePanel(game);
+    if (_labsState.pollId) clearInterval(_labsState.pollId);
+    _labsState.pollId = setInterval(labsTick, 200);
+}
+function labsTick() {
+    if (!ytPlayer || !ytPlayerReady) return;
+    let currentMs;
+    try { currentMs = (ytPlayer.getCurrentTime() || 0) * 1000; }
+    catch (_) { return; }
+    const evs = _labsState.events;
+    let idx = -1;
+    for (let i = evs.length - 1; i >= 0; i--) {
+        if ((evs[i].streamTimeMs ?? -1) <= currentMs) { idx = i; break; }
+    }
+    if (idx === _labsState.lastEventIdx) return;
+    _labsState.lastEventIdx = idx;
+    labsPaint(idx);
+}
+function labsPaint(idx) {
+    const sc = document.getElementById('scoreContent');
+    if (!sc) return;
+    const homeEl = sc.querySelector('.team-block:nth-child(1) .score');
+    const awayEl = sc.querySelector('.team-block:nth-child(3) .score');
+    if (idx < 0) {
+        if (homeEl) homeEl.textContent = '0';
+        if (awayEl) awayEl.textContent = '0';
+    } else {
+        const p = _labsState.events[idx].payload || {};
+        if (homeEl) homeEl.textContent = String(p.homeScore ?? 0);
+        if (awayEl) awayEl.textContent = String(p.awayScore ?? 0);
+    }
+    const setIdx = idx < 0 ? 0 : ((_labsState.events[idx].payload || {}).setIndex ?? 0);
+    const tag = document.getElementById('labsLiveTag');
+    if (tag) tag.textContent = `🧪 Set ${setIdx + 1} · synced to video time`;
+    _labsState.rowRefs.forEach((row, i) => {
+        row.style.background = (i === idx) ? 'rgba(255,150,64,0.18)' : '';
+        row.style.borderLeft = (i === idx) ? '3px solid var(--accent)' : '3px solid transparent';
+    });
+    if (idx >= 0 && _labsState.rowRefs[idx]) {
+        _labsState.rowRefs[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+}
+function labsBuildTimelinePanel(game) {
+    const scoreCard = document.getElementById('scoreCard');
+    if (!scoreCard) return;
+    const tagDiv = document.createElement('div');
+    tagDiv.id = 'labsLiveTag';
+    tagDiv.style.cssText = 'margin-top:8px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--accent);';
+    tagDiv.textContent = '🧪 Set 1 · synced to video time';
+    scoreCard.appendChild(tagDiv);
 
-  if (!window.YT || !window.YT.Player) {
+    const panel = document.createElement('div');
+    panel.className = 'card';
+    panel.style.cssText = 'margin-top:14px;';
+    panel.innerHTML = `
+        <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:10px;">🧪 Labs · Event Timeline</div>
+        <div id="labsTimelineRows" style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;"></div>
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:8px;">Tap any event to jump the video there.</div>
+    `;
+    scoreCard.parentNode.insertBefore(panel, scoreCard.nextSibling);
+    const rows = document.getElementById('labsTimelineRows');
+    _labsState.rowRefs = _labsState.events.map((ev, i) => {
+        const p = ev.payload || {};
+        const t = ev.streamTimeMs ?? 0;
+        const mm = Math.floor(t / 60000);
+        const ss = Math.floor((t % 60000) / 1000).toString().padStart(2, '0');
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--border);cursor:pointer;border-left:3px solid transparent;';
+        row.innerHTML = `
+            <span style="font-size:13px;">Set ${(p.setIndex ?? 0) + 1} · ${p.side === 'AWAY' ? 'Away' : 'Home'} +1 → <strong>${p.homeScore ?? 0}–${p.awayScore ?? 0}</strong></span>
+            <span style="font-size:12px;color:var(--text-secondary);font-variant-numeric:tabular-nums;">${mm}:${ss}</span>
+        `;
+        row.addEventListener('click', () => {
+            if (ytPlayer && ytPlayerReady) {
+                try { ytPlayer.seekTo(Math.max(0, (ev.streamTimeMs ?? 0) / 1000), true); ytPlayer.playVideo(); } catch (_) {}
+            }
+        });
+        rows.appendChild(row);
+        return row;
+    });
+}
+
+// Pre-game render path. Shows the team header + a countdown card in the
+// player slot. No stream embed (none exists yet). The Game Info card
+// still renders so viewers see opponent / location / event name. Once
+// the broadcaster goes live, hub.activeStreamUrl flips and a fresh load
+// of the page picks the right path — we don't try to swap state in
+// place because YouTube/Twitch embeds don't materialize that gracefully.
+function renderUpcomingGame(hub, game) {
+    const sport = (game.sport || hub.sport || 'GENERIC').toUpperCase();
+    const opponent = game.opponent || '';
+    const eventName = game.eventName || '';
+    const title = opponent
+        ? `${hub.teamName} vs ${opponent}`
+        : (eventName || `${hub.teamName} — Upcoming`);
+    document.title = `${title} · Upcoming · ScoreFrame`;
+    $('liveSlot').innerHTML = `<div class="upcoming-pill">📅 UPCOMING</div>`;
+    $('heroTitle').textContent = title;
+    const metaBits = [];
+    if (game.date) metaBits.push(formatDate(game.date));
+    if (game.location) metaBits.push(`📍 ${game.location}`);
+    // Show the event name (league / tournament / "vs Cardinals" label)
+    // here too — Eric called this out: the hero meta is the only place
+    // upcoming context surfaces above the fold, and dropping the event
+    // makes the page feel anonymous.
+    if (eventName && opponent) metaBits.push(`🏷️ ${eventName}`);
+    $('heroMeta').textContent = metaBits.join('  ·  ');
+
+    // Countdown card replacing the player. We tick once per second; the
+    // interval is harmless if the user navigates away because we never
+    // hold a reference outside this scope.
+    // If the broadcaster pre-created a YouTube broadcast at schedule time
+    // (ytWatchUrl is populated), surface the link now so fans can hit
+    // "Set reminder" / bookmark / share before the game starts. Same URL
+    // gets reused when the broadcaster goes live (MainActivity reuses
+    // ytBroadcastId for the scheduled game), so what they save here will
+    // be the actual stream they watch at match time.
+    const preStreamUrl = (game.ytWatchUrl || '').trim();
+    const preStreamHtml = preStreamUrl ? `
+        <div class="prestream-card">
+            <div class="prestream-label">📺 Stream is ready</div>
+            <a class="prestream-link" href="${escapeHtml(preStreamUrl)}" target="_blank" rel="noopener">
+                Watch on YouTube
+            </a>
+            <div class="prestream-hint">Tap "Set reminder" on YouTube — same link goes live at game time.</div>
+            <div class="prestream-actions">
+                <button type="button" class="prestream-copy" data-copy="${escapeHtml(preStreamUrl)}">📋 Copy link</button>
+                <button type="button" class="prestream-share" data-share="${escapeHtml(preStreamUrl)}" data-title="${escapeHtml(title || 'ScoreFrame stream')}">🔗 Share</button>
+            </div>
+        </div>` : '';
+    const countdownHtml = `
+        <div class="countdown-card">
+            <div class="label-top">Game Starts</div>
+            <div class="matchup">${escapeHtml(title)}</div>
+            <div class="when">${formatDate(game.date)}</div>
+            <div class="count" id="countdownNumbers"></div>
+        </div>${preStreamHtml}`;
+    $('playerSlot').innerHTML = countdownHtml;
+    const tick = () => {
+        const ms = (game.date || 0) - Date.now();
+        if (ms <= 0) {
+            // The schedule entry's date passed but we still don't have a
+            // live stream or a completed game. Reload — by then either
+            // the live state or a games/{id} doc may exist.
+            window.location.reload();
+            return;
+        }
+        const totalSec = Math.floor(ms / 1000);
+        const days = Math.floor(totalSec / 86400);
+        const hours = Math.floor((totalSec % 86400) / 3600);
+        const mins = Math.floor((totalSec % 3600) / 60);
+        const secs = totalSec % 60;
+        const segs = days > 0
+            ? [['Days', days], ['Hours', hours], ['Min', mins]]
+            : [['Hours', hours], ['Min', mins], ['Sec', secs]];
+        const el = document.getElementById('countdownNumbers');
+        if (el) el.innerHTML = segs.map(([u, n]) =>
+            `<div class="seg"><div class="num">${String(n).padStart(2,'0')}</div><div class="unit">${u}</div></div>`
+        ).join('');
+    };
+    tick();
+    setInterval(tick, 1000);
+
+    // v33b — Copy + Share handlers for the pre-stream actions block.
+    // Bound after the innerHTML write so the buttons exist. Native
+    // share sheet on mobile via navigator.share; clipboard via
+    // navigator.clipboard with a textarea fallback for older browsers.
+    setupPreStreamActions();
+
+    renderMeta(game, sport);
+    renderBoxScore(hub, game, sport);
+    renderAiRecap(game);
+    $('streamPlatformPill').innerHTML = '';
+    $('streamCaption').textContent = '';
+
+    $('loadingState').style.display = 'none';
+    $('gameView').style.display = 'block';
+}
+
+// Render the page when we have no specific game record, only an
+// activeStreamUrl on the hub. Lets a generic "/game.html?team=X" link
+// land somewhere useful while the team is live.
+function renderLiveOnly(hub, url) {
+    document.title = `${hub.teamName} — Live · ScoreFrame`;
+    $('liveSlot').innerHTML = `<div class="live-pill">● LIVE NOW</div>`;
+    $('heroTitle').textContent = `${hub.teamName} is streaming`;
+    $('heroMeta').textContent = '';
+    mountPrimaryStream({ url, platform: detectPlatform(url) });
+    $('loadingState').style.display = 'none';
+    $('gameView').style.display = 'block';
+}
+
+function renderGame(hub, game) {
+    const sport = (game.sport || hub.sport || 'GENERIC').toUpperCase();
+    const isBowling = sport === 'BOWLING';
+
+    // Title + meta
+    let title;
+    if (isBowling) {
+        title = game.eventName || 'Bowling';
+    } else {
+        const home = game.homeTeam || hub.teamName || 'Home';
+        const away = game.awayTeam || 'Away';
+        title = `${home} vs ${away}`;
+    }
+    document.title = `${title} · ${hub.teamName} · ScoreFrame`;
+    $('heroTitle').textContent = title;
+
+    // v18 — Promote the event label to its own banner above the team
+    // name. eventLabel is the new Pro field; eventName is the legacy
+    // bowling-only field — fall back so older data still shows up.
+    // Skip when the same string is already the title (bowling games
+    // use eventName as the title text, so no need to duplicate).
+    const evt = (game.eventLabel || game.eventName || '').trim();
+    if (evt && evt !== title) {
+        $('heroEvent').textContent = evt;
+        $('heroEvent').style.display = '';
+    }
+
+    const metaBits = [];
+    if (game.date) metaBits.push(formatDate(game.date));
+    if (game.location) metaBits.push(`📍 ${game.location}`);
+    $('heroMeta').textContent = metaBits.join('  ·  ');
+
+    // LIVE pill if this game matches the hub's active stream.
+    const isLive = !!(hub.hub && hub.hub.activeStreamUrl &&
+        ((game.streams || []).some(s => s.url === hub.hub.activeStreamUrl) ||
+         game.streamUrl === hub.hub.activeStreamUrl));
+    if (isLive) {
+        $('liveSlot').innerHTML = `<div class="live-pill">● LIVE NOW</div>`;
+    }
+
+    // Player — pick the best stream to embed at the top.
+    const baseStreams = (game.streams && game.streams.length > 0)
+        ? game.streams.slice()
+        : (game.streamUrl ? [{ url: game.streamUrl, platform: detectPlatform(game.streamUrl) }] : []);
+    // v1.1.478 — Save to YouTube. The Android app (Labs+Pro) uploads the
+    // saved game video to the user's own YouTube channel and writes the
+    // watch URL back to `game.youtubeVideoUrl`. Treat it as a stream so
+    // the existing playlist / streams-card pipeline picks it up without
+    // a separate render path. If the same URL is already in streams[]
+    // (e.g. the broadcaster manually added it), don't duplicate.
+    if (game.youtubeVideoUrl && !baseStreams.some(s => s && s.url === game.youtubeVideoUrl)) {
+        baseStreams.push({ url: game.youtubeVideoUrl, platform: 'youtube' });
+    }
+    if (game.youtubeHighlightsUrl && !baseStreams.some(s => s && s.url === game.youtubeHighlightsUrl)) {
+        baseStreams.push({ url: game.youtubeHighlightsUrl, platform: 'youtube' });
+    }
+    const streams = baseStreams;
+
+    // Build the embeddable playlist. Order: YouTube first, then Twitch, then
+    // any other embeddable streams. Non-embeddable links don't go in the
+    // playlist — they stay in the "Watch & Replays" card as direct-watch
+    // links so we don't end up "advancing" to a stream that can't actually
+    // play inline.
+    const embeddable = (streams || []).filter(s => s && s.url && canEmbed(s.url, s.platform));
+    const ytFirst = embeddable.filter(s => detectPlatform(s.url) === 'youtube');
+    const twitchNext = embeddable.filter(s => detectPlatform(s.url) === 'twitch');
+    const others = embeddable.filter(s => {
+        const p = detectPlatform(s.url);
+        return p !== 'youtube' && p !== 'twitch';
+    });
+    playlistStreams = [...ytFirst, ...twitchNext, ...others];
+    playlistIndex = 0;
+    wirePlaylistControlsOnce();
+
+    if (playlistStreams.length > 0) {
+        mountStreamAtIndex(0);
+    } else {
+        $('playerSlot').innerHTML = `
+            <div class="no-stream-card">
+                <div class="emoji">${sportEmoji(sport)}</div>
+                <div class="label" style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">No video available for this game</div>
+                <div>Final score and stats are below.</div>
+            </div>`;
+        refreshPlaylistControls(); // hides the controls
+    }
+
+    // Score card
+    if (isBowling) {
+        renderBowlingScore(game);
+    } else {
+        renderTeamScore(hub, game);
+    }
+
+    // Game info card
+    renderMeta(game, sport);
+    // Box score card — sport-specific per-player stat table.
+    renderBoxScore(hub, game, sport);
+    // 2026-06-09 — Per-event scoring summary (Soccer's first user).
+    renderScoringSummary(hub, game, sport);
+    // 2026-06-09 — Team-level match stats (Soccer first user).
+    renderMatchStats(hub, game, sport);
+    // 2026-06-09 — PK shootout strip + win-method label.
+    renderPkShootout(hub, game, sport);
+    // ✨ AI recap card (Labs feature, persisted from in-app generation).
+    renderAiRecap(game);
+
+    // Highlights — load the subcollection asynchronously so the rest of
+    // the page renders even if there's a brief Firestore delay or no
+    // highlights at all (most non-streamed games won't have any).
+    loadHighlights(hub.teamId, game.id, playlistStreams[0]);
+
+    // Streams card — list all platforms. Embeddable streams get a click
+    // handler that jumps the inline player to that index; non-embeddable
+    // links open externally as before. The currently-playing entry is
+    // highlighted with the orange "Now Playing" treatment.
+    if (streams.length > 0) {
+        const renderStreamsCard = () => {
+            const grid = $('streamGrid');
+            grid.innerHTML = streams.map((s, i) => {
+                const p = s.platform || detectPlatform(s.url);
+                const embeddableHere = canEmbed(s.url, p);
+                // Find this stream's playlist index by URL match (a stream
+                // that's not embeddable returns -1 and stays a normal link).
+                const plIdx = playlistStreams.findIndex(x => x.url === s.url);
+                const isCurrent = embeddableHere && plIdx === playlistIndex;
+                const isInPlaylist = plIdx >= 0;
+                if (isInPlaylist) {
+                    // Inline-jump button
+                    return `<button class="stream-link${isCurrent ? ' primary' : ''}"
+                                    type="button" data-pl-idx="${plIdx}">
+                        ${platformIcon(p)} ${platformLabel(p)}${isCurrent ? ' &mdash; Now Playing' : ''}
+                    </button>`;
+                }
+                // Non-embeddable: open externally
+                return `<a class="stream-link" href="${s.url}" target="_blank" rel="noopener">
+                    ${platformIcon(p)} ${platformLabel(p)}
+                </a>`;
+            }).join('');
+            // Wire jump-to-index buttons.
+            grid.querySelectorAll('button.stream-link[data-pl-idx]').forEach(btn => {
+                btn.onclick = () => {
+                    const idx = parseInt(btn.dataset.plIdx, 10);
+                    if (!Number.isNaN(idx)) mountStreamAtIndex(idx);
+                };
+            });
+        };
+        // Expose so mountStreamAtIndex can re-render after a jump.
+        window.__rerenderStreamsCard = renderStreamsCard;
+        renderStreamsCard();
+        $('streamsCard').style.display = '';
+    }
+
+    $('loadingState').style.display = 'none';
+    $('gameView').style.display = 'block';
+}
+
+// Holds the active YouTube IFrame API player so highlight chips can call
+// `seekTo()` on it. null when the embed is non-YouTube or the API hasn't
+// loaded yet — in those cases highlight chips fall back to opening the
+// stream URL in a new tab with `?t=...`.
+let ytPlayer = null;
+let ytPlayerReady = false;
+let ytApiLoading = false;
+
+// ── Playlist state ────────────────────────────────────────────────────
+// When a game has multiple streams we treat them as a playlist: the first
+// embeddable stream auto-mounts, end-of-video advances to the next, and
+// users get manual Prev/Next buttons + an "Auto-play next" toggle. Only
+// embeddable streams (YouTube/Twitch) participate; non-embeddable links
+// stay in the "Watch & Replays" card as direct-watch links.
+let playlistStreams = [];
+let playlistIndex = 0;
+
+function ensureYouTubeApi(callback) {
+    // Idempotent loader. The IFrame API uses a single global callback
+    // (`onYouTubeIframeAPIReady`) that fires once when the script finishes
+    // initializing — we queue any waiting callbacks against that.
+    if (window.YT && window.YT.Player) { callback(); return; }
+    window.__ytApiQueue = window.__ytApiQueue || [];
+    window.__ytApiQueue.push(callback);
+    if (ytApiLoading) return;
+    ytApiLoading = true;
+    window.onYouTubeIframeAPIReady = () => {
+        const q = window.__ytApiQueue || [];
+        window.__ytApiQueue = [];
+        q.forEach(fn => { try { fn(); } catch (e) { console.error('YT API callback failed:', e); } });
+    };
     const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
     document.head.appendChild(tag);
-    window.onYouTubeIframeAPIReady = () => createPlayer(videoId);
-  } else {
-    createPlayer(videoId);
-  }
 }
 
-function createPlayer(videoId) {
-  state.ytPlayer = new YT.Player('yt-player', {
-    videoId,
-    playerVars: { autoplay: 0, modestbranding: 1, rel: 0 },
-    events: {
-      onReady: () => { state.ytPlayerReady = true; startSync(); },
-      onStateChange: () => syncToVideoTime(),
-    },
-  });
+function mountPrimaryStream(stream) {
+    // Single-stream entry point — for the live-only path that doesn't have
+    // a playlist behind it. The multi-stream renderGame path uses
+    // mountStreamAtIndex() instead so playlist controls show up.
+    mountEmbed(stream);
 }
 
-function extractYtId(url) {
-  if (!url) return null;
-  const m1 = url.match(/[?&]v=([\w-]{6,})/);
-  if (m1) return m1[1];
-  const m2 = url.match(/youtu\.be\/([\w-]{6,})/);
-  if (m2) return m2[1];
-  return null;
-}
-
-// ── Sync loop ──────────────────────────────────────────────────────
-function startSync() {
-  if (state.syncTimer) clearInterval(state.syncTimer);
-  state.syncTimer = setInterval(syncToVideoTime, 200);
-}
-
-function syncToVideoTime() {
-  if (!state.ytPlayerReady || !state.ytPlayer || !state.ytPlayer.getCurrentTime) return;
-  let tMs;
-  try { tMs = Math.floor(state.ytPlayer.getCurrentTime() * 1000); }
-  catch (e) { return; }
-
-  // Backwards seek: reset + replay.
-  if (state.renderIndex > 0) {
-    const lastRendered = state.events[state.renderIndex - 1];
-    if (lastRendered && (lastRendered.streamTimeMs - 500) > tMs) {
-      resetRenderedState();
-      state.renderIndex = 0;
+/** Build the iframe + wire YouTube IFrame API hooks. Auto-advance to the
+ *  next playlist entry on YT.PlayerState.ENDED if the user has the
+ *  "Auto-play next" checkbox on. */
+function mountEmbed(stream) {
+    const url = stream.url;
+    const platform = stream.platform || detectPlatform(url);
+    const allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+    if (canEmbed(url, platform)) {
+        const src = buildEmbedSrc(url, platform);
+        // Use a known iframe id so the IFrame API can attach to it for
+        // YouTube embeds. enablejsapi=1 is already in the embed src.
+        const iframeId = 'sf-primary-player';
+        // Reset YT state; we're mounting a fresh player.
+        ytPlayer = null;
+        ytPlayerReady = false;
+        $('playerSlot').innerHTML = `
+            <div class="video-embed-wrap">
+                <iframe id="${iframeId}" src="${src}" allow="${allow}" allowfullscreen loading="eager"></iframe>
+            </div>`;
+        if (platform === 'youtube') {
+            ensureYouTubeApi(() => {
+                try {
+                    ytPlayer = new YT.Player(iframeId, {
+                        events: {
+                            onReady: () => { ytPlayerReady = true; },
+                            onStateChange: (e) => {
+                                // 0 === YT.PlayerState.ENDED. Advance the playlist
+                                // when the current video finishes IF the user hasn't
+                                // turned off Auto-play next.
+                                if (e.data === 0) {
+                                    const cb = document.getElementById('playlistAutoplay');
+                                    if (cb && cb.checked) playlistAdvance();
+                                }
+                            },
+                        }
+                    });
+                } catch (e) {
+                    console.warn('YT.Player init failed:', e);
+                }
+            });
+        }
+        $('streamPlatformPill').innerHTML = `<span class="platform-pill">${platformLabel(platform).toUpperCase()}</span>`;
+        $('streamCaption').textContent = '';
+    } else {
+        // Non-embeddable — at least give a clean "Watch on …" call-to-action
+        // instead of a busted iframe.
+        $('playerSlot').innerHTML = `
+            <div class="no-stream-card">
+                <div class="emoji">📺</div>
+                <div style="margin-bottom:14px;color:var(--text-secondary);font-size:14px;">This stream plays on ${platformLabel(platform)}.</div>
+                <a class="stream-link primary" href="${url}" target="_blank" rel="noopener">${platformIcon(platform)} Open on ${platformLabel(platform)}</a>
+            </div>`;
     }
-  }
-
-  while (state.renderIndex < state.events.length &&
-         (state.events[state.renderIndex].streamTimeMs ?? -1) <= tMs) {
-    applyEvent(state.events[state.renderIndex]);
-    state.renderIndex++;
-  }
-  paintScore();
-  drawTimeline(tMs);
 }
 
-// ── Reducer ────────────────────────────────────────────────────────
-function resetRenderedState() {
-  state.live.homeScore = state.initialState.homeScore;
-  state.live.awayScore = state.initialState.awayScore;
-  state.live.currentSet = state.initialState.currentSet;
-  state.live.homeSets = state.initialState.homeSets;
-  state.live.awaySets = state.initialState.awaySets;
-  state.live.homeScoreBySet = [];
-  state.live.awayScoreBySet = [];
+/** Mount the playlist entry at `idx`, refresh the playlist controls, and
+ *  re-render the "Watch & Replays" card so the active link gets the
+ *  "Now Playing" highlight. Idempotent: clamping handles invalid indices. */
+function mountStreamAtIndex(idx) {
+    if (playlistStreams.length === 0) return;
+    playlistIndex = Math.max(0, Math.min(idx, playlistStreams.length - 1));
+    mountEmbed(playlistStreams[playlistIndex]);
+    refreshPlaylistControls();
+    // Re-render the streams card so the active item gets the orange "Now
+    // Playing" treatment without us having to track DOM nodes manually.
+    if (typeof window.__rerenderStreamsCard === 'function') {
+        try { window.__rerenderStreamsCard(); } catch (_) {}
+    }
 }
 
-function applyEvent(ev) {
-  if (!ev || ev.eventType !== 'point') return;
-  const p = ev.payload || {};
-  // The payload carries the authoritative homeScore/awayScore AT THE TIME of
-  // this event — single source of truth, idempotent over forward replay.
-  if (typeof p.homeScore === 'number') state.live.homeScore = p.homeScore;
-  if (typeof p.awayScore === 'number') state.live.awayScore = p.awayScore;
-  if (typeof p.setIndex === 'number') state.live.currentSet = p.setIndex;
+function playlistAdvance() {
+    if (playlistStreams.length === 0) return;
+    if (playlistIndex >= playlistStreams.length - 1) return; // last; no wrap
+    mountStreamAtIndex(playlistIndex + 1);
 }
 
-function applyAllEvents() {
-  resetRenderedState();
-  for (const ev of state.events) applyEvent(ev);
-  state.renderIndex = state.events.length;
-  paintScore();
+function playlistBack() {
+    if (playlistStreams.length === 0) return;
+    if (playlistIndex <= 0) return;
+    mountStreamAtIndex(playlistIndex - 1);
 }
 
-// ── Paint ──────────────────────────────────────────────────────────
-function paintScore() {
-  const hs = document.getElementById('home-score');
-  const as = document.getElementById('away-score');
-  if (hs) hs.textContent = state.live.homeScore;
-  if (as) as.textContent = state.live.awayScore;
-  const row = document.getElementById('sets-row');
-  if (row) {
-    row.innerHTML = `<span class="set-pill current">Set ${state.live.currentSet}</span>`;
-  }
+function refreshPlaylistControls() {
+    const controls = document.getElementById('playlistControls');
+    if (!controls) return;
+    if (playlistStreams.length < 2) {
+        controls.style.display = 'none';
+        return;
+    }
+    controls.style.display = '';
+    const pos = document.getElementById('playlistPos');
+    if (pos) {
+        pos.innerHTML = `<span class="current">${playlistIndex + 1}</span> of ${playlistStreams.length}`;
+    }
+    const prev = document.getElementById('playlistPrevBtn');
+    const next = document.getElementById('playlistNextBtn');
+    if (prev) prev.disabled = (playlistIndex <= 0);
+    if (next) next.disabled = (playlistIndex >= playlistStreams.length - 1);
 }
 
-function drawTimeline(tMs) {
-  const list = document.getElementById('event-list');
-  if (!list) return;
-  list.innerHTML = state.events.map((ev, i) => {
-    const future = (ev.streamTimeMs ?? -1) > tMs;
-    const t = formatMs(ev.streamTimeMs);
-    const side = (ev.payload && ev.payload.side) || '';
-    const score = ev.payload ? `${ev.payload.homeScore}-${ev.payload.awayScore}` : '';
-    return `<div class="event-row ${future ? 'future' : ''}" data-i="${i}">
-      <span>Point — ${side} (${score})</span>
-      <span class="event-time">${t}</span>
-    </div>`;
-  }).join('');
-  list.querySelectorAll('.event-row').forEach(el => {
-    el.addEventListener('click', () => {
-      const i = parseInt(el.dataset.i, 10);
-      const ev = state.events[i];
-      if (state.ytPlayer && state.ytPlayer.seekTo && (ev.streamTimeMs ?? -1) > 0) {
-        state.ytPlayer.seekTo(ev.streamTimeMs / 1000, true);
-      }
+// One-time wiring of the Prev/Next buttons. Safe to call multiple times —
+// we set the same handlers each time.
+function wirePlaylistControlsOnce() {
+    const prev = document.getElementById('playlistPrevBtn');
+    const next = document.getElementById('playlistNextBtn');
+    if (prev) prev.onclick = playlistBack;
+    if (next) next.onclick = playlistAdvance;
+}
+
+function renderTeamScore(hub, game) {
+    const home = game.homeTeam || hub.teamName || 'Home';
+    const away = game.awayTeam || 'Away';
+    const hs = game.homeScore || 0;
+    const as = game.awayScore || 0;
+    let homeWin = hs > as, awayWin = as > hs;
+
+    // 2026-06-09 — Soccer PK winner detection. When a soccer game ends
+    // tied at full-time and the shootout decides it, the score numbers
+    // are equal (e.g. 3–3) so neither side would normally pick up the
+    // .winner highlight. Read the PK attempts from sportSpecificStats
+    // and assign the orange to whichever side made more PKs. A small
+    // "WON ON PKs" badge appears under that side's score so the
+    // viewer knows the shootout — not regulation — picked the winner.
+    let pkWonBy = null; // 'home' | 'away' | null
+    const stats = (game && typeof game.sportSpecificStats === 'object' && game.sportSpecificStats) || {};
+    const homePks = Array.isArray(stats.homePkAttempts) ? stats.homePkAttempts : [];
+    const awayPks = Array.isArray(stats.awayPkAttempts) ? stats.awayPkAttempts : [];
+    if (homePks.length > 0 || awayPks.length > 0) {
+        const homeMade = homePks.filter(x => x === 'MADE').length;
+        const awayMade = awayPks.filter(x => x === 'MADE').length;
+        if (homeMade > awayMade) { pkWonBy = 'home'; homeWin = true; awayWin = false; }
+        else if (awayMade > homeMade) { pkWonBy = 'away'; awayWin = true; homeWin = false; }
+    }
+    const pkBadge = `<div style="display:inline-block;margin-top:6px;padding:2px 8px;border-radius:10px;background:var(--accent);color:#1A1A1A;font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;">Won on PKs</div>`;
+    const homePkBadge = pkWonBy === 'home' ? pkBadge : '';
+    const awayPkBadge = pkWonBy === 'away' ? pkBadge : '';
+
+    // Per-set point line for VB (and any other sport that ships home/awaySetScores).
+    // homeScore/awayScore are SETS WON (e.g. 3-1); homeSetScores/awaySetScores are
+    // POINTS-PER-SET (e.g. [25,23,25,25] / [18,25,22,15]) — render under the final.
+    const homeSets = Array.isArray(game.homeSetScores) ? game.homeSetScores : [];
+    const awaySets = Array.isArray(game.awaySetScores) ? game.awaySetScores : [];
+    let setLine = '';
+    if (homeSets.length > 0 && homeSets.length === awaySets.length) {
+        const parts = homeSets.map((h, i) => {
+            const a = awaySets[i] ?? 0;
+            const winnerClass = h > a ? 'set-home' : (a > h ? 'set-away' : 'set-tie');
+            return `<span class="set-pair ${winnerClass}">${h}–${a}</span>`;
+        });
+        setLine = `<div class="set-line">${parts.join('<span class="set-sep">·</span>')}</div>`;
+    }
+
+    // v1.1.643 — Inline team logo on the score card. Hub (home) logo comes
+    // from the hub doc's logoUrl. Away logo would need a separate team-doc
+    // lookup, deferred. Only render when the URL is a valid http link.
+    const hubLogo = hub && hub.logoUrl && hub.logoUrl.startsWith('http') ? hub.logoUrl : null;
+    const homeLogoHtml = hubLogo
+        ? `<img src="${hubLogo}" alt="" style="width:36px;height:36px;border-radius:18px;object-fit:cover;display:inline-block;vertical-align:middle;margin-right:8px;box-shadow:0 1px 4px rgba(0,0,0,0.4);" />`
+        : '';
+    $('scoreContent').innerHTML = `
+        <div class="scoreline">
+            <div class="team-block">
+                <div class="name">${homeLogoHtml}${home}</div>
+                <div class="score ${homeWin ? 'winner' : (awayWin ? 'loser' : '')}">${hs}</div>
+                ${homePkBadge}
+            </div>
+            <div class="vs">VS</div>
+            <div class="team-block" style="text-align:right;">
+                <div class="name">${away}</div>
+                <div class="score ${awayWin ? 'winner' : (homeWin ? 'loser' : '')}">${as}</div>
+                ${awayPkBadge}
+            </div>
+        </div>
+        ${setLine}
+    `;
+    $('scoreCard').style.display = '';
+}
+
+function renderBowlingScore(game) {
+    // v1.1.440 — Head-to-head bowling matchup header. When the saved
+    // game carries `sportSpecificStats.h2h === true` we lead the score
+    // card with a stacked team/opponent scoreline (winner colored gold,
+    // loser dim, tie neutral). When the game also has a handicap, we
+    // show BOTH raw and adjusted totals so the viewer can see how the
+    // W/L was determined.
+    const stats = game.sportSpecificStats || {};
+    const isH2H = stats.h2h === true && (game.awayTeam || '').toString().trim() !== '';
+    const hasHandicap = isH2H && stats.hasHandicap === true;
+    let h2hHeader = '';
+    if (isH2H) {
+        const home = (game.homeTeam || 'Home').toString();
+        const away = (game.awayTeam || 'Away').toString();
+        const homeAdj = Number(game.homeScore || 0);
+        const awayAdj = Number(game.awayScore || 0);
+        const homeRaw = hasHandicap ? Number(stats.teamRawSeries ?? homeAdj) : homeAdj;
+        const awayRaw = hasHandicap ? Number(stats.opponentRawSeries ?? awayAdj) : awayAdj;
+        const homeWon = homeAdj > awayAdj;
+        const awayWon = awayAdj > homeAdj;
+        const tied = homeAdj === awayAdj;
+        const colorFor = won => tied ? 'var(--text-primary)' : (won ? '#F2A93B' : 'var(--text-secondary)');
+        const sideHtml = (name, raw, adj, won) => {
+            const adjStr = hasHandicap && raw !== adj
+                ? `<span style="font-size:14px;color:var(--text-secondary);margin-left:8px;">scratch ${raw}</span> <span style="font-size:14px;color:${colorFor(won)};margin-left:4px;">· +hcp <strong>${adj}</strong></span>`
+                : `<strong>${adj}</strong>`;
+            return `<div style="display:flex;align-items:baseline;justify-content:space-between;padding:6px 0;color:${colorFor(won)};">
+                        <span style="font-size:16px;font-weight:700;">${escapeHtml(name)}</span>
+                        <span style="font-size:22px;font-weight:800;">${adjStr}</span>
+                    </div>`;
+        };
+        const handicapNote = hasHandicap
+            ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:6px;">+hcp totals include handicap × games (${stats.gameCount || 1}). W/L is based on +hcp.</div>`
+            : '';
+        h2hHeader = `${sideHtml(home, homeRaw, homeAdj, homeWon)}${sideHtml(away, awayRaw, awayAdj, awayWon)}${handicapNote}`;
+        // Show the score card immediately so the matchup header lands
+        // even when the per-bowler frame data below is empty (no
+        // playerScores string on the doc yet).
+        $('scoreContent').innerHTML = h2hHeader;
+        $('scoreCard').style.display = '';
+    }
+
+    const ps = game.playerScores || '';
+    if (!ps) {
+        if (!isH2H && game.homeScore > 0) {
+            $('scoreContent').innerHTML = `<div style="font-size:32px;font-weight:800;color:var(--accent);">${game.homeScore}</div>`;
+            $('scoreCard').style.display = '';
+        }
+        return;
+    }
+    // v1.1.390 — Index participants by lowercased name so each bowler row
+    // can pick up its strike / spare / open / split counts from the
+    // participant snapshot. The per-game playerScores string only carries
+    // names + scores; the frame-level stats live alongside in
+    // participants[].stats (written by MainActivity.savePerPlayerStats at
+    // End Game). When no matching participant exists (legacy games saved
+    // before the stats map was populated) the stats line just hides.
+    const partByName = new Map();
+    for (const p of (game.participants || [])) {
+        const key = (p.name || '').trim().toLowerCase();
+        if (key) partByName.set(key, p);
+    }
+    // v19 — iOS writes per-bowler frame data + handicap + seriesAdjusted
+    // onto `sportSpecificStats.bowlers[]` (via uploadBowlingFrameData),
+    // while Android writes them onto `participants[].stats`. Build a
+    // second lookup by lowercased bowler name so the per-row read can
+    // fall back to whichever location actually has the data. Without
+    // this, iOS-saved bowling games render with no frame strip and no
+    // scratch/+hcp breakdown.
+    const ssBowlerByName = new Map();
+    for (const b of (game.sportSpecificStats?.bowlers || [])) {
+        const key = ((b && b.name) || '').trim().toLowerCase();
+        if (key) ssBowlerByName.set(key, b);
+    }
+    // v20 — Untracked teammates aren't in participants[] or
+    // sportSpecificStats.bowlers[]; they live on
+    // sportSpecificStats.untrackedBowlers[] with {name, handicap,
+    // gameScores}. Build a third lookup so the per-bowler row can show
+    // their handicap + adjusted series too. Without this, an untracked
+    // teammate's row rendered just the raw series with no scratch/+hcp
+    // breakdown even when the team had handicap on. Eric: "game pages
+    // need to show the handicap for each player and their own adjusted
+    // handicap score as well."
+    const untrackedByName = new Map();
+    for (const u of (game.sportSpecificStats?.untrackedBowlers || [])) {
+        const key = ((u && u.name) || '').trim().toLowerCase();
+        if (key) untrackedByName.set(key, u);
+    }
+
+    // v15 — Render the rolls for a single frame in traditional bowling
+    // notation. Frames 1-9 get 2 cells; frame 10 gets 3 cells (the third is
+    // the bonus roll, only used after a strike or spare). r1/r2/r3 are pin
+    // counts 0-10, possibly null for incomplete frames. `split` marks the
+    // first roll as a split — if the second roll is a spare (or 10 in
+    // frame 10), the split is a conversion and the circle is accent-colored.
+    // Renders a single roll cell. `roll` is the parseRoll() result
+    // ({pins, label}) or null when the roll wasn't bowled. isStrike /
+    // isSpare are passed by buildFrameCells when the frame context
+    // makes the visual call differently (e.g. a strike in frame 10's
+    // second ball renders X instead of using the parsed label).
+    function rollMark(roll, isStrike, isSpare, isSplit) {
+        // v30 — distinct classes per roll type (gutter / foul / dot)
+        // instead of all-using "empty". Keeps gutters subtle while
+        // letting fouls render loud red. Also sidesteps the global
+        // `.empty, .loading { padding: 60px 24px }` page-state rule
+        // — these classes don't collide with it.
+        if (roll == null) return '<span class="roll dot">·</span>';
+        if (isStrike) return '<span class="roll strike">X</span>';
+        if (isSpare) return '<span class="roll spare">/</span>';
+        const lbl = roll.label;
+        if (lbl === 'F') return '<span class="roll foul">F</span>';
+        if (lbl === '-' || roll.pins === 0) return '<span class="roll gutter">-</span>';
+        const display = (roll.pins != null) ? roll.pins : lbl;
+        if (isSplit) {
+            return `<span class="roll"><span class="pin-circle">${display}</span></span>`;
+        }
+        return `<span class="roll">${display}</span>`;
+    }
+    // Android persists rolls as strings: "X" strike, "/" spare, "-" miss
+    // (gutter ball / 0 pins), "F" foul (also 0 pins, but separate notation),
+    // "1".."9" partial counts, "" / undefined when not bowled yet. This
+    // helper normalizes into a {pins, label} pair so the strike/spare
+    // logic can do math on `pins` while `label` carries the original
+    // notation for display (so "F" still renders as "F", not "-").
+    function parseRoll(raw, prev) {
+        if (raw == null) return null;
+        let s = '';
+        if (typeof raw === 'string') s = raw.trim();
+        else if (typeof raw === 'number') return { pins: raw, label: String(raw) };
+        else return null;
+        if (s === '') return null;
+        const up = s.toUpperCase();
+        if (up === 'X') return { pins: 10, label: 'X' };
+        if (s === '/') {
+            const p = (prev == null) ? 0 : prev.pins;
+            return { pins: Math.max(0, 10 - p), label: '/' };
+        }
+        if (s === '-') return { pins: 0, label: '-' };
+        if (up === 'F') return { pins: 0, label: 'F' };
+        const n = parseInt(s, 10);
+        if (isNaN(n)) return null;
+        return { pins: n, label: String(n) };
+    }
+
+    // v1.1.510 — Missing rolls in COMPLETED frames render as a gutter
+    // dash, not the dot placeholder. iOS-saved games sometimes drop the
+    // explicit 0-pin roll, leaving `r2`/`r3` undefined; a viewer who
+    // sees a `·` next to a 6 thinks the game isn't done, when in fact
+    // it was a 6 + gutter. `f.score != null` is the "frame was tallied
+    // by the scorer" signal — anything with a score is complete.
+    const DASH_ROLL = '<span class="roll gutter">-</span>';
+    const DOT_ROLL = '<span class="roll dot">·</span>';
+    function buildFrameCells(frames) {
+        // Pad to 10 frames so the scoreboard always has the full row, even
+        // for in-progress / abandoned games.
+        const padded = [];
+        for (let i = 0; i < 10; i++) padded.push(frames[i] || null);
+        return padded.map((f, idx) => {
+            const isF10 = idx === 9;
+            const cls = `bowling-frame${isF10 ? ' f10' : ''}`;
+            if (!f) {
+                // Empty frame — placeholder rolls + blank cum.
+                const cells = isF10 ? 3 : 2;
+                const rolls = Array(cells).fill(DOT_ROLL).join('');
+                return `<div class="${cls}"><div class="rolls">${rolls}</div><div class="cum empty"></div></div>`;
+            }
+            const r1 = parseRoll(f.r1, null);
+            const r2 = parseRoll(f.r2, r1);
+            const r3 = parseRoll(f.r3, r2);
+            const pins1 = r1 ? r1.pins : null;
+            const pins2 = r2 ? r2.pins : null;
+            const pins3 = r3 ? r3.pins : null;
+            const split = !!f.split;
+            const frameTallied = f.score != null && Number.isFinite(Number(f.score));
+            let rollsHtml = '';
+            if (!isF10) {
+                const isStrike = pins1 === 10;
+                const isSpare = !isStrike && pins1 != null && pins2 != null && (pins1 + pins2) === 10;
+                if (isStrike) {
+                    // Strike spans the WHOLE frame width — a single big X
+                    // is the traditional bowling-sheet rendering and avoids
+                    // squeezing the mark into half the cell.
+                    rollsHtml = '<span class="roll strike strike-full">X</span>';
+                } else {
+                    // v1.1.510 — Missing roll on a tallied frame → dash.
+                    // iOS-saved games often persist the per-frame score
+                    // without storing per-roll values; without this fallback
+                    // those frames render as empty `·` placeholders. The
+                    // dash is the right visual signal: "frame was bowled,
+                    // detail unknown / gutter".
+                    const c1 = r1 == null
+                        ? (frameTallied ? DASH_ROLL : DOT_ROLL)
+                        : rollMark(r1, false, false, split);
+                    const c2 = r2 == null
+                        ? (frameTallied ? DASH_ROLL : DOT_ROLL)
+                        : rollMark(r2, false, isSpare, false);
+                    rollsHtml = c1 + c2;
+                }
+            } else {
+                // Frame 10 — up to 3 rolls. r2 is a spare iff r1+r2===10 and
+                // r1 is NOT a strike. r3 only renders if r1 strike or r2
+                // spare (i.e. bonus earned).
+                const r1Strike = pins1 === 10;
+                const r2Strike = r1Strike && pins2 === 10;
+                const r2Spare = !r1Strike && pins1 != null && pins2 != null && (pins1 + pins2) === 10;
+                const r3Strike = pins3 === 10;
+                const r3Spare = r1Strike && !r2Strike && pins2 != null && pins3 != null && (pins2 + pins3) === 10;
+                const bonusEarned = r1Strike || r2Spare;
+                const c1 = r1 == null
+                    ? (frameTallied ? DASH_ROLL : DOT_ROLL)
+                    : rollMark(r1, r1Strike, false, split);
+                let c2;
+                if (r2 == null) {
+                    // Missing r2 on a tallied frame 10 → dash.
+                    c2 = frameTallied ? DASH_ROLL : DOT_ROLL;
+                }
+                else if (r2Strike) c2 = rollMark(r2, true, false, false);
+                else if (r2Spare) c2 = rollMark(r2, false, true, false);
+                else c2 = rollMark(r2, false, false, false);
+                let c3;
+                if (r3 == null) {
+                    // r3 cell shown when the strike/spare bonus was
+                    // earned, or when the data is missing on a tallied
+                    // F10 (iOS save without per-roll detail).
+                    // Otherwise leave a dot.
+                    c3 = (frameTallied && (bonusEarned || r1 == null)) ? DASH_ROLL : DOT_ROLL;
+                }
+                else if (r3Strike) c3 = rollMark(r3, true, false, false);
+                else if (r3Spare) c3 = rollMark(r3, false, true, false);
+                else c3 = rollMark(r3, false, false, false);
+                rollsHtml = c1 + c2 + c3;
+            }
+            const score = f.score;
+            const cumHtml = (score != null && Number(score) > 0)
+                ? `<div class="cum">${score}</div>`
+                : '<div class="cum empty"></div>';
+            return `<div class="${cls}"><div class="rolls">${rollsHtml}</div>${cumHtml}</div>`;
+        }).join('');
+    }
+    function buildFramesBlock(framesByGame) {
+        if (!Array.isArray(framesByGame) || framesByGame.length === 0) return '';
+        // v1.1.405 — Accept Firestore-legal shape: each game is a
+        // {gameNumber, frames} map. Old in-flight data may still be a
+        // bare frames array (List<List<Map>>) — handle both.
+        const games = framesByGame.map((entry) => {
+            if (Array.isArray(entry)) return entry;
+            if (entry && Array.isArray(entry.frames)) return entry.frames;
+            return null;
+        }).filter(Boolean);
+        if (games.length === 0) return '';
+        const multi = games.length > 1;
+        const rows = games.map((frames, idx) => {
+            const label = multi ? `<div class="game-label">G${idx + 1}</div>` : '';
+            const rowCls = multi ? 'bowling-frames-row' : 'bowling-frames-row no-label';
+            return `<div class="${rowCls}">${label}${buildFrameCells(frames)}</div>`;
+        }).join('');
+        return `<div class="bowling-frames-wrap">${rows}</div>`;
+    }
+
+    const fmtPct = v => {
+        const n = Number(v);
+        if (!isFinite(n) || n <= 0) return '';
+        return n >= 100 ? '100%' : `${n.toFixed(0)}%`;
+    };
+    const buildStatsLine = (name, scoreCount) => {
+        const p = partByName.get((name || '').trim().toLowerCase());
+        if (!p) return '';
+        const s = p.stats || {};
+        const strikes = Number(s.strikes || 0);
+        const spares = Number(s.spares || 0);
+        const open = Number(s.openFrames || 0);
+        const splits = Number(s.splits || 0);
+        const conv = Number(s.splitConversions || 0);
+        // Prefer precomputed percentages; fall back to (count / frames)
+        // when missing.
+        const frames = Number(s.totalFrames || (scoreCount * 10) || 0);
+        const strikePct = s.strikePct != null
+            ? Number(s.strikePct)
+            : (frames > 0 ? strikes * 100 / frames : 0);
+        const sparePct = s.sparePct != null
+            ? Number(s.sparePct)
+            : (frames > 0 ? spares * 100 / frames : 0);
+        if (strikes + spares + open + splits === 0) return '';
+        const chips = [];
+        if (strikes > 0) chips.push(`<span class="chip"><strong>X</strong> ${strikes}${strikePct ? ` (${fmtPct(strikePct)})` : ''}</span>`);
+        if (spares > 0) chips.push(`<span class="chip"><strong>/</strong> ${spares}${sparePct ? ` (${fmtPct(sparePct)})` : ''}</span>`);
+        if (open > 0) chips.push(`<span class="chip"><strong>O</strong> ${open}</span>`);
+        if (splits > 0) {
+            const txt = conv > 0 ? `${conv}/${splits}` : `${splits}`;
+            chips.push(`<span class="chip"><strong>Split</strong> ${txt}</span>`);
+        }
+        return chips.length ? `<div class="bowling-stats">${chips.join('')}</div>` : '';
+    };
+
+    const rows = ps.split(';').filter(Boolean).map(b => {
+        const [name, gamesStr, storedSeries] = b.split(':');
+        const scores = (gamesStr || '').split(',').filter(s => s).map(Number);
+        const calcSeries = scores.reduce((a, x) => a + x, 0);
+        const series = calcSeries > 0 ? calcSeries : (parseInt(storedSeries) || 0);
+        const high = scores.length ? Math.max(...scores) : 0;
+        // v15 — Pull framesByGame off the matching participant snapshot.
+        // Pro games written by Android v1.1.391+ carry this; older games
+        // (or free-tier) won't, and the row falls back to the scores-only
+        // strip beneath the bowler name.
+        const lname = (name || '').trim().toLowerCase();
+        const p = partByName.get(lname);
+        const ssb = ssBowlerByName.get(lname);
+        const utr = untrackedByName.get(lname);
+        // v19 — read from participants[].stats first (Android writer),
+        // fall back to sportSpecificStats.bowlers[] (iOS writer).
+        const framesByGame = (p && p.stats && Array.isArray(p.stats.framesByGame))
+            ? p.stats.framesByGame
+            : (ssb && Array.isArray(ssb.framesByGame))
+                ? ssb.framesByGame
+                : null;
+        // Per-bowler handicap — when present, each bowler row shows both
+        // raw and adjusted series so the page mirrors a league recap sheet.
+        // v20 — Fall through to sportSpecificStats.untrackedBowlers[] so
+        // untracked teammates also show their scratch / +hcp split.
+        const partHcap = (p && p.stats && Number.isFinite(Number(p.stats.handicap)))
+            ? Number(p.stats.handicap) : NaN;
+        const ssHcap = (ssb && Number.isFinite(Number(ssb.handicap)))
+            ? Number(ssb.handicap) : NaN;
+        const utrHcap = (utr && Number.isFinite(Number(utr.handicap)))
+            ? Number(utr.handicap) : NaN;
+        const bowlerHcap = Number.isFinite(partHcap) ? partHcap
+            : Number.isFinite(ssHcap) ? ssHcap
+            : Number.isFinite(utrHcap) ? utrHcap : 0;
+        const partAdj = (p && p.stats && Number.isFinite(Number(p.stats.seriesAdjusted)))
+            ? Number(p.stats.seriesAdjusted) : NaN;
+        const ssAdj = (ssb && Number.isFinite(Number(ssb.seriesAdjusted)))
+            ? Number(ssb.seriesAdjusted) : NaN;
+        // Untracked entries don't carry a precomputed seriesAdjusted —
+        // derive it as series + handicap × gameCount-played so the
+        // displayed adjusted total matches what the team total used.
+        const utrAdj = (utr && Number.isFinite(Number(utr.handicap)))
+            ? series + Number(utr.handicap) * (Array.isArray(utr.gameScores) ? utr.gameScores.filter(s => s > 0).length : scores.length)
+            : NaN;
+        const bowlerAdj = Number.isFinite(partAdj) ? partAdj
+            : Number.isFinite(ssAdj) ? ssAdj
+            : Number.isFinite(utrAdj) ? utrAdj : series;
+        return { name: name || 'Bowler', scores, series, high, framesByGame, bowlerHcap, bowlerAdj };
     });
-  });
+    // v1.1.440 — Prepend the H2H matchup header (built above) instead
+    // of overwriting it. Solo nights leave h2hHeader empty so no
+    // visual change there.
+    // v1.1.450 — Per-bowler raw + adjusted series when handicap is on
+    // the game, so league sheets read like a real recap (raw 539 · Adj
+    // 542 with hcap +1). Solo / non-handicap games keep the single
+    // series number to avoid clutter.
+    // v21 — Eric: "on the game page, I want the individual players, both
+    // tracked and untracked, to show their individual series scores both
+    // scratch and handicap." When the game itself has handicap on, every
+    // bowler row now shows the scratch / +hcp split, even when this
+    // specific bowler's hcap is 0 (rendered as "+hcp +0/g"). Keeps the
+    // column visually consistent across the lineup and surfaces the
+    // adjusted total next to scratch for every contributor.
+    // v22 — Solo-team handicap fallback. The h2h+stats.hasHandicap gate
+    // above only fires for head-to-head games where the camera stamped
+    // both flags. A solo-team bowling night with per-bowler handicap
+    // (e.g. Carter and Eric league night 2026-06-03, Carter +9/g,
+    // Eric +67/g) leaves both flags off, so the per-bowler row dropped
+    // the +hcp split. Broaden the rendering gate to ALSO fire when any
+    // bowler in the rendered list carries a non-zero handicap. The H2H
+    // header logic above is unaffected — it stays inside `if (isH2H)`.
+    const anyBowlerHcap = rows.some(r => Number(r.bowlerHcap) > 0);
+    const showHcapColumn = hasHandicap || anyBowlerHcap;
+    const seriesCell = r => {
+        if (showHcapColumn) {
+            return `<div class="bowling-series" style="text-align:right;">
+                        <div style="font-size:13px;color:var(--text-secondary);">scratch ${r.series}</div>
+                        <div><strong>${r.bowlerAdj}</strong> <span style="font-size:11px;color:var(--text-secondary);">+hcp +${r.bowlerHcap || 0}/g</span></div>
+                    </div>`;
+        }
+        return `<div class="bowling-series">${r.series}</div>`;
+    };
+    $('scoreContent').innerHTML = h2hHeader + `
+        <div class="bowling-list">
+            ${rows.map(r => `
+                <div class="bowling-row">
+                    <div>
+                        <div class="bowling-name">${r.name}</div>
+                        ${(!r.framesByGame && r.scores.length) ? `<div class="bowling-detail">${r.scores.join(' · ')}</div>` : ''}
+                    </div>
+                    <div class="bowling-detail">High ${r.high}</div>
+                    ${seriesCell(r)}
+                    ${buildStatsLine(r.name, r.scores.length)}
+                    ${r.framesByGame ? buildFramesBlock(r.framesByGame) : ''}
+                </div>
+            `).join('')}
+        </div>`;
+    $('scoreCard').style.display = '';
 }
 
-function formatMs(ms) {
-  if (ms === undefined || ms === null || ms < 0) return '—';
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const ss = String(s % 60).padStart(2, '0');
-  return `${m}:${ss}`;
+// ── Highlights ────────────────────────────────────────────────────────
+//
+// During a YouTube/Twitch live stream the broadcaster can tap Highlight
+// to flag a moment, optionally with a quick description ("Audrey with
+// the Ace!"). The phone records the offset from broadcast start and the
+// score at that instant; on game end the buffer flushes to a subcollection
+// at teams/{teamId}/games/{gameId}/highlights. Here we read those docs
+// and render each as a chip — clicking a chip seeks the embed via the
+// YouTube IFrame API (or for non-YouTube embeds, opens a new tab with
+// `?t=...`).
+
+function formatTimestamp(seconds) {
+    const s = Math.max(0, Math.floor(Number(seconds) || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    return `${m}:${String(sec).padStart(2,'0')}`;
+}
+
+async function loadHighlights(teamId, gameId, primaryStream) {
+    if (!teamId || !gameId) return;
+    let docs = [];
+    try {
+        const snap = await retryOnAuthDeny('loadHighlights', () => getDocs(query(
+            collection(db, 'teams', teamId, 'games', gameId, 'highlights'),
+            orderBy('videoTimeSec', 'asc')
+        )));
+        snap.forEach(d => docs.push({ id: d.id, ...d.data() }));
+    } catch (e) {
+        // Most likely cause: no highlights subcollection yet for this game.
+        // Treat as empty rather than surfacing a console error to viewers.
+        console.debug('No highlights for this game:', e?.message);
+        return;
+    }
+    if (docs.length === 0) return;
+    renderHighlights(docs, primaryStream);
+}
+
+function renderHighlights(highlights, primaryStream) {
+    const list = $('highlightsList');
+    const platform = primaryStream ? (primaryStream.platform || detectPlatform(primaryStream.url)) : null;
+    const baseUrl = primaryStream ? primaryStream.url : null;
+    list.innerHTML = highlights.map((h, i) => {
+        const desc = h.description && h.description.trim()
+            ? escapeHtml(h.description.trim())
+            : `Highlight ${i + 1}`;
+        const score = h.scoreLabel ? escapeHtml(h.scoreLabel) : '';
+        const t = formatTimestamp(h.videoTimeSec);
+        const sec = Math.max(0, Math.floor(Number(h.videoTimeSec) || 0));
+        return `<button class="highlight-chip" data-time="${sec}" data-idx="${i}">
+            <span class="star">⭐</span>
+            <span class="body">
+                <span class="desc">${desc}</span>
+                ${score ? `<span class="score">${score}</span>` : ''}
+            </span>
+            <span class="time">${t}</span>
+        </button>`;
+    }).join('');
+    // Wire up click → seek (or fall back to opening in a new tab with
+    // `?t=` for non-IFrame-API embeds, e.g., Twitch or when YT API failed).
+    list.querySelectorAll('.highlight-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const sec = parseInt(btn.dataset.time, 10) || 0;
+            seekToHighlight(sec, platform, baseUrl);
+        });
+    });
+    $('highlightsCard').style.display = '';
+}
+
+function seekToHighlight(seconds, platform, baseUrl) {
+    if (platform === 'youtube' && ytPlayer && ytPlayerReady) {
+        try {
+            ytPlayer.seekTo(seconds, true);
+            ytPlayer.playVideo();
+            // Smooth-scroll the player back into view in case the user had
+            // scrolled down to the chip list before tapping.
+            document.querySelector('.video-embed-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        } catch (e) {
+            console.warn('YT seekTo failed, falling back to inline remount:', e);
+        }
+    }
+
+    // 2026-06-09 — Inline-remount fallback. Eric: "in my browser outside
+    // of the app I click on the watch links for each goal it's taking me
+    // to YouTube directly. but it works correctly inside the app." The
+    // old fallback used window.open() against the highlight URL which
+    // landed straight on the YouTube site. Now we mount a fresh embed
+    // into the existing player slot, autoplay starting at the goal
+    // timestamp — the goal plays inline regardless of YT API state.
+    const playerSlot = $('playerSlot');
+    if (platform === 'youtube' && baseUrl && playerSlot) {
+        const id = extractYouTubeId(baseUrl);
+        if (id) {
+            const allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+            const ps = new URLSearchParams({
+                modestbranding: '1', rel: '0', playsinline: '1',
+                color: 'white', iv_load_policy: '3', enablejsapi: '1',
+                origin: window.location.origin,
+                autoplay: '1', start: String(seconds),
+            });
+            const src = `https://www.youtube.com/embed/${id}?${ps.toString()}`;
+            const iframeId = 'sf-primary-player';
+            playerSlot.innerHTML = `
+                <div class="video-embed-wrap">
+                    <iframe id="${iframeId}" src="${src}" allow="${allow}" allowfullscreen loading="eager"></iframe>
+                </div>`;
+            ytPlayer = null;
+            ytPlayerReady = false;
+            ensureYouTubeApi(() => {
+                try {
+                    ytPlayer = new YT.Player(iframeId, {
+                        events: { onReady: () => { ytPlayerReady = true; } }
+                    });
+                } catch (e) { /* embed plays fine without API */ }
+            });
+            document.querySelector('.video-embed-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+    }
+
+    // Last-resort fallback: open the stream URL in a new tab. Only
+    // reaches here when there's no player slot (headless layout) or the
+    // stream isn't YouTube (Twitch / Facebook). Non-YouTube embed
+    // remount could be added later when those highlights ship.
+    if (baseUrl) {
+        const sep = baseUrl.includes('?') ? '&' : '?';
+        window.open(`${baseUrl}${sep}t=${seconds}`, '_blank', 'noopener');
+    }
+}
+
+function renderAiRecap(game) {
+    const recap = (game && typeof game.aiRecap === 'string') ? game.aiRecap.trim() : '';
+    if (!recap) return;
+    $('aiRecapText').textContent = recap;
+    $('aiRecapCard').style.display = '';
+}
+
+// 2026-06-09 — Per-event scoring summary card. Reads game.scoringEvents
+// (written by the in-app goal-confirmation dialog) and renders one row
+// per event: ⚽ Team — "Player" — game-clock — optional ▶ Watch link.
+// Untracked / "no player" entries skip the player name but still log
+// the team + clock so the timeline stays complete. Sorted by clock asc
+// so the order matches the broadcast. Soccer-first; future sports will
+// re-label "Goals" → "Scoring" / "Tries" / etc. via SPORT_LABEL_MAP.
+function renderScoringSummary(hub, game, sport) {
+    const card = $('scoringSummaryCard');
+    if (!card) return;
+    const events = Array.isArray(game?.scoringEvents) ? game.scoringEvents : [];
+    if (events.length === 0) { card.style.display = 'none'; return; }
+
+    const SPORT_LABEL_MAP = {
+        SOCCER: { label: 'Goals', emoji: '⚽', verb: 'Goal' },
+    };
+    const sportKey = String(sport || '').toUpperCase();
+    const meta = SPORT_LABEL_MAP[sportKey] || { label: 'Scoring Summary', emoji: '🥅', verb: 'Score' };
+    $('scoringSummaryLabel').textContent = meta.label;
+
+    // Stable sort by game clock (ascending). gameClockSeconds is the
+    // soccer match-clock position at the tap.
+    const sorted = events.slice().sort((a, b) => (a.gameClockSeconds || 0) - (b.gameClockSeconds || 0));
+
+    const homeColor = hub?.color || '#FF9640';
+    const awayColor = hub?.color2 || '#FFFFFF';
+    const homeName = game.homeTeam || 'Home';
+    const awayName = game.awayTeam || 'Away';
+
+    const fmtClock = (sec) => {
+        const s = Math.max(0, Math.floor(sec || 0));
+        const m = Math.floor(s / 60);
+        return `${m}'`;  // soccer convention: minute marker, e.g. "23'"
+    };
+    // 2026-06-09 — Half label (1st / 2nd / ET / PK) stamped on the
+    // ScoringEvent at tap time. Empty for legacy events.
+    const fmtHalf = (h) => {
+        const s = String(h || '').trim();
+        if (!s) return '';
+        return s === 'PK' ? 'PKs' : s;
+    };
+
+    const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => (
+        { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+    ));
+
+    // 2026-06-09 — Each goal row lines up on the scoring team's side
+    // (HOME left, AWAY right) with the team color as background tint +
+    // border. Per Eric: "put the score for the other team to the right
+    // side of the screen and apply the color for that team that was
+    // selected on setup."
+    const hexToRgba = (hex, alpha) => {
+        const h = hex.replace('#', '');
+        const norm = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+        const r = parseInt(norm.slice(0, 2), 16);
+        const g = parseInt(norm.slice(2, 4), 16);
+        const b = parseInt(norm.slice(4, 6), 16);
+        return `rgba(${r},${g},${b},${alpha})`;
+    };
+
+    // Build the watch-button HTML for one event. Eric: tapping a watch
+    // link inside the WebView was opening the YouTube site instead of
+    // seeking the inline player. We now mirror the Highlights chips —
+    // parse the `t=Ns` offset out of the highlightUrl, look up the
+    // matching entry in game.streams[] (most often the YouTube live
+    // broadcast), and emit a button that drives the existing
+    // seekToHighlight() helper. That helper seeks the IFrame API
+    // player when ready and falls back to a new tab only when we
+    // can't reach it (non-embed platform, late call, etc.).
+    const buildWatchHtml = (ev) => {
+        const url = typeof ev.highlightUrl === 'string' ? ev.highlightUrl : '';
+        if (!url.startsWith('http')) return '';
+        const tMatch = url.match(/[?&]t=(\d+)s?/);
+        const seconds = tMatch ? parseInt(tMatch[1], 10) : 0;
+        const streams = Array.isArray(game.streams) ? game.streams : [];
+        const matched = streams.find(s => typeof s?.url === 'string' && url.startsWith(s.url)) || streams[0] || {};
+        const platform = matched.platform || 'youtube';
+        const baseUrl = matched.url || url.split(/[?#]/)[0];
+        return `<button type="button" class="scoring-watch-btn" data-seek-sec="${seconds}" data-stream-platform="${escapeHtml(platform)}" data-stream-url="${escapeHtml(baseUrl)}" style="font-size:12px;font-weight:700;color:var(--accent);background:transparent;border:0;cursor:pointer;white-space:nowrap;padding:0;">▶ Watch</button>`;
+    };
+
+    const rows = sorted.map(ev => {
+        const side = (ev.side || 'HOME').toUpperCase();
+        const isHome = side === 'HOME';
+        const accent = isHome ? homeColor : awayColor;
+        const tint = hexToRgba(accent, 0.16);
+        const teamName = ev.teamName || (isHome ? homeName : awayName);
+        const playerName = (ev.playerName || '').trim();
+        const clock = fmtClock(ev.gameClockSeconds);
+        const half = fmtHalf(ev.halfLabel);
+        const watchHtml = buildWatchHtml(ev);
+        // Card content. We build the same blocks for both sides; the
+        // outer wrapper flips the visual order so the home card hugs
+        // the left edge and the away card hugs the right.
+        const playerLine = playerName
+            ? `<div style="font-size:13px;color:var(--text-secondary);margin-top:2px;text-align:${isHome ? 'left' : 'right'};">${escapeHtml(playerName)}</div>`
+            : '';
+        const teamLine = `<div style="font-size:14px;font-weight:700;color:var(--text-primary);text-align:${isHome ? 'left' : 'right'};">${escapeHtml(teamName)}</div>`;
+        // Clock block: minute + (when present) the half label as a
+        // small secondary line so the reader can see *when* the goal
+        // happened in the full game flow, not just the minute.
+        const halfLine = half
+            ? `<div style="font-size:10px;font-weight:700;color:var(--text-muted,#666);letter-spacing:0.04em;text-transform:uppercase;margin-top:2px;text-align:${isHome ? 'right' : 'left'};">${escapeHtml(half)}</div>`
+            : '';
+        const clockBlock = `<div style="min-width:44px;text-align:${isHome ? 'right' : 'left'};"><div style="font-size:13px;font-weight:700;color:var(--text-muted,#888);">${clock}</div>${halfLine}</div>`;
+        const emojiBlock = `<div style="font-size:18px;line-height:1;flex-shrink:0;">${meta.emoji}</div>`;
+        const infoBlock = `<div style="flex:1;min-width:0;">${teamLine}${playerLine}</div>`;
+        const accentBar = `<div style="width:4px;align-self:stretch;background:${escapeHtml(accent)};border-radius:2px;"></div>`;
+        // Card itself, with team-tinted background + leading border on
+        // the scoring side.
+        const cardInner = isHome
+            ? `${accentBar}${emojiBlock}${infoBlock}${clockBlock}${watchHtml}`
+            : `${watchHtml}${clockBlock}${infoBlock}${emojiBlock}${accentBar}`;
+        const card = `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:${tint};max-width:88%;">${cardInner}</div>`;
+        // Outer wrapper: justify left for HOME, right for AWAY.
+        return `<div style="display:flex;justify-content:${isHome ? 'flex-start' : 'flex-end'};padding:6px 0;">${card}</div>`;
+    }).join('');
+
+    $('scoringSummaryContent').innerHTML = rows;
+    // Wire the watch buttons through seekToHighlight so they drive the
+    // inline player rather than the external YouTube site (Eric repro:
+    // tapping ▶ Watch was popping the YouTube web app inside the
+    // WebView). Mirrors the Highlights-chip wiring at line 1950-ish.
+    card.querySelectorAll('.scoring-watch-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const sec = parseInt(btn.dataset.seekSec, 10) || 0;
+            const platform = btn.dataset.streamPlatform || 'youtube';
+            const baseUrl = btn.dataset.streamUrl || '';
+            seekToHighlight(sec, platform, baseUrl);
+        });
+    });
+    card.style.display = '';
+}
+
+// 2026-06-09 — Match Stats card. Sport-specific team totals from
+// game.sportSpecificStats (written by the Android/iOS end-game save).
+// Soccer is the first user: SOG / Corners / Fouls / Offsides /
+// Yellow / Red / Saves. Renders as a horizontal table with the
+// HOME number on the left, AWAY number on the right, and the stat
+// label in the middle. Each row gets a colored bar showing relative
+// dominance — wider bar on the side that has the larger value.
+// Hidden when the sport has no stat payload OR when every value is
+// zero (boring 0-0 row strip just clutters the page).
+function renderMatchStats(hub, game, sport) {
+    const card = $('matchStatsCard');
+    if (!card) return;
+    const sportKey = String(sport || '').toUpperCase();
+    const stats = (game && typeof game.sportSpecificStats === 'object' && game.sportSpecificStats) || {};
+    // Per-sport row spec: { label, homeKey, awayKey, prefix? }
+    const ROWS_BY_SPORT = {
+        SOCCER: [
+            { label: 'Shots on Goal',  hk: 'homeShotsOnGoal',  ak: 'awayShotsOnGoal' },
+            { label: 'Corners',        hk: 'homeCorners',      ak: 'awayCorners' },
+            { label: 'Fouls',          hk: 'homeFouls',        ak: 'awayFouls' },
+            { label: 'Offsides',       hk: 'homeOffsides',     ak: 'awayOffsides' },
+            { label: '🟨 Yellow Cards', hk: 'homeYellowCards',  ak: 'awayYellowCards' },
+            { label: '🟥 Red Cards',    hk: 'homeRedCards',     ak: 'awayRedCards' },
+            { label: 'Saves',          hk: 'homeSaves',        ak: 'awaySaves' },
+        ],
+    };
+    const spec = ROWS_BY_SPORT[sportKey];
+    if (!spec) { card.style.display = 'none'; return; }
+    const rows = spec
+        .map(r => ({ label: r.label, home: Number(stats[r.hk] || 0), away: Number(stats[r.ak] || 0) }))
+        .filter(r => r.home > 0 || r.away > 0);
+    if (rows.length === 0) { card.style.display = 'none'; return; }
+
+    const homeColor = hub?.color || '#FF9640';
+    const awayColor = hub?.color2 || '#FFFFFF';
+    const homeName = game.homeTeam || 'Home';
+    const awayName = game.awayTeam || 'Away';
+    const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => (
+        { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+    ));
+
+    // Header row: team name + color swatch on each side.
+    const headerHtml = `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0 12px 0;border-bottom:1px solid var(--bg-elevated,#1e1e1e);margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${escapeHtml(homeColor)};"></span>
+            <span style="font-size:13px;font-weight:700;color:var(--text-primary);">${escapeHtml(homeName)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:13px;font-weight:700;color:var(--text-primary);">${escapeHtml(awayName)}</span>
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${escapeHtml(awayColor)};"></span>
+        </div>
+    </div>`;
+
+    // Stat rows: HOME number — colored relative bar — AWAY number.
+    const rowsHtml = rows.map(r => {
+        const total = r.home + r.away;
+        const homePct = total > 0 ? Math.round((r.home / total) * 100) : 50;
+        const awayPct = 100 - homePct;
+        return `<div style="padding:8px 0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;">
+                <div style="font-weight:700;color:var(--text-primary);min-width:36px;text-align:left;">${r.home}</div>
+                <div style="flex:1;text-align:center;color:var(--text-secondary);font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">${r.label}</div>
+                <div style="font-weight:700;color:var(--text-primary);min-width:36px;text-align:right;">${r.away}</div>
+            </div>
+            <div style="display:flex;margin-top:6px;height:6px;border-radius:3px;overflow:hidden;background:var(--bg-elevated,#1e1e1e);">
+                <div style="width:${homePct}%;background:${escapeHtml(homeColor)};"></div>
+                <div style="width:${awayPct}%;background:${escapeHtml(awayColor)};"></div>
+            </div>
+        </div>`;
+    }).join('');
+
+    $('matchStatsContent').innerHTML = headerHtml + rowsHtml;
+    card.style.display = '';
+}
+
+// 2026-06-09 — Penalty shootout rendering. Soccer playoff PKs come
+// across in game.sportSpecificStats as `homePkAttempts` /
+// `awayPkAttempts` lists ("MADE" / "MISSED") and a corresponding
+// `endingMethod` flag ("regulation" / "playoff" / "playoff_sudden_death")
+// stamped at end-game. Card is hidden when no PKs were attempted.
+function renderPkShootout(hub, game, sport) {
+    const card = $('pkShootoutCard');
+    if (!card) return;
+    const stats = (game && typeof game.sportSpecificStats === 'object' && game.sportSpecificStats) || {};
+    const home = Array.isArray(stats.homePkAttempts) ? stats.homePkAttempts : [];
+    const away = Array.isArray(stats.awayPkAttempts) ? stats.awayPkAttempts : [];
+    if (home.length === 0 && away.length === 0) { card.style.display = 'none'; return; }
+
+    const homeColor = hub?.color || '#FF9640';
+    const awayColor = hub?.color2 || '#FFFFFF';
+    const homeName = game.homeTeam || 'Home';
+    const awayName = game.awayTeam || 'Away';
+    const homeMade = home.filter(x => x === 'MADE').length;
+    const awayMade = away.filter(x => x === 'MADE').length;
+    const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => (
+        { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+    ));
+
+    const slots = Math.max(5, home.length, away.length);
+    const buildDots = (list, color) => {
+        let html = '';
+        for (let i = 0; i < slots; i++) {
+            const v = list[i] || '';
+            const fill = v === 'MADE' ? '#22C55E' : v === 'MISSED' ? '#EF4444' : 'transparent';
+            const border = v ? fill : 'var(--text-muted,#888)';
+            const sym = v === 'MADE' ? '✓' : v === 'MISSED' ? '✗' : (i + 1);
+            const dotColor = v ? '#fff' : 'var(--text-muted,#888)';
+            html += `<div style="width:26px;height:26px;border-radius:50%;border:2px solid ${border};background:${fill};color:${dotColor};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-right:6px;">${sym}</div>`;
+        }
+        return html;
+    };
+
+    // 2026-06-09 — Winning side's row colored orange (matches the
+    // "Won on PKs" badge in the score card). Tied PK rows happen during
+    // sudden death — both sides stay neutral until one breaks the tie.
+    const winName = (s, isWinner) => isWinner
+        ? `color:var(--accent);`
+        : `color:var(--text-primary);`;
+    const winCount = (isWinner) => isWinner
+        ? `color:var(--accent);`
+        : `color:var(--text-muted,#888);`;
+    const homeIsWinner = homeMade > awayMade;
+    const awayIsWinner = awayMade > homeMade;
+
+    const rowHome = `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${escapeHtml(homeColor)};"></span>
+            <span style="font-size:13px;font-weight:700;${winName(homeName, homeIsWinner)}">${escapeHtml(homeName)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">${buildDots(home, homeColor)}<span style="font-size:14px;font-weight:700;${winCount(homeIsWinner)}margin-left:6px;">${homeMade}</span></div>
+    </div>`;
+    const rowAway = `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${escapeHtml(awayColor)};"></span>
+            <span style="font-size:13px;font-weight:700;${winName(awayName, awayIsWinner)}">${escapeHtml(awayName)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">${buildDots(away, awayColor)}<span style="font-size:14px;font-weight:700;${winCount(awayIsWinner)}margin-left:6px;">${awayMade}</span></div>
+    </div>`;
+
+    // Win label — pulled from endingMethod, or derived from the
+    // attempts length when an older save didn't stamp it.
+    const ending = (stats.endingMethod ||
+        (home.length > 5 || away.length > 5 ? 'playoff_sudden_death'
+        : home.length || away.length ? 'playoff' : 'regulation'));
+    const endingLabel = {
+        regulation: 'Decided in regulation',
+        playoff: 'Decided on penalties',
+        playoff_sudden_death: 'Decided on penalties (sudden death)',
+    }[ending] || '';
+    const labelHtml = endingLabel
+        ? `<div style="margin-top:10px;font-size:12px;color:var(--text-muted,#888);text-transform:uppercase;letter-spacing:0.06em;text-align:center;">${escapeHtml(endingLabel)}</div>`
+        : '';
+
+    $('pkShootoutContent').innerHTML = rowHome + rowAway + labelHtml;
+    card.style.display = '';
+}
+
+// 2026-06-02 — Box score. Reads game.participants (per-player stats
+// snapshot written at End Game on both platforms) and renders a
+// sport-specific column set for each side. Skipped for bowling
+// (per-frame visualization handles it) and for games with no
+// participants[] at all (sport without per-player tracking, or a
+// legacy save).
+function renderBoxScore(hub, game, sport) {
+    const card = $('boxScoreCard');
+    const content = $('boxScoreContent');
+    const parts = Array.isArray(game.participants) ? game.participants : [];
+    const s = String(sport || '').toUpperCase();
+    console.log('[box-score] sport=', s, 'participants=', parts.length,
+        'first=', parts[0]);
+    if (parts.length === 0) return;
+    if (s === 'BOWLING') return; // already rendered per-frame above
+    const cols = boxScoreColumnsForSport(s);
+    if (!cols || cols.length === 0) {
+        console.log('[box-score] no columns defined for sport', s);
+        return;
+    }
+    const home = parts.filter(p => String(p.side || '').toLowerCase() === 'home');
+    const away = parts.filter(p => String(p.side || '').toLowerCase() === 'away');
+
+    // 2026-06-09 — Soccer per-player stats only get captured when the
+    // user has the Pro-gated Advanced Soccer mode + chip stat strip.
+    // Free-user games have a complete roster but every stat at zero —
+    // rendering a "box score" of all-zero rows reads like the app
+    // broke. Eric: "in free mode since we can't score any stats we
+    // should not put the box score on the game page for a game that
+    // has scored from a free user." Skip the card unless at least
+    // one participant has a non-zero stat tracked.
+    if (s === 'SOCCER') {
+        const everyone = home.concat(away);
+        const anyStats = everyone.some(p => {
+            const st = (p && p.stats && typeof p.stats === 'object') ? p.stats : {};
+            return cols.some(c => {
+                const v = st[c.key];
+                return typeof v === 'number' && v > 0;
+            });
+        });
+        if (!anyStats) return;
+    }
+
+    const homeName = game.homeTeam || hub.teamName || 'Home';
+    const awayName = game.awayTeam || 'Away';
+    const homeColor = game.homeColor || hub.color || '#1565C0';
+    const awayColor = game.awayColor || '#C62828';
+    const sections = [];
+    if (home.length > 0) sections.push(renderBoxSide(homeName, homeColor, home, cols, s));
+    if (away.length > 0) sections.push(renderBoxSide(awayName, awayColor, away, cols, s));
+    if (sections.length === 0) return;
+    content.innerHTML = sections.join('');
+    card.style.display = '';
+}
+
+function renderBoxSide(name, color, players, cols, sportKey) {
+    const headerStyle = `background:${color};`;
+    const headerCols = '<th class="bx-num">#</th><th class="bx-name">Player</th>' +
+        cols.map(c => `<th>${c.label}</th>`).join('');
+    const bodyRows = players.map(p => {
+        const stats = (p.stats && typeof p.stats === 'object') ? p.stats : {};
+        const cells = cols.map(c => `<td class="bx-stat">${c.fmt(stats, sportKey)}</td>`).join('');
+        return `<tr><td class="bx-num">${escapeHtml(p.number || '–')}</td>` +
+            `<td class="bx-name">${escapeHtml(p.name || 'Player')}</td>${cells}</tr>`;
+    }).join('');
+    const totals = computeBoxTotals(players, cols, sportKey);
+    const totalRow = totals ?
+        `<tfoot><tr><td class="bx-num"></td><td class="bx-name">Total</td>` +
+        cols.map(c => `<td class="bx-stat">${c.totalFmt ? c.totalFmt(totals, sportKey) : (totals[c.key] != null ? totals[c.key] : '')}</td>`).join('') +
+        `</tr></tfoot>` : '';
+    return `<div class="box-side"><div class="box-side-header" style="${headerStyle}">${escapeHtml(name)}</div>` +
+        `<div class="box-table-wrap"><table class="box-table"><thead><tr>${headerCols}</tr></thead>` +
+        `<tbody>${bodyRows}</tbody>${totalRow}</table></div></div>`;
+}
+
+// Per-sport column definitions. Each column = { key, label, fmt(stats),
+// totalFmt?(totals), sumKey? }. `key` matches the participant.stats
+// map key written by the apps (see Android MainActivity.buildParticipants,
+// iOS MainActivity.buildParticipants).
+function boxScoreColumnsForSport(s) {
+    const num = (v) => (v == null || v === '') ? '0' : String(v);
+    const dec = (v, d) => (typeof v === 'number' && v > 0) ? v.toFixed(d) : '–';
+    const pct = (m, a) => (a > 0) ? Math.round((m / a) * 100) + '%' : '–';
+    if (s === 'BASKETBALL') {
+        return [
+            { key: 'PTS', label: 'PTS', fmt: (st) => num(st.PTS), sum: true },
+            { key: 'FG',  label: 'FG',  fmt: (st) => `${num(st.FGM)}-${num(st.FGA)}`,
+              totalFmt: (t) => `${num(t.FGM)}-${num(t.FGA)}` },
+            { key: '3P',  label: '3P',  fmt: (st) => `${num(st['3PM'])}-${num(st['3PA'])}`,
+              totalFmt: (t) => `${num(t['3PM'])}-${num(t['3PA'])}` },
+            { key: 'FT',  label: 'FT',  fmt: (st) => `${num(st.FTM)}-${num(st.FTA)}`,
+              totalFmt: (t) => `${num(t.FTM)}-${num(t.FTA)}` },
+            { key: 'REB', label: 'REB', fmt: (st) => num(st.REB), sum: true },
+            { key: 'AST', label: 'AST', fmt: (st) => num(st.AST), sum: true },
+            { key: 'STL', label: 'STL', fmt: (st) => num(st.STL), sum: true },
+            { key: 'BLK', label: 'BLK', fmt: (st) => num(st.BLK), sum: true },
+            { key: 'TO',  label: 'TO',  fmt: (st) => num(st.TO),  sum: true },
+            { key: 'PF',  label: 'PF',  fmt: (st) => num(st.PF),  sum: true },
+        ];
+    }
+    if (s === 'BASEBALL' || s === 'SOFTBALL') {
+        return [
+            { key: 'AB',  label: 'AB',  fmt: (st) => num(st.AB),  sum: true },
+            { key: 'R',   label: 'R',   fmt: (st) => num(st.R),   sum: true },
+            { key: 'H',   label: 'H',   fmt: (st) => num(st.H),   sum: true },
+            { key: 'RBI', label: 'RBI', fmt: (st) => num(st.RBI), sum: true },
+            { key: 'HR',  label: 'HR',  fmt: (st) => num(st.HR),  sum: true },
+            { key: 'BB',  label: 'BB',  fmt: (st) => num(st.BB),  sum: true },
+            { key: 'K',   label: 'K',   fmt: (st) => num(st.K),   sum: true },
+            { key: 'AVG', label: 'AVG',
+              fmt: (st) => (typeof st.AVG === 'number' ? st.AVG.toFixed(3) : '–'),
+              totalFmt: (t) => (t.AB > 0 ? (t.H / t.AB).toFixed(3) : '–') },
+        ];
+    }
+    if (s === 'VOLLEYBALL') {
+        return [
+            { key: 'kills',        label: 'K',    fmt: (st) => num(st.kills),        sum: true },
+            { key: 'aces',         label: 'A',    fmt: (st) => num(st.aces),         sum: true },
+            { key: 'assists',      label: 'AST',  fmt: (st) => num(st.assists),      sum: true },
+            { key: 'digs',         label: 'D',    fmt: (st) => num(st.digs),         sum: true },
+            { key: 'blocks',       label: 'B',    fmt: (st) => num(st.blocks),       sum: true },
+            { key: 'errors',       label: 'ERR',  fmt: (st) => num(st.errors),       sum: true },
+            { key: 'missedServes', label: 'MSV',  fmt: (st) => num(st.missedServes), sum: true },
+        ];
+    }
+    if (s === 'TENNIS' || s === 'PICKLEBALL') {
+        return [
+            { key: 'wins',   label: 'W', fmt: (st) => num(st.wins),   sum: true },
+            { key: 'losses', label: 'L', fmt: (st) => num(st.losses), sum: true },
+        ];
+    }
+    if (s === 'SOCCER') {
+        // 2026-06-09 — Per-player soccer stats (Android v1.1.672+).
+        // Mirrors the panel chip-strip stat buttons: G / A / SOG /
+        // Foul / Off / YC / RC / Sav / Cor. Cards as count rather
+        // than a symbol so the totals line stays numeric.
+        return [
+            { key: 'goals',        label: 'G',   fmt: (st) => num(st.goals),        sum: true },
+            { key: 'assists',      label: 'A',   fmt: (st) => num(st.assists),      sum: true },
+            { key: 'shotsOnGoal',  label: 'SOG', fmt: (st) => num(st.shotsOnGoal),  sum: true },
+            { key: 'fouls',        label: 'F',   fmt: (st) => num(st.fouls),        sum: true },
+            { key: 'offsides',     label: 'OFF', fmt: (st) => num(st.offsides),     sum: true },
+            { key: 'yellowCards',  label: 'YC',  fmt: (st) => num(st.yellowCards),  sum: true },
+            { key: 'redCards',     label: 'RC',  fmt: (st) => num(st.redCards),     sum: true },
+            { key: 'saves',        label: 'SAV', fmt: (st) => num(st.saves),        sum: true },
+            { key: 'corners',      label: 'CK',  fmt: (st) => num(st.corners),      sum: true },
+        ];
+    }
+    // Hockey/Lacrosse: only team-level stats are tracked today,
+    // so per-player rows would all be zeros — skip the section.
+    return null;
+}
+
+function computeBoxTotals(players, cols, sportKey) {
+    const t = {};
+    let hasSum = false;
+    for (const c of cols) {
+        // Collect all numeric keys we sum + the FG/3P/FT pairs.
+        const keys = [];
+        if (c.sum) keys.push(c.key);
+        if (c.key === 'FG') keys.push('FGM', 'FGA');
+        if (c.key === '3P') keys.push('3PM', '3PA');
+        if (c.key === 'FT') keys.push('FTM', 'FTA');
+        if (c.key === 'AVG') keys.push('AB', 'H');
+        for (const k of keys) {
+            let sum = 0;
+            for (const p of players) {
+                const v = (p.stats && p.stats[k]);
+                if (typeof v === 'number') sum += v;
+            }
+            t[k] = sum;
+            if (sum > 0) hasSum = true;
+        }
+    }
+    return hasSum ? t : null;
+}
+
+// v33b — Copy + Share handlers for the pre-stream card. Buttons carry
+// the URL on data-copy / data-share and the event name on data-title;
+// rendered via innerHTML so we have to bind after each write.
+function setupPreStreamActions() {
+    const copyBtn = document.querySelector('.prestream-copy');
+    const shareBtn = document.querySelector('.prestream-share');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', async () => {
+            const url = copyBtn.dataset.copy || '';
+            if (!url) return;
+            try {
+                await navigator.clipboard.writeText(url);
+            } catch (e) {
+                // Fallback for older browsers.
+                const ta = document.createElement('textarea');
+                ta.value = url;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch (_) {}
+                ta.remove();
+            }
+            const original = copyBtn.textContent;
+            copyBtn.textContent = '✓ Copied';
+            setTimeout(() => { copyBtn.textContent = original; }, 1500);
+        });
+    }
+    if (shareBtn) {
+        shareBtn.addEventListener('click', async () => {
+            const url = shareBtn.dataset.share || '';
+            const title = shareBtn.dataset.title || 'ScoreFrame stream';
+            if (!url) return;
+            if (navigator.share) {
+                try {
+                    await navigator.share({ title, text: `Watch live: ${url}`, url });
+                    return;
+                } catch (_) { /* user dismissed or share unavailable */ }
+            }
+            // Desktop / unsupported — fall back to copying.
+            try {
+                await navigator.clipboard.writeText(url);
+                shareBtn.textContent = '✓ Link copied';
+                setTimeout(() => { shareBtn.textContent = '🔗 Share'; }, 1500);
+            } catch (_) {}
+        });
+    }
+}
+
+function renderMeta(game, sport) {
+    const items = [];
+    if (game.date)        items.push({ k: 'Date',    v: formatDate(game.date) });
+    if (game.location)    items.push({ k: 'Location', v: game.location });
+    if (game.eventName)   items.push({ k: 'Event',   v: game.eventName });
+    items.push({ k: 'Sport', v: sportName(sport) });
+    if (game.notes)       items.push({ k: 'Notes',   v: game.notes });
+    if (items.length === 0) return;
+    $('metaGrid').innerHTML = items.map(i =>
+        `<div class="meta-item"><div class="k">${i.k}</div><div class="v">${escapeHtml(i.v)}</div></div>`
+    ).join('');
+    $('metaCard').style.display = '';
 }
 
 function escapeHtml(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return String(s || '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 }
 
-function showError(msg) {
-  const root = document.getElementById('root');
-  root.innerHTML = `<div class="empty-state">${escapeHtml(msg)}</div>`;
+function showNotFound() {
+    $('loadingState').style.display = 'none';
+    $('notFound').style.display = '';
 }
 
+// v1.1.389 — Private-hub sign-in card. Shown when Firestore returns
+// permission-denied for an unauthenticated visitor. After the user signs
+// in, onAuthStateChanged below re-fires load() and the read succeeds
+// (subject to the canReadTeam rule — owner / manager / approved follower).
+function showSignIn() {
+    $('loadingState').style.display = 'none';
+    $('notFound').style.display = 'none';
+    $('signInState').style.display = '';
+}
+
+document.getElementById('signInGoogleBtn')?.addEventListener('click', async () => {
+    try {
+        if (_useRedirectAuth) {
+            await signInWithRedirect(auth, googleProvider);
+        } else {
+            await signInWithPopup(auth, googleProvider);
+        }
+    } catch (e) {
+        // Popup blocked / closed → try redirect as fallback.
+        if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user')) {
+            try { await signInWithRedirect(auth, googleProvider); return; } catch (_) {}
+        }
+        console.error('[auth] sign-in failed:', e);
+    }
+});
+
+// ── Share ──
+window.copyLink = function(btn) {
+    const url = window.location.href;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+            const old = btn.textContent;
+            btn.textContent = '✓ Copied';
+            setTimeout(() => btn.textContent = old, 1500);
+        });
+    }
+};
+
+window.shareNative = function() {
+    const title = document.title;
+    const url = window.location.href;
+    if (navigator.share) {
+        navigator.share({ title, url }).catch(() => {});
+    } else {
+        // Fallback — same as Copy Link.
+        if (navigator.clipboard) navigator.clipboard.writeText(url);
+        alert('Link copied — paste it anywhere.');
+    }
+};
+
+// v18 — Listen for auth state. When the URL hash carries an SSO token
+// from the native app, suppress the first anonymous onAuthStateChanged
+// fire so the page doesn't flash the "🔒 Private team page" card
+// before signInWithCustomToken completes. The IIFE below awaits the
+// handoff, then fires load() with whatever auth state landed.
+let _initialLoadDone = false;
+const _hadAuthToken = /[#&]auth=/.test(window.location.hash);
+let _handoffSettled = !_hadAuthToken;
 (async () => {
-  await tryAppAuthHandoff();
-  main();
+    if (_hadAuthToken) {
+        try { await tryAppAuthHandoff(); } catch (_) {}
+    }
+    _handoffSettled = true;
+    // If the listener was suppressed (anonymous fire arrived during
+    // handoff), fire the initial load now with whatever the post-
+    // handoff auth state is. Public hubs render; private hubs with a
+    // successful handoff render too; failed handoff falls through to
+    // the sign-in card on permission-denied.
+    if (!_initialLoadDone) {
+        _initialLoadDone = true;
+        load();
+    }
 })();
+onAuthStateChanged(auth, (user) => {
+    currentUser = user && !user.isAnonymous ? user : null;
+    // Suppress the anonymous fire while we're still waiting on the SSO
+    // handoff — otherwise the page flashes signInState before the
+    // in-app session lands. The IIFE above fires load() once settled.
+    if (!_handoffSettled && !currentUser) return;
+    if (!_initialLoadDone) {
+        _initialLoadDone = true;
+        load();
+    } else if (currentUser) {
+        // User just signed in via the sign-in card — retry with creds.
+        $('signInState').style.display = 'none';
+        $('loadingState').style.display = '';
+        load();
+    }
+});
 </script>
 </body>
 </html>
