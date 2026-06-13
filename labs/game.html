@@ -1422,20 +1422,29 @@ function labsBuildAnnounceFeed() {
     if (document.getElementById('labsAnnouncePanel')) return;
     const stage = document.querySelector('.stage');
     if (!stage) return;
+    // Portrait-fit reorder: video → play-by-play → scoreboard on one
+    // screen. Hide hero (title/meta) — same info lives in the labs
+    // status pill + email subject. Move stage to top of its parent so
+    // it's the first thing the viewer sees.
+    const hero = document.querySelector('.hero');
+    if (hero) hero.style.display = 'none';
+    if (stage.parentNode.firstElementChild !== stage) {
+        stage.parentNode.insertBefore(stage, stage.parentNode.firstElementChild);
+    }
     // Card-style panel labeled PLAY BY PLAY, visible from initial render
     // so the area doesn't read as "empty space" before the first event.
-    // Fixed height: header (~28px) + 2 rows (~46px each, incl. gap) +
-    // padding ≈ 134px. Rows fill bottom-up inside the inner feed div.
+    // Fixed height: header + 2 rows + padding ≈ 130px. Rows fill bottom-
+    // up inside the inner feed div.
     const panel = document.createElement('div');
     panel.id = 'labsAnnouncePanel';
-    panel.style.cssText = 'margin:8px 16px 0;padding:10px 12px 12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,150,64,0.10), rgba(255,150,64,0.04));border:1px solid rgba(255,150,64,0.30);box-shadow:0 2px 10px rgba(0,0,0,0.20);';
+    panel.style.cssText = 'margin:6px 12px 0;padding:8px 10px 10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,150,64,0.10), rgba(255,150,64,0.04));border:1px solid rgba(255,150,64,0.30);box-shadow:0 2px 10px rgba(0,0,0,0.20);';
     const header = document.createElement('div');
-    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:800;letter-spacing:0.10em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;';
-    header.innerHTML = `<span>🎙️ Play-by-Play</span><span style="font-size:10px;color:var(--text-secondary);font-weight:600;">Labs · synced to video</span>`;
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:800;letter-spacing:0.10em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;';
+    header.innerHTML = `<span>🎙️ Play-by-Play</span><span style="font-size:9px;color:var(--text-secondary);font-weight:600;">Labs · synced to video</span>`;
     panel.appendChild(header);
     const wrap = document.createElement('div');
     wrap.id = 'labsAnnounceFeed';
-    wrap.style.cssText = 'display:flex;flex-direction:column;justify-content:flex-end;gap:6px;overflow:hidden;height:92px;flex:0 0 92px;';
+    wrap.style.cssText = 'display:flex;flex-direction:column;justify-content:flex-end;gap:5px;overflow:hidden;height:80px;flex:0 0 80px;';
     panel.appendChild(wrap);
     // Build the bottom-of-video overlay popup container at the same time.
     labsBuildVideoOverlay(stage);
@@ -1476,7 +1485,8 @@ function labsBuildAnnounceFeed() {
       #labsAnnounceFeed .lf-row[data-pos="1"] { opacity: 0.90; }
     `;
     document.head.appendChild(style);
-    stage.parentNode.insertBefore(panel, stage);
+    // Place play-by-play directly under the video.
+    stage.parentNode.insertBefore(panel, stage.nextSibling);
     _labsState.announceFeed = wrap;
 }
 // Bottom-of-video popup overlay. Lives inside `.stage` so a YouTube
@@ -1508,7 +1518,7 @@ function labsBuildVideoOverlay(stage) {
     const fsBtn = document.createElement('button');
     fsBtn.id = 'labsFullscreenBtn';
     fsBtn.type = 'button';
-    fsBtn.style.cssText = 'display:block;width:calc(100% - 32px);margin:10px 16px 0;padding:11px 14px;border-radius:10px;border:1px solid rgba(255,150,64,0.45);background:linear-gradient(180deg, rgba(255,150,64,0.18), rgba(255,150,64,0.08));color:var(--text-primary);font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.02em;';
+    fsBtn.style.cssText = 'display:block;width:calc(100% - 24px);margin:6px 12px 0;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,150,64,0.45);background:linear-gradient(180deg, rgba(255,150,64,0.18), rgba(255,150,64,0.08));color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.02em;';
     fsBtn.innerHTML = '⛶ &nbsp;Watch in full screen';
     fsBtn.addEventListener('click', () => {
         const fe = document.fullscreenElement || document.webkitFullscreenElement;
@@ -1518,9 +1528,10 @@ function labsBuildVideoOverlay(stage) {
             (stage.requestFullscreen || stage.webkitRequestFullscreen).call(stage);
         }
     });
-    // Insert right after the stage (before the announce panel injected
-    // earlier by labsBuildAnnounceFeed, which is the stage's sibling).
-    stage.parentNode.insertBefore(fsBtn, stage.nextSibling);
+    // Park the button under the scoreboard (or stage if board not built
+    // yet). Order on screen: video → PxP → scoreboard → fullscreen btn.
+    const fsAnchor = document.getElementById('labsBoardCard') || stage;
+    fsAnchor.parentNode.insertBefore(fsBtn, fsAnchor.nextSibling);
 
     // CSS for the .stage when it's the fullscreen element. Aspect-ratio
     // preserved with `width:auto; height:auto; max-width/height: 100v*`
@@ -1954,16 +1965,18 @@ function labsRebuildAnnounceFromIndex(idx) {
 function labsEnsureBoardCard() {
     let card = document.getElementById('labsBoardCard');
     if (card) return card;
-    // Insert a brand-new card immediately under the video stage so the
-    // synced scoreboard sits right under the player — not buried below
-    // the hero/meta where the prod scoreCard lives.
+    // Insert the scoreboard card directly under the play-by-play panel
+    // (which itself sits under the video) so portrait viewport order is
+    // video → PxP → scoreboard. Falls back to right under .stage if the
+    // announce panel hasn't been built yet.
     const stage = document.querySelector('.stage');
     if (!stage) return null;
+    const anchor = document.getElementById('labsAnnouncePanel') || stage;
     card = document.createElement('div');
     card.id = 'labsBoardCard';
     card.className = 'card';
-    card.style.cssText = 'margin:12px 16px 4px;';
-    stage.parentNode.insertBefore(card, stage.nextSibling);
+    card.style.cssText = 'margin:6px 12px 4px;padding:10px 12px;';
+    anchor.parentNode.insertBefore(card, anchor.nextSibling);
     return card;
 }
 function labsEnsureStatusBanner() {
