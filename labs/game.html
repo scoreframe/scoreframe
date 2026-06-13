@@ -1983,6 +1983,11 @@ function labsSetStatus(text) {
 function labsBuildScoreboard() {
     const card = labsEnsureBoardCard();
     if (!card) return;
+    // Hide the production scoreCard — labs scoreboard supersedes it
+    // (same data: sets won + per-set points, just more readable). Two
+    // visible score blocks above the body was confusing.
+    const prodCard = document.getElementById('scoreCard');
+    if (prodCard) prodCard.style.display = 'none';
     const tagDiv = document.createElement('div');
     tagDiv.id = 'labsLiveTag';
     tagDiv.style.cssText = 'margin-top:8px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--accent);';
