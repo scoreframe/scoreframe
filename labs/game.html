@@ -1525,8 +1525,24 @@ function labsBuildVideoOverlay(stage) {
     const fsBtn = document.createElement('button');
     fsBtn.id = 'labsFullscreenBtn';
     fsBtn.type = 'button';
-    fsBtn.style.cssText = 'display:block;width:calc(100% - 24px);margin:6px 12px 0;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,150,64,0.45);background:linear-gradient(180deg, rgba(255,150,64,0.18), rgba(255,150,64,0.08));color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.02em;';
-    fsBtn.innerHTML = '⛶ &nbsp;Watch in full screen';
+    // Repurpose the existing platform pill slot under the video (which
+    // just said "YOUTUBE" with no behavior) as a tiny clickable
+    // fullscreen toggle. Keeps the visual footprint of the prod page
+    // but the pill now does something useful.
+    const platformSlot = document.getElementById('streamPlatformPill');
+    if (platformSlot) {
+        fsBtn.style.cssText = 'padding:2px 8px;border-radius:4px;border:none;background:var(--bg-elevated);color:var(--text-secondary);font-weight:700;letter-spacing:0.04em;font-size:10px;cursor:pointer;line-height:1.3;';
+        fsBtn.innerHTML = '⛶ FULL SCREEN';
+        platformSlot.innerHTML = '';
+        platformSlot.appendChild(fsBtn);
+    } else {
+        // Fallback: if the prod platform-pill slot isn't on the page,
+        // drop the button under the scoreboard with the larger style.
+        fsBtn.style.cssText = 'display:block;width:calc(100% - 24px);margin:6px 12px 0;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,150,64,0.45);background:linear-gradient(180deg, rgba(255,150,64,0.18), rgba(255,150,64,0.08));color:var(--text-primary);font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.02em;';
+        fsBtn.innerHTML = '⛶ &nbsp;Watch in full screen';
+        const fsAnchor = document.getElementById('labsBoardCard') || stage;
+        fsAnchor.parentNode.insertBefore(fsBtn, fsAnchor.nextSibling);
+    }
     fsBtn.addEventListener('click', () => {
         const fe = document.fullscreenElement || document.webkitFullscreenElement;
         if (fe) {
@@ -1535,10 +1551,6 @@ function labsBuildVideoOverlay(stage) {
             (stage.requestFullscreen || stage.webkitRequestFullscreen).call(stage);
         }
     });
-    // Park the button under the scoreboard (or stage if board not built
-    // yet). Order on screen: video → PxP → scoreboard → fullscreen btn.
-    const fsAnchor = document.getElementById('labsBoardCard') || stage;
-    fsAnchor.parentNode.insertBefore(fsBtn, fsAnchor.nextSibling);
 
     // CSS for the .stage when it's the fullscreen element. Aspect-ratio
     // preserved with `width:auto; height:auto; max-width/height: 100v*`
@@ -1579,7 +1591,13 @@ function labsBuildVideoOverlay(stage) {
         const inFs = !!fe && stage.contains(fe);
         _labsState.inFullscreen = inFs;
         ov.style.display = inFs ? 'flex' : 'none';
-        fsBtn.innerHTML = inFs ? '⛶ &nbsp;Exit full screen' : '⛶ &nbsp;Watch in full screen';
+        // Update button label to reflect state. The tiny pill-style and
+        // the fallback large-button-style both work with the same text.
+        if (fsBtn.parentNode && fsBtn.parentNode.id === 'streamPlatformPill') {
+            fsBtn.innerHTML = inFs ? '⛶ EXIT FULL SCREEN' : '⛶ FULL SCREEN';
+        } else {
+            fsBtn.innerHTML = inFs ? '⛶ &nbsp;Exit full screen' : '⛶ &nbsp;Watch in full screen';
+        }
         if (!inFs) {
             // Clear queued popups so we don't reveal a stale stack on the
             // next fullscreen entry.
