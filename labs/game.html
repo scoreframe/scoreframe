@@ -1106,10 +1106,13 @@ function labsAttach(hub, game) {
         labsSetStatus(`⚠️ Labs L1 is volleyball-only. This is a ${sport.toLowerCase() || 'unknown'} game. Try a VB game.`);
         return;
     }
-    if (events.length === 0) {
-        labsSetStatus('⚠️ No Labs timeline events on this game. Record a new VB game with "🧪 Video-Synced Game Page" enabled under Labs to see the replay.');
-        return;
-    }
+    // build 2026-06-13 — Don't bail on empty events. For a fresh live
+    // game the cloud doc has no events yet at first page load; we still
+    // want to render the labs chrome (hero hide + video-PxP-scoreboard
+    // reorder) so the listener can populate it as events arrive. The
+    // labsApplyLiveUpdate path was gating on _labsState.attached, which
+    // never flipped true when this early-return was taken — so the page
+    // looked dead until refreshed. Status banner narrates either case.
     // Repair streamTimeMs for events captured by Android <= v1.1.695, which
     // subtracted SystemClock.elapsedRealtime() (boot uptime) from a wall-
     // clock streamStartTimeMs, producing huge negative values. When the
@@ -1131,7 +1134,11 @@ function labsAttach(hub, game) {
             ev.streamTimeMs = wall - streamStartedAt;
         }
     });
-    labsSetStatus(`✅ ${events.length} timeline events loaded. Waiting for YouTube player…`);
+    if (events.length === 0) {
+        labsSetStatus('⏳ Waiting for the first scoring event…');
+    } else {
+        labsSetStatus(`✅ ${events.length} timeline events loaded. Waiting for YouTube player…`);
+    }
     events.sort((a, b) => (a.streamTimeMs ?? -1) - (b.streamTimeMs ?? -1));
     _labsState.events = events;
     _labsState.lastEventIdx = -1;
