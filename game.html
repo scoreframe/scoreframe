@@ -1137,7 +1137,7 @@ function renderUpcomingGame(hub, game) {
         const mins = Math.floor((totalSec % 3600) / 60);
         const secs = totalSec % 60;
         const segs = days > 0
-            ? [['Days', days], ['Hours', hours], ['Min', mins]]
+            ? [['Days', days], ['Hours', hours], ['Min', mins], ['Sec', secs]]
             : [['Hours', hours], ['Min', mins], ['Sec', secs]];
         const el = document.getElementById('countdownNumbers');
         if (el) el.innerHTML = segs.map(([u, n]) =>
