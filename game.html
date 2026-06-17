@@ -1052,7 +1052,15 @@ async function load() {
             renderGame(hubProfile, game);
             return;
         }
-        if ((game.date || 0) > Date.now()) {
+        // 2026-06-17 — Postponed / cancelled games route to the
+        // pre-game card REGARDLESS of date. Their stored `date` is
+        // historical (when they WERE scheduled), so the future-date
+        // gate dropped them through to renderGame (live/replay) which
+        // had nothing to draw. renderUpcomingGame already owns the
+        // POSTPONED / CANCELLED pill + explanation card.
+        const status = (game.status || '').toLowerCase();
+        const isStateless = status === 'postponed' || status === 'cancelled';
+        if (isStateless || (game.date || 0) > Date.now()) {
             renderUpcomingGame(hubProfile, game);
             return;
         }
