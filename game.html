@@ -1104,11 +1104,13 @@ function renderUpcomingGame(hub, game) {
                 src="https://www.youtube.com/embed/${encodeURIComponent(preStreamYtId)}?modestbranding=1&rel=0&playsinline=1&color=white&iv_load_policy=3&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}"
                 allow="${embedAllow}" allowfullscreen loading="eager"></iframe>
         </div>` : '';
+    // Slim countdown — just the label + ticking timer. The matchup
+    // title + game date are already shown by the hero block and the
+    // meta strip up top, so duplicating them inside the countdown was
+    // just clutter (Eric).
     const countdownHtml = `
         <div class="countdown-card">
             <div class="label-top">Game Starts</div>
-            <div class="matchup">${escapeHtml(title)}</div>
-            <div class="when">${formatDate(game.date)}</div>
             <div class="count" id="countdownNumbers"></div>
         </div>`;
     // When we have a pre-created broadcast: embed at top, countdown
