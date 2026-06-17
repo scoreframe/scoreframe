@@ -1104,18 +1104,6 @@ function renderUpcomingGame(hub, game) {
                 src="https://www.youtube.com/embed/${encodeURIComponent(preStreamYtId)}?modestbranding=1&rel=0&playsinline=1&color=white&iv_load_policy=3&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}"
                 allow="${embedAllow}" allowfullscreen loading="eager"></iframe>
         </div>` : '';
-    const preStreamActionsHtml = preStreamUrl ? `
-        <div class="prestream-card">
-            <div class="prestream-label">📺 Stream is ready</div>
-            <div class="prestream-hint">YouTube's "Set reminder" button works on this embed — or use the link below.</div>
-            <a class="prestream-link" href="${escapeHtml(preStreamUrl)}" target="_blank" rel="noopener">
-                Open on YouTube
-            </a>
-            <div class="prestream-actions">
-                <button type="button" class="prestream-copy" data-copy="${escapeHtml(preStreamUrl)}">📋 Copy link</button>
-                <button type="button" class="prestream-share" data-share="${escapeHtml(preStreamUrl)}" data-title="${escapeHtml(title || 'ScoreFrame stream')}">🔗 Share</button>
-            </div>
-        </div>` : '';
     const countdownHtml = `
         <div class="countdown-card">
             <div class="label-top">Game Starts</div>
@@ -1123,11 +1111,12 @@ function renderUpcomingGame(hub, game) {
             <div class="when">${formatDate(game.date)}</div>
             <div class="count" id="countdownNumbers"></div>
         </div>`;
-    // When we have a pre-created broadcast: embed → actions block →
-    // countdown stays below as a meta card. Without a broadcast: just
-    // the countdown card.
+    // When we have a pre-created broadcast: embed at top, countdown
+    // strip beneath. The YouTube player surfaces its own Set Reminder
+    // / Share / Watch on YouTube affordances natively, so the prior
+    // duplicate "Stream is ready" actions card was just noise.
     $('playerSlot').innerHTML = preStreamEmbedHtml
-        ? `${preStreamEmbedHtml}${preStreamActionsHtml}${countdownHtml}`
+        ? `${preStreamEmbedHtml}${countdownHtml}`
         : countdownHtml;
     const tick = () => {
         const ms = (game.date || 0) - Date.now();
