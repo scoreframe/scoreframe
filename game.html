@@ -1022,7 +1022,7 @@ async function load() {
         if (!snap.exists()) { showNotFound(); return; }
         game = { id: snap.id, ...snap.data() };
         const status = game.status || '';
-        if (status === 'scheduled' || status === 'live' || status === 'cancelled') {
+        if (status === 'scheduled' || status === 'live' || status === 'cancelled' || status === 'postponed') {
             isScheduledOnly = true;
         }
     } catch (e) {
@@ -1071,14 +1071,33 @@ function renderUpcomingGame(hub, game) {
     const sport = (game.sport || hub.sport || 'GENERIC').toUpperCase();
     const opponent = game.opponent || '';
     const eventName = game.eventName || '';
+    const status = (game.status || '').toLowerCase();
+    const isCancelled = status === 'cancelled';
+    const isPostponed = status === 'postponed';
     const title = opponent
         ? `${hub.teamName} vs ${opponent}`
         : (eventName || `${hub.teamName} — Upcoming`);
-    document.title = `${title} · Upcoming · ScoreFrame`;
-    $('liveSlot').innerHTML = `<div class="upcoming-pill">📅 UPCOMING</div>`;
+    document.title = `${title} · ${isCancelled ? 'Cancelled' : (isPostponed ? 'Postponed' : 'Upcoming')} · ScoreFrame`;
+    // 2026-06-16 — Top pill swaps based on status. Postponed + cancelled
+    // get their own pill so the page reads honestly the moment a fan
+    // lands; upcoming keeps the existing label.
+    if (isCancelled) {
+        $('liveSlot').innerHTML = `<div class="upcoming-pill" style="background:#FF4D4D;color:#fff;">❌ CANCELLED</div>`;
+    } else if (isPostponed) {
+        $('liveSlot').innerHTML = `<div class="upcoming-pill" style="background:#888;color:#1A1A1A;">⏸️ POSTPONED</div>`;
+    } else {
+        $('liveSlot').innerHTML = `<div class="upcoming-pill">📅 UPCOMING</div>`;
+    }
     $('heroTitle').textContent = title;
     const metaBits = [];
-    if (game.date) metaBits.push(formatDate(game.date));
+    if (isPostponed) {
+        // Postponed games render their date as TBD until the manager
+        // re-edits with a new date (which flips status back to
+        // scheduled and triggers the diff email).
+        metaBits.push('Date: TBD');
+    } else if (game.date) {
+        metaBits.push(formatDate(game.date));
+    }
     if (game.location) metaBits.push(`📍 ${game.location}`);
     // Show the event name (league / tournament / "vs Cardinals" label)
     // here too — Eric called this out: the hero meta is the only place
@@ -1119,6 +1138,22 @@ function renderUpcomingGame(hub, game) {
     // Countdown sits above the embed so the time-to-go reads first,
     // then the video player. The YouTube player surfaces its own
     // Set Reminder / Share / Watch on YouTube affordances natively.
+    //
+    // 2026-06-16 — Cancelled / postponed games skip the timer and
+    // embed entirely; we drop in an explanatory card instead so a fan
+    // who lands here doesn't see a stale countdown or a pre-created
+    // broadcast that's no longer going to happen on the listed time.
+    if (isCancelled || isPostponed) {
+        $('playerSlot').innerHTML = `
+        <div class="countdown-card">
+            <div class="label-top" style="color:${isCancelled ? '#FF4D4D' : '#bbb'};">${isCancelled ? 'Cancelled' : 'Postponed'}</div>
+            <div style="font-size:14px;color:var(--text-secondary);margin-top:8px;line-height:1.5;">${isCancelled
+                ? "This game has been cancelled and won't be played."
+                : "This game has been postponed. The team will let you know once a new date is set."}</div>
+        </div>`;
+        // No countdown ticking needed; we're done.
+        return;
+    }
     $('playerSlot').innerHTML = preStreamEmbedHtml
         ? `${countdownHtml}${preStreamEmbedHtml}`
         : countdownHtml;
