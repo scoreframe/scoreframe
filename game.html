@@ -1196,6 +1196,13 @@ function renderUpcomingGame(hub, game) {
     // navigator.clipboard with a textarea fallback for older browsers.
     setupPreStreamActions();
 
+    // 2026-06-17 — Add to Calendar button. Skipped on cancelled /
+    // postponed since the .ics would block a slot for a game that
+    // isn't happening at that time.
+    if (!isCancelled && !isPostponed) {
+        mountAddToCalendarButton(hub, game);
+    }
+
     renderMeta(game, sport);
     renderBoxScore(hub, game, sport);
     renderAiRecap(game);
@@ -1204,6 +1211,86 @@ function renderUpcomingGame(hub, game) {
 
     $('loadingState').style.display = 'none';
     $('gameView').style.display = 'block';
+}
+
+// 2026-06-17 — Add to Calendar UX for the pre-game card. Builds an
+// .ics blob in the browser and triggers download with a meaningful
+// filename. On iOS Safari the OS auto-prompts Calendar.app to import;
+// on Android Chrome it surfaces "Open with" + Google Calendar /
+// system calendar; on desktop the user double-clicks. No third-party
+// integration, no OAuth, works for unauthenticated visitors.
+function mountAddToCalendarButton(hub, game) {
+    const slot = document.getElementById('playerSlot');
+    if (!slot) return;
+    const btn = document.createElement('button');
+    btn.innerHTML = '\u{1F4C5} Add to Calendar';
+    btn.style.cssText = 'display:block;margin:14px auto 0 auto;padding:10px 18px;background:transparent;color:var(--accent);font-weight:700;font-size:13px;letter-spacing:0.04em;border:1px solid var(--accent);border-radius:6px;cursor:pointer;';
+    btn.addEventListener('click', () => {
+        try {
+            const ics = buildScheduledGameIcs(hub, game);
+            if (!ics) return;
+            const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const slug = (hub.teamName || 'scoreframe').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || 'scoreframe';
+            a.href = url;
+            a.download = `${slug}.ics`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 200);
+        } catch (e) {
+            console.warn('[addToCalendar]', e);
+        }
+    });
+    slot.appendChild(btn);
+}
+
+function buildScheduledGameIcs(hub, game) {
+    const dateMs = game.date || 0;
+    if (!dateMs) return null;
+    const durationMin = (typeof game.durationMinutes === 'number' && game.durationMinutes >= 15 && game.durationMinutes <= 720)
+        ? game.durationMinutes : 60;
+    const start = new Date(dateMs);
+    const end = new Date(dateMs + durationMin * 60 * 1000);
+    const pad = (n) => String(n).padStart(2, '0');
+    const fmt = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+    const opponent = game.opponent || '';
+    const eventTitle = game.eventName || game.eventLabel || '';
+    const teamName = hub.teamName || 'ScoreFrame';
+    const summary = opponent
+        ? `${teamName} vs ${opponent}`
+        : (eventTitle ? `${teamName} — ${eventTitle}` : `${teamName} game`);
+    const location = game.location || '';
+    const gameUrl = `${window.location.origin}/game.html?team=${encodeURIComponent(hub.hubCode || '')}&id=${encodeURIComponent(game.id || '')}`;
+    const descParts = [];
+    if (game.notes) descParts.push(game.notes);
+    descParts.push(`Game page: ${gameUrl}`);
+    const description = descParts.join('\n\n');
+    const esc = (s) => String(s || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/,/g, '\\,')
+        .replace(/;/g, '\\;')
+        .replace(/\r?\n/g, '\\n');
+    const uid = `game-${game.id}@scoreframe.app`;
+    return [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//ScoreFrame//Schedule//EN',
+        'METHOD:PUBLISH',
+        'CALSCALE:GREGORIAN',
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${fmt(new Date())}`,
+        `DTSTART:${fmt(start)}`,
+        `DTEND:${fmt(end)}`,
+        `SUMMARY:${esc(summary)}`,
+        location ? `LOCATION:${esc(location)}` : null,
+        `DESCRIPTION:${esc(description)}`,
+        `URL:${esc(gameUrl)}`,
+        'END:VEVENT',
+        'END:VCALENDAR',
+    ].filter(Boolean).join('\r\n');
 }
 
 // Render the page when we have no specific game record, only an
