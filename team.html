@@ -1565,12 +1565,12 @@ async function loadSchedule() {
             const statusClass = isLive ? 'live' : isPostponed ? 'postponed' : g.status === 'completed' ? 'completed' : 'scheduled';
             // v15 — Multi-day tournaments render the date range instead of
             // the single start date. Single-game events keep the old format.
-            // Postponed games show "Date TBD" regardless of the doc's date.
-            const dateText = isPostponed
-                ? 'Date TBD'
-                : (typeof g.endDate === 'number' && g.endDate > (g.date || 0))
-                    ? formatDateRange(g.date, g.endDate)
-                    : formatDate(g.date);
+            // Eric 2026-06-17: postponed games keep their ORIGINAL date
+            // on the calendar — the POSTPONED pill carries the "didn't
+            // happen" semantic, not the date string.
+            const dateText = (typeof g.endDate === 'number' && g.endDate > (g.date || 0))
+                ? formatDateRange(g.date, g.endDate)
+                : formatDate(g.date);
             const statusLabel = isLive ? '● LIVE' : isPostponed ? '⏸ POSTPONED' : g.status === 'completed' ? 'Final' : dateText;
             const watchUrl = g.streamUrl || (g.streamCode ? `/watch.html?code=${g.streamCode}` : '');
             const watchBtn = isLive && watchUrl ? `<a class="watch-btn" href="${watchUrl}" target="_blank">▶ Watch Live</a>` : '';
