@@ -1113,12 +1113,11 @@ function renderUpcomingGame(hub, game) {
             <div class="label-top">Game Starts</div>
             <div class="count" id="countdownNumbers"></div>
         </div>`;
-    // When we have a pre-created broadcast: embed at top, countdown
-    // strip beneath. The YouTube player surfaces its own Set Reminder
-    // / Share / Watch on YouTube affordances natively, so the prior
-    // duplicate "Stream is ready" actions card was just noise.
+    // Countdown sits above the embed so the time-to-go reads first,
+    // then the video player. The YouTube player surfaces its own
+    // Set Reminder / Share / Watch on YouTube affordances natively.
     $('playerSlot').innerHTML = preStreamEmbedHtml
-        ? `${preStreamEmbedHtml}${countdownHtml}`
+        ? `${countdownHtml}${preStreamEmbedHtml}`
         : countdownHtml;
     const tick = () => {
         const ms = (game.date || 0) - Date.now();
