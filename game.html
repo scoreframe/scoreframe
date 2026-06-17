@@ -1087,20 +1087,30 @@ function renderUpcomingGame(hub, game) {
     // Countdown card replacing the player. We tick once per second; the
     // interval is harmless if the user navigates away because we never
     // hold a reference outside this scope.
-    // If the broadcaster pre-created a YouTube broadcast at schedule time
-    // (ytWatchUrl is populated), surface the link now so fans can hit
-    // "Set reminder" / bookmark / share before the game starts. Same URL
-    // gets reused when the broadcaster goes live (MainActivity reuses
-    // ytBroadcastId for the scheduled game), so what they save here will
-    // be the actual stream they watch at match time.
+    //
+    // When the broadcaster pre-created a YouTube broadcast at schedule
+    // time (ytWatchUrl populated), embed the YouTube IFrame directly in
+    // the video area so fans see YouTube's own countdown / scheduled
+    // thumbnail inline — same surface they'd see on youtube.com. The
+    // iframe gracefully transitions to live playback when the broadcast
+    // starts, so no reload is needed. Falls back to the countdown card
+    // when no broadcast was pre-created.
     const preStreamUrl = (game.ytWatchUrl || '').trim();
-    const preStreamHtml = preStreamUrl ? `
+    const preStreamYtId = preStreamUrl ? extractYouTubeId(preStreamUrl) : '';
+    const embedAllow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+    const preStreamEmbedHtml = preStreamYtId ? `
+        <div class="video-embed-wrap">
+            <iframe id="sf-prestream-player"
+                src="https://www.youtube.com/embed/${encodeURIComponent(preStreamYtId)}?modestbranding=1&rel=0&playsinline=1&color=white&iv_load_policy=3&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}"
+                allow="${embedAllow}" allowfullscreen loading="eager"></iframe>
+        </div>` : '';
+    const preStreamActionsHtml = preStreamUrl ? `
         <div class="prestream-card">
             <div class="prestream-label">📺 Stream is ready</div>
+            <div class="prestream-hint">YouTube's "Set reminder" button works on this embed — or use the link below.</div>
             <a class="prestream-link" href="${escapeHtml(preStreamUrl)}" target="_blank" rel="noopener">
-                Watch on YouTube
+                Open on YouTube
             </a>
-            <div class="prestream-hint">Tap "Set reminder" on YouTube — same link goes live at game time.</div>
             <div class="prestream-actions">
                 <button type="button" class="prestream-copy" data-copy="${escapeHtml(preStreamUrl)}">📋 Copy link</button>
                 <button type="button" class="prestream-share" data-share="${escapeHtml(preStreamUrl)}" data-title="${escapeHtml(title || 'ScoreFrame stream')}">🔗 Share</button>
@@ -1112,8 +1122,13 @@ function renderUpcomingGame(hub, game) {
             <div class="matchup">${escapeHtml(title)}</div>
             <div class="when">${formatDate(game.date)}</div>
             <div class="count" id="countdownNumbers"></div>
-        </div>${preStreamHtml}`;
-    $('playerSlot').innerHTML = countdownHtml;
+        </div>`;
+    // When we have a pre-created broadcast: embed → actions block →
+    // countdown stays below as a meta card. Without a broadcast: just
+    // the countdown card.
+    $('playerSlot').innerHTML = preStreamEmbedHtml
+        ? `${preStreamEmbedHtml}${preStreamActionsHtml}${countdownHtml}`
+        : countdownHtml;
     const tick = () => {
         const ms = (game.date || 0) - Date.now();
         if (ms <= 0) {
