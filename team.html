@@ -1491,7 +1491,7 @@ async function loadSchedule() {
         // would drop live + cancelled.
         const q2 = query(
             collection(db, 'teams', teamId, 'games'),
-            where('status', 'in', ['scheduled', 'live', 'cancelled']),
+            where('status', 'in', ['scheduled', 'live', 'cancelled', 'postponed']),
             orderBy('date')
         );
         const snap = await retryOnAuthDeny('loadSchedule', () => getDocs(q2));
@@ -1507,8 +1507,9 @@ async function loadSchedule() {
             // not show in the upcoming section.
             if (game.status === 'cancelled') return;
             // Skip games whose scheduled date is more than 6h in the past
-            // (and they're not live). They're effectively past.
-            if (game.status !== 'live' && typeof game.date === 'number' && game.date < cutoff) return;
+            // (and they're not live OR postponed — postponed is upcoming-
+            // with-TBD-date and keeps its original date on the doc).
+            if (game.status !== 'live' && game.status !== 'postponed' && typeof game.date === 'number' && game.date < cutoff) return;
             // v13 — Season switcher filter.
             if (!matchesSelectedSeason(game)) return;
             upcoming.push(game);
@@ -1560,13 +1561,17 @@ async function loadSchedule() {
 
         container.innerHTML = topLevelUpcoming.map(g => {
             const isLive = g.status === 'live';
-            const statusClass = isLive ? 'live' : g.status === 'completed' ? 'completed' : 'scheduled';
+            const isPostponed = g.status === 'postponed';
+            const statusClass = isLive ? 'live' : isPostponed ? 'postponed' : g.status === 'completed' ? 'completed' : 'scheduled';
             // v15 — Multi-day tournaments render the date range instead of
             // the single start date. Single-game events keep the old format.
-            const dateText = (typeof g.endDate === 'number' && g.endDate > (g.date || 0))
-                ? formatDateRange(g.date, g.endDate)
-                : formatDate(g.date);
-            const statusLabel = isLive ? '● LIVE' : g.status === 'completed' ? 'Final' : dateText;
+            // Postponed games show "Date TBD" regardless of the doc's date.
+            const dateText = isPostponed
+                ? 'Date TBD'
+                : (typeof g.endDate === 'number' && g.endDate > (g.date || 0))
+                    ? formatDateRange(g.date, g.endDate)
+                    : formatDate(g.date);
+            const statusLabel = isLive ? '● LIVE' : isPostponed ? '⏸ POSTPONED' : g.status === 'completed' ? 'Final' : dateText;
             const watchUrl = g.streamUrl || (g.streamCode ? `/watch.html?code=${g.streamCode}` : '');
             const watchBtn = isLive && watchUrl ? `<a class="watch-btn" href="${watchUrl}" target="_blank">▶ Watch Live</a>` : '';
             const score = g.status === 'completed' ? `<div class="game-score">${g.homeScore} - ${g.awayScore}</div>` : '';
@@ -1785,7 +1790,7 @@ async function loadPastGames() {
             // Skip scheduled/live/cancelled — those belong to the upcoming
             // section. Legacy completed docs without a status field flow
             // through unchanged.
-            if (g.status === 'scheduled' || g.status === 'live' || g.status === 'cancelled') return;
+            if (g.status === 'scheduled' || g.status === 'live' || g.status === 'cancelled' || g.status === 'postponed') return;
             // v13 — Season switcher filter.
             if (!matchesSelectedSeason(g)) return;
             renderedCount++;
