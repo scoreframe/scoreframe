@@ -146,15 +146,18 @@ html, body {
     letter-spacing: 0.04em;
 }
 
-/* Countdown card replacing the player when a game hasn't started yet. */
+/* Countdown card replacing the player when a game hasn't started yet.
+   When the countdown is stacked above the pre-stream embed, the bottom
+   margin keeps the player from butting right up against the timer. */
 .countdown-card {
-    width: 100%; padding: 36px 20px; text-align: center;
+    width: 100%; padding: 18px 20px; text-align: center;
     background: var(--bg-surface); border-radius: 14px;
     border: 1px solid var(--bg-elevated);
+    margin-bottom: 16px;
 }
 .countdown-card .label-top {
     font-size: 11px; font-weight: 700; color: var(--accent);
-    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px;
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
 }
 .countdown-card .matchup {
     font-size: 18px; font-weight: 700; margin-bottom: 4px;
