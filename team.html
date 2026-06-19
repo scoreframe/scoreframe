@@ -25,6 +25,12 @@
 }
 body.app .team-header { display: none; }
 body.app .section:first-of-type { padding-top: 16px; }
+/* 2026-06-19 — Hide the page's own ScoreFrame brand bar + "Sign Out"
+   control + Powered-by footer when rendered inside the native iOS/Android
+   WebView. The app already shows its own chrome, so the page nav was
+   navigation-bait that could log the user out of the team view. */
+body.app #accountBar { display: none !important; }
+body.app .footer { display: none !important; }
 html, body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: var(--bg-deepest); color: var(--text-primary);

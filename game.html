@@ -41,6 +41,8 @@ body[data-theme="light"] {
     }
 }
 body.app .top-bar { display: none; }
+/* 2026-06-19 — Hide page footer chrome when rendered inside the app. */
+body.app .footer { display: none !important; }
 html, body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: var(--bg-deepest); color: var(--text-primary);
