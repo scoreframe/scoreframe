@@ -380,8 +380,12 @@ async function loadEvent() {
             ? `<div class="game-score">${g.homeScore ?? 0} - ${g.awayScore ?? 0}</div>`
             : '';
         const href = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}`;
-        const meta = [g.location ? `📍 ${g.location}` : '', g.notes ? g.notes : '']
-            .filter(Boolean).join(' · ');
+        const matchup = (g.matchupLabel || '').trim();
+        const metaParts = [];
+        if (matchup) metaParts.push(`🏷️ ${matchup}`);
+        if (g.location) metaParts.push(`📍 ${g.location}`);
+        if (g.notes) metaParts.push(g.notes);
+        const meta = metaParts.join(' · ');
         return `<a class="game-card ${g.status === 'live' ? 'live' : ''}" href="${href}">
             <div class="game-row">
                 <div class="game-left">
