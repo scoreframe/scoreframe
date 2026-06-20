@@ -601,6 +601,7 @@ html, body {
              Sits above heroTeam so a tournament / conference label is
              the first thing the viewer sees on the page. -->
         <div id="heroEvent" style="display:none;font-size:13px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;"></div>
+        <a id="heroEventBack" href="#" style="display:none;font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;margin-bottom:8px;">← Back to tournament</a>
         <div class="hero-team" id="heroTeam"></div>
         <div class="hero-title" id="heroTitle"></div>
         <div class="hero-meta" id="heroMeta"></div>
@@ -1397,6 +1398,17 @@ function renderGame(hub, game) {
     } else if (matchup) {
         $('heroEvent').textContent = matchup;
         $('heroEvent').style.display = '';
+    }
+    // 2026-06-19 — Back-to-tournament link when this game is a child of a
+    // multi-game parent event (parentEventId stamped by appendGameToScheduled).
+    // Legacy fallback: scheduledGameId pointing at a different doc.
+    const parentEventId = (game.parentEventId || (game.scheduledGameId && game.scheduledGameId !== game.id ? game.scheduledGameId : '')) || '';
+    if (parentEventId && hub.hubCode) {
+        const eventHref = `/event.html?team=${encodeURIComponent(hub.hubCode)}&event=${encodeURIComponent(parentEventId)}`;
+        const backEl = $('heroEventBack');
+        backEl.setAttribute('href', eventHref);
+        backEl.style.display = '';
+        backEl.textContent = evt ? `← Back to ${evt}` : '← Back to tournament';
     }
 
     const metaBits = [];
