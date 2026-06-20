@@ -1797,6 +1797,13 @@ async function loadPastGames() {
             // section. Legacy completed docs without a status field flow
             // through unchanged.
             if (g.status === 'scheduled' || g.status === 'live' || g.status === 'cancelled' || g.status === 'postponed') return;
+            // 2026-06-20 — Hide tournament children from the team page. They
+            // belong nested under the tournament event card on event.html.
+            // Stamped via parentEventId at game-end time. Eric: "if a game
+            // is under a tournament then the game shouldn't show on the
+            // team page, just the tournament that takes them to the event
+            // page."
+            if (g.parentEventId) return;
             // v13 — Season switcher filter.
             if (!matchesSelectedSeason(g)) return;
             renderedCount++;
