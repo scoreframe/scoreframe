@@ -160,6 +160,7 @@ html, body {
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
@@ -172,6 +173,54 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+// 2026-06-19 — Mirror team.html's SSO + auth-state gating. event.html
+// previously called loadEvent() directly with no auth session, so on
+// security-rules-restricted reads (team doc / past games) every fetch
+// failed → "Could not load team" + empty games list. Now we wait for
+// the WebView SSO handoff (#auth=<idToken> from the native app) and the
+// first onAuthStateChanged event before fetching anything.
+async function tryAppAuthHandoff() {
+    const hash = window.location.hash || '';
+    const m = hash.match(/[#&]auth=([^&]+)/);
+    if (!m) return false;
+    const idToken = decodeURIComponent(m[1]);
+    try {
+        const cleanHash = hash.replace(/[#&]auth=[^&]+/, '').replace(/^#$/, '');
+        history.replaceState(null, '', window.location.pathname + window.location.search + cleanHash);
+    } catch (_) {}
+    try {
+        const resp = await fetch('https://us-central1-scoreframe-deploy.cloudfunctions.net/mintAuthToken', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + idToken }
+        });
+        if (!resp.ok) { console.warn('[event auth] mintAuthToken ' + resp.status); return false; }
+        const data = await resp.json();
+        if (!data.customToken) return false;
+        await signInWithCustomToken(auth, data.customToken);
+        console.log('[event auth] SSO handoff complete');
+        return true;
+    } catch (e) {
+        console.warn('[event auth] SSO handoff failed:', e);
+        return false;
+    }
+}
+
+let authResolved = false;
+let authResolveFn = null;
+const authReady = new Promise((resolve) => {
+    authResolveFn = resolve;
+    setTimeout(() => {
+        if (!authResolved) { authResolved = true; resolve(); }
+    }, 2000);
+});
+onAuthStateChanged(auth, () => {
+    if (!authResolved) {
+        authResolved = true;
+        authResolveFn && authResolveFn();
+    }
+});
 
 const params = new URLSearchParams(location.search);
 const hubCode = (params.get('team') || '').trim().toUpperCase();
@@ -347,7 +396,11 @@ async function loadEvent() {
     }).join('');
 }
 
-loadEvent();
+(async () => {
+    await tryAppAuthHandoff();
+    await authReady;
+    loadEvent();
+})();
 </script>
 
 </body>
