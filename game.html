@@ -1390,8 +1390,12 @@ function renderGame(hub, game) {
     // Skip when the same string is already the title (bowling games
     // use eventName as the title text, so no need to duplicate).
     const evt = (game.eventLabel || game.eventName || '').trim();
+    const matchup = (game.matchupLabel || '').trim();
     if (evt && evt !== title) {
-        $('heroEvent').textContent = evt;
+        $('heroEvent').textContent = matchup ? `${evt} — ${matchup}` : evt;
+        $('heroEvent').style.display = '';
+    } else if (matchup) {
+        $('heroEvent').textContent = matchup;
         $('heroEvent').style.display = '';
     }
 
