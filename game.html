@@ -685,6 +685,15 @@ html, body {
             <div id="aiRecapText" style="font-size:15px;line-height:1.55;color:var(--text-primary);"></div>
         </div>
 
+        <!-- 2026-06-20 — Coach Notes for this game. Populated by
+             loadCoachNotes(teamId, gameId). Each note: author + relative
+             timestamp + full text (preserves line breaks). Hidden when no
+             notes exist. -->
+        <div class="card" id="coachNotesCard" style="display:none;">
+            <div class="label">📋 Coach Notes</div>
+            <div id="coachNotesList"></div>
+        </div>
+
         <!-- Highlights — chips that seek the YouTube embed to the moment
              the broadcaster tagged during the live stream. -->
         <div class="card" id="highlightsCard" style="display:none;">
@@ -717,7 +726,7 @@ html, body {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy }
+import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, limit as fbLimit }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 // v1.1.389 — Auth imports added so private-hub games (visibility !== 'public')
 // can be viewed by their owner / approved subscribers after signing in.
@@ -1495,6 +1504,9 @@ function renderGame(hub, game) {
     // highlights at all (most non-streamed games won't have any).
     loadHighlights(hub.teamId, game.id, playlistStreams[0]);
 
+    // 2026-06-20 — Coach Notes for this specific game.
+    loadCoachNotes(hub.teamId, game.id);
+
     // Streams card — list all platforms. Embeddable streams get a click
     // handler that jumps the inline player to that index; non-embeddable
     // links open externally as before. The currently-playing entry is
@@ -2223,6 +2235,60 @@ function renderHighlights(highlights, primaryStream) {
         });
     });
     $('highlightsCard').style.display = '';
+}
+
+// 2026-06-20 — Coach Notes for this game. Reads from
+// teams/{teamId}/coachNotes ordered by createdAt desc, filters to notes
+// scoped to this game's id, ignores revoked. Renders author + relative
+// timestamp + full text. Hidden when none.
+const escapeHtmlGlobal = (s) => String(s).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+));
+async function loadCoachNotes(teamId, gameId) {
+    if (!teamId || !gameId) return;
+    let notes = [];
+    try {
+        const snap = await retryOnAuthDeny('loadCoachNotes', () => getDocs(query(
+            collection(db, 'teams', teamId, 'coachNotes'),
+            orderBy('createdAt', 'desc'),
+            fbLimit(50)
+        )));
+        snap.forEach(d => {
+            const n = { id: d.id, ...d.data() };
+            if (n.gameId !== gameId) return;
+            if (n.revoked === true) return;
+            notes.push(n);
+        });
+    } catch (e) {
+        console.debug('No coach notes for this game:', e?.message);
+        return;
+    }
+    if (notes.length === 0) return;
+    const list = $('coachNotesList');
+    list.innerHTML = notes.map(n => {
+        const author = escapeHtmlGlobal(n.authorName || 'Coach');
+        const when = n.createdAt ? formatRelativeTime(n.createdAt) : '';
+        const text = escapeHtmlGlobal(n.text || '').replace(/\n/g, '<br>');
+        return `<div style="padding:14px;background:var(--bg-elevated);border-radius:8px;border-left:3px solid var(--accent);margin-bottom:10px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">${author}</div>
+            ${when ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">${escapeHtmlGlobal(when)}</div>` : ''}
+            <div style="font-size:14px;line-height:1.55;color:var(--text-primary);white-space:pre-wrap;">${text}</div>
+        </div>`;
+    }).join('');
+    $('coachNotesCard').style.display = '';
+}
+
+function formatRelativeTime(ms) {
+    const diff = Date.now() - ms;
+    if (diff < 60000) return 'just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
+    try {
+        return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (_) {
+        return '';
+    }
 }
 
 function seekToHighlight(seconds, platform, baseUrl) {
