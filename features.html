@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
   <title>ScoreFrame — Features Guide</title>
   <link rel="canonical" href="https://scoreframe.app/features.html" />
-  <meta name="description" content="Every ScoreFrame feature explained — what it does, how to use it, and when you'd pick it. Buffer mode, live streaming, remote scoring, custom branding, and more." />
+  <meta name="description" content="Every ScoreFrame feature explained — what it does, how to use it, and when you'd pick it. Buffer mode, live streaming, team sharing, custom branding, stat tracking, and more." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
@@ -44,48 +44,21 @@
 
     a { color: var(--accent); }
 
-    /* ── NAV ─────────────────────────────────────────── */
     nav {
-      position: fixed;
-      top: 0;
-      width: 100%;
-      z-index: 100;
+      position: fixed; top: 0; width: 100%; z-index: 100;
       background: rgba(10, 10, 12, 0.85);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid rgba(255, 150, 64, 0.08);
       padding: 0 24px;
     }
-
-    .nav-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 64px;
-    }
-
-    .nav-logo {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 1.4rem;
-      font-weight: 900;
-      text-decoration: none;
-      color: var(--text-primary);
-    }
+    .nav-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .nav-logo { font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 900; text-decoration: none; color: var(--text-primary); }
     .nav-logo span { color: var(--accent); }
-
     .nav-links { display: flex; gap: 24px; align-items: center; }
-    .nav-links a {
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
+    .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
     .nav-links a:hover { color: var(--accent); }
 
-    /* ── HERO ─────────────────────────────────────────── */
     .hero {
       padding: 140px 24px 60px;
       max-width: 900px;
@@ -108,7 +81,6 @@
       margin: 0 auto;
     }
 
-    /* ── FEATURE INDEX (chip strip) ────────────────────── */
     .index-strip {
       max-width: 1100px;
       margin: 40px auto 60px;
@@ -119,9 +91,7 @@
       justify-content: center;
     }
     .index-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      display: inline-flex; align-items: center; gap: 6px;
       background: var(--bg-card);
       color: var(--text-primary);
       text-decoration: none;
@@ -132,13 +102,9 @@
       border: 1px solid rgba(255,255,255,0.08);
       transition: border-color 0.2s, color 0.2s, background 0.2s;
     }
-    .index-chip:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
+    .index-chip:hover { border-color: var(--accent); color: var(--accent); }
     .index-chip.pro { background: var(--accent-dim); border-color: rgba(255,150,64,0.3); color: var(--accent); }
 
-    /* ── SECTIONS ────────────────────────────────────── */
     main {
       max-width: 900px;
       margin: 0 auto;
@@ -154,17 +120,9 @@
       scroll-margin-top: 80px;
     }
 
-    .feature-head {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      margin-bottom: 18px;
-    }
-
+    .feature-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
     .feature-emoji { font-size: 2.2rem; line-height: 1; }
-
     .feature-title-block { flex: 1; }
-
     .feature h2 {
       font-family: 'Playfair Display', Georgia, serif;
       font-size: 1.7rem;
@@ -173,12 +131,7 @@
       letter-spacing: -0.5px;
     }
 
-    .badges {
-      display: inline-flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-top: 4px;
-    }
+    .badges { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
     .badge {
       display: inline-block;
       padding: 3px 10px;
@@ -191,12 +144,9 @@
     .badge.free { background: rgba(76,175,80,0.15); color: var(--green); border: 1px solid rgba(76,175,80,0.3); }
     .badge.pro { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(255,150,64,0.3); }
     .badge.free-limited { background: rgba(255,193,7,0.12); color: #FFC107; border: 1px solid rgba(255,193,7,0.3); }
+    .badge.experimental { background: rgba(155, 89, 182, 0.15); color: #BB86FC; border: 1px solid rgba(155, 89, 182, 0.3); }
 
-    .lead {
-      color: var(--text-secondary);
-      font-size: 1.02rem;
-      margin-bottom: 18px;
-    }
+    .lead { color: var(--text-secondary); font-size: 1.02rem; margin-bottom: 18px; }
 
     .sub {
       font-size: 0.78rem;
@@ -207,10 +157,7 @@
       margin: 18px 0 8px;
     }
 
-    ol.steps, ul.bullets {
-      margin: 0;
-      padding-left: 22px;
-    }
+    ol.steps, ul.bullets { margin: 0; padding-left: 22px; }
     ol.steps li, ul.bullets li {
       margin-bottom: 6px;
       color: var(--text-primary);
@@ -218,6 +165,41 @@
     }
     ul.bullets li::marker { color: var(--accent); }
     ol.steps li::marker { color: var(--accent); font-weight: 700; }
+
+    .role-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin: 14px 0;
+    }
+    .role-card {
+      background: var(--bg-elevated);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .role-card h4 {
+      font-size: 0.95rem;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .role-card p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .notif-list { list-style: none; padding: 0; margin: 8px 0 0; }
+    .notif-list li {
+      display: flex;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.92rem;
+    }
+    .notif-list li:last-child { border-bottom: none; }
+    .notif-list .icon { font-size: 1rem; }
+    .notif-list .title { color: var(--text-primary); font-weight: 600; }
+    .notif-list .who { display: block; color: var(--text-tertiary); font-size: 0.78rem; margin-top: 2px; }
 
     .callout {
       margin: 16px 0 0;
@@ -230,7 +212,6 @@
     }
     .callout strong { color: var(--accent); }
 
-    /* ── FOOTER ──────────────────────────────────────── */
     footer {
       border-top: 1px solid rgba(255,255,255,0.06);
       padding: 40px 24px 60px;
@@ -241,7 +222,6 @@
     footer a { color: var(--text-secondary); text-decoration: none; margin: 0 12px; }
     footer a:hover { color: var(--accent); }
 
-    /* ── MOBILE ──────────────────────────────────────── */
     @media (max-width: 640px) {
       .nav-links { gap: 14px; }
       .nav-links a { font-size: 0.82rem; }
@@ -267,7 +247,7 @@
 
 <section class="hero">
   <h1>Features <span class="accent">Guide</span></h1>
-  <p>Every ScoreFrame feature explained — what it does, how to use it, and when you'd pick it. Tap any feature to jump straight to it.</p>
+  <p>Every ScoreFrame feature explained — what it does, how to use it, and when you'd pick it. Tap any chip to jump to that section.</p>
 </section>
 
 <div class="index-strip">
@@ -276,13 +256,20 @@
   <a class="index-chip" href="#live-streaming">📡 Live Streaming</a>
   <a class="index-chip" href="#highlights">⭐ Highlights</a>
   <a class="index-chip pro" href="#fullscreen-mode">🖥️ Fullscreen Mode</a>
-  <a class="index-chip" href="#pip-overlay">📷 PiP Overlay</a>
   <a class="index-chip pro" href="#custom-branding">🎨 Custom Branding</a>
-  <a class="index-chip" href="#team-hubs">🌐 Team Hubs</a>
-  <a class="index-chip pro" href="#full-scorebook">📋 Full Scorebook</a>
-  <a class="index-chip pro" href="#4k">🎬 4K Recording</a>
+  <a class="index-chip" href="#team-sharing">🌐 Team Sharing</a>
+  <a class="index-chip" href="#roles">👥 Roles</a>
+  <a class="index-chip" href="#scheduling">📅 Scheduling</a>
+  <a class="index-chip pro" href="#coach-notes">📋 Coach Notes</a>
+  <a class="index-chip" href="#notifications">🔔 Notifications</a>
+  <a class="index-chip" href="#game-pages">▶️ Game Pages</a>
+  <a class="index-chip" href="#stat-tracking">📊 Stat Tracking</a>
+  <a class="index-chip pro" href="#full-scorebook">📓 Full Scorebook</a>
+  <a class="index-chip pro" href="#bt-buttons">🎛️ Bluetooth Buttons</a>
+  <a class="index-chip pro" href="#video-quality">🎬 Video Quality</a>
+  <a class="index-chip" href="#fun-effects">🎆 Fun Effects</a>
   <a class="index-chip pro" href="#ad-free">🚫 Ad-Free + No Watermark</a>
-  <a class="index-chip" href="#scoring-only">📊 Score Only Mode</a>
+  <a class="index-chip" href="#scoring-only">📺 Score Only Mode</a>
 </div>
 
 <main>
@@ -307,7 +294,7 @@
     </ol>
 
     <div class="callout">
-      <strong>Three connection methods.</strong> Wi-Fi (same network, fastest), Wi-Fi Direct (no router needed), or Bluetooth (works on a plane). The app tries all three simultaneously and uses whichever lights up.
+      <strong>Three connection methods.</strong> Wi-Fi (same network, fastest), Wi-Fi Direct (no router needed), or Bluetooth (works on a plane). The app tries all three simultaneously and uses whichever lights up first.
     </div>
   </article>
 
@@ -320,17 +307,17 @@
         <div class="badges"><span class="badge pro">Pro</span></div>
       </div>
     </div>
-    <p class="lead">Save only the good plays. Buffer mode keeps the last minute of footage rolling in memory — when something amazing happens, tap the star and the previous 5/10/20/30/60 seconds get saved as a highlight clip. No giant game-length video, no time-consuming post-editing.</p>
+    <p class="lead">Save only the good plays. Buffer mode keeps the last minute of footage rolling in memory — when something amazing happens, tap the star and the previous 5/10/20/30/60 seconds get saved as a highlight clip. No giant game-length video, no post-editing.</p>
 
     <div class="sub">Why it's different from regular recording</div>
-    <p>Regular recording saves the whole game (often 1–2 GB per quarter). Buffer mode saves <em>only the moments you mark</em>. Pick a 30-second window after the play happens — perfect for posting individual highlights without the bloat.</p>
+    <p>Regular recording saves the whole game (often 1–2 GB per quarter). Buffer mode saves <em>only the moments you mark</em>. Pick a 30-second window <em>after</em> the play happens — perfect for posting individual highlights without the bloat.</p>
 
     <div class="sub">How to use it</div>
     <ol class="steps">
       <li>From the camera screen, tap the <strong>⭐ Buffer</strong> button (next to the red Record button).</li>
       <li>The phone starts recording silently into a rolling 60-second buffer. The on-screen indicator turns orange.</li>
       <li>When something great happens, tap the big <strong>⭐</strong> button. Pick how far back to capture (5, 10, 20, 30, or 60 seconds).</li>
-      <li>The clip saves to your Photos library (and shows up on the game card in the app). Buffer keeps rolling — capture as many highlights as you want.</li>
+      <li>The clip saves to your Photos library and shows up on the game card in the app. Buffer keeps rolling — capture as many highlights as you want.</li>
       <li>Tap the stop button when you're done. The 60-second working buffer is discarded; only your captured highlights stick around.</li>
     </ol>
 
@@ -348,7 +335,7 @@
         <div class="badges"><span class="badge free-limited">Free · 10 min limit</span> <span class="badge pro">Pro · Unlimited</span></div>
       </div>
     </div>
-    <p class="lead">Push the game to YouTube Live straight from the phone — scoreboard burned in, family watching from anywhere, no extra hardware. One tap creates the broadcast, uploads a custom thumbnail, and starts pushing video.</p>
+    <p class="lead">Push the game to YouTube Live straight from the phone — scoreboard burned in, family watching from anywhere, no extra hardware. One tap creates the broadcast, uploads a custom ScoreFrame thumbnail, and starts pushing video.</p>
 
     <div class="sub">How to use it</div>
     <ol class="steps">
@@ -403,26 +390,6 @@
     </ol>
   </article>
 
-  <!-- PiP Overlay -->
-  <article class="feature" id="pip-overlay">
-    <div class="feature-head">
-      <div class="feature-emoji">📷</div>
-      <div class="feature-title-block">
-        <h2>PiP Camera Overlay</h2>
-        <div class="badges"><span class="badge free">Free · Fixed</span> <span class="badge pro">Pro · Crop &amp; Move</span></div>
-      </div>
-    </div>
-    <p class="lead">The controller phone aims at a real-world scoreboard (the gym wall clock, an opposing scoreboard, anything) and streams a cropped picture-in-picture into the corner of the recorded video.</p>
-
-    <div class="sub">How to use it</div>
-    <ol class="steps">
-      <li>Connect two phones via <strong>Remote Scoring</strong>.</li>
-      <li>On the controller, tap the <strong>📷 PiP</strong> toggle in the scoring bar.</li>
-      <li>Free tier: full camera frame, fixed in the bottom-right corner of the video.</li>
-      <li>Pro tier: draw a crop box around just the scoreboard, drag the PiP overlay anywhere on the recorded video, edit the crop mid-stream with the ✏️ button.</li>
-    </ol>
-  </article>
-
   <!-- Custom Branding -->
   <article class="feature" id="custom-branding">
     <div class="feature-head">
@@ -443,31 +410,272 @@
     </ol>
   </article>
 
-  <!-- Team Hubs -->
-  <article class="feature" id="team-hubs">
+  <!-- Team Sharing -->
+  <article class="feature" id="team-sharing">
     <div class="feature-head">
       <div class="feature-emoji">🌐</div>
       <div class="feature-title-block">
-        <h2>Team Hubs</h2>
-        <div class="badges"><span class="badge free">Free · 1 hub</span> <span class="badge pro">Pro · Unlimited hubs</span></div>
+        <h2>Team Sharing</h2>
+        <div class="badges"><span class="badge free">Free · 1 team</span> <span class="badge pro">Pro · Unlimited teams</span></div>
       </div>
     </div>
-    <p class="lead">Give every player's family a single page that shows your schedule, roster, past games, career stats, and live streams. Hubs live at scoreframe.app/team — no sign-up required to view, optional sign-up to follow.</p>
+    <p class="lead">Give every player's family a single page that shows your schedule, roster, past games, career stats, coach notes, and live streams. Lives at <code>scoreframe.app/team</code> — no sign-up required to view, optional sign-up to follow.</p>
+
+    <div class="sub">How to share a team</div>
+    <ol class="steps">
+      <li>Open a team in <strong>My Teams &amp; Players</strong> → <strong>Share Team</strong>.</li>
+      <li>Get an 8-character team code + a sharable URL.</li>
+      <li>Pick visibility: <strong>Public</strong> (anyone), <strong>Invite-only</strong> (search but request approval), or <strong>Private</strong> (link only).</li>
+      <li>Followers tap "Follow" on the web page or in the app to get notifications when a game goes live, when a final score is posted, or when a coach drops a note.</li>
+    </ol>
+
+    <div class="callout">
+      Pre-2026-06 this was branded "Team Hubs" inside the app. Same feature — just renamed to "Team Sharing" so the name actually says what it does.
+    </div>
+  </article>
+
+  <!-- Roles -->
+  <article class="feature" id="roles">
+    <div class="feature-head">
+      <div class="feature-emoji">👥</div>
+      <div class="feature-title-block">
+        <h2>Roles</h2>
+        <div class="badges"><span class="badge free">Free</span></div>
+      </div>
+    </div>
+    <p class="lead">Every person who interacts with a team has a role. The role decides what they can see, edit, post, and get notified about. You set your own role the first time you open the app (and can change it any time in Settings → APP MODE).</p>
+
+    <div class="sub">Personal roles (per device)</div>
+    <div class="role-grid">
+      <div class="role-card">
+        <h4>Coach</h4>
+        <p>Default for the people running games. Records, scores, manages teams, posts coach notes, sends notifications. Sees the Home screen tuned for game-day workflow.</p>
+      </div>
+      <div class="role-card">
+        <h4>Fan</h4>
+        <p>For parents, family, friends. Read-only by default — follows teams, watches streams, gets notifications when followed teams go live or post results. No scoring controls clutter the UI.</p>
+      </div>
+    </div>
+
+    <div class="sub">Per-team roles</div>
+    <div class="role-grid">
+      <div class="role-card">
+        <h4>Owner</h4>
+        <p>The person who created the team. Can add/remove managers, transfer ownership, delete the team, change visibility, and approve follower requests.</p>
+      </div>
+      <div class="role-card">
+        <h4>Manager / Co-coach</h4>
+        <p>Invited by the owner. Can edit roster, schedule games, score and stream on behalf of the team, post coach notes, approve follower requests. Can't delete the team or kick the owner.</p>
+      </div>
+      <div class="role-card">
+        <h4>Follower</h4>
+        <p>Anyone who taps Follow on a team page. Sees public schedule, live streams, final scores, and coach notes. Gets push notifications for whatever they've opted into.</p>
+      </div>
+      <div class="role-card">
+        <h4>Visitor</h4>
+        <p>Read-only one-off — someone who opens a team link without signing in. Can claim themselves to a roster entry (linking "Eric Bloomcamp" the user to "Eric Bloomcamp" on the roster) which then upgrades them to a tied player with a "You" badge.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- Scheduling -->
+  <article class="feature" id="scheduling">
+    <div class="feature-head">
+      <div class="feature-emoji">📅</div>
+      <div class="feature-title-block">
+        <h2>Scheduling</h2>
+        <div class="badges"><span class="badge free">Free</span></div>
+      </div>
+    </div>
+    <p class="lead">Plan the whole season once, then walk into every game prepped. Scheduled games auto-promote to live broadcasts, auto-trigger reminders to followers, and auto-attach video to the right schedule entry when the game ends.</p>
+
+    <div class="sub">What you can schedule</div>
+    <ul class="bullets">
+      <li><strong>Regular games</strong> — opponent, date/time, location, notes (e.g. "wear away jerseys", "carpool at 4pm").</li>
+      <li><strong>Tournaments</strong> — a parent event with multiple child games underneath. Pool play, bracket play, mixed formats.</li>
+      <li><strong>Seasons</strong> — group games by season for season-long stats (W-L records, scoring leaders, etc.).</li>
+      <li><strong>Events</strong> — non-game things you want the team to know about (practices, team dinners, fundraisers).</li>
+    </ul>
+
+    <div class="sub">What happens automatically</div>
+    <ul class="bullets">
+      <li>Reminders push out to followers 24 hours before kickoff (opt-in per follower).</li>
+      <li>When you tap "Start Game" from a scheduled entry, the team names, opponent, location, and event label all pre-fill — no re-typing.</li>
+      <li>If the game has an opponent that matches a saved team, both rosters load automatically.</li>
+      <li>Pre-created YouTube broadcasts can be scheduled in advance — viewers see a countdown splash, then your stream takes over at kickoff.</li>
+      <li>When the game ends, the final score posts to the schedule entry. The schedule turns into your past-games list as the season rolls forward.</li>
+    </ul>
+  </article>
+
+  <!-- Coach Notes -->
+  <article class="feature" id="coach-notes">
+    <div class="feature-head">
+      <div class="feature-emoji">📋</div>
+      <div class="feature-title-block">
+        <h2>Coach Notes</h2>
+        <div class="badges"><span class="badge pro">Pro</span></div>
+      </div>
+    </div>
+    <p class="lead">Post a note from the game card and every follower and approved subscriber gets a push notification AND an email. Use it for "great game everyone, see you at practice Tuesday", "MVP was Sarah for the diving save", or "lineup for Saturday is on the team page".</p>
 
     <div class="sub">How to use it</div>
     <ol class="steps">
-      <li>Open a team in <strong>My Teams &amp; Players</strong> → <strong>Create Team Hub</strong>.</li>
-      <li>Get an 8-character hub code + a sharable URL.</li>
-      <li>Schedule games from the hub screen; the schedule appears on the web page automatically.</li>
-      <li>Followers tap "Follow" to get notifications when a game goes live, when a final score is posted, or when a coach drops a note.</li>
-      <li>Pick visibility: <strong>Public</strong> (anyone), <strong>Invite-only</strong> (search but request approval), or <strong>Private</strong> (link only).</li>
+      <li>Open any game in your team's history (or open the Coach Notes section on a team page).</li>
+      <li>Tap <strong>+ Post Coach Note</strong>.</li>
+      <li>Write your message. There's no character cap — write a paragraph if you want.</li>
+      <li>Tap <strong>Post</strong>. Followers + subscribers get a push and an email instantly. The note renders on the game's public page and on the team's coach-notes card.</li>
+      <li>Revoke any time. Revoked notes show as "[Note removed by owner]" so the conversation thread stays coherent.</li>
+    </ol>
+
+    <div class="callout">
+      Free users see the option on every game card so it's discoverable; tapping the locked button opens the upgrade screen so they know exactly what they're paying for.
+    </div>
+  </article>
+
+  <!-- Notifications -->
+  <article class="feature" id="notifications">
+    <div class="feature-head">
+      <div class="feature-emoji">🔔</div>
+      <div class="feature-title-block">
+        <h2>Notifications</h2>
+        <div class="badges"><span class="badge free">Free</span></div>
+      </div>
+    </div>
+    <p class="lead">Every notification is opt-in per follower and per team. ScoreFrame never spams — followers see exactly what they signed up for, with a one-tap mute per team and a global mute in Settings.</p>
+
+    <div class="sub">What can fire a notification</div>
+    <ul class="notif-list">
+      <li>
+        <span class="icon">🔴</span>
+        <div>
+          <span class="title">Live stream started</span>
+          Fires when a followed team's stream goes live. Tap to open the watch page.
+          <span class="who">→ Followers of the team</span>
+        </div>
+      </li>
+      <li>
+        <span class="icon">🏁</span>
+        <div>
+          <span class="title">Game ended — final score</span>
+          Posted automatically when you tap End Game. Shows score, sport, opponent.
+          <span class="who">→ Followers of the team</span>
+        </div>
+      </li>
+      <li>
+        <span class="icon">⏰</span>
+        <div>
+          <span class="title">Upcoming game reminder</span>
+          24 hours before a scheduled game. Opt-out per follower.
+          <span class="who">→ Followers of the team</span>
+        </div>
+      </li>
+      <li>
+        <span class="icon">📋</span>
+        <div>
+          <span class="title">Coach posted a note</span>
+          Push + email every time a manager or owner posts. Linked to the relevant game on tap.
+          <span class="who">→ Followers + subscribers</span>
+        </div>
+      </li>
+      <li>
+        <span class="icon">👋</span>
+        <div>
+          <span class="title">New follower request</span>
+          For invite-only / private teams. Owner gets an Approve / Block action right inside the notification.
+          <span class="who">→ Owner + managers</span>
+        </div>
+      </li>
+      <li>
+        <span class="icon">✅</span>
+        <div>
+          <span class="title">Your follow request was approved</span>
+          When the team owner accepts your invite-only request.
+          <span class="who">→ The requester</span>
+        </div>
+      </li>
+      <li>
+        <span class="icon">📨</span>
+        <div>
+          <span class="title">You've been invited as a manager</span>
+          Owner taps Invite Manager → invitee gets a push to accept / decline.
+          <span class="who">→ The invitee</span>
+        </div>
+      </li>
+      <li>
+        <span class="icon">📦</span>
+        <div>
+          <span class="title">Team was archived / revived</span>
+          So followers know the team is no longer active (or is back).
+          <span class="who">→ Followers</span>
+        </div>
+      </li>
+    </ul>
+  </article>
+
+  <!-- Game Pages -->
+  <article class="feature" id="game-pages">
+    <div class="feature-head">
+      <div class="feature-emoji">▶️</div>
+      <div class="feature-title-block">
+        <h2>Custom Game Pages</h2>
+        <div class="badges"><span class="badge free">Free</span></div>
+      </div>
+    </div>
+    <p class="lead">Every saved game gets its own permanent web page at <code>scoreframe.app/game</code>. Embedded YouTube player at the top so people can watch the recap any time, full scoreboard, per-player stats, coach notes for that game, and a "← Back to schedule" link if it was part of a tournament or season.</p>
+
+    <div class="sub">What lands on the page</div>
+    <ul class="bullets">
+      <li>Embedded video player (YouTube replay if you streamed; share link if you only recorded locally).</li>
+      <li>Final score, both teams' colors and logos.</li>
+      <li>Full box score: per-period scores, per-player stat lines, leaders.</li>
+      <li>Coach notes posted on this game.</li>
+      <li>Event label (Pro) — "Region Final", "Senior Night", "Tournament Game 3", whatever you set.</li>
+      <li>Date, location, sport.</li>
+      <li>"← Back to {team}" navigation to surface the team's whole history.</li>
+    </ul>
+
+    <div class="callout">
+      Game pages are the long-term record. Players can show their grandparents the dunk three years later, college recruiters can see the highlight + the full game, and the team's history doesn't depend on anyone keeping the app installed.
+    </div>
+  </article>
+
+  <!-- Stat Tracking -->
+  <article class="feature" id="stat-tracking">
+    <div class="feature-head">
+      <div class="feature-emoji">📊</div>
+      <div class="feature-title-block">
+        <h2>Full Stat Tracking for Players</h2>
+        <div class="badges"><span class="badge free">Free · Per game</span> <span class="badge pro">Pro · Career view</span></div>
+      </div>
+    </div>
+    <p class="lead">Every tap during scoring attributes to a player. Career stats accumulate across every game that player appears in — same player across multiple teams, multiple seasons, multiple years. Player pages show career totals, per-game logs, leaderboards.</p>
+
+    <div class="sub">What's tracked, per sport</div>
+    <ul class="bullets">
+      <li><strong>Basketball</strong> — points by type (1/2/3), fouls, per-quarter breakdown, per-game and career averages.</li>
+      <li><strong>Volleyball</strong> — kills, aces, assists, errors, missed serves, per-set splits.</li>
+      <li><strong>Soccer</strong> — goals, assists, shots, saves, fouls, cards.</li>
+      <li><strong>Football</strong> — touchdowns, field goals, by-quarter, possession turnover.</li>
+      <li><strong>Bowling</strong> — game scores, series totals, high game, average, strikes, spares, splits, conversions.</li>
+      <li><strong>Baseball / Softball</strong> — full AVG/OBP/SLG/OPS slash line, 1B/2B/3B/HR, RBI, runs, walks, K, HBP, SAC, plus pitcher IP/H/R/ER/BB/K/HR/BF/PC.</li>
+      <li><strong>Hockey</strong> — goals, shots on goal, penalty minutes, by-period.</li>
+      <li><strong>Lacrosse</strong> — goals, shots, ground balls, faceoffs won, penalties, by-quarter.</li>
+      <li><strong>Tennis / Pickleball</strong> — match W-L records, per-set scores.</li>
+    </ul>
+
+    <div class="sub">How attribution works</div>
+    <ol class="steps">
+      <li>Add players to a team's roster in <strong>My Teams &amp; Players</strong>.</li>
+      <li>When you score during a game, the tap is attributed to whoever's currently selected (or to the active batter / lineup position for baseball).</li>
+      <li>At End Game, stats roll up into the player's career profile, the team's season totals, and the per-game box score on the game page.</li>
+      <li>Career stats survive team changes — a player who switches clubs keeps their career line; you can see their full history across every team they've played for.</li>
     </ol>
   </article>
 
   <!-- Full Scorebook -->
   <article class="feature" id="full-scorebook">
     <div class="feature-head">
-      <div class="feature-emoji">📋</div>
+      <div class="feature-emoji">📓</div>
       <div class="feature-title-block">
         <h2>Full Baseball / Softball Scorebook</h2>
         <div class="badges"><span class="badge pro">Pro</span></div>
@@ -477,11 +685,12 @@
 
     <div class="sub">What it tracks per at-bat</div>
     <ul class="bullets">
-      <li>13 result types (1B, 2B, 3B, HR, BB, K, HBP, IBB, IFR, CI, K-WP, SAC fly/bunt, error)</li>
+      <li>15 result types (1B, 2B, 3B, HR, BB, K, HBP, IBB, IFR, CI, K-WP, SAC fly/bunt, error, fielder's choice)</li>
       <li>Pitch-by-pitch count, pitcher pitch totals</li>
       <li>Fielding play notation (6-3, 4-6-3, F-7, etc.) via a 3×3 position grid</li>
-      <li>Base runner identity tracking through advancements</li>
-      <li>Defensive substitutions + pitcher changes</li>
+      <li>Base runner identity tracking through advancements (so the right player gets credit for the run)</li>
+      <li>Defensive substitutions + pitcher changes, with running pitch counts per pitcher</li>
+      <li>Earned vs unearned run toggle, pitcher line (IP/H/R/ER/BB/K/HR/BF/PC)</li>
     </ul>
 
     <div class="callout">
@@ -489,18 +698,106 @@
     </div>
   </article>
 
-  <!-- 4K -->
-  <article class="feature" id="4k">
+  <!-- BT Buttons -->
+  <article class="feature" id="bt-buttons">
     <div class="feature-head">
-      <div class="feature-emoji">🎬</div>
+      <div class="feature-emoji">🎛️</div>
       <div class="feature-title-block">
-        <h2>4K Recording</h2>
+        <h2>External Bluetooth Buttons</h2>
         <div class="badges"><span class="badge pro">Pro</span></div>
       </div>
     </div>
-    <p class="lead">Record at 3840×2160 / 60fps for archival quality. Free tier caps at 1080p — plenty for sharing, but 4K is the move for college recruiting tape, future-proofing, or zooming in on details during review.</p>
+    <p class="lead">Any Bluetooth device with buttons — a $10 selfie remote, a presentation clicker, a media remote, a Bluetooth keyboard — can drive recording and zoom without touching the phone. Set it up once and the buttons just work.</p>
+
+    <div class="sub">What you can map</div>
+    <ul class="bullets">
+      <li><strong>Record button</strong> — single press toggles start / pause / resume. Double-press (within 400ms) captures a highlight using your chosen highlight duration.</li>
+      <li><strong>Zoom In button</strong> — hold to zoom in smoothly. Release to stop.</li>
+      <li><strong>Zoom Out button</strong> — hold to zoom out smoothly. Release to stop.</li>
+      <li>Stop recording is still on-screen only — protects against accidental stops mid-game.</li>
+    </ul>
+
+    <div class="sub">How to set it up</div>
+    <ol class="steps">
+      <li>Pair your Bluetooth device with iPhone / Android the normal way (Settings → Bluetooth).</li>
+      <li>In ScoreFrame, open <strong>Settings → External Buttons</strong>.</li>
+      <li>Tap <strong>Record Button</strong> → "Press the button now" → press whichever button you want to use. The app records the device name + key code.</li>
+      <li>Tap <strong>Zoom Buttons</strong> → press zoom-in, then zoom-out, in that order.</li>
+      <li>Flip the on-screen <strong>Ext</strong> toggle in the recording bar to enable the buttons.</li>
+    </ol>
+
     <div class="callout">
-      <strong>Storage warning.</strong> 4K eats ~30 MB/second. A 90-minute game is roughly 14–16 GB. The app surfaces a "~Xm left" estimate while recording so you don't get caught short.
+      Matches on device name only — cheap remotes alternate key codes on every connection, but the device name stays stable. Works with the phone tucked into a tripod mount across the gym.
+    </div>
+  </article>
+
+  <!-- Video Quality -->
+  <article class="feature" id="video-quality">
+    <div class="feature-head">
+      <div class="feature-emoji">🎬</div>
+      <div class="feature-title-block">
+        <h2>Custom Video Quality &amp; Camera Controls</h2>
+        <div class="badges"><span class="badge free">Free · Basics</span> <span class="badge pro">Pro · Advanced</span></div>
+      </div>
+    </div>
+    <p class="lead">ScoreFrame uses the same camera APIs every pro video app uses — and exposes the controls. Free users get sensible defaults that work indoors and out; Pro unlocks the full set so you can dial in for tricky lighting, contrast, or motion.</p>
+
+    <div class="sub">Resolution + frame rate</div>
+    <ul class="bullets">
+      <li><strong>720p</strong> up to 60fps (free) — small files, easy to share.</li>
+      <li><strong>1080p</strong> up to 60fps (free) — the everyday default.</li>
+      <li><strong>4K</strong> up to 60fps (Pro) — archival quality, recruiting tape, future-proofing.</li>
+      <li>Frame rate auto-detected per device — 60fps if hardware supports it, 30fps otherwise. Pinned constant (min == max) so the rate doesn't drift under low light.</li>
+    </ul>
+
+    <div class="sub">Camera adjustments</div>
+    <ul class="bullets">
+      <li><strong>Video stabilization</strong> (free, default on) — OIS + EIS where the phone supports it. Smooths out tripod wobble and handheld shake.</li>
+      <li><strong>Tap-to-focus</strong> (Pro) — tap the preview to lock focus + exposure at that point. Persistent dotted circle shows where you tapped.</li>
+      <li><strong>White balance</strong> (Pro) — Auto / Incandescent / Fluorescent / Daylight / Cloudy. Kills the yellow / blue tint indoor gyms add.</li>
+      <li><strong>Exposure compensation</strong> (Pro) — slider with EV display. Brighten dim arenas, hold back overexposed sunlit fields.</li>
+      <li><strong>Edge enhancement (sharpening)</strong> (Pro) — pulls back fine detail in the recorded video.</li>
+      <li><strong>HDR</strong> (Pro) — wider dynamic range. Useful for high-contrast scenes (sunlit field + shaded dugout). May reduce frame rate on some devices.</li>
+      <li><strong>AE/AWB lock</strong> (Pro) — once recording starts, exposure and white balance lock. Stops the picture from "breathing" mid-play as the camera re-meters.</li>
+    </ul>
+
+    <div class="callout">
+      <strong>Smart defaults out of the box.</strong> Continuous-video autofocus, FAST noise reduction, anti-banding for fluorescent gym lights, OIS + EIS where available. You don't need to touch any of this for the recording to look good — Pro is for when you want to fine-tune.
+    </div>
+  </article>
+
+  <!-- Fun Effects -->
+  <article class="feature" id="fun-effects">
+    <div class="feature-head">
+      <div class="feature-emoji">🎆</div>
+      <div class="feature-title-block">
+        <h2>Fun Effects on Scoring</h2>
+        <div class="badges"><span class="badge free">Free</span> <span class="badge experimental">Experimental · Off by default</span></div>
+      </div>
+    </div>
+    <p class="lead">Tap a score, see a celebration burned right into the video. Confetti on a three-pointer, fireworks on a touchdown, pins exploding on a bowling strike, a star burst on an ace. Optional, off by default, all toggleable per sport per event in Settings → Experimental.</p>
+
+    <div class="sub">What's available, per sport</div>
+    <ul class="bullets">
+      <li><strong>Generic</strong> — confetti on any score</li>
+      <li><strong>Basketball</strong> — confetti on a 3-pointer</li>
+      <li><strong>Football</strong> — fireworks on a touchdown</li>
+      <li><strong>Bowling</strong> — pins exploding on a strike</li>
+      <li><strong>Soccer / Hockey / Lacrosse</strong> — expanding rings on a goal</li>
+      <li><strong>Volleyball</strong> — confetti on a point, ace burst on an ace, persistent 🔥 fire emoji on a 5+ point scoring streak</li>
+      <li><strong>Tennis</strong> — star burst on an ace</li>
+      <li><strong>Pickleball</strong> — confetti on game point</li>
+    </ul>
+
+    <div class="sub">How to turn them on</div>
+    <ol class="steps">
+      <li>Open <strong>Settings → Experimental</strong>.</li>
+      <li>Toggle the per-sport per-event row you want (e.g. "Football → Touchdown fireworks").</li>
+      <li>Score during a game. The animation burns into the recorded video and into the live stream, so viewers see it too.</li>
+    </ol>
+
+    <div class="callout">
+      Tasteful for some teams (kids' youth leagues, end-of-season highlight reels). Distracting for others (high school varsity, scouting tape). Off by default — turn on only the ones you want.
     </div>
   </article>
 
@@ -516,10 +813,10 @@
     <p class="lead">Pro removes the small "ScoreFrame.app" watermark from the bottom-left of recorded videos AND removes all interstitial / banner ads inside the app. The recording you share looks like yours, not ours.</p>
   </article>
 
-  <!-- Scoring Only Mode -->
+  <!-- Score Only Mode -->
   <article class="feature" id="scoring-only">
     <div class="feature-head">
-      <div class="feature-emoji">📊</div>
+      <div class="feature-emoji">📺</div>
       <div class="feature-title-block">
         <h2>Score Only Mode</h2>
         <div class="badges"><span class="badge free">Free</span></div>
