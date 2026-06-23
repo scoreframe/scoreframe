@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+  <title>ScoreFrame — Features Guide</title>
+  <link rel="canonical" href="https://scoreframe.app/features.html" />
+  <meta name="description" content="Every ScoreFrame feature explained — what it does, how to use it, and when you'd pick it. Buffer mode, live streaming, remote scoring, custom branding, and more." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deepest: #0A0A0C;
+      --bg-deep: #0F0F11;
+      --bg-card: #161618;
+      --bg-elevated: #1E1E21;
+      --accent: #FF9640;
+      --accent-dim: rgba(255, 150, 64, 0.15);
+      --accent-glow: rgba(255, 150, 64, 0.08);
+      --text-primary: #F2F2F2;
+      --text-secondary: rgba(255, 255, 255, 0.55);
+      --text-tertiary: rgba(255, 255, 255, 0.35);
+      --red: #FF3B3B;
+      --green: #4CAF50;
+    }
+
+    html { scroll-behavior: smooth; overflow-x: hidden; }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-deepest);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+      max-width: 100vw;
+    }
+
+    a { color: var(--accent); }
+
+    /* ── NAV ─────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 100;
+      background: rgba(10, 10, 12, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 150, 64, 0.08);
+      padding: 0 24px;
+    }
+
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .nav-logo {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.4rem;
+      font-weight: 900;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+    .nav-logo span { color: var(--accent); }
+
+    .nav-links { display: flex; gap: 24px; align-items: center; }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--accent); }
+
+    /* ── HERO ─────────────────────────────────────────── */
+    .hero {
+      padding: 140px 24px 60px;
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      letter-spacing: -1px;
+    }
+    .hero h1 .accent { color: var(--accent); }
+    .hero p {
+      font-size: clamp(1rem, 1.8vw, 1.15rem);
+      color: var(--text-secondary);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    /* ── FEATURE INDEX (chip strip) ────────────────────── */
+    .index-strip {
+      max-width: 1100px;
+      margin: 40px auto 60px;
+      padding: 0 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+    .index-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      text-decoration: none;
+      padding: 8px 14px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+    .index-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .index-chip.pro { background: var(--accent-dim); border-color: rgba(255,150,64,0.3); color: var(--accent); }
+
+    /* ── SECTIONS ────────────────────────────────────── */
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px 120px;
+    }
+
+    .feature {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 36px 32px;
+      margin-bottom: 28px;
+      scroll-margin-top: 80px;
+    }
+
+    .feature-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .feature-emoji { font-size: 2.2rem; line-height: 1; }
+
+    .feature-title-block { flex: 1; }
+
+    .feature h2 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.7rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+    }
+
+    .badges {
+      display: inline-flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    .badge.free { background: rgba(76,175,80,0.15); color: var(--green); border: 1px solid rgba(76,175,80,0.3); }
+    .badge.pro { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(255,150,64,0.3); }
+    .badge.free-limited { background: rgba(255,193,7,0.12); color: #FFC107; border: 1px solid rgba(255,193,7,0.3); }
+
+    .lead {
+      color: var(--text-secondary);
+      font-size: 1.02rem;
+      margin-bottom: 18px;
+    }
+
+    .sub {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      margin: 18px 0 8px;
+    }
+
+    ol.steps, ul.bullets {
+      margin: 0;
+      padding-left: 22px;
+    }
+    ol.steps li, ul.bullets li {
+      margin-bottom: 6px;
+      color: var(--text-primary);
+      font-size: 0.97rem;
+    }
+    ul.bullets li::marker { color: var(--accent); }
+    ol.steps li::marker { color: var(--accent); font-weight: 700; }
+
+    .callout {
+      margin: 16px 0 0;
+      padding: 14px 18px;
+      background: var(--accent-glow);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      font-size: 0.92rem;
+      color: var(--text-primary);
+    }
+    .callout strong { color: var(--accent); }
+
+    /* ── FOOTER ──────────────────────────────────────── */
+    footer {
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 40px 24px 60px;
+      text-align: center;
+      color: var(--text-tertiary);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--text-secondary); text-decoration: none; margin: 0 12px; }
+    footer a:hover { color: var(--accent); }
+
+    /* ── MOBILE ──────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .nav-links { gap: 14px; }
+      .nav-links a { font-size: 0.82rem; }
+      .feature { padding: 24px 20px; }
+      .feature-head { gap: 12px; }
+      .feature-emoji { font-size: 1.8rem; }
+      .feature h2 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">Score<span>Frame</span></a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/features.html">Features</a>
+      <a href="/support.html">Support</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1>Features <span class="accent">Guide</span></h1>
+  <p>Every ScoreFrame feature explained — what it does, how to use it, and when you'd pick it. Tap any feature to jump straight to it.</p>
+</section>
+
+<div class="index-strip">
+  <a class="index-chip" href="#remote-scoring">🎮 Remote Scoring</a>
+  <a class="index-chip pro" href="#buffer-mode">⭐ Buffer Mode</a>
+  <a class="index-chip" href="#live-streaming">📡 Live Streaming</a>
+  <a class="index-chip" href="#highlights">⭐ Highlights</a>
+  <a class="index-chip pro" href="#fullscreen-mode">🖥️ Fullscreen Mode</a>
+  <a class="index-chip" href="#pip-overlay">📷 PiP Overlay</a>
+  <a class="index-chip pro" href="#custom-branding">🎨 Custom Branding</a>
+  <a class="index-chip" href="#team-hubs">🌐 Team Hubs</a>
+  <a class="index-chip pro" href="#full-scorebook">📋 Full Scorebook</a>
+  <a class="index-chip pro" href="#4k">🎬 4K Recording</a>
+  <a class="index-chip pro" href="#ad-free">🚫 Ad-Free + No Watermark</a>
+  <a class="index-chip" href="#scoring-only">📊 Score Only Mode</a>
+</div>
+
+<main>
+
+  <!-- Remote Scoring -->
+  <article class="feature" id="remote-scoring">
+    <div class="feature-head">
+      <div class="feature-emoji">🎮</div>
+      <div class="feature-title-block">
+        <h2>Remote Scoring</h2>
+        <div class="badges"><span class="badge free">Free</span></div>
+      </div>
+    </div>
+    <p class="lead">Two phones, two jobs. One phone records on a tripod, the other phone scores from anywhere in the gym, the bleachers, or even from home over the internet.</p>
+
+    <div class="sub">How to use it</div>
+    <ol class="steps">
+      <li>On the camera phone, tap <strong>Connect Phones</strong> → <strong>Camera Phone</strong>.</li>
+      <li>On the controller phone, tap <strong>Connect Phones</strong> → <strong>Controller Phone</strong> → pick the camera from the discovered list.</li>
+      <li>The controller phone scores; every tap mirrors instantly to the camera and burns into the recorded video.</li>
+      <li>Out of Wi-Fi range? Pick <strong>Host Game Online</strong> on the camera and share the join code — the controller can join from anywhere.</li>
+    </ol>
+
+    <div class="callout">
+      <strong>Three connection methods.</strong> Wi-Fi (same network, fastest), Wi-Fi Direct (no router needed), or Bluetooth (works on a plane). The app tries all three simultaneously and uses whichever lights up.
+    </div>
+  </article>
+
+  <!-- Buffer Mode -->
+  <article class="feature" id="buffer-mode">
+    <div class="feature-head">
+      <div class="feature-emoji">⭐</div>
+      <div class="feature-title-block">
+        <h2>Buffer Mode</h2>
+        <div class="badges"><span class="badge pro">Pro</span></div>
+      </div>
+    </div>
+    <p class="lead">Save only the good plays. Buffer mode keeps the last minute of footage rolling in memory — when something amazing happens, tap the star and the previous 5/10/20/30/60 seconds get saved as a highlight clip. No giant game-length video, no time-consuming post-editing.</p>
+
+    <div class="sub">Why it's different from regular recording</div>
+    <p>Regular recording saves the whole game (often 1–2 GB per quarter). Buffer mode saves <em>only the moments you mark</em>. Pick a 30-second window after the play happens — perfect for posting individual highlights without the bloat.</p>
+
+    <div class="sub">How to use it</div>
+    <ol class="steps">
+      <li>From the camera screen, tap the <strong>⭐ Buffer</strong> button (next to the red Record button).</li>
+      <li>The phone starts recording silently into a rolling 60-second buffer. The on-screen indicator turns orange.</li>
+      <li>When something great happens, tap the big <strong>⭐</strong> button. Pick how far back to capture (5, 10, 20, 30, or 60 seconds).</li>
+      <li>The clip saves to your Photos library (and shows up on the game card in the app). Buffer keeps rolling — capture as many highlights as you want.</li>
+      <li>Tap the stop button when you're done. The 60-second working buffer is discarded; only your captured highlights stick around.</li>
+    </ol>
+
+    <div class="callout">
+      <strong>When to pick it.</strong> Tournaments where you only want the winning shots. Practice sessions where 90% is drills. Long matches where you don't want a 4 GB video. Anything where "the good parts" matter more than the full timeline.
+    </div>
+  </article>
+
+  <!-- Live Streaming -->
+  <article class="feature" id="live-streaming">
+    <div class="feature-head">
+      <div class="feature-emoji">📡</div>
+      <div class="feature-title-block">
+        <h2>Live Streaming</h2>
+        <div class="badges"><span class="badge free-limited">Free · 10 min limit</span> <span class="badge pro">Pro · Unlimited</span></div>
+      </div>
+    </div>
+    <p class="lead">Push the game to YouTube Live straight from the phone — scoreboard burned in, family watching from anywhere, no extra hardware. One tap creates the broadcast, uploads a custom thumbnail, and starts pushing video.</p>
+
+    <div class="sub">How to use it</div>
+    <ol class="steps">
+      <li>Open the drawer → <strong>Go Live</strong>.</li>
+      <li>Sign in to YouTube on the first run (one tap, uses your existing Google account).</li>
+      <li>Set the broadcast title (auto-suggested from team names + sport) and privacy: Unlisted, Public, or Private.</li>
+      <li>Tap <strong>Go Live</strong>. The pill at the top of the screen turns red with a running uptime.</li>
+      <li>Stop streaming any time from the same menu; the recording goes to your YouTube channel as a normal video.</li>
+    </ol>
+
+    <div class="sub">Quality presets (Pro)</div>
+    <ul class="bullets">
+      <li><strong>Standard</strong> — 720p 30fps, 4 Mbps. Works on any home Wi-Fi.</li>
+      <li><strong>High</strong> — 1080p 30fps, 6 Mbps. Best balance of quality + bandwidth.</li>
+      <li><strong>Ultra</strong> — 1080p 60fps, 9 Mbps. Sports with fast motion (basketball, hockey, lacrosse).</li>
+    </ul>
+    <p class="lead" style="margin-top:12px;">If the network can't sustain the chosen rate, adaptive bitrate steps it down silently so the stream stays live instead of cutting out. You'll see a toast when the auto-adjust kicks in.</p>
+  </article>
+
+  <!-- Highlights -->
+  <article class="feature" id="highlights">
+    <div class="feature-head">
+      <div class="feature-emoji">⭐</div>
+      <div class="feature-title-block">
+        <h2>In-Game Highlights</h2>
+        <div class="badges"><span class="badge free-limited">Free · 3 per game</span> <span class="badge pro">Pro · Unlimited</span></div>
+      </div>
+    </div>
+    <p class="lead">Tap the star during a regular recording to mark a great moment. When the game ends, ScoreFrame extracts the last 5/10/20 seconds (your pick in Settings) into its own clip — keeping the full game AND a separate set of share-ready highlights.</p>
+
+    <div class="sub">How it differs from Buffer Mode</div>
+    <p>Highlights run on top of a normal full-game recording — you get both the full match AND the clipped highlights. Buffer mode skips the full match entirely and saves <em>only</em> the highlights.</p>
+  </article>
+
+  <!-- Fullscreen Mode -->
+  <article class="feature" id="fullscreen-mode">
+    <div class="feature-head">
+      <div class="feature-emoji">🖥️</div>
+      <div class="feature-title-block">
+        <h2>Fullscreen Mode</h2>
+        <div class="badges"><span class="badge pro">Pro</span></div>
+      </div>
+    </div>
+    <p class="lead">Hide the scoring panel behind a pull-tab and let the video fill the whole screen. The scoring drawer slides out from the right when you need it; recording controls float at the bottom on demand.</p>
+
+    <div class="sub">How to use it</div>
+    <ol class="steps">
+      <li>Tap the diagonal-arrow icon in the bottom-right corner of the video preview.</li>
+      <li>The scoring panel slides away. The video now fills the screen.</li>
+      <li>Tap the right-side pull-tab (or swipe in from the right) to slide the scoring panel back when you need to score.</li>
+      <li>Tap the collapse arrow to return to the split view.</li>
+    </ol>
+  </article>
+
+  <!-- PiP Overlay -->
+  <article class="feature" id="pip-overlay">
+    <div class="feature-head">
+      <div class="feature-emoji">📷</div>
+      <div class="feature-title-block">
+        <h2>PiP Camera Overlay</h2>
+        <div class="badges"><span class="badge free">Free · Fixed</span> <span class="badge pro">Pro · Crop &amp; Move</span></div>
+      </div>
+    </div>
+    <p class="lead">The controller phone aims at a real-world scoreboard (the gym wall clock, an opposing scoreboard, anything) and streams a cropped picture-in-picture into the corner of the recorded video.</p>
+
+    <div class="sub">How to use it</div>
+    <ol class="steps">
+      <li>Connect two phones via <strong>Remote Scoring</strong>.</li>
+      <li>On the controller, tap the <strong>📷 PiP</strong> toggle in the scoring bar.</li>
+      <li>Free tier: full camera frame, fixed in the bottom-right corner of the video.</li>
+      <li>Pro tier: draw a crop box around just the scoreboard, drag the PiP overlay anywhere on the recorded video, edit the crop mid-stream with the ✏️ button.</li>
+    </ol>
+  </article>
+
+  <!-- Custom Branding -->
+  <article class="feature" id="custom-branding">
+    <div class="feature-head">
+      <div class="feature-emoji">🎨</div>
+      <div class="feature-title-block">
+        <h2>Custom Team Branding</h2>
+        <div class="badges"><span class="badge free">Free · 16 colors</span> <span class="badge pro">Pro · Custom colors, logos &amp; names</span></div>
+      </div>
+    </div>
+    <p class="lead">Make the scoreboard look like <em>your</em> team's scoreboard. Pick from 16 preset colors free; Pro unlocks the full HSV color picker, secondary team colors, custom team names (free is locked to "Home"/"Away"), and per-team logos rendered over the recorded video.</p>
+
+    <div class="sub">How to use it</div>
+    <ol class="steps">
+      <li>Drawer → <strong>My Teams &amp; Players</strong>.</li>
+      <li>Tap a team (or + to create one). Pick primary + secondary color from the palette or the wheel.</li>
+      <li>Add a logo: tap the logo card → pick from your photo library. Toggle "Show on video" to burn it into recordings.</li>
+      <li>Set the roster — players you create here track stats across every game they play in.</li>
+    </ol>
+  </article>
+
+  <!-- Team Hubs -->
+  <article class="feature" id="team-hubs">
+    <div class="feature-head">
+      <div class="feature-emoji">🌐</div>
+      <div class="feature-title-block">
+        <h2>Team Hubs</h2>
+        <div class="badges"><span class="badge free">Free · 1 hub</span> <span class="badge pro">Pro · Unlimited hubs</span></div>
+      </div>
+    </div>
+    <p class="lead">Give every player's family a single page that shows your schedule, roster, past games, career stats, and live streams. Hubs live at scoreframe.app/team — no sign-up required to view, optional sign-up to follow.</p>
+
+    <div class="sub">How to use it</div>
+    <ol class="steps">
+      <li>Open a team in <strong>My Teams &amp; Players</strong> → <strong>Create Team Hub</strong>.</li>
+      <li>Get an 8-character hub code + a sharable URL.</li>
+      <li>Schedule games from the hub screen; the schedule appears on the web page automatically.</li>
+      <li>Followers tap "Follow" to get notifications when a game goes live, when a final score is posted, or when a coach drops a note.</li>
+      <li>Pick visibility: <strong>Public</strong> (anyone), <strong>Invite-only</strong> (search but request approval), or <strong>Private</strong> (link only).</li>
+    </ol>
+  </article>
+
+  <!-- Full Scorebook -->
+  <article class="feature" id="full-scorebook">
+    <div class="feature-head">
+      <div class="feature-emoji">📋</div>
+      <div class="feature-title-block">
+        <h2>Full Baseball / Softball Scorebook</h2>
+        <div class="badges"><span class="badge pro">Pro</span></div>
+      </div>
+    </div>
+    <p class="lead">A real digital scorebook for baseball and softball — at-bat by at-bat tracking with pitch counts, fielding plays, base advancements, defensive positions, and a multi-page PDF export at the end that looks like a hand-kept book.</p>
+
+    <div class="sub">What it tracks per at-bat</div>
+    <ul class="bullets">
+      <li>13 result types (1B, 2B, 3B, HR, BB, K, HBP, IBB, IFR, CI, K-WP, SAC fly/bunt, error)</li>
+      <li>Pitch-by-pitch count, pitcher pitch totals</li>
+      <li>Fielding play notation (6-3, 4-6-3, F-7, etc.) via a 3×3 position grid</li>
+      <li>Base runner identity tracking through advancements</li>
+      <li>Defensive substitutions + pitcher changes</li>
+    </ul>
+
+    <div class="callout">
+      The exported PDF includes a box score, both team scoresheets with diamond basepath notation, a pitcher summary, and a play-by-play log. Drop it in the team's Google Drive or email it to the coach.
+    </div>
+  </article>
+
+  <!-- 4K -->
+  <article class="feature" id="4k">
+    <div class="feature-head">
+      <div class="feature-emoji">🎬</div>
+      <div class="feature-title-block">
+        <h2>4K Recording</h2>
+        <div class="badges"><span class="badge pro">Pro</span></div>
+      </div>
+    </div>
+    <p class="lead">Record at 3840×2160 / 60fps for archival quality. Free tier caps at 1080p — plenty for sharing, but 4K is the move for college recruiting tape, future-proofing, or zooming in on details during review.</p>
+    <div class="callout">
+      <strong>Storage warning.</strong> 4K eats ~30 MB/second. A 90-minute game is roughly 14–16 GB. The app surfaces a "~Xm left" estimate while recording so you don't get caught short.
+    </div>
+  </article>
+
+  <!-- Ad-Free + No Watermark -->
+  <article class="feature" id="ad-free">
+    <div class="feature-head">
+      <div class="feature-emoji">🚫</div>
+      <div class="feature-title-block">
+        <h2>Ad-Free &amp; No Watermark</h2>
+        <div class="badges"><span class="badge pro">Pro</span></div>
+      </div>
+    </div>
+    <p class="lead">Pro removes the small "ScoreFrame.app" watermark from the bottom-left of recorded videos AND removes all interstitial / banner ads inside the app. The recording you share looks like yours, not ours.</p>
+  </article>
+
+  <!-- Scoring Only Mode -->
+  <article class="feature" id="scoring-only">
+    <div class="feature-head">
+      <div class="feature-emoji">📊</div>
+      <div class="feature-title-block">
+        <h2>Score Only Mode</h2>
+        <div class="badges"><span class="badge free">Free</span></div>
+      </div>
+    </div>
+    <p class="lead">Use the phone as a standalone scoreboard — no recording, no battery drain from the camera. Toggle it on and the screen shows the giant scoreboard overlay; tap to score; tap the toggle again to go back to recording mode.</p>
+    <div class="callout">
+      Useful when another phone (or a DSLR) is doing the recording, when you're scoring for the league, or when you just want a big readable scoreboard on a courtside table.
+    </div>
+  </article>
+
+</main>
+
+<footer>
+  <div>
+    <a href="/">Home</a>
+    <a href="/support.html">Support</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/terms.html">Terms</a>
+  </div>
+  <p style="margin-top:12px;">Developed by Glavin Labs LLC</p>
+</footer>
+
+</body>
+</html>
