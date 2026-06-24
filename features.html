@@ -200,6 +200,16 @@
       font-weight: 700;
     }
     .compare-card.pro li::before { color: var(--accent); }
+    .compare-card li a {
+      color: var(--text-primary);
+      text-decoration: none;
+      border-bottom: 1px dotted transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .compare-card li a:hover {
+      color: var(--accent);
+      border-bottom-color: rgba(255,150,64,0.5);
+    }
     @media (max-width: 640px) {
       .compare-grid { grid-template-columns: 1fr; }
     }
@@ -342,37 +352,37 @@
       <p class="blurb">Plenty to ship a season on. Records, scores, streams, shares.</p>
       <ul>
         <li>All 12 sports, full scoring</li>
-        <li>Video recording up to 1080p / 60fps</li>
-        <li>Remote scoring (Wi-Fi, Wi-Fi Direct, Bluetooth)</li>
-        <li>Live streaming to YouTube (10-minute limit)</li>
-        <li>3 highlights per game</li>
-        <li>1 shared team page</li>
-        <li>Roles, scheduling, notifications</li>
-        <li>Game pages with embedded video</li>
-        <li>Per-game stat tracking</li>
-        <li>Score-only mode</li>
-        <li>Fun effects on scoring</li>
-        <li>16 preset team colors</li>
+        <li><a href="#video-quality">Video recording up to 1080p / 60fps</a></li>
+        <li><a href="#remote-scoring">Remote scoring</a> (Wi-Fi, Wi-Fi Direct, Bluetooth)</li>
+        <li><a href="#live-streaming">Live streaming to YouTube</a> (10-minute limit)</li>
+        <li><a href="#highlights">3 highlights per game</a></li>
+        <li><a href="#team-sharing">1 shared team page</a></li>
+        <li><a href="#roles">Roles</a>, <a href="#scheduling">scheduling</a>, <a href="#notifications">notifications</a></li>
+        <li><a href="#game-pages">Game pages with embedded video</a></li>
+        <li><a href="#stat-tracking">Per-game stat tracking</a></li>
+        <li><a href="#scoring-only">Score-only mode</a></li>
+        <li><a href="#fun-effects">Fun effects on scoring</a></li>
+        <li><a href="#custom-branding">16 preset team colors</a></li>
       </ul>
     </div>
     <div class="compare-card pro">
       <h3>Pro &mdash; everything Free, plus</h3>
       <p class="blurb">For the coach or videographer doing every game, every season.</p>
       <ul>
-        <li>Unlimited live streaming</li>
-        <li>Unlimited highlights</li>
-        <li>Unlimited shared teams</li>
-        <li>Buffer mode &mdash; save only the good plays</li>
-        <li>4K recording at 60fps</li>
-        <li>Custom HSV team colors, secondary colors, per-team logos</li>
-        <li>Full baseball / softball scorebook with PDF export</li>
-        <li>Fullscreen recording mode</li>
-        <li>Coach notes (push + email to followers)</li>
-        <li>External Bluetooth record / zoom buttons</li>
-        <li>Pro camera controls (white balance, exposure, HDR, sharpening)</li>
-        <li>Career stat tracking across all teams</li>
-        <li>Custom YouTube broadcast thumbnails</li>
-        <li>Ad-free, no watermark</li>
+        <li><a href="#live-streaming">Unlimited live streaming</a></li>
+        <li><a href="#highlights">Unlimited highlights</a></li>
+        <li><a href="#team-sharing">Unlimited shared teams</a></li>
+        <li><a href="#buffer-mode">Buffer mode &mdash; save only the good plays</a></li>
+        <li><a href="#video-quality">4K recording at 60fps</a></li>
+        <li><a href="#custom-branding">Custom HSV team colors, secondary colors, per-team logos</a></li>
+        <li><a href="#full-scorebook">Full baseball / softball scorebook with PDF export</a></li>
+        <li><a href="#fullscreen-mode">Fullscreen recording mode</a></li>
+        <li><a href="#coach-notes">Coach notes (push + email to followers)</a></li>
+        <li><a href="#bt-buttons">External Bluetooth record / zoom buttons</a></li>
+        <li><a href="#video-quality">Pro camera controls (white balance, exposure, HDR, sharpening)</a></li>
+        <li><a href="#stat-tracking">Career stat tracking across all teams</a></li>
+        <li><a href="#live-streaming">Custom YouTube broadcast thumbnails</a></li>
+        <li><a href="#ad-free">Ad-free, no watermark</a></li>
       </ul>
     </div>
   </div>
