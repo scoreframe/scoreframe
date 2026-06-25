@@ -6,13 +6,15 @@
         "components": [
           {
             "/": "/game.html",
-            "?": { "team": "?*", "game": "?*" },
             "comment": "ScoreFrame game page — opens in the in-app WebView with auth handoff"
           },
           {
             "/": "/labs/game.html",
-            "?": { "team": "?*", "game": "?*" },
             "comment": "Labs (video-synced) game page"
+          },
+          {
+            "/": "/team.html",
+            "comment": "Team page — schedule, roster, past games"
           }
         ]
       }
