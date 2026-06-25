@@ -15,6 +15,10 @@
           {
             "/": "/team.html",
             "comment": "Team page — schedule, roster, past games"
+          },
+          {
+            "/": "/event.html",
+            "comment": "Event / tournament page — child games strip"
           }
         ]
       }
