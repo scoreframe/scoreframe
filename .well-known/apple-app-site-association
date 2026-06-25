@@ -1,0 +1,21 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["365RQ8228L.com.scoreframe.ios"],
+        "components": [
+          {
+            "/": "/game.html",
+            "?": { "team": "?*", "game": "?*" },
+            "comment": "ScoreFrame game page — opens in the in-app WebView with auth handoff"
+          },
+          {
+            "/": "/labs/game.html",
+            "?": { "team": "?*", "game": "?*" },
+            "comment": "Labs (video-synced) game page"
+          }
+        ]
+      }
+    ]
+  }
+}
