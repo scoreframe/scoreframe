@@ -577,7 +577,10 @@ html, body {
 </div>
 
 <!-- v1.1.389 — Sign-in card for private hubs. Shown when the Firestore
-     read returns permission-denied AND the user isn't signed in. -->
+     read returns permission-denied AND the user isn't signed in.
+     2026-06-24 — email/PW added for parity with team.html. Apple
+     Sign-In users had no way in (Google-only); they can now use the
+     same email/PW combo as the native app. -->
 <div id="signInState" style="display:none;" class="loading">
     <div style="font-size:36px;margin-bottom:8px;">🔒</div>
     <div style="font-weight:700;font-size:16px;color:var(--text-primary);margin-bottom:4px;">Private team page</div>
@@ -585,10 +588,30 @@ html, body {
     <button id="signInGoogleBtn" type="button" style="
         background:#FFFFFF;color:#1A1A1A;border:none;border-radius:8px;
         padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;
-        display:inline-flex;align-items:center;gap:8px;">
+        display:inline-flex;align-items:center;gap:8px;margin-bottom:16px;">
         <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.98 10.98 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A10.98 10.98 0 0 0 1 12c0 1.77.42 3.44 1.18 4.93l3.66-2.83z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.83C6.71 7.31 9.14 5.38 12 5.38z"/></svg>
         Sign in with Google
     </button>
+
+    <!-- Email/password (Apple Sign-In users + anyone without Google). -->
+    <div style="display:flex;align-items:center;gap:8px;margin:0 auto 12px;max-width:320px;color:var(--text-secondary);font-size:12px;">
+        <span style="flex:1;height:1px;background:var(--text-secondary);opacity:0.3;"></span>
+        <span>or</span>
+        <span style="flex:1;height:1px;background:var(--text-secondary);opacity:0.3;"></span>
+    </div>
+    <div id="emailForm" style="max-width:320px;margin:0 auto;text-align:left;">
+        <input id="authEmail" type="email" placeholder="Email address" autocomplete="email"
+               style="display:block;width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:var(--text-primary);font-size:14px;">
+        <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password"
+               style="display:block;width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:var(--text-primary);font-size:14px;">
+        <input id="authName" type="text" placeholder="Display name" autocomplete="name" style="display:none;width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:var(--text-primary);font-size:14px;">
+        <button id="authSubmit" type="button"
+                style="display:block;width:100%;padding:10px 20px;background:var(--accent);color:#1A1A1A;border:none;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;">Sign In</button>
+        <div id="authToggle" style="text-align:center;margin-top:10px;font-size:13px;color:var(--text-secondary);">
+            Don't have an account? <a id="authToggleLink" style="color:var(--accent);cursor:pointer;text-decoration:underline;">Create one</a>
+        </div>
+        <div id="authError" style="color:#FF6B6B;font-size:13px;margin-top:8px;min-height:1em;text-align:center;"></div>
+    </div>
 </div>
 
 <div id="gameView" style="display:none;">
@@ -734,6 +757,7 @@ import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, limit a
 // read against a private team and game.html silently shows "not found."
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
     signInWithCustomToken,
+    signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile,
     GoogleAuthProvider, onAuthStateChanged,
     setPersistence, browserLocalPersistence }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -2921,6 +2945,73 @@ document.getElementById('signInGoogleBtn')?.addEventListener('click', async () =
             try { await signInWithRedirect(auth, googleProvider); return; } catch (_) {}
         }
         console.error('[auth] sign-in failed:', e);
+    }
+});
+
+// 2026-06-24 — Email/password sign-in (parity with team.html). Same
+// flow: Sign In by default, "Create one" toggle reveals the display-
+// name field and switches the button to Create Account. Errors map
+// the Firebase error codes to friendly copy.
+let _isCreateMode = false;
+function _renderAuthMode() {
+    const submit = document.getElementById('authSubmit');
+    const toggle = document.getElementById('authToggleLink');
+    const name = document.getElementById('authName');
+    const toggleWrap = document.getElementById('authToggle');
+    if (!submit || !toggle || !name || !toggleWrap) return;
+    if (_isCreateMode) {
+        submit.textContent = 'Create Account';
+        name.style.display = 'block';
+        toggleWrap.innerHTML = 'Already have an account? <a id="authToggleLink" style="color:var(--accent);cursor:pointer;text-decoration:underline;">Sign in</a>';
+    } else {
+        submit.textContent = 'Sign In';
+        name.style.display = 'none';
+        toggleWrap.innerHTML = "Don't have an account? <a id=\"authToggleLink\" style=\"color:var(--accent);cursor:pointer;text-decoration:underline;\">Create one</a>";
+    }
+    document.getElementById('authToggleLink')?.addEventListener('click', () => {
+        _isCreateMode = !_isCreateMode;
+        document.getElementById('authError').textContent = '';
+        _renderAuthMode();
+    });
+}
+_renderAuthMode();
+
+document.getElementById('authSubmit')?.addEventListener('click', async () => {
+    const email = document.getElementById('authEmail')?.value?.trim() || '';
+    const password = document.getElementById('authPassword')?.value || '';
+    const name = document.getElementById('authName')?.value?.trim() || '';
+    const errEl = document.getElementById('authError');
+    errEl.textContent = '';
+    if (!email || !password) {
+        errEl.textContent = 'Enter email and password.';
+        return;
+    }
+    if (_isCreateMode && password.length < 6) {
+        errEl.textContent = 'Password must be at least 6 characters.';
+        return;
+    }
+    try {
+        if (_isCreateMode) {
+            const result = await createUserWithEmailAndPassword(auth, email, password);
+            if (name && result?.user) {
+                try { await updateProfile(result.user, { displayName: name }); } catch (_) {}
+            }
+        } else {
+            await signInWithEmailAndPassword(auth, email, password);
+        }
+        // onAuthStateChanged re-fires load() so the page recovers
+        // automatically — no explicit reload needed.
+    } catch (e) {
+        const codeMap = {
+            'auth/user-not-found': 'No account with that email. Tap "Create one" below.',
+            'auth/wrong-password': 'Incorrect password.',
+            'auth/invalid-credential': 'Invalid email or password.',
+            'auth/email-already-in-use': 'That email is already in use. Sign in instead.',
+            'auth/weak-password': 'Password is too weak (min 6 characters).',
+            'auth/invalid-email': 'That email address is not valid.',
+        };
+        errEl.textContent = codeMap[e?.code] || (e?.message || 'Sign-in failed.');
+        console.error('[auth] email sign-in failed:', e);
     }
 });
 
