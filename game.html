@@ -576,6 +576,40 @@ html, body {
     <div style="margin-top:12px;"><a id="notFoundBack" class="back-link" href="/">← Back to team hub</a></div>
 </div>
 
+<!-- 2026-06-27 — Soft paywall shown to owner/managers when they open
+     their own gated game's URL. Public visitors get the not-found card
+     instead. Trigger: game.hubPublishGated === true on a team where the
+     owner hasn't picked it as their active shared team (free tier with
+     multiple trial-era hubs). Flag flips false on Pro upgrade or when
+     the team becomes the active sharing team. -->
+<div id="gatedPaywall" style="display:none;" class="loading">
+    <div style="font-size:36px;margin-bottom:12px;">🔒</div>
+    <div style="font-weight:700;font-size:18px;color:var(--text-primary);margin-bottom:8px;">
+        This game's page isn't shared publicly
+    </div>
+    <div style="margin-bottom:20px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.5;">
+        You're on the free tier and this team isn't your active shared team. The game is saved and syncs to your devices, but its public game page is hidden until you either:
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;max-width:320px;margin:0 auto 20px;">
+        <a href="/dashboard.html" style="
+            background:var(--accent);color:#1A1A1A;border:none;border-radius:8px;
+            padding:12px 20px;font-weight:700;font-size:14px;text-decoration:none;
+            display:inline-block;">
+            Upgrade to Pro — Share All Teams
+        </a>
+        <a id="gatedPickActiveLink" href="/dashboard.html" style="
+            background:transparent;color:var(--text-primary);border:1px solid var(--text-secondary);
+            border-radius:8px;padding:12px 20px;font-weight:600;font-size:14px;
+            text-decoration:none;display:inline-block;">
+            Or pick this team as your active sharing team
+        </a>
+    </div>
+    <div style="margin-top:12px;font-size:12px;color:var(--text-secondary);">
+        Only you can see this page — public visitors get a not-found.
+    </div>
+    <div style="margin-top:16px;"><a class="back-link" href="/">← Back</a></div>
+</div>
+
 <!-- v1.1.389 — Sign-in card for private hubs. Shown when the Firestore
      read returns permission-denied AND the user isn't signed in.
      2026-06-24 — email/PW added for parity with team.html. Apple
@@ -1065,17 +1099,20 @@ async function load() {
         // hub trial leftover picks one team as active; games on the
         // others write to cloud (so the owner sees them on their
         // own devices) but team.html + game.html filter them out
-        // from public view. Owner / managers see the game (the
-        // ownerUid check below); everyone else gets the not-found
-        // surface. Flag flips false on upgrade or active-team
-        // change via ReplayGatedGames.
+        // from public view. Owner/managers get the soft-paywall
+        // surface (gatedPaywall card with Pro upgrade + pick-active
+        // CTAs); everyone else gets the not-found surface. Flag
+        // flips false on Pro upgrade or active-team change via
+        // ReplayGatedGames.
         if (game.hubPublishGated === true) {
             const me = auth.currentUser ? auth.currentUser.uid : null;
             const isOwner = me && (
                 hubProfile.ownerUid === me ||
                 (hubProfile.managers || []).includes(me)
             );
-            if (!isOwner) { showNotFound(); return; }
+            if (isOwner) { showGatedPaywall(); return; }
+            showNotFound();
+            return;
         }
     } catch (e) {
         console.error('Game load failed:', e);
@@ -2936,6 +2973,13 @@ function escapeHtml(s) {
 function showNotFound() {
     $('loadingState').style.display = 'none';
     $('notFound').style.display = '';
+}
+
+// 2026-06-27 — Soft paywall surface for owner/managers viewing their own
+// gated game URL. Public visitors hit showNotFound() instead.
+function showGatedPaywall() {
+    $('loadingState').style.display = 'none';
+    $('gatedPaywall').style.display = '';
 }
 
 // v1.1.389 — Private-hub sign-in card. Shown when Firestore returns
