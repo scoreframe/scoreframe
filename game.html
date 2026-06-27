@@ -576,36 +576,29 @@ html, body {
     <div style="margin-top:12px;"><a id="notFoundBack" class="back-link" href="/">← Back to team hub</a></div>
 </div>
 
-<!-- 2026-06-27 — Soft paywall shown to owner/managers when they open
-     their own gated game's URL. Public visitors get the not-found card
-     instead. Trigger: game.hubPublishGated === true on a team where the
-     owner hasn't picked it as their active shared team (free tier with
-     multiple trial-era hubs). Flag flips false on Pro upgrade or when
-     the team becomes the active sharing team. -->
+<!-- 2026-06-27 — Soft paywall shown when a game's hubPublishGated
+     flag is true. Visible to anyone who hits the URL (we don't
+     differentiate owner vs visitor because the in-app WebView has
+     no Firebase JS auth context, and the owner-check would always
+     fail there → owner sees not-found instead of this card).
+     Public visitors seeing it learn nothing sensitive — just that
+     the game exists but isn't being publicly shared. Flag flips
+     false on Pro upgrade or active-team change via ReplayGatedGames. -->
 <div id="gatedPaywall" style="display:none;" class="loading">
     <div style="font-size:36px;margin-bottom:12px;">🔒</div>
     <div style="font-weight:700;font-size:18px;color:var(--text-primary);margin-bottom:8px;">
-        This game's page isn't shared publicly
+        This game isn't being shared publicly
     </div>
     <div style="margin-bottom:20px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.5;">
-        You're on the free tier and this team isn't your active shared team. The game is saved and syncs to your devices, but its public game page is hidden until you either:
+        The team's owner is on the free tier and hasn't picked this team as their active shared team. They can make this game public by upgrading to Pro (which shares every team) or by picking this team as their active sharing team in the ScoreFrame app.
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;max-width:320px;margin:0 auto 20px;">
         <a href="/dashboard.html" style="
             background:var(--accent);color:#1A1A1A;border:none;border-radius:8px;
             padding:12px 20px;font-weight:700;font-size:14px;text-decoration:none;
             display:inline-block;">
-            Upgrade to Pro — Share All Teams
+            Open Account Dashboard
         </a>
-        <a id="gatedPickActiveLink" href="/dashboard.html" style="
-            background:transparent;color:var(--text-primary);border:1px solid var(--text-secondary);
-            border-radius:8px;padding:12px 20px;font-weight:600;font-size:14px;
-            text-decoration:none;display:inline-block;">
-            Or pick this team as your active sharing team
-        </a>
-    </div>
-    <div style="margin-top:12px;font-size:12px;color:var(--text-secondary);">
-        Only you can see this page — public visitors get a not-found.
     </div>
     <div style="margin-top:16px;"><a class="back-link" href="/">← Back</a></div>
 </div>
@@ -1098,20 +1091,20 @@ async function load() {
         // 2026-06-27 — Tier-gated visibility. Free user with multi-
         // hub trial leftover picks one team as active; games on the
         // others write to cloud (so the owner sees them on their
-        // own devices) but team.html + game.html filter them out
-        // from public view. Owner/managers get the soft-paywall
-        // surface (gatedPaywall card with Pro upgrade + pick-active
-        // CTAs); everyone else gets the not-found surface. Flag
-        // flips false on Pro upgrade or active-team change via
+        // own devices via the app) but the public game page renders
+        // the soft-paywall surface explaining why. We don't
+        // differentiate owner vs visitor here because the in-app
+        // WebView opens this page without a Firebase JS auth
+        // context (the native app holds the auth, not the WebView),
+        // so an owner check based on auth.currentUser would always
+        // fail and the owner would see not-found instead of the
+        // paywall. Showing the paywall to everyone leaks no
+        // sensitive data (no scores, no participants) — just the
+        // existence of a game that isn't being shared. Flag flips
+        // false on Pro upgrade or active-team change via
         // ReplayGatedGames.
         if (game.hubPublishGated === true) {
-            const me = auth.currentUser ? auth.currentUser.uid : null;
-            const isOwner = me && (
-                hubProfile.ownerUid === me ||
-                (hubProfile.managers || []).includes(me)
-            );
-            if (isOwner) { showGatedPaywall(); return; }
-            showNotFound();
+            showGatedPaywall();
             return;
         }
     } catch (e) {
