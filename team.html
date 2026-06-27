@@ -1804,6 +1804,14 @@ async function loadPastGames() {
             // team page, just the tournament that takes them to the event
             // page."
             if (g.parentEventId) return;
+            // 2026-06-27 — Tier-gated visibility. Free user with
+            // multiple trial-era hubs picks one as their active
+            // shared team; games on the others write to cloud (for
+            // their own cross-device history) with hubPublishGated
+            // = true so they DON'T appear publicly here. Flag
+            // flipped to false on upgrade-to-Pro or active-team
+            // pick (see ReplayGatedGames on Android/iOS).
+            if (g.hubPublishGated === true) return;
             // v13 — Season switcher filter.
             if (!matchesSelectedSeason(g)) return;
             renderedCount++;

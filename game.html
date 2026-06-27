@@ -1061,6 +1061,22 @@ async function load() {
         if (status === 'scheduled' || status === 'live' || status === 'cancelled' || status === 'postponed') {
             isScheduledOnly = true;
         }
+        // 2026-06-27 — Tier-gated visibility. Free user with multi-
+        // hub trial leftover picks one team as active; games on the
+        // others write to cloud (so the owner sees them on their
+        // own devices) but team.html + game.html filter them out
+        // from public view. Owner / managers see the game (the
+        // ownerUid check below); everyone else gets the not-found
+        // surface. Flag flips false on upgrade or active-team
+        // change via ReplayGatedGames.
+        if (game.hubPublishGated === true) {
+            const me = auth.currentUser ? auth.currentUser.uid : null;
+            const isOwner = me && (
+                hubProfile.ownerUid === me ||
+                (hubProfile.managers || []).includes(me)
+            );
+            if (!isOwner) { showNotFound(); return; }
+        }
     } catch (e) {
         console.error('Game load failed:', e);
         showNotFound();
