@@ -576,33 +576,6 @@ html, body {
     <div style="margin-top:12px;"><a id="notFoundBack" class="back-link" href="/">← Back to team hub</a></div>
 </div>
 
-<!-- 2026-06-27 — Soft paywall shown when a game's hubPublishGated
-     flag is true. Visible to anyone who hits the URL (we don't
-     differentiate owner vs visitor because the in-app WebView has
-     no Firebase JS auth context, and the owner-check would always
-     fail there → owner sees not-found instead of this card).
-     Public visitors seeing it learn nothing sensitive — just that
-     the game exists but isn't being publicly shared. Flag flips
-     false on Pro upgrade or active-team change via ReplayGatedGames. -->
-<div id="gatedPaywall" style="display:none;" class="loading">
-    <div style="font-size:36px;margin-bottom:12px;">🔒</div>
-    <div style="font-weight:700;font-size:18px;color:var(--text-primary);margin-bottom:8px;">
-        This game isn't being shared publicly
-    </div>
-    <div style="margin-bottom:20px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.5;">
-        The team's owner is on the free tier and hasn't picked this team as their active shared team. They can make this game public by upgrading to Pro (which shares every team) or by picking this team as their active sharing team in the ScoreFrame app.
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px;max-width:320px;margin:0 auto 20px;">
-        <a href="/dashboard.html" style="
-            background:var(--accent);color:#1A1A1A;border:none;border-radius:8px;
-            padding:12px 20px;font-weight:700;font-size:14px;text-decoration:none;
-            display:inline-block;">
-            Open Account Dashboard
-        </a>
-    </div>
-    <div style="margin-top:16px;"><a class="back-link" href="/">← Back</a></div>
-</div>
-
 <!-- v1.1.389 — Sign-in card for private hubs. Shown when the Firestore
      read returns permission-denied AND the user isn't signed in.
      2026-06-24 — email/PW added for parity with team.html. Apple
@@ -1097,16 +1070,6 @@ async function load() {
         // WebView opens this page without a Firebase JS auth
         // context (the native app holds the auth, not the WebView),
         // so an owner check based on auth.currentUser would always
-        // fail and the owner would see not-found instead of the
-        // paywall. Showing the paywall to everyone leaks no
-        // sensitive data (no scores, no participants) — just the
-        // existence of a game that isn't being shared. Flag flips
-        // false on Pro upgrade or active-team change via
-        // ReplayGatedGames.
-        if (game.hubPublishGated === true) {
-            showGatedPaywall();
-            return;
-        }
     } catch (e) {
         console.error('Game load failed:', e);
         showNotFound();
@@ -2966,13 +2929,6 @@ function escapeHtml(s) {
 function showNotFound() {
     $('loadingState').style.display = 'none';
     $('notFound').style.display = '';
-}
-
-// 2026-06-27 — Soft paywall surface for owner/managers viewing their own
-// gated game URL. Public visitors hit showNotFound() instead.
-function showGatedPaywall() {
-    $('loadingState').style.display = 'none';
-    $('gatedPaywall').style.display = '';
 }
 
 // v1.1.389 — Private-hub sign-in card. Shown when Firestore returns
