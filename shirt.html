@@ -594,9 +594,14 @@ async function loadProgress() {
 // ── Eligibility check ──
 function checkEligible(uid, userDoc) {
   if (isDebug && DEBUG_UIDS.includes(uid)) return { eligible: true, plan: 'annual (debug)' };
-  const plan = userDoc.data()?.basePlanId; // written by BillingManager
-  if (plan === 'annual') return { eligible: true, plan: 'annual' };
-  return { eligible: false, plan: plan || 'free' };
+  const data = userDoc.data() || {};
+  const basePlanId = data.basePlanId;  // written by BillingManager (newer app versions)
+  const tier = (data.tier || '').toLowerCase();
+  // Annual qualifier: basePlanId explicitly set to "annual"
+  if (basePlanId === 'annual') return { eligible: true, plan: 'annual' };
+  // Pro subscriber but not on annual plan
+  if (tier === 'pro' || basePlanId === 'monthly') return { eligible: false, plan: 'monthly' };
+  return { eligible: false, plan: 'free' };
 }
 
 // ── Main auth flow ──
@@ -633,7 +638,7 @@ async function handleUser(user) {
 
   if (!eligible) {
     userBadge('badge-ineligible', user);
-    const planLabel = plan === 'monthly' ? 'the monthly plan' : 'the free plan';
+    const planLabel = plan === 'monthly' ? 'the monthly Pro plan' : 'the free plan';
     document.getElementById('current-plan-label').textContent = planLabel;
     showState('state-ineligible');
     return;
