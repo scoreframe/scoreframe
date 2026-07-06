@@ -1418,6 +1418,30 @@ function labsPaint(idx) {
     // Intentionally NOT calling row.scrollIntoView — pulling page focus
     // every time an event fires steals the user's attention away from
     // the video. The user can scroll the timeline manually.
+
+    // Paint the score bug overlay with current game state.
+    const bugHomeHalf = document.getElementById('labsBugHomeHalf');
+    const bugAwayHalf = document.getElementById('labsBugAwayHalf');
+    if (bugHomeHalf && bugAwayHalf) {
+        const hc = _labsState.homeColor || '#1565C0';
+        const ac = _labsState.awayColor || '#C62828';
+        bugHomeHalf.style.background = hc;
+        bugHomeHalf.style.color = labsBugTextColor(hc);
+        bugAwayHalf.style.background = ac;
+        bugAwayHalf.style.color = labsBugTextColor(ac);
+        const hn = document.getElementById('labsBugHomeName');
+        const an = document.getElementById('labsBugAwayName');
+        if (hn) hn.textContent = (_labsState.homeName || 'Home').slice(0, 10);
+        if (an) an.textContent = (_labsState.awayName || 'Away').slice(0, 10);
+        const hs = document.getElementById('labsBugHomeScore');
+        const as_ = document.getElementById('labsBugAwayScore');
+        if (hs) hs.textContent = String(st.curHome);
+        if (as_) as_.textContent = String(st.curAway);
+        const sl = document.getElementById('labsBugSetsLine');
+        const pd = document.getElementById('labsBugPeriod');
+        if (sl) sl.textContent = `${st.homeSets}–${st.awaySets}`;
+        if (pd) pd.textContent = idx < 0 ? 'Pre-game' : `Set ${st.currentSet}`;
+    }
 }
 // ─── Labs announce feed ───────────────────────────────────────────────
 // Broadcast-style play-by-play above the video. Newest row enters at the
@@ -1455,6 +1479,8 @@ function labsBuildAnnounceFeed() {
     panel.appendChild(wrap);
     // Build the bottom-of-video overlay popup container at the same time.
     labsBuildVideoOverlay(stage);
+    // Score bug — persistent scoreboard overlay on the video.
+    labsBuildScoreBug(stage);
     // Inject row animation CSS once.
     const style = document.createElement('style');
     style.textContent = `
@@ -1629,6 +1655,121 @@ function labsBuildVideoOverlay(stage) {
       #labsVideoOverlay .lov.lov-tie  { border-left-color: #50A0FF; }
     `;
     document.head.appendChild(style);
+}
+// ─── Labs score bug ───────────────────────────────────────────────────
+// Persistent scoreboard overlay sitting on top of the video. Always shown
+// when labs is attached; draggable so the user can move it out of the way.
+// Lives inside .stage so it survives both window and fullscreen modes.
+function labsBugLuminance(hex) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const r = parseInt(hex.slice(0, 2), 16) / 255;
+    const g = parseInt(hex.slice(2, 4), 16) / 255;
+    const b = parseInt(hex.slice(4, 6), 16) / 255;
+    const lin = v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+function labsBugTextColor(hex) {
+    return labsBugLuminance(hex) > 0.35 ? '#000' : '#fff';
+}
+function labsBuildScoreBug(stage) {
+    if (document.getElementById('labsScoreBug')) return;
+    const cs = window.getComputedStyle(stage);
+    if (cs.position === 'static') stage.style.position = 'relative';
+
+    const bug = document.createElement('div');
+    bug.id = 'labsScoreBug';
+    bug.style.cssText = 'position:absolute;top:10px;right:10px;z-index:20;border-radius:8px;overflow:hidden;cursor:move;user-select:none;box-shadow:0 4px 20px rgba(0,0,0,0.6);min-width:152px;font-family:inherit;touch-action:none;';
+
+    const body = document.createElement('div');
+    body.style.cssText = 'display:flex;align-items:stretch;';
+
+    const homeHalf = document.createElement('div');
+    homeHalf.id = 'labsBugHomeHalf';
+    homeHalf.style.cssText = 'flex:1;padding:6px 10px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;background:#1565C0;color:#fff;';
+    homeHalf.innerHTML =
+        `<div style="font-size:9px;font-weight:800;letter-spacing:0.07em;opacity:0.75;text-transform:uppercase;">Home</div>` +
+        `<div id="labsBugHomeName" style="font-size:11px;font-weight:700;line-height:1;text-align:center;max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">HOME</div>` +
+        `<div id="labsBugHomeScore" style="font-size:24px;font-weight:900;line-height:1;letter-spacing:-0.02em;">0</div>`;
+
+    const mid = document.createElement('div');
+    mid.style.cssText = 'background:rgba(0,0,0,0.55);color:rgba(255,255,255,0.85);padding:6px 7px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;';
+    mid.innerHTML =
+        `<div id="labsBugSetsLine" style="font-size:11px;font-weight:800;white-space:nowrap;letter-spacing:-0.02em;">0–0</div>` +
+        `<div id="labsBugPeriod" style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.6);white-space:nowrap;">Set 1</div>`;
+
+    const awayHalf = document.createElement('div');
+    awayHalf.id = 'labsBugAwayHalf';
+    awayHalf.style.cssText = 'flex:1;padding:6px 10px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;background:#C62828;color:#fff;';
+    awayHalf.innerHTML =
+        `<div style="font-size:9px;font-weight:800;letter-spacing:0.07em;opacity:0.75;text-transform:uppercase;">Away</div>` +
+        `<div id="labsBugAwayName" style="font-size:11px;font-weight:700;line-height:1;text-align:center;max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">AWAY</div>` +
+        `<div id="labsBugAwayScore" style="font-size:24px;font-weight:900;line-height:1;letter-spacing:-0.02em;">0</div>`;
+
+    body.appendChild(homeHalf);
+    body.appendChild(mid);
+    body.appendChild(awayHalf);
+    bug.appendChild(body);
+
+    const hideBar = document.createElement('button');
+    hideBar.id = 'labsBugHideBtn';
+    hideBar.type = 'button';
+    hideBar.textContent = '● hide';
+    hideBar.style.cssText = 'display:block;width:100%;border:none;background:rgba(0,0,0,0.5);color:rgba(255,255,255,0.55);font-size:9px;font-weight:700;letter-spacing:0.04em;padding:3px;cursor:pointer;';
+    bug.appendChild(hideBar);
+    stage.appendChild(bug);
+
+    const showBtn = document.createElement('button');
+    showBtn.id = 'labsBugShowBtn';
+    showBtn.type = 'button';
+    showBtn.textContent = 'SB';
+    showBtn.style.cssText = 'position:absolute;top:10px;right:10px;z-index:20;display:none;border:none;background:rgba(0,0,0,0.65);color:#fff;font-size:11px;font-weight:800;letter-spacing:0.06em;padding:5px 9px;border-radius:6px;cursor:pointer;';
+    stage.appendChild(showBtn);
+
+    hideBar.addEventListener('click', e => {
+        e.stopPropagation();
+        bug.style.display = 'none';
+        showBtn.style.display = '';
+    });
+    showBtn.addEventListener('click', () => {
+        showBtn.style.display = 'none';
+        bug.style.display = '';
+    });
+
+    // Drag the bug anywhere within the stage bounds.
+    let dragging = false, ox = 0, oy = 0, startX = 0, startY = 0;
+    const onDown = e => {
+        if (e.target === hideBar) return;
+        dragging = true;
+        const br = bug.getBoundingClientRect();
+        const sr = stage.getBoundingClientRect();
+        const pt = e.touches ? e.touches[0] : e;
+        startX = pt.clientX; startY = pt.clientY;
+        ox = br.left - sr.left;
+        oy = br.top - sr.top;
+        bug.style.right = 'auto';
+        bug.style.left = ox + 'px';
+        bug.style.top = oy + 'px';
+        e.preventDefault();
+    };
+    const onMove = e => {
+        if (!dragging) return;
+        const pt = e.touches ? e.touches[0] : e;
+        const sr = stage.getBoundingClientRect();
+        const br = bug.getBoundingClientRect();
+        const nx = Math.max(0, Math.min(ox + pt.clientX - startX, sr.width - br.width));
+        const ny = Math.max(0, Math.min(oy + pt.clientY - startY, sr.height - br.height));
+        bug.style.left = nx + 'px';
+        bug.style.top = ny + 'px';
+        e.preventDefault();
+    };
+    const onUp = () => { dragging = false; };
+    bug.addEventListener('mousedown', onDown);
+    bug.addEventListener('touchstart', onDown, { passive: false });
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchend', onUp);
 }
 // Produce a message (text + tone) for an event from its payload + the
 // running window of prior events. Deterministic: same idx always yields
