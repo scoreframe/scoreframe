@@ -755,6 +755,11 @@ async function loadTickets() {
 }
 
 async function openTicket(ticketId) {
+    // If this exact ticket is already open, do nothing — prevents a phantom
+    // touch event on screen-unlock from wiping any draft the user was typing.
+    const existing = $('ticketModal');
+    if (existing && existing.dataset.ticketId === ticketId) return;
+    closeTicketModal();
     // Lazy fetch the ticket doc + thread, render in a modal.
     try {
         const tDoc = await getDoc(doc(db, 'tickets', ticketId));
@@ -808,6 +813,7 @@ async function openTicket(ticketId) {
         const modal = document.createElement('div');
         modal.className = 'modal-backdrop';
         modal.id = 'ticketModal';
+        modal.dataset.ticketId = ticketId;
         modal.onclick = (e) => { if (e.target === modal) closeTicketModal(); };
         modal.innerHTML = `
             <div class="modal">
@@ -860,6 +866,14 @@ async function openTicket(ticketId) {
                 </div>
             </div>`;
         document.body.appendChild(modal);
+        // Restore any draft the user was typing before the screen locked.
+        const draftKey = 'ticket_draft_' + ticketId;
+        const saved = sessionStorage.getItem(draftKey);
+        if (saved) $('replyBody').value = saved;
+        // Persist keystrokes so a page-discard on lock can't lose the draft.
+        $('replyBody').addEventListener('input', () => {
+            sessionStorage.setItem(draftKey, $('replyBody').value);
+        });
     } catch (e) {
         alert('Failed to open ticket: ' + (e.message || e));
     }
@@ -916,6 +930,7 @@ async function sendTicketReply(ticketId) {
         });
         statusMsg.className = 'status success';
         statusMsg.textContent = `Sent. Status now: ${result.data.status}`;
+        sessionStorage.removeItem('ticket_draft_' + ticketId);
         // Reopen the ticket to show the appended reply.
         setTimeout(() => {
             closeTicketModal();
