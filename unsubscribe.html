@@ -3,111 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ScoreFrame — Unsubscribe</title>
+    <title>ScoreFrame — Email Preferences</title>
     <link rel="canonical" href="https://scoreframe.app/unsubscribe.html">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0D0D0D; color: #F2F2F2; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .card { background: #1E1E1E; border-radius: 16px; padding: 32px; max-width: 420px; width: 90%; text-align: center; }
-        .logo { color: #FF9640; font-size: 28px; font-weight: 800; margin-bottom: 20px; }
-        .logo span { color: #F2F2F2; }
-        h1 { font-size: 22px; margin-bottom: 10px; }
-        p { color: #bbb; font-size: 14px; line-height: 1.55; margin-bottom: 20px; }
-        .emoji { font-size: 40px; margin-bottom: 12px; }
-        button { padding: 12px 22px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0D0D0D; color: #F2F2F2; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .card { background: #1E1E1E; border-radius: 16px; padding: 30px; max-width: 460px; width: 100%; }
+        .logo { font-size: 26px; font-weight: 800; margin-bottom: 20px; }
+        .logo .a { color: #F2F2F2; } .logo .b { color: #FF9640; }
+        h1 { font-size: 21px; margin-bottom: 6px; }
+        p.sub { color: #999; font-size: 14px; margin-bottom: 22px; line-height: 1.5; }
+        .section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: #FF9640; margin: 22px 0 10px; text-transform: uppercase; }
+        .row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #262626; border-radius: 10px; margin-bottom: 8px; }
+        .row label { flex: 1; font-size: 15px; cursor: pointer; }
+        .row .hint { color: #888; font-size: 12px; }
+        input[type=checkbox] { width: 20px; height: 20px; accent-color: #FF9640; cursor: pointer; flex-shrink: 0; }
+        button { width: 100%; padding: 13px; border: none; border-radius: 9px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 14px; }
         .btn-primary { background: #FF9640; color: #1A1A1A; }
         .btn-primary:hover { background: #FFa860; }
-        .btn-outline { background: transparent; color: #FF9640; border: 1px solid #FF9640; }
-        .btn-outline:hover { background: rgba(255,150,64,0.1); }
-        a.home { color: #999; text-decoration: none; font-size: 13px; display: inline-block; margin-top: 18px; }
-        .hidden { display: none; }
-        .spinner { border: 3px solid #333; border-top: 3px solid #FF9640; border-radius: 50%; width: 32px; height: 32px; animation: spin 0.8s linear infinite; margin: 8px auto 16px; }
+        .btn-primary:disabled { background: #555; color: #999; cursor: default; }
+        .unsub-all { background: transparent; color: #FF6B6B; text-decoration: underline; font-weight: 600; font-size: 13px; margin-top: 16px; padding: 6px; }
+        .spinner { border: 3px solid #333; border-top: 3px solid #FF9640; border-radius: 50%; width: 30px; height: 30px; animation: spin .8s linear infinite; margin: 10px auto; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .hidden { display: none; }
+        .emoji { font-size: 38px; text-align: center; margin-bottom: 10px; }
+        .center { text-align: center; }
+        a.home { color: #999; text-decoration: none; font-size: 13px; display: inline-block; margin-top: 16px; }
+        .empty { color: #888; font-size: 14px; padding: 10px 2px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div class="logo"><span>Score</span>Frame</div>
+        <div class="logo"><span class="a">Score</span><span class="b">Frame</span></div>
 
-        <!-- Loading -->
-        <div id="loading">
-            <div class="spinner"></div>
-            <p>Updating your preferences…</p>
+        <div id="loading"><div class="spinner"></div><p class="sub center">Loading your preferences…</p></div>
+
+        <div id="prefs" class="hidden">
+            <h1>Email preferences</h1>
+            <p class="sub">Choose what you'd like to hear about. Changes save when you tap the button.</p>
+
+            <div id="marketingBlock" class="hidden">
+                <div class="section-title">Product updates</div>
+                <div class="row">
+                    <input type="checkbox" id="marketingChk">
+                    <label for="marketingChk">ScoreFrame news, tips &amp; new features<div class="hint">1–2 emails a month</div></label>
+                </div>
+            </div>
+
+            <div id="teamsBlock">
+                <div class="section-title">Teams you follow</div>
+                <div id="teamsList"></div>
+            </div>
+
+            <button class="btn-primary" id="saveBtn" onclick="save()">Save changes</button>
+            <div class="center"><button class="unsub-all" onclick="unsubAll()">Unsubscribe from everything</button></div>
         </div>
 
-        <!-- Unsubscribed -->
-        <div id="doneMsg" class="hidden">
-            <div class="emoji">&#x1F44B;</div>
-            <h1>You're unsubscribed</h1>
-            <p>You won't receive any more ScoreFrame marketing emails. Sorry to see you go — you can resubscribe anytime.</p>
-            <button class="btn-outline" id="resubBtn" onclick="resubscribe()">Resubscribe</button>
-            <br><a class="home" href="https://scoreframe.app">Back to ScoreFrame</a>
-        </div>
-
-        <!-- Resubscribed -->
-        <div id="resubMsg" class="hidden">
+        <div id="doneMsg" class="hidden center">
             <div class="emoji">&#x2705;</div>
-            <h1>You're back in</h1>
-            <p>You'll keep getting ScoreFrame updates. Thanks for sticking around!</p>
+            <h1>Saved</h1>
+            <p class="sub">Your email preferences are updated.</p>
             <a class="home" href="https://scoreframe.app">Back to ScoreFrame</a>
         </div>
 
-        <!-- Error / invalid link -->
-        <div id="errorMsg" class="hidden">
+        <div id="allDoneMsg" class="hidden center">
+            <div class="emoji">&#x1F44B;</div>
+            <h1>You're all unsubscribed</h1>
+            <p class="sub">You won't receive any more ScoreFrame emails. You can always re-follow a team later.</p>
+            <a class="home" href="https://scoreframe.app">Back to ScoreFrame</a>
+        </div>
+
+        <div id="errorMsg" class="hidden center">
             <div class="emoji">&#x26A0;&#xFE0F;</div>
             <h1>Something went wrong</h1>
-            <p id="errorText">This unsubscribe link is invalid or has expired. If you keep getting emails you don't want, reply to any of them and we'll take care of it.</p>
+            <p class="sub" id="errorText">This link is invalid or has expired. If you keep getting emails you don't want, reply to any of them and we'll take care of it.</p>
             <a class="home" href="https://scoreframe.app">Back to ScoreFrame</a>
         </div>
     </div>
 
     <script>
-        const ENDPOINT = "https://us-central1-scoreframe-deploy.cloudfunctions.net/unsubscribe";
-        const params = new URLSearchParams(window.location.search);
+        const ENDPOINT = "https://us-central1-scoreframe-deploy.cloudfunctions.net/preferences";
+        const params = new URLSearchParams(location.search);
         const uid = params.get("u") || "";
+        const emailHash = params.get("e") || "";
         const token = params.get("t") || "";
+        let state = null;
 
         function show(id) {
-            ["loading", "doneMsg", "resubMsg", "errorMsg"].forEach(function (x) {
+            ["loading", "prefs", "doneMsg", "allDoneMsg", "errorMsg"].forEach(function (x) {
                 document.getElementById(x).classList.toggle("hidden", x !== id);
             });
         }
+        function idParam() { return uid ? ("u=" + encodeURIComponent(uid)) : ("e=" + encodeURIComponent(emailHash)); }
 
-        async function callEndpoint(action) {
-            const url = ENDPOINT + "?u=" + encodeURIComponent(uid) +
-                "&t=" + encodeURIComponent(token) +
-                (action ? "&action=" + action : "");
-            const res = await fetch(url, { method: "POST" });
+        async function load() {
+            if ((!uid && !emailHash) || !token) { show("errorMsg"); return; }
+            try {
+                const res = await fetch(ENDPOINT + "?" + idParam() + "&t=" + encodeURIComponent(token) + "&action=load");
+                if (!res.ok) throw new Error("http_" + res.status);
+                state = await res.json();
+                render();
+            } catch (e) { show("errorMsg"); }
+        }
+
+        function render() {
+            if (state.kind === "account") {
+                document.getElementById("marketingBlock").classList.remove("hidden");
+                document.getElementById("marketingChk").checked = !!state.marketingOptedIn;
+            }
+            const list = document.getElementById("teamsList");
+            list.innerHTML = "";
+            if (!state.teams || state.teams.length === 0) {
+                list.innerHTML = '<div class="empty">You\'re not following any teams.</div>';
+            } else {
+                state.teams.forEach(function (t) {
+                    const row = document.createElement("div");
+                    row.className = "row";
+                    row.innerHTML = '<input type="checkbox" checked data-id="' + t.id + '">' +
+                        '<label>' + escapeHtml(t.name) + '<div class="hint">Following</div></label>';
+                    list.appendChild(row);
+                });
+            }
+            show("prefs");
+        }
+
+        function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+
+        async function post(body) {
+            const res = await fetch(ENDPOINT + "?" + idParam() + "&t=" + encodeURIComponent(token), {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+            });
             if (!res.ok) throw new Error("http_" + res.status);
             return res.json();
         }
 
-        async function unsubscribe() {
-            if (!uid || !token) { show("errorMsg"); return; }
-            try {
-                await callEndpoint("unsubscribe");
-                show("doneMsg");
-            } catch (e) {
-                show("errorMsg");
-            }
+        async function save() {
+            const btn = document.getElementById("saveBtn");
+            btn.disabled = true; btn.textContent = "Saving…";
+            const unfollow = Array.from(document.querySelectorAll("#teamsList input[type=checkbox]"))
+                .filter(function (c) { return !c.checked; }).map(function (c) { return c.getAttribute("data-id"); });
+            const body = { action: "update", unfollow: unfollow };
+            if (state.kind === "account") body.marketingOptedIn = document.getElementById("marketingChk").checked;
+            try { await post(body); show("doneMsg"); }
+            catch (e) { btn.disabled = false; btn.textContent = "Save changes"; show("errorMsg"); }
         }
 
-        async function resubscribe() {
-            const btn = document.getElementById("resubBtn");
-            btn.disabled = true;
-            btn.textContent = "Resubscribing…";
-            try {
-                await callEndpoint("resubscribe");
-                show("resubMsg");
-            } catch (e) {
-                btn.disabled = false;
-                btn.textContent = "Resubscribe";
-                show("errorMsg");
-            }
+        async function unsubAll() {
+            try { await post({ action: "unsubscribe_all" }); show("allDoneMsg"); }
+            catch (e) { show("errorMsg"); }
         }
 
-        // Auto-unsubscribe on load (the email link is the confirmation).
-        unsubscribe();
+        load();
     </script>
 </body>
 </html>
