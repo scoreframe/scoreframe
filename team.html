@@ -995,7 +995,7 @@ function updateUserBar() {
         accountBar.innerHTML = `${logo}
             <button class="sign-in-btn" onclick="doSignIn()" style="font-size:12px;padding:6px 14px;">Sign In</button>
             <button class="sign-in-btn" onclick="doSignIn()" style="font-size:12px;padding:6px 14px;background:var(--accent);color:#1A1A1A;">Sign Up</button>`;
-        if (followArea) followArea.innerHTML = '';
+        if (followArea) followArea.innerHTML = isPublic ? emailFollowBoxHtml() : '';
         $('followStatus').textContent = '';
         return;
     }
@@ -1236,6 +1236,38 @@ window.doFollow = async function() {
 // 2026-06-01 — Confirmation wrapper for unfollow. The "Following" pill
 // no longer triggers an unfollow directly; the new "Unfollow" button
 // calls this helper, which prompts before doing the destructive write.
+function emailFollowBoxHtml() {
+    return `
+      <div id="emailFollowWrap" style="margin-top:8px;max-width:360px;">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">Follow by email — no account needed</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input id="emailFollowInput" type="email" placeholder="you@email.com" style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--text-secondary);border-radius:8px;background:#262626;color:var(--text-primary);font-size:14px;">
+          <button class="follow-btn" onclick="window.doEmailFollow()">Follow</button>
+        </div>
+        <div id="emailFollowMsg" style="font-size:12px;margin-top:6px;"></div>
+      </div>`;
+}
+window.doEmailFollow = async function() {
+    const input = document.getElementById('emailFollowInput');
+    const msg = document.getElementById('emailFollowMsg');
+    const email = (input?.value || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.style.color = '#FF6B6B'; msg.textContent = 'Enter a valid email.'; return; }
+    msg.style.color = 'var(--text-secondary)'; msg.textContent = 'Signing you up…';
+    try {
+        const res = await fetch('https://us-central1-scoreframe-deploy.cloudfunctions.net/followTeamByEmail?email=' +
+            encodeURIComponent(email) + '&hub=' + encodeURIComponent(hubCode), { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+            document.getElementById('emailFollowWrap').innerHTML =
+                '<div style="font-size:13px;color:#4CAF50;">✓ You\'re following. Check your email to confirm.</div>';
+        } else {
+            msg.style.color = '#FF6B6B';
+            msg.textContent = data.error === 'not_public' ? 'This team isn\'t public.' : 'Could not sign up — try again.';
+        }
+    } catch (e) {
+        msg.style.color = '#FF6B6B'; msg.textContent = 'Could not sign up — try again.';
+    }
+};
 window.confirmUnfollow = function() {
     const name = (hubProfile && hubProfile.teamName) || 'this team';
     if (confirm(`Unfollow ${name}? You'll stop receiving updates and will need to re-request access if it's an invite-only team.`)) {
