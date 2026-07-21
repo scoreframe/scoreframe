@@ -232,8 +232,9 @@ html, body {
     display: grid; gap: 14px;
 }
 .card {
-    background: var(--bg-surface); border-radius: 12px;
+    background: var(--bg-surface); border-radius: 14px;
     padding: 16px 18px; border: 1px solid var(--bg-elevated);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.22);
     /* 2026-06-04 — Grid children have min-width: auto by default,
        which means the card refuses to shrink below its intrinsic
        content width. On narrow screens a wide stats table (BB has 11
