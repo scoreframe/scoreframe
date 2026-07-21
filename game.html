@@ -73,6 +73,16 @@ html, body {
 .team-color-bar { height: 4px; border-radius: 2px; margin-bottom: 14px; max-width: 480px; margin-left: auto; margin-right: auto; }
 .hero-team { font-size: 13px; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
 .hero-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+/* v20 — Result badge (design system: gold win / red loss / grey draw).
+   Solid pill reads in both themes; dark text on gold, white on red/grey. */
+.hero-result {
+    display: inline-block; margin: 2px 0 8px;
+    padding: 4px 14px; border-radius: 13px;
+    font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.hero-result.won { background: #FFC800; color: #1A1A1A; }
+.hero-result.lost { background: var(--loss-red); color: #FFFFFF; }
+.hero-result.draw { background: var(--tie-grey); color: #FFFFFF; }
 .hero-meta { font-size: 13px; color: var(--text-muted); }
 .live-pill {
     display: inline-flex; align-items: center; gap: 6px;
@@ -628,6 +638,10 @@ html, body {
         <a id="heroEventBack" href="#" style="display:none;font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;margin-bottom:8px;">← Back to tournament</a>
         <div class="hero-team" id="heroTeam"></div>
         <div class="hero-title" id="heroTitle"></div>
+        <!-- v20 (2026-07-21) — Movie-style result badge from the hub team's
+             POV: gold WON / red LOST / neutral DRAW. Populated in renderGame,
+             shown only for completed (non-live, non-bowling) games. -->
+        <div id="heroResult" class="hero-result" style="display:none;"></div>
         <div class="hero-meta" id="heroMeta"></div>
     </div>
 
@@ -1466,6 +1480,28 @@ function renderGame(hub, game) {
     if (isLive) {
         $('liveSlot').innerHTML = `<div class="live-pill">● LIVE NOW</div>`;
     }
+
+    // v20 (2026-07-21) — Movie-style result badge from the hub team's POV.
+    // Only for completed head-to-head games (not live, not bowling series).
+    // Hub side is resolved by teamId against home/awayTeamId; falls back to
+    // home so a self-recorded game (hub == home) still reads correctly.
+    (function renderResultBadge() {
+        const el = $('heroResult');
+        if (!el) return;
+        if (isLive || isBowling) { el.style.display = 'none'; return; }
+        const hs = Number(game.homeScore || 0);
+        const as = Number(game.awayScore || 0);
+        // Skip games with no recorded score (nothing meaningful to badge).
+        if (hs === 0 && as === 0) { el.style.display = 'none'; return; }
+        const hubIsAway = !!(game.awayTeamId && hub.teamId && game.awayTeamId === hub.teamId
+            && game.homeTeamId !== hub.teamId);
+        const myScore = hubIsAway ? as : hs;
+        const oppScore = hubIsAway ? hs : as;
+        if (myScore > oppScore) { el.className = 'hero-result won'; el.textContent = `Won ${myScore}–${oppScore}`; }
+        else if (myScore < oppScore) { el.className = 'hero-result lost'; el.textContent = `Lost ${myScore}–${oppScore}`; }
+        else { el.className = 'hero-result draw'; el.textContent = `Draw ${myScore}–${oppScore}`; }
+        el.style.display = 'inline-block';
+    })();
 
     // Player — pick the best stream to embed at the top.
     const baseStreams = (game.streams && game.streams.length > 0)
