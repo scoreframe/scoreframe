@@ -799,7 +799,7 @@ html, body {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy, limit as fbLimit }
+import { getFirestore, doc, getDoc, onSnapshot, collection, getDocs, query, orderBy, limit as fbLimit }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 // v1.1.389 — Auth imports added so private-hub games (visibility !== 'public')
 // can be viewed by their owner / approved subscribers after signing in.
@@ -1162,6 +1162,9 @@ async function load() {
     }
 
     renderGame(hubProfile, game);
+    // v20 — Live-sync completed-game edits from the app's Manage overlay.
+    // Data cards only; never remounts the player (see attachLiveSync).
+    attachLiveSync(hubProfile, game, (game.sport || hubProfile.sport || 'GENERIC').toUpperCase(), teamId, gameId);
 }
 
 // Pre-game render path. Shows the team header + a countdown card in the
@@ -1517,26 +1520,7 @@ function renderGame(hub, game) {
     }
 
     // v20 (2026-07-21) — Movie-style result badge from the hub team's POV.
-    // Only for completed head-to-head games (not live, not bowling series).
-    // Hub side is resolved by teamId against home/awayTeamId; falls back to
-    // home so a self-recorded game (hub == home) still reads correctly.
-    (function renderResultBadge() {
-        const el = $('heroResult');
-        if (!el) return;
-        if (isLive || isBowling) { el.style.display = 'none'; return; }
-        const hs = Number(game.homeScore || 0);
-        const as = Number(game.awayScore || 0);
-        // Skip games with no recorded score (nothing meaningful to badge).
-        if (hs === 0 && as === 0) { el.style.display = 'none'; return; }
-        const hubIsAway = !!(game.awayTeamId && hub.teamId && game.awayTeamId === hub.teamId
-            && game.homeTeamId !== hub.teamId);
-        const myScore = hubIsAway ? as : hs;
-        const oppScore = hubIsAway ? hs : as;
-        if (myScore > oppScore) { el.className = 'hero-result won'; el.textContent = `Won ${myScore}–${oppScore}`; }
-        else if (myScore < oppScore) { el.className = 'hero-result lost'; el.textContent = `Lost ${myScore}–${oppScore}`; }
-        else { el.className = 'hero-result draw'; el.textContent = `Draw ${myScore}–${oppScore}`; }
-        el.style.display = 'inline-block';
-    })();
+    renderResultBadge(hub, game, isLive, isBowling);
 
     // Player — pick the best stream to embed at the top.
     const baseStreams = (game.streams && game.streams.length > 0)
@@ -1809,6 +1793,78 @@ function wirePlaylistControlsOnce() {
     const next = document.getElementById('playlistNextBtn');
     if (prev) prev.onclick = playlistBack;
     if (next) next.onclick = playlistAdvance;
+}
+
+// v20 (2026-07-21) — Movie-style result badge from the hub team's POV.
+// Only for completed head-to-head games (not live, not bowling series).
+// Hub side is resolved by teamId against home/awayTeamId; falls back to
+// home so a self-recorded game (hub == home) still reads correctly.
+function renderResultBadge(hub, game, isLive, isBowling) {
+    const el = $('heroResult');
+    if (!el) return;
+    if (isLive || isBowling) { el.style.display = 'none'; return; }
+    const hs = Number(game.homeScore || 0);
+    const as = Number(game.awayScore || 0);
+    if (hs === 0 && as === 0) { el.style.display = 'none'; return; }
+    const hubIsAway = !!(game.awayTeamId && hub.teamId && game.awayTeamId === hub.teamId
+        && game.homeTeamId !== hub.teamId);
+    const myScore = hubIsAway ? as : hs;
+    const oppScore = hubIsAway ? hs : as;
+    if (myScore > oppScore) { el.className = 'hero-result won'; el.textContent = `Won ${myScore}–${oppScore}`; }
+    else if (myScore < oppScore) { el.className = 'hero-result lost'; el.textContent = `Lost ${myScore}–${oppScore}`; }
+    else { el.className = 'hero-result draw'; el.textContent = `Draw ${myScore}–${oppScore}`; }
+    el.style.display = 'inline-block';
+}
+
+// v20 (2026-07-21) — Live-sync (Firestore onSnapshot). When the owner edits
+// the game from the app's native "Manage" overlay (score / AI recap / box
+// stats), the doc changes and this re-renders ONLY the self-contained data
+// cards. It deliberately DOES NOT touch the player embed / playlist / stream
+// cards — remounting a YouTube iframe mid-playback would interrupt viewing.
+// Stream/video changes are picked up on the next full page load (the app
+// reloads the WebView when the overlay closes). Skips the update entirely for
+// live games (score is still churning) and non-replay states.
+let __liveUnsub = null;
+let __lastGameJson = null;
+function attachLiveSync(hub, game, sport, teamId, gameId) {
+    if (__liveUnsub) { try { __liveUnsub(); } catch (_) {} __liveUnsub = null; }
+    __lastGameJson = JSON.stringify(game);
+    try {
+        __liveUnsub = onSnapshot(doc(db, 'teams', teamId, 'games', gameId), (snap) => {
+            if (!snap.exists()) return;
+            const updated = { id: snap.id, ...snap.data() };
+            // Only completed replays get live data refresh here; scheduled /
+            // live / cancelled states have their own render paths and a status
+            // flip should trigger a full reload, not an in-place patch.
+            const status = (updated.status || '').toLowerCase();
+            if (status === 'scheduled' || status === 'cancelled' || status === 'postponed') return;
+            const nextJson = JSON.stringify(updated);
+            if (nextJson === __lastGameJson) return; // no-op echo
+            __lastGameJson = nextJson;
+            applyLiveUpdate(hub, updated, sport);
+        }, (err) => { console.warn('[live-sync] snapshot error', err); });
+    } catch (e) { console.warn('[live-sync] attach failed', e); }
+}
+function applyLiveUpdate(hub, game, sport) {
+    const isBowling = sport === 'BOWLING';
+    // Recompute isLive against the current hub stream state.
+    const isLive = !!(hub.hub && hub.hub.activeStreamUrl &&
+        ((game.streams || []).some(s => s.url === hub.hub.activeStreamUrl) ||
+         game.streamUrl === hub.hub.activeStreamUrl));
+    // Hero text can change if the owner renamed the matchup / event.
+    const home = game.homeTeam || hub.teamName || 'Home';
+    const away = game.awayTeam || 'Away';
+    if (!isBowling) $('heroTitle').textContent = `${home} vs ${away}`;
+    renderResultBadge(hub, game, isLive, isBowling);
+    // Self-contained card re-renders (each writes only its own container).
+    if (isBowling) renderBowlingScore(game); else renderTeamScore(hub, game);
+    renderRoster(hub, game, isBowling);
+    renderMeta(game, sport);
+    renderBoxScore(hub, game, sport);
+    renderScoringSummary(hub, game, sport);
+    renderMatchStats(hub, game, sport);
+    renderPkShootout(hub, game, sport);
+    renderAiRecap(game);
 }
 
 // v20 (2026-07-21) — "Cast" roster rail. Renders team-colored initial
