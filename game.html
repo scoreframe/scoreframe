@@ -268,6 +268,32 @@ html, body {
 .team-block .score.loser { color: var(--text-muted); }
 .vs { font-size: 12px; color: var(--text-muted); padding: 0 8px; }
 
+/* v20 — "Cast" roster rail. Team-colored initial avatars, grouped by side.
+   Each side is a wrapping row; the avatar's ring carries the team color so
+   home/away read at a glance without a stats table. */
+.roster-side { margin-bottom: 12px; }
+.roster-side:last-child { margin-bottom: 0; }
+.roster-side .side-label {
+    font-size: 12px; font-weight: 700; color: var(--text-secondary);
+    margin-bottom: 8px; display: flex; align-items: center; gap: 7px;
+}
+.roster-side .side-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.avatar-rail { display: flex; flex-wrap: wrap; gap: 12px; }
+.avatar-cell { width: 60px; text-align: center; }
+.avatar {
+    width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800; color: var(--text-primary);
+    background: var(--bg-elevated); border: 2.5px solid var(--accent);
+    box-shadow: 0 1px 5px rgba(0,0,0,0.3);
+}
+.avatar-name {
+    font-size: 11px; color: var(--text-secondary); line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.avatar-num { font-size: 10px; color: var(--text-muted); }
+
 /* Per-set line score for VB games — sets-won is the big number above; this is
    the points-per-set breakdown rendered as winner-coloured pairs. */
 .set-line {
@@ -670,6 +696,15 @@ html, body {
         <div class="card" id="scoreCard" style="display:none;">
             <div class="label">Final</div>
             <div id="scoreContent"></div>
+        </div>
+
+        <!-- v20 (2026-07-21) — "Cast" roster rail. Movie-style team-colored
+             initial avatars grouped HOME then AWAY. Visual identity, distinct
+             from the stats Box Score below. Hidden for bowling + games with no
+             participants. -->
+        <div class="card" id="rosterCard" style="display:none;">
+            <div class="label">Players</div>
+            <div id="rosterContent"></div>
         </div>
 
         <!-- Game info -->
@@ -1556,6 +1591,8 @@ function renderGame(hub, game) {
         renderTeamScore(hub, game);
     }
 
+    // v20 — "Cast" roster rail (movie-style avatars). Above Game Info.
+    renderRoster(hub, game, isBowling);
     // Game info card
     renderMeta(game, sport);
     // Box score card — sport-specific per-player stat table.
@@ -1772,6 +1809,57 @@ function wirePlaylistControlsOnce() {
     const next = document.getElementById('playlistNextBtn');
     if (prev) prev.onclick = playlistBack;
     if (next) next.onclick = playlistAdvance;
+}
+
+// v20 (2026-07-21) — "Cast" roster rail. Renders team-colored initial
+// avatars for every participant, HOME group then AWAY. Purely visual (no
+// stats) — the Box Score below carries the numbers. Hidden for bowling and
+// for games with no participant snapshot.
+function renderRoster(hub, game, isBowling) {
+    const card = $('rosterCard');
+    if (!card) return;
+    const parts = Array.isArray(game.participants) ? game.participants : [];
+    if (isBowling || parts.length === 0) { card.style.display = 'none'; return; }
+
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g,
+        c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    const homeColor = hub?.color || '#FF9640';
+    const awayColor = hub?.color2 || '#FFFFFF';
+    const initials = (name) => {
+        const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+        if (words.length === 0) return '?';
+        if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+        return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+    };
+    const cell = (p, ring) => {
+        const name = p.name || 'Player';
+        const num = (p.number != null && String(p.number) !== '') ? `<div class="avatar-num">#${esc(p.number)}</div>` : '';
+        return `<div class="avatar-cell">
+            <div class="avatar" style="border-color:${esc(ring)};">${esc(initials(name))}</div>
+            <div class="avatar-name">${esc(name)}</div>${num}
+        </div>`;
+    };
+    const sideBlock = (label, list, color) => {
+        if (list.length === 0) return '';
+        const teamName = label === 'home'
+            ? (game.homeTeam || hub.teamName || 'Home')
+            : (game.awayTeam || 'Away');
+        return `<div class="roster-side">
+            <div class="side-label"><span class="side-dot" style="background:${esc(color)};"></span>${esc(teamName)}</div>
+            <div class="avatar-rail">${list.map(p => cell(p, color)).join('')}</div>
+        </div>`;
+    };
+
+    const home = parts.filter(p => String(p.side || '').toLowerCase() === 'home');
+    const away = parts.filter(p => String(p.side || '').toLowerCase() === 'away');
+    // Participants with no side still deserve to show — bucket them under home.
+    const sideless = parts.filter(p => { const s = String(p.side || '').toLowerCase(); return s !== 'home' && s !== 'away'; });
+    const homeAll = home.concat(sideless);
+
+    const html = sideBlock('home', homeAll, homeColor) + sideBlock('away', away, awayColor);
+    if (!html) { card.style.display = 'none'; return; }
+    $('rosterContent').innerHTML = html;
+    card.style.display = '';
 }
 
 function renderTeamScore(hub, game) {
