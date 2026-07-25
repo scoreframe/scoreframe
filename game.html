@@ -801,6 +801,7 @@ html, body {
         <div class="card">
             <div class="label">Share This Game</div>
             <div class="share-row">
+                <button class="share-btn" onclick="shareGameCard()">📸 Game Card</button>
                 <button class="share-btn" onclick="copyLink(this)">🔗 Copy Link</button>
                 <button class="share-btn" onclick="shareNative()">📤 Share</button>
                 <a class="share-btn" id="hubLink" href="/" style="text-align:center;text-decoration:none;line-height:1;">🏟️ View Team Page</a>
@@ -811,7 +812,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v37</span>
+    <span class="page-version">game.html v38</span>
 </div>
 
 <script type="module">
@@ -3287,6 +3288,141 @@ document.getElementById('authSubmit')?.addEventListener('click', async () => {
 });
 
 // ── Share ──
+// ── Shareable game card (2026-07-25) — draws a 1080×1920 image in-page and
+// shares via the Web Share API (download fallback). Works in the app WebView
+// and browsers; no native code. Mirrors the app's card design + palette.
+function __sfRoundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function __sfSetLine(game) {
+    let home = [], away = [];
+    if (Array.isArray(game.homeSetScores) && game.homeSetScores.length &&
+        game.homeSetScores.length === (game.awaySetScores || []).length) {
+        home = game.homeSetScores; away = game.awaySetScores;
+    } else {
+        const s = game.sportSpecificStats || {};
+        const h = s.homeScoreBySet || s.homeScoreByPeriod || s.homeScoreByQuarter;
+        const a = s.awayScoreBySet || s.awayScoreByPeriod || s.awayScoreByQuarter;
+        if (!Array.isArray(h) || !Array.isArray(a) || h.length !== a.length || !h.length) return '';
+        home = h.map(Number); away = a.map(Number);
+    }
+    if (!home.length) return '';
+    return home.map((v, i) => `${v}–${away[i]}`).join('   ·   ');
+}
+function __sfStatLabel(k) {
+    const m = { kills:'Kills', aces:'Aces', assists:'Assists', blocks:'Blocks', digs:'Digs',
+        points:'Pts', rebounds:'Reb', goals:'Goals', saves:'Saves', hits:'Hits', rbi:'RBI',
+        rbis:'RBI', runs:'Runs', strikeouts:'K', tackles:'Tackles', groundballs:'GB', faceoffs:'FO' };
+    return m[String(k).toLowerCase()] || (String(k).charAt(0).toUpperCase() + String(k).slice(1));
+}
+function __sfPerformers(game) {
+    const primaryBySport = { VOLLEYBALL:'kills', BASKETBALL:'points', SOCCER:'goals',
+        HOCKEY:'goals', LACROSSE:'goals', BASEBALL:'hits', SOFTBALL:'hits' };
+    const primary = primaryBySport[String(game.sport || '').toUpperCase()];
+    const num = v => (typeof v === 'number' ? v : (parseFloat(v) || 0));
+    const out = [];
+    for (const p of (game.participants || [])) {
+        if (!p || !p.name) continue;
+        const stats = p.stats || {}; let value = 0, label = '';
+        if (primary && num(stats[primary]) > 0) { value = num(stats[primary]); label = __sfStatLabel(primary); }
+        else {
+            let bestK = '', bestV = 0;
+            for (const k in stats) { const v = num(stats[k]); if (v > bestV) { bestV = v; bestK = k; } }
+            if (bestV > 0) { value = bestV; label = __sfStatLabel(bestK); }
+        }
+        if (value > 0) out.push({ name: p.name, value: Math.round(value), label });
+    }
+    return out.sort((a, b) => b.value - a.value).slice(0, 3);
+}
+window.shareGameCard = function() {
+    const game = window.__cardGame, hub = window.__cardHub;
+    if (!game || !hub) return;
+    const W = 1080, H = 1920;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const c = cv.getContext('2d');
+    const BG='#0E0E10', CARD='#1A1B1E', LINE='#2E2F33', ORANGE='#FF9640', GOLD='#FFC800', TEXT='#F2F2F2', DIM='#9A9A9A';
+    c.fillStyle = BG; c.fillRect(0, 0, W, H);
+    const cx = W / 2;
+    const sport = String(game.sport || hub.sport || 'GENERIC').toUpperCase();
+    const hubIsHome = game.homeTeamId === hub.teamId;
+    const homeColor = hubIsHome ? (hub.color || ORANGE) : '#3A3B40';
+    const awayColor = hubIsHome ? '#3A3B40' : (hub.color || ORANGE);
+    const g = c.createLinearGradient(0, 0, W, 0); g.addColorStop(0, homeColor); g.addColorStop(1, awayColor);
+    c.fillStyle = g; c.fillRect(0, 0, W, 46);
+    c.font = 'bold 54px sans-serif';
+    const sw = c.measureText('Score').width, fw = c.measureText('Frame').width;
+    const x0 = cx - (sw + fw) / 2; c.textAlign = 'left';
+    c.fillStyle = TEXT; c.fillText('Score', x0, 190);
+    c.fillStyle = ORANGE; c.fillText('Frame', x0 + sw, 190);
+    c.textAlign = 'center';
+    c.fillStyle = ORANGE; c.font = '700 40px sans-serif';
+    c.fillText(`${sportEmoji(sport)}  ${sportName(sport)}`.toUpperCase(), cx, 268);
+    const meta = []; const evt = String(game.eventLabel || game.eventName || '').trim();
+    if (evt) meta.push(evt); if (game.location) meta.push('📍 ' + game.location);
+    if (meta.length) { c.fillStyle = DIM; c.font = '34px sans-serif'; c.fillText(meta.join('   ·   ').slice(0, 60), cx, 330); }
+    const homeName = game.homeTeam || hub.teamName || 'Home';
+    const awayName = game.awayTeam || '';
+    const twoTeam = !!awayName;
+    const hs = Number(game.homeScore || 0), as = Number(game.awayScore || 0);
+    const homeWon = twoTeam && hs > as, awayWon = twoTeam && as > hs;
+    const drawRow = (top, color, name, score, won) => {
+        const chipL = 100, chipT = top + 20, chipS = 96;
+        c.fillStyle = color; __sfRoundRect(c, chipL, chipT, chipS, chipS, 20); c.fill();
+        c.fillStyle = '#fff'; c.font = 'bold 52px sans-serif'; c.textAlign = 'center';
+        c.fillText((String(name)[0] || '?').toUpperCase(), chipL + chipS / 2, chipT + chipS / 2 + 18);
+        c.textAlign = 'left'; c.font = 'bold 60px sans-serif'; c.fillStyle = won ? GOLD : TEXT;
+        c.fillText(String(name).slice(0, 16), chipL + chipS + 34, chipT + 72);
+        if (won) { c.fillStyle = GOLD; c.font = '30px sans-serif'; c.fillText('WINNER', chipL + chipS + 36, chipT + 118); }
+        c.textAlign = 'right'; c.fillStyle = won ? GOLD : TEXT; c.font = '800 150px sans-serif';
+        c.fillText(String(score), W - 100, chipT + 128);
+    };
+    let y = 520;
+    drawRow(y, homeColor, homeName, hs, homeWon);
+    if (twoTeam) {
+        c.fillStyle = GOLD; c.font = '700 44px sans-serif'; c.textAlign = 'center'; c.fillText('FINAL', cx, y + 210);
+        c.strokeStyle = LINE; c.lineWidth = 3;
+        c.beginPath(); c.moveTo(120, y + 250); c.lineTo(cx - 130, y + 250); c.moveTo(cx + 130, y + 250); c.lineTo(W - 120, y + 250); c.stroke();
+        drawRow(y + 320, awayColor, awayName, as, awayWon); y += 560;
+    } else y += 240;
+    const setLine = __sfSetLine(game);
+    if (setLine) { c.fillStyle = DIM; c.font = '42px sans-serif'; c.textAlign = 'center'; c.fillText(setLine.slice(0, 48), cx, y + 40); y += 90; }
+    const perfs = __sfPerformers(game);
+    if (perfs.length) {
+        y += 70; c.fillStyle = ORANGE; c.font = '700 38px sans-serif'; c.textAlign = 'center'; c.fillText('TOP PERFORMERS', cx, y); y += 30;
+        for (const p of perfs) {
+            y += 78;
+            c.fillStyle = CARD; __sfRoundRect(c, 90, y - 54, W - 180, 74, 20); c.fill();
+            c.textAlign = 'left'; c.fillStyle = TEXT; c.font = 'bold 40px sans-serif'; c.fillText(String(p.name).slice(0, 22), 128, y);
+            c.font = '34px sans-serif'; const lw = c.measureText(' ' + p.label).width;
+            c.textAlign = 'right'; c.fillStyle = GOLD; c.font = '800 44px sans-serif'; c.fillText(String(p.value), W - 128 - lw, y);
+            c.fillStyle = DIM; c.font = '34px sans-serif'; c.fillText(' ' + p.label, W - 128, y);
+        }
+    }
+    const footY = H - 70;
+    c.strokeStyle = LINE; c.lineWidth = 2; c.beginPath(); c.moveTo(90, footY - 60); c.lineTo(W - 90, footY - 60); c.stroke();
+    c.textAlign = 'left'; c.fillStyle = DIM; c.font = '32px sans-serif'; c.fillText(formatDate(game.date), 100, footY);
+    c.textAlign = 'right'; c.fillStyle = ORANGE; c.fillText('scoreframe.app', W - 100, footY);
+    cv.toBlob(async (blob) => {
+        if (!blob) return;
+        const fname = `ScoreFrame_${sport}_${Date.now()}.png`;
+        const file = new File([blob], fname, { type: 'image/png' });
+        const shareText = `${homeName}${twoTeam ? ' vs ' + awayName : ''} — ${hs}-${as}. scoreframe.app`;
+        try {
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: 'ScoreFrame', text: shareText });
+                return;
+            }
+        } catch (e) { if (e && e.name === 'AbortError') return; }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = fname;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }, 'image/png');
+};
+
 window.copyLink = function(btn) {
     const url = window.location.href;
     if (navigator.clipboard) {
