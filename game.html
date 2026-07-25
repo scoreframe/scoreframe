@@ -811,7 +811,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v36</span>
+    <span class="page-version">game.html v37</span>
 </div>
 
 <script type="module">
@@ -1482,6 +1482,8 @@ function renderLiveOnly(hub, url) {
 }
 
 function renderGame(hub, game) {
+    // Stash for the shareable game-card renderer (window.shareGameCard).
+    window.__cardGame = game; window.__cardHub = hub;
     const sport = (game.sport || hub.sport || 'GENERIC').toUpperCase();
     const isBowling = sport === 'BOWLING';
 
@@ -1841,7 +1843,7 @@ function moreCardHtml(hub, g) {
     const scoreColor = won ? '#FFC800' : 'var(--text-primary)';
     const metaColor = won ? '#FFC800' : (lost ? 'var(--loss-red)' : 'var(--text-muted)');
     const rl = won ? 'W' : (lost ? 'L' : 'T');
-    const href = `/game.html?team=${encodeURIComponent(hub.hubCode)}&game=${encodeURIComponent(g.id)}`;
+    const href = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}`;
     const dt = gameDateMs(g);
     const dstr = dt ? new Date(dt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
     return `<a class="more-card" href="${href}">
@@ -1855,7 +1857,10 @@ function moreCardHtml(hub, g) {
 }
 
 async function renderMoreFromTeam(hub, game) {
-    if (!hub || !hub.teamId || !hub.hubCode) return;
+    // hubCode is a module-level const from the URL (hubProfile has NO .hubCode
+    // property — the old `hub.hubCode` guard was always undefined, so this
+    // function returned immediately and the rail never rendered).
+    if (!hub || !hub.teamId || !hubCode) return;
     let docs;
     try {
         const snap = await getDocs(collection(db, 'teams', hub.teamId, 'games'));
