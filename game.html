@@ -294,6 +294,17 @@ html, body {
 }
 .avatar-num { font-size: 10px; color: var(--text-muted); }
 
+/* v36 — "More from this team" poster rail: horizontal scroll of the team's
+   other games, left result bar (gold win / red loss), big score, W/L · date. */
+.more-rail { display: flex; gap: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+.more-card { flex: 0 0 auto; width: 150px; display: flex; text-decoration: none;
+    background: var(--bg-elevated); border: 1px solid rgba(128,128,128,0.25); border-radius: 12px; overflow: hidden; }
+.more-bar { width: 5px; flex: 0 0 auto; }
+.more-body { padding: 10px 12px; min-width: 0; }
+.more-opp { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.more-score { font-size: 24px; font-weight: 800; margin: 3px 0; }
+.more-meta { font-size: 11px; font-weight: 700; }
+
 /* Per-set line score for VB games — sets-won is the big number above; this is
    the points-per-set breakdown rendered as winner-coloured pairs. */
 .set-line {
@@ -780,6 +791,12 @@ html, body {
             <div class="stream-grid" id="streamGrid"></div>
         </div>
 
+        <!-- More from this team (2026-07-25) — poster rail of the team's other games -->
+        <div class="card" id="moreFromTeamCard" style="display:none;">
+            <div class="label" id="moreFromLabel">More from this team</div>
+            <div class="more-rail" id="moreFromRail"></div>
+        </div>
+
         <!-- Share -->
         <div class="card">
             <div class="label">Share This Game</div>
@@ -794,7 +811,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v35</span>
+    <span class="page-version">game.html v36</span>
 </div>
 
 <script type="module">
@@ -1598,6 +1615,9 @@ function renderGame(hub, game) {
     // 2026-06-20 — Coach Notes for this specific game.
     loadCoachNotes(hub.teamId, game.id);
 
+    // 2026-07-25 — "More from this team" poster rail (async Firestore read).
+    renderMoreFromTeam(hub, game);
+
     // Streams card — list all platforms. Embeddable streams get a click
     // handler that jumps the inline player to that index; non-embeddable
     // links open externally as before. The currently-playing entry is
@@ -1799,6 +1819,62 @@ function wirePlaylistControlsOnce() {
 // Only for completed head-to-head games (not live, not bowling series).
 // Hub side is resolved by teamId against home/awayTeamId; falls back to
 // home so a self-recorded game (hub == home) still reads correctly.
+// v36 (2026-07-25) — "More from this team" poster rail. Reads the hub team's
+// other completed games and renders a horizontal scroll of compact cards, each
+// linking to that game's page. Cloud-authoritative by nature (reads Firestore
+// directly). Mirrors the native app's kit #6 rail.
+function gameDateMs(g) {
+    const d = g && g.date;
+    if (typeof d === 'number') return d;
+    if (d && typeof d.toMillis === 'function') return d.toMillis();   // Firestore Timestamp
+    if (d && typeof d.seconds === 'number') return d.seconds * 1000;
+    return 0;
+}
+
+function moreCardHtml(hub, g) {
+    const teamIsHome = g.homeTeamId === hub.teamId;
+    const teamScore = Number((teamIsHome ? g.homeScore : g.awayScore) || 0);
+    const oppScore = Number((teamIsHome ? g.awayScore : g.homeScore) || 0);
+    const oppName = (teamIsHome ? g.awayTeam : g.homeTeam) || '—';
+    const won = teamScore > oppScore, lost = teamScore < oppScore;
+    const bar = won ? '#FFC800' : (lost ? 'var(--loss-red)' : 'var(--tie-grey)');
+    const scoreColor = won ? '#FFC800' : 'var(--text-primary)';
+    const metaColor = won ? '#FFC800' : (lost ? 'var(--loss-red)' : 'var(--text-muted)');
+    const rl = won ? 'W' : (lost ? 'L' : 'T');
+    const href = `/game.html?team=${encodeURIComponent(hub.hubCode)}&game=${encodeURIComponent(g.id)}`;
+    const dt = gameDateMs(g);
+    const dstr = dt ? new Date(dt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    return `<a class="more-card" href="${href}">
+        <div class="more-bar" style="background:${bar}"></div>
+        <div class="more-body">
+            <div class="more-opp">${sportEmoji((g.sport || '').toUpperCase())} vs ${escapeHtml(oppName)}</div>
+            <div class="more-score" style="color:${scoreColor}">${teamScore}–${oppScore}</div>
+            <div class="more-meta" style="color:${metaColor}">${rl} · ${dstr}</div>
+        </div>
+    </a>`;
+}
+
+async function renderMoreFromTeam(hub, game) {
+    if (!hub || !hub.teamId || !hub.hubCode) return;
+    let docs;
+    try {
+        const snap = await getDocs(collection(db, 'teams', hub.teamId, 'games'));
+        docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) { return; }
+    const now = Date.now();
+    const others = docs.filter(g => {
+        const st = String(g.status || '').toLowerCase();
+        if (st === 'scheduled' || st === 'live' || st === 'cancelled' || st === 'postponed') return false;
+        if (g.multiGame === true || (Array.isArray(g.gameIds) && g.gameIds.length)) return false;
+        const dt = gameDateMs(g);
+        return g.id !== game.id && dt > 0 && dt <= now + 3600000;
+    }).sort((a, b) => gameDateMs(b) - gameDateMs(a)).slice(0, 12);
+    if (!others.length) return;
+    document.getElementById('moreFromRail').innerHTML = others.map(g => moreCardHtml(hub, g)).join('');
+    document.getElementById('moreFromLabel').textContent = `More from ${hub.teamName || 'this team'}`;
+    document.getElementById('moreFromTeamCard').style.display = '';
+}
+
 function renderResultBadge(hub, game, isLive, isBowling) {
     const el = $('heroResult');
     if (!el) return;
