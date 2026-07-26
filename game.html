@@ -305,6 +305,12 @@ html, body {
 .more-score { font-size: 24px; font-weight: 800; margin: 3px 0; }
 .more-meta { font-size: 11px; font-weight: 700; }
 
+/* v39 — Local-only game banner (app-injected pickup / not-shared games). */
+.local-banner { background: var(--accent-dim); border: 1px solid var(--accent);
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+.local-banner-title { font-size: 15px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
+.local-banner-sub { font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+
 /* Per-set line score for VB games — sets-won is the big number above; this is
    the points-per-set breakdown rendered as winner-coloured pairs. */
 .set-line {
@@ -703,6 +709,13 @@ html, body {
 
     <!-- Body -->
     <div class="body">
+        <!-- v39 — Local-only indicator. Shown only for app-injected pickup /
+             not-shared games (renderLocalGame reveals it). Explains why there's
+             no shareable link + nudges toward creating a team. -->
+        <div id="localBanner" class="local-banner" style="display:none;">
+            <div class="local-banner-title">📱 This game is only on your device</div>
+            <div class="local-banner-sub">It isn’t shared, so there’s no link others can open. Add it to a team you’ve shared to give it a live link anyone can watch — or use <b>📸 Game Card</b> below to share an image.</div>
+        </div>
         <!-- Final score / scoreline -->
         <div class="card" id="scoreCard" style="display:none;">
             <div class="label">Final</div>
@@ -802,8 +815,8 @@ html, body {
             <div class="label">Share This Game</div>
             <div class="share-row">
                 <button class="share-btn" onclick="shareGameCard()">📸 Game Card</button>
-                <button class="share-btn" onclick="copyLink(this)">🔗 Copy Link</button>
-                <button class="share-btn" onclick="shareNative()">📤 Share</button>
+                <button class="share-btn" id="copyLinkBtn" onclick="copyLink(this)">🔗 Copy Link</button>
+                <button class="share-btn" id="shareLinkBtn" onclick="shareNative()">📤 Share</button>
                 <a class="share-btn" id="hubLink" href="/" style="text-align:center;text-decoration:none;line-height:1;">🏟️ View Team Page</a>
             </div>
         </div>
@@ -812,7 +825,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v39</span>
+    <span class="page-version">game.html v40</span>
 </div>
 
 <script type="module">
@@ -1516,6 +1529,10 @@ function renderLocalGame(game) {
         $('heroTeam').textContent = `${sportEmoji(sport)} ${sportName(sport)}`;
         // Hide "back to team" affordances that have no target for a local game.
         ['backLink', 'hubLink', 'notFoundBack'].forEach(id => { const e = $(id); if (e) e.style.display = 'none'; });
+        // Local-only: no shareable LINK (nothing in the cloud to open), so hide
+        // Copy Link + Share; keep the image "Game Card". Show the local banner.
+        ['copyLinkBtn', 'shareLinkBtn'].forEach(id => { const e = $(id); if (e) e.style.display = 'none'; });
+        const lb = $('localBanner'); if (lb) lb.style.display = '';
     } catch (_) {}
     renderGame(localHub, game);
 }
