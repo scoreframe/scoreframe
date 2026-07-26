@@ -812,7 +812,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v38</span>
+    <span class="page-version">game.html v39</span>
 </div>
 
 <script type="module">
@@ -1051,6 +1051,17 @@ function platformIcon(platform) {
 // ── Load + render ─────────────────────────────────────────────────────
 
 async function load() {
+    // v39 — Local-only game (pickup / team-not-shared). The app opens
+    // game.html?local=1 with NO hub and injects the game object directly
+    // (window.__renderLocalGame(json), called after page load). Same page,
+    // same renderGame() — the ONLY difference is where the game object comes
+    // from. No Firestore, no hub. This is what lets us delete the native game
+    // detail and route every game through this one page.
+    if (params.get('local') === '1' || window.__localGame) {
+        if (window.__localGame) renderLocalGame(window.__localGame);
+        // else: wait for the app to call window.__renderLocalGame(json)
+        return;
+    }
     if (!hubCode) {
         showNotFound();
         return;
@@ -1481,6 +1492,43 @@ function renderLiveOnly(hub, url) {
     $('loadingState').style.display = 'none';
     $('gameView').style.display = 'block';
 }
+
+// v39 — Render a local-only (pickup / not-shared) game injected by the app.
+// Builds a synthetic hub from the game itself (no cloud team) and reuses the
+// exact same renderGame(). Cloud-only sections (highlights, coach notes,
+// "More from this team", live-sync) skip themselves when there's no teamId.
+function renderLocalGame(game) {
+    if (!game || typeof game !== 'object') { showNotFound(); return; }
+    const sport = String(game.sport || 'GENERIC').toUpperCase();
+    const localHub = {
+        teamId: null,
+        teamName: game.homeTeam || 'Game',
+        sport,
+        color: game.homeColor || '#FF9640',
+        color2: game.awayColor || '#FFFFFF',
+        hub: {},
+        logoUrl: '',
+        __local: true,
+    };
+    // Chrome that load() normally sets from the hub. No team → no back links.
+    try {
+        $('colorBar').style.background = `linear-gradient(90deg, ${localHub.color}, ${localHub.color2})`;
+        $('heroTeam').textContent = `${sportEmoji(sport)} ${sportName(sport)}`;
+        // Hide "back to team" affordances that have no target for a local game.
+        ['backLink', 'hubLink', 'notFoundBack'].forEach(id => { const e = $(id); if (e) e.style.display = 'none'; });
+    } catch (_) {}
+    renderGame(localHub, game);
+}
+window.__renderLocalGame = function(json) {
+    try {
+        const g = (typeof json === 'string') ? JSON.parse(json) : json;
+        window.__localGame = g;
+        renderLocalGame(g);
+    } catch (e) {
+        console.error('[game.html] renderLocalGame failed:', e);
+        showNotFound();
+    }
+};
 
 function renderGame(hub, game) {
     // Stash for the shareable game-card renderer (window.shareGameCard).
