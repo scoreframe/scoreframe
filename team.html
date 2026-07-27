@@ -1973,18 +1973,30 @@ async function loadPastGames() {
         }
         container.innerHTML = html;
 
-        // Flat team record reflects standalone games only; tournament
-        // containers (and their nested children) are summarized on the
-        // event page, not here. When a team's only past items are
-        // tournaments, blank the record instead of showing "0W-0L · 0 games".
-        if (pastGamesCache.length === 0) { $('teamRecord').textContent = ''; return; }
+        // v18 — Team record now INCLUDES tournament games (event children),
+        // not just standalone games. The display list above hides children
+        // (they live under the event card), but they're real games and count
+        // toward the record. Build the record set from all fetched docs:
+        // real games only (skip event containers), completed only, filtered
+        // to the selected season.
+        const recordGames = [];
+        snap.forEach(d => {
+            const g = { id: d.id, ...d.data() };
+            if (g.status === 'scheduled' || g.status === 'live' || g.status === 'cancelled' || g.status === 'postponed') return;
+            const childCount = Array.isArray(g.gameIds) ? g.gameIds.length : 0;
+            if (g.multiGame === true || childCount > 1) return; // event container, not a game
+            if (!matchesSelectedSeason(g)) return;
+            recordGames.push(g);
+        });
+        // Nothing real to summarize (e.g. only empty tournament shells).
+        if (recordGames.length === 0) { $('teamRecord').textContent = ''; return; }
 
         // Calculate and display team record
         const sport = (hubProfile?.sport || '').toUpperCase();
         const isBowlingRecord = sport === 'BOWLING';
         if (isBowlingRecord) {
             let totalScore = 0, totalGames = 0, highGame = 0;
-            for (const g of pastGamesCache) {
+            for (const g of recordGames) {
                 const ps = g.playerScores || '';
                 if (ps) {
                     for (const b of ps.split(';')) {
@@ -1998,16 +2010,16 @@ async function loadPastGames() {
                 }
             }
             const avg = totalGames > 0 ? Math.round(totalScore / totalGames) : 0;
-            $('teamRecord').textContent = `${pastGamesCache.length} session${pastGamesCache.length !== 1 ? 's' : ''} · ${totalGames} games · Avg: ${avg} · High: ${highGame}`;
+            $('teamRecord').textContent = `${recordGames.length} session${recordGames.length !== 1 ? 's' : ''} · ${totalGames} games · Avg: ${avg} · High: ${highGame}`;
         } else {
             let w = 0, l = 0, t = 0;
-            for (const g of pastGamesCache) {
+            for (const g of recordGames) {
                 const hs = g.homeScore || 0, as_ = g.awayScore || 0;
                 if (hs > as_) w++; else if (as_ > hs) l++; else if (hs > 0) t++;
             }
             let rec = `${w}W-${l}L`;
             if (t > 0) rec += `-${t}T`;
-            $('teamRecord').textContent = `${rec} · ${pastGamesCache.length} game${pastGamesCache.length !== 1 ? 's' : ''}`;
+            $('teamRecord').textContent = `${rec} · ${recordGames.length} game${recordGames.length !== 1 ? 's' : ''}`;
         }
     } catch (e) {
         console.error('Past games error:', e);
