@@ -1838,6 +1838,28 @@ async function loadPastGames() {
             if (g.parentEventId) return;
             // v13 — Season switcher filter.
             if (!matchesSelectedSeason(g)) return;
+            // Completed tournament container → render an event card that opens
+            // event.html (its child games are hidden above via parentEventId).
+            // Without this branch the container renders as a blank 0-0 game
+            // card. Not pushed to pastGamesCache so it stays out of the flat
+            // W/L record — the games are summarized on the event page.
+            const _childCount = Array.isArray(g.gameIds) ? g.gameIds.length : 0;
+            if (g.multiGame === true || _childCount > 1) {
+                renderedCount++;
+                const evHref = `/event.html?team=${encodeURIComponent(hubCode)}&event=${encodeURIComponent(g.id)}`;
+                const evName = g.eventName || 'Tournament';
+                const evDate = (typeof g.endDate === 'number' && g.endDate > (g.date || 0))
+                    ? formatDateRange(g.date, g.endDate) : formatDate(g.date);
+                const evCard = `<a class="game-card linkable" href="${evHref}" style="text-decoration:none;color:inherit;display:block;">
+                    <div class="open-chevron">Open ›</div>
+                    <div class="event-type-badge tournament">🏆 TOURNAMENT${_childCount > 0 ? ` · ${_childCount} game${_childCount === 1 ? '' : 's'}` : ''}</div>
+                    <div class="game-date">${evDate}</div>
+                    <div class="game-opponent">${evName}</div>
+                </a>`;
+                html += evCard;
+                if ((g.date || 0) >= weekAgoMs) { recentHtml += evCard; recentCount++; }
+                return;
+            }
             renderedCount++;
             pastGamesCache.push(g);
             // Recent strip eligibility — captured here so the card HTML
@@ -1944,12 +1966,18 @@ async function loadPastGames() {
                 if (recentSection) recentSection.style.display = 'none';
             }
         }
-        if (pastGamesCache.length === 0) {
+        if (renderedCount === 0) {
             container.innerHTML = '<div class="empty">No past games yet</div>';
             $('teamRecord').textContent = '';
             return;
         }
         container.innerHTML = html;
+
+        // Flat team record reflects standalone games only; tournament
+        // containers (and their nested children) are summarized on the
+        // event page, not here. When a team's only past items are
+        // tournaments, blank the record instead of showing "0W-0L · 0 games".
+        if (pastGamesCache.length === 0) { $('teamRecord').textContent = ''; return; }
 
         // Calculate and display team record
         const sport = (hubProfile?.sport || '').toUpperCase();
