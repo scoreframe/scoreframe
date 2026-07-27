@@ -137,6 +137,7 @@ html, body {
     <div id="heroTeam" class="hero-team">—</div>
     <div id="heroTitle" class="hero-title">Loading…</div>
     <div id="heroDate" class="hero-meta">—</div>
+    <div id="heroRecord" class="hero-meta" style="display:none;font-weight:700;color:var(--accent);"></div>
     <div id="heroLocation" class="hero-meta" style="display:none;"></div>
     <div id="heroSeason" class="hero-meta" style="display:none;"></div>
     <div id="heroNotes" class="hero-meta" style="margin-top:8px;font-style:italic;display:none;"></div>
@@ -360,6 +361,40 @@ async function loadEvent() {
     if (games.length === 0) {
         list.innerHTML = '<div class="empty">No games available.</div>';
         return;
+    }
+    // v18 — Event record line in the hero: W/L (team sports) or a scoring
+    // summary (bowling) across the completed child games in this event.
+    const completed = games.filter(g => g.status === 'completed');
+    if (completed.length > 0) {
+        const evSport = (team?.profile?.sport || team?.sport || completed[0].sport || '').toUpperCase();
+        if (evSport === 'BOWLING') {
+            let totalScore = 0, totalGames = 0, high = 0;
+            for (const g of completed) {
+                const ps = g.playerScores || '';
+                if (ps) {
+                    for (const b of ps.split(';')) {
+                        const scs = (b.split(':')[1] || '').split(',').map(Number).filter(n => n > 0);
+                        totalScore += scs.reduce((a, c) => a + c, 0);
+                        totalGames += scs.length;
+                        high = Math.max(high, ...scs, 0);
+                    }
+                } else if (g.homeScore > 0) {
+                    totalScore += g.homeScore; totalGames++; high = Math.max(high, g.homeScore);
+                }
+            }
+            const avg = totalGames > 0 ? Math.round(totalScore / totalGames) : 0;
+            $('heroRecord').textContent = `${totalGames} game${totalGames !== 1 ? 's' : ''} · Avg ${avg} · High ${high}`;
+            $('heroRecord').style.display = '';
+        } else {
+            let w = 0, l = 0, t = 0;
+            for (const g of completed) {
+                const hs = g.homeScore || 0, as_ = g.awayScore || 0;
+                if (hs > as_) w++; else if (as_ > hs) l++; else if (hs > 0) t++;
+            }
+            const rec = `${w}W-${l}L` + (t > 0 ? `-${t}T` : '');
+            $('heroRecord').textContent = `${rec} · ${completed.length} game${completed.length !== 1 ? 's' : ''}`;
+            $('heroRecord').style.display = '';
+        }
     }
     // Sort: live first, then scheduled by date asc, then completed by date desc.
     games.sort((a, b) => {
