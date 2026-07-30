@@ -3488,8 +3488,35 @@ window.shareGameCard = function() {
     }, 'image/png');
 };
 
+// Build a link that's safe to hand to someone else. The in-app WebView loads
+// this page with app-internal params on the URL — `app=1` hides the header and
+// footer (correct in-app, but an external recipient just loses the site chrome),
+// `theme=` forces the sharer's light/dark choice onto the recipient, and
+// `local=1` marks a local-only game whose data the app injects AFTER load, so a
+// shared local link would open completely empty. Copy Link and Share used to
+// pass `window.location.href` straight through, so whatever the app appended
+// went out with it. Keep only the params that identify the content
+// (hub/game/id/team) and drop the rest. Also strips the #auth= SSO token as a
+// belt-and-braces guard — load() clears it, but never risk sharing a token.
+// Eric 2026-07-30.
+window.shareableUrl = function() {
+    try {
+        const u = new URL(window.location.href);
+        ['app', 'local', 'theme'].forEach(k => u.searchParams.delete(k));
+        u.hash = (u.hash || '').replace(/[#&]auth=[^&]*/g, '').replace(/^#$/, '');
+        return u.toString();
+    } catch (_) {
+        // Older browser without URL(): fall back to a manual strip rather than
+        // handing back a link with app=1 still on it.
+        return window.location.href
+            .replace(/([?&])(app|local|theme)=[^&#]*/g, '$1')
+            .replace(/[?&]+(?=[?&#]|$)/g, '')
+            .replace(/[#&]auth=[^&]*/g, '');
+    }
+};
+
 window.copyLink = function(btn) {
-    const url = window.location.href;
+    const url = window.shareableUrl();
     if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(() => {
             const old = btn.textContent;
@@ -3501,7 +3528,7 @@ window.copyLink = function(btn) {
 
 window.shareNative = function() {
     const title = document.title;
-    const url = window.location.href;
+    const url = window.shareableUrl();
     if (navigator.share) {
         navigator.share({ title, url }).catch(() => {});
     } else {
