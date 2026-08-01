@@ -28,6 +28,34 @@ body[data-theme="light"] {
     --text-primary: #1A1A1A !important; --text-secondary: #555 !important; --text-muted: #888 !important;
     --win-green: #1B5E20 !important; --loss-red: #B71C1C !important; --tie-grey: #888888 !important;
 }
+
+/* ── In-app colour palette (?palette=) — added 2026-08-01 ─────────────
+   The APP appends ?palette=<name> when it opens this page in its WebView so
+   the page matches whichever palette the user picked in Settings. It is a
+   personal preference, NOT branding: share/copy links deliberately omit it,
+   so anyone opening a shared link gets ScoreFrame orange.
+
+   Deliberately a SEPARATE param from ?theme= — that one already means
+   light|dark here and has since v14. Overloading it would have broken every
+   existing in-app link.
+
+   Unknown or absent value = no selector matches = brand orange. That is the
+   whole backwards-compatibility story; nothing else needs a fallback.
+
+   Two-attribute selectors beat the one-attribute body[data-theme] blocks
+   above on specificity, so the light variants below win where both apply. */
+body[data-palette="trailhead"] {
+    --accent: #8E9A45 !important; --accent-dim: rgba(142,154,69,0.15) !important;
+}
+body[data-theme="light"][data-palette="trailhead"] {
+    --accent: #4E5A21 !important; --accent-dim: rgba(78,90,33,0.15) !important;
+}
+body[data-palette="floodlight"] {
+    --accent: #4E9CE8 !important; --accent-dim: rgba(78,156,232,0.15) !important;
+}
+body[data-theme="light"][data-palette="floodlight"] {
+    --accent: #1C5FA8 !important; --accent-dim: rgba(28,95,168,0.15) !important;
+}
 @media (prefers-color-scheme: light) {
     :root {
         --bg-deepest: #F5F5F2; --bg-deep: #FFFFFF; --bg-surface: #FFFFFF;
@@ -123,6 +151,26 @@ html, body {
     color: var(--text-muted); font-size: 18px; margin-left: 6px;
 }
 </style>
+<script>
+/* Palette param — mirrors the theme block above. Applied to <html> before
+   paint and to <body> once it exists, same two-step as ?theme=, so there is
+   no flash of the wrong accent. 2026-08-01. */
+(function() {
+    try {
+        var p = new URLSearchParams(location.search).get('palette');
+        if (p === 'trailhead' || p === 'floodlight') {
+            document.documentElement.setAttribute('data-palette', p);
+            if (document.body) {
+                document.body.setAttribute('data-palette', p);
+            } else {
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.body.setAttribute('data-palette', p);
+                });
+            }
+        }
+    } catch (e) {}
+})();
+</script>
 </head>
 <body>
 
