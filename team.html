@@ -83,6 +83,112 @@ html, body {
 .team-name { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
 .team-sport { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
 .team-code { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+
+/* ── Team page redesign (2026-08-02) ────────────────────────────────────
+   Borrows the game page's vocabulary so the two pages read as one product:
+   an eyebrow/name/meta hero, a stage that always holds something, and
+   horizontal rails instead of vertical lists.
+
+   NO CALLS TO ACTION anywhere in here. This is the page a stranger lands
+   on from a shared link — "record a game" is an instruction for the coach,
+   and the coach is already in the app. Eric, 2026-08-02. */
+
+/* Record as a scoreline, the way the game page shows a final score. */
+.tp-scoreline {
+    display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+    margin: 14px auto 4px; max-width: 420px;
+}
+.tp-sl {
+    flex: 1 1 0; min-width: 64px; padding: 10px 6px;
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+    border-radius: 10px;
+}
+.tp-sl .v {
+    font-size: 22px; font-weight: 800; line-height: 1;
+    font-variant-numeric: tabular-nums; color: var(--text-primary);
+}
+.tp-sl.win .v { color: var(--accent); }
+.tp-sl .k {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-muted); margin-top: 5px;
+}
+
+/* The stage — one slot under the hero that is never blank. */
+.tp-stage { padding: 0 24px; margin-top: 4px; }
+.tp-stage-card {
+    width: 100%; padding: 18px 20px; text-align: center;
+    background: var(--bg-surface); border-radius: 14px;
+    border: 1px solid var(--bg-elevated);
+}
+.tp-stage-card .label-top {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+}
+.tp-stage-card .matchup { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.tp-stage-card .when {
+    font-size: 13px; color: var(--text-secondary); margin-bottom: 18px;
+}
+/* Same countdown treatment as game.html's .countdown-card so a fan sees
+   an identical timer on both pages. */
+.tp-count { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; }
+.tp-count .seg { min-width: 60px; }
+.tp-count .num {
+    font-size: 30px; font-weight: 800; color: var(--accent);
+    font-variant-numeric: tabular-nums; line-height: 1;
+}
+.tp-count .unit {
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px;
+}
+.tp-stage-empty {
+    border-style: dashed; color: var(--text-secondary);
+}
+.tp-stage-empty .t { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.tp-stage-empty .s { font-size: 12.5px; color: var(--text-muted); margin-top: 5px; }
+
+/* Horizontal schedule rail. Overflow is on the rail itself so the page
+   body never scrolls sideways. */
+.tp-railhead {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 0 24px; margin: 22px 0 10px;
+}
+.tp-railhead .l {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--accent);
+}
+.tp-rail {
+    display: flex; gap: 10px; overflow-x: auto; padding: 2px 24px 6px;
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+}
+.tp-rail::-webkit-scrollbar { height: 0; }
+.tp-scard {
+    flex: 0 0 auto; width: 138px; scroll-snap-align: start;
+    padding: 11px 12px; border-radius: 12px;
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+    text-decoration: none; color: inherit; position: relative;
+}
+.tp-scard.next { border-color: var(--accent); }
+.tp-scard .nx {
+    position: absolute; top: -7px; left: 10px;
+    background: var(--accent); color: #1A1A1A;
+    font-size: 8.5px; font-weight: 800; letter-spacing: 0.1em;
+    padding: 2px 7px; border-radius: 6px;
+}
+.tp-scard .dt {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px;
+}
+.tp-scard .op {
+    font-size: 14px; font-weight: 700; margin-bottom: 5px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tp-scard .ha { font-size: 11px; color: var(--text-secondary); }
+.tp-scard .tm { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.tp-scard .pill {
+    display: inline-block; margin-top: 6px; font-size: 9px; font-weight: 800;
+    letter-spacing: 0.08em; padding: 2px 6px; border-radius: 5px;
+}
+
 .live-badge {
     display: inline-flex; align-items: center; gap: 6px;
     background: var(--recording-red); color: white; padding: 4px 12px;
@@ -420,6 +526,12 @@ html, body {
              2+ seasons. Hidden when the team has no active season. -->
         <div id="teamSeason" style="display:none; font-size:12px; font-weight:700; color:var(--accent); margin: 4px 0;"></div>
         <div id="teamRecord" style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:8px;"></div>
+        <!-- 2026-08-02 — Record as a scoreline, mirroring the game page's
+             final-score treatment. Populated by renderScoreline() from the
+             same games loadPastGames() already counts, so the two can never
+             disagree. Falls back to the plain #teamRecord text above when
+             there's nothing to summarise. -->
+        <div id="teamScoreline" class="tp-scoreline" style="display:none;"></div>
         <div id="liveBadge" style="display:none;" class="live-badge">● LIVE NOW</div>
         <div class="team-code" id="teamCode"></div>
 
@@ -451,6 +563,23 @@ html, body {
         <div id="liveSection" style="display:none;" class="section">
             <div class="section-title">🔴 Live Now</div>
             <div id="liveGame"></div>
+        </div>
+
+        <!-- 2026-08-02 — THE STAGE. One slot that is never blank: it holds the
+             next game's countdown, and when there's nothing scheduled it falls
+             back to the most recent completed game, then to a plain "no games
+             yet" line. A live game is handled by #liveSection directly above,
+             and renderStage() hides itself in that case rather than competing
+             with it for the same real estate. -->
+        <div class="tp-stage" id="teamStage" style="display:none;"></div>
+
+        <!-- 2026-08-02 — Full upcoming schedule as a horizontal rail, next
+             game flagged. Fed by the same array loadSchedule() already builds
+             for the list below, so there is exactly one source of truth for
+             what's upcoming. -->
+        <div id="scheduleRailSection" style="display:none;">
+            <div class="tp-railhead"><span class="l" id="scheduleRailLabel">Schedule</span></div>
+            <div class="tp-rail" id="scheduleRail"></div>
         </div>
 
         <!-- v13 — Season switcher. Hidden when the team has 0 or 1 seasons.
@@ -1575,6 +1704,232 @@ async function blockPendingRequest(subUid, displayName, rowEl) {
     }
 }
 
+/* ── Team page redesign — stage, schedule rail, record scoreline ───────────
+   Added 2026-08-02. All three read from data the page already loads; none of
+   them issue their own Firestore queries, so they can't disagree with the
+   lists below and cost nothing extra.
+
+   Deliberately CTA-free: this is the page a stranger opens from a shared
+   link. Coach instructions belong in the app. */
+
+/** The rest of this page interpolates user-supplied strings straight into
+ *  innerHTML. That's pre-existing and out of scope to fix wholesale here, but
+ *  the new blocks below render opponent names, locations and event labels —
+ *  all typed by a user — so they escape. */
+function escapeHtml(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+let scheduleUpcoming = [];   // top-level upcoming, set by loadSchedule()
+let stageLastCompleted = null; // newest completed game, set by loadPastGames()
+let stageHasLive = false;    // set by listenForLive()
+let stageTimer = null;       // countdown interval; cleared before each re-render
+
+/** Home/away from the team's perspective. Schedule docs carry `isHome` on
+ *  newer writes; older ones don't, and guessing wrong is worse than saying
+ *  nothing, so an absent flag renders no venue line at all. */
+function stageVenue(g) {
+    if (g.isHome === true) return '🏠 Home';
+    if (g.isHome === false) return '🛫 Away';
+    return '';
+}
+
+function stageOpponent(g) {
+    const childCount = Array.isArray(g.gameIds) ? g.gameIds.length : 0;
+    if (g.multiGame === true || childCount > 1) return g.eventName || 'Tournament';
+    return g.opponent || g.eventName || 'Game';
+}
+
+function stageHref(g) {
+    if (!g.id) return null;
+    const childCount = Array.isArray(g.gameIds) ? g.gameIds.length : 0;
+    const isTournament = g.multiGame === true || childCount > 1;
+    const page = isTournament ? 'event.html' : 'game.html';
+    const key = isTournament ? 'event' : 'game';
+    return `/${page}?team=${encodeURIComponent(hubCode)}&${key}=${encodeURIComponent(g.id)}`;
+}
+
+/** Horizontal schedule rail. Shows every upcoming entry, next one flagged. */
+function renderScheduleRail() {
+    const section = $('scheduleRailSection');
+    const rail = $('scheduleRail');
+    if (!section || !rail) return;
+    // Archived teams stop advertising a schedule, same as the list below.
+    const playable = (hubProfile?.status === 'archived') ? [] : scheduleUpcoming;
+    if (!playable.length) { section.style.display = 'none'; return; }
+
+    section.style.display = 'block';
+    const label = $('scheduleRailLabel');
+    if (label) label.textContent = `Schedule · ${playable.length} upcoming`;
+
+    rail.innerHTML = playable.map((g, i) => {
+        const d = (typeof g.date === 'number') ? new Date(g.date) : null;
+        const dt = d
+            ? d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+            : 'TBD';
+        const tm = d ? d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : '';
+        const venue = stageVenue(g);
+        const isLive = g.status === 'live';
+        const isPostponed = g.status === 'postponed';
+        // "NEXT" marks the soonest entry that is actually going to happen.
+        const isNext = i === 0 && !isPostponed;
+        let pill = '';
+        if (isLive) pill = '<span class="pill" style="background:rgba(204,34,34,0.16);color:#CC2222;">● LIVE</span>';
+        else if (isPostponed) pill = '<span class="pill" style="background:var(--bg-elevated);color:var(--text-muted);">POSTPONED</span>';
+        const href = stageHref(g);
+        const inner = `
+            ${isNext ? '<span class="nx">NEXT</span>' : ''}
+            <div class="dt">${escapeHtml(dt)}</div>
+            <div class="op">${escapeHtml(stageOpponent(g))}</div>
+            ${venue ? `<div class="ha">${venue}</div>` : ''}
+            ${tm ? `<div class="tm">${escapeHtml(tm)}</div>` : ''}
+            ${pill}`;
+        return href
+            ? `<a class="tp-scard${isNext ? ' next' : ''}" href="${href}">${inner}</a>`
+            : `<div class="tp-scard${isNext ? ' next' : ''}">${inner}</div>`;
+    }).join('');
+}
+
+/** The stage. Priority: live (defer to #liveSection) → next game countdown
+ *  → most recent completed game → plain empty line. */
+function renderStage() {
+    const stage = $('teamStage');
+    if (!stage) return;
+    if (stageTimer) { clearInterval(stageTimer); stageTimer = null; }
+
+    // A live game already owns the top of the page; don't compete with it.
+    if (stageHasLive || hubProfile?.status === 'archived') {
+        stage.style.display = 'none';
+        return;
+    }
+
+    // Next genuinely-upcoming game (a postponed one has no date to count to).
+    const next = scheduleUpcoming.find(g =>
+        g.status !== 'postponed' && typeof g.date === 'number' && g.date > Date.now());
+
+    if (next) {
+        const d = new Date(next.date);
+        const when = d.toLocaleString(undefined, {
+            weekday: 'short', month: 'short', day: 'numeric',
+            hour: 'numeric', minute: '2-digit',
+        });
+        const venue = stageVenue(next);
+        const loc = next.location ? ` · ${escapeHtml(next.location)}` : '';
+        const href = stageHref(next);
+        const body = `
+            <div class="tp-stage-card">
+                <div class="label-top">📅 Next game</div>
+                <div class="matchup">${escapeHtml(stageOpponent(next))}</div>
+                <div class="when">${escapeHtml(when)}${venue ? ` · ${venue}` : ''}${loc}</div>
+                <div class="tp-count" id="stageCount"></div>
+            </div>`;
+        stage.innerHTML = href
+            ? `<a href="${href}" style="text-decoration:none;color:inherit;display:block;">${body}</a>`
+            : body;
+        stage.style.display = 'block';
+
+        // Same tick shape as game.html's countdown so both pages agree.
+        const tick = () => {
+            const ms = next.date - Date.now();
+            const el = document.getElementById('stageCount');
+            if (!el) { if (stageTimer) { clearInterval(stageTimer); stageTimer = null; } return; }
+            if (ms <= 0) {
+                // Start time passed — the game is probably live or scored now.
+                if (stageTimer) { clearInterval(stageTimer); stageTimer = null; }
+                el.innerHTML = '<div class="seg"><div class="num">—</div><div class="unit">Starting</div></div>';
+                return;
+            }
+            const total = Math.floor(ms / 1000);
+            const days = Math.floor(total / 86400);
+            const hours = Math.floor((total % 86400) / 3600);
+            const mins = Math.floor((total % 3600) / 60);
+            const secs = total % 60;
+            const segs = days > 0
+                ? [['Days', days], ['Hrs', hours], ['Min', mins], ['Sec', secs]]
+                : [['Hrs', hours], ['Min', mins], ['Sec', secs]];
+            el.innerHTML = segs.map(([u, n]) =>
+                `<div class="seg"><div class="num">${String(n).padStart(2, '0')}</div><div class="unit">${u}</div></div>`
+            ).join('');
+        };
+        tick();
+        stageTimer = setInterval(tick, 1000);
+        return;
+    }
+
+    // Nothing scheduled — show the last game that was actually played.
+    if (stageLastCompleted) {
+        const g = stageLastCompleted;
+        const d = (typeof g.date === 'number') ? new Date(g.date) : null;
+        const when = d ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        const hs = g.homeScore ?? 0, as_ = g.awayScore ?? 0;
+        const outcome = hs > as_ ? 'W' : as_ > hs ? 'L' : 'T';
+        const href = stageHref(g);
+        const isBowling = (hubProfile?.sport || '').toUpperCase() === 'BOWLING';
+        // Bowling has no opponent score to show, so lead with the series total.
+        const scoreLine = isBowling
+            ? `<div class="matchup">${escapeHtml(String(hs))}</div>`
+            : `<div class="matchup">${hs} – ${as_} <span style="color:var(--text-muted);font-size:14px;">${outcome}</span></div>`;
+        const body = `
+            <div class="tp-stage-card">
+                <div class="label-top">Most recent</div>
+                ${scoreLine}
+                <div class="when" style="margin-bottom:0;">${escapeHtml(stageOpponent(g))}${when ? ` · ${escapeHtml(when)}` : ''}</div>
+            </div>`;
+        stage.innerHTML = href
+            ? `<a href="${href}" style="text-decoration:none;color:inherit;display:block;">${body}</a>`
+            : body;
+        stage.style.display = 'block';
+        return;
+    }
+
+    // Genuinely nothing. State what the slot is for and stop — no CTA.
+    stage.innerHTML = `
+        <div class="tp-stage-card tp-stage-empty">
+            <div class="t">No games yet</div>
+            <div class="s">Schedule and results appear here</div>
+        </div>`;
+    stage.style.display = 'block';
+}
+
+/** Team record as a scoreline. Bowling has no W-L, so it gets series
+ *  average / high game / total instead — same component, sport-aware values,
+ *  exactly how the game cards already behave. */
+function renderScoreline(stats) {
+    const el = $('teamScoreline');
+    const textEl = $('teamRecord');
+    if (!el) return;
+    if (!stats) {
+        // Restore the plain text line too — switching to a season with no
+        // games must not leave both the scoreline AND the text hidden.
+        el.style.display = 'none';
+        if (textEl) textEl.style.display = '';
+        return;
+    }
+
+    const cells = stats.bowling
+        ? [
+            { v: stats.avg, k: 'Average', win: true },
+            { v: stats.high, k: 'High game' },
+            { v: stats.games, k: 'Games' },
+            { v: stats.sessions, k: 'Sessions' },
+          ]
+        : [
+            { v: stats.w, k: 'Won', win: true },
+            { v: stats.l, k: 'Lost' },
+            ...(stats.t > 0 ? [{ v: stats.t, k: 'Tied' }] : []),
+            { v: stats.pct, k: 'Win %' },
+          ];
+
+    el.innerHTML = cells.map(c =>
+        `<div class="tp-sl${c.win ? ' win' : ''}"><div class="v">${escapeHtml(String(c.v))}</div><div class="k">${c.k}</div></div>`
+    ).join('');
+    el.style.display = 'flex';
+    // The scoreline replaces the old text line rather than repeating it.
+    if (textEl) textEl.style.display = 'none';
+}
+
 async function loadSchedule() {
     try {
         // Post-cutover, scheduled games live in `games/` with status in
@@ -1624,6 +1979,18 @@ async function loadSchedule() {
         }
         // Top-level list excludes nested children.
         const topLevelUpcoming = upcoming.filter(g => !nestedChildIds.has(g.id));
+
+        // 2026-08-02 — Hand the same list to the rail + stage before the
+        // early return below, so a team with nothing scheduled still gets a
+        // stage (it falls back to the last completed game).
+        //
+        // Own try/catch on purpose: these are new and sit ABOVE the existing
+        // upcoming-list render, so an exception here would otherwise be caught
+        // by the outer handler and silently cost the page its schedule. New
+        // decoration must never break what already worked.
+        scheduleUpcoming = topLevelUpcoming;
+        try { renderScheduleRail(); renderStage(); }
+        catch (e) { console.error('stage/rail render failed:', e); }
 
         const container = $('upcomingGames');
         if (upcoming.length === 0) {
@@ -2024,6 +2391,10 @@ async function loadPastGames() {
         if (renderedCount === 0) {
             container.innerHTML = '<div class="empty">No past games yet</div>';
             $('teamRecord').textContent = '';
+            // 2026-08-02 — Clear the scoreline too, or switching to a season
+            // with no games leaves the previous season's record on screen.
+            try { stageLastCompleted = null; renderScoreline(null); renderStage(); }
+            catch (e) { console.error('stage render failed:', e); }
             return;
         }
         container.innerHTML = html;
@@ -2044,7 +2415,21 @@ async function loadPastGames() {
             recordGames.push(g);
         });
         // Nothing real to summarize (e.g. only empty tournament shells).
-        if (recordGames.length === 0) { $('teamRecord').textContent = ''; return; }
+        if (recordGames.length === 0) {
+            $('teamRecord').textContent = '';
+            // 2026-08-02 — No completed games, so the stage has no replay to
+            // fall back to. Re-render in case the schedule already resolved.
+            try { stageLastCompleted = null; renderScoreline(null); renderStage(); }
+            catch (e) { console.error('stage render failed:', e); }
+            return;
+        }
+
+        // 2026-08-02 — Newest completed game feeds the stage's replay
+        // fallback when nothing is scheduled. Sorted here rather than trusting
+        // query order, which is by date ascending for the display list.
+        stageLastCompleted = recordGames
+            .filter(g => typeof g.date === 'number')
+            .sort((a, b) => b.date - a.date)[0] || null;
 
         // Calculate and display team record
         const sport = (hubProfile?.sport || '').toUpperCase();
@@ -2066,6 +2451,12 @@ async function loadPastGames() {
             }
             const avg = totalGames > 0 ? Math.round(totalScore / totalGames) : 0;
             $('teamRecord').textContent = `${recordGames.length} session${recordGames.length !== 1 ? 's' : ''} · ${totalGames} games · Avg: ${avg} · High: ${highGame}`;
+            try {
+                renderScoreline({
+                    bowling: true, avg, high: highGame,
+                    games: totalGames, sessions: recordGames.length,
+                });
+            } catch (e) { console.error('scoreline render failed:', e); }
         } else {
             let w = 0, l = 0, t = 0;
             for (const g of recordGames) {
@@ -2075,7 +2466,17 @@ async function loadPastGames() {
             let rec = `${w}W-${l}L`;
             if (t > 0) rec += `-${t}T`;
             $('teamRecord').textContent = `${rec} · ${recordGames.length} game${recordGames.length !== 1 ? 's' : ''}`;
+            // Win % counts a tie as half, the usual sports convention. Decided
+            // games only — an unplayed 0-0 shell isn't in recordGames anyway.
+            const decided = w + l + t;
+            const pct = decided > 0
+                ? ((w + t / 2) / decided).toFixed(3).replace(/^0/, '')
+                : '—';
+            try { renderScoreline({ bowling: false, w, l, t, pct }); }
+            catch (e) { console.error('scoreline render failed:', e); }
         }
+        // Stage may have been waiting on a replay fallback.
+        try { renderStage(); } catch (e) { console.error('stage render failed:', e); }
     } catch (e) {
         console.error('Past games error:', e);
         $('pastGames').innerHTML = '<div class="empty">Unable to load past games</div>';
@@ -2204,6 +2605,12 @@ function listenForLive() {
     const streamUrl = hubProfile.activeStreamUrl || '';
     const code = hubProfile.activeStreamCode || '';
     if (!code && !streamUrl) return;
+
+    // 2026-08-02 — A live game owns the top of the page. Tell the stage to
+    // stand down so the countdown/replay card doesn't compete with it for
+    // the same slot. Re-rendering is cheap and safe if the stage isn't up yet.
+    stageHasLive = true;
+    try { renderStage(); } catch (e) { console.error('stage render failed:', e); }
 
     // Build the body once. When streamUrl is YouTube/Twitch we drop the
     // iframe inline so viewers stay on the team hub. Otherwise we fall
