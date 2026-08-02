@@ -148,16 +148,23 @@ html, body {
 
 /* Horizontal schedule rail. Overflow is on the rail itself so the page
    body never scrolls sideways. */
+/* Bottom margin trimmed to offset the rail's 12px top padding, so the gap
+   between the heading and the cards stays where it was. */
 .tp-railhead {
     display: flex; align-items: baseline; justify-content: space-between;
-    padding: 0 24px; margin: 22px 0 10px;
+    padding: 0 24px; margin: 22px 0 0;
 }
 .tp-railhead .l {
     font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--accent);
 }
+/* Top padding is load-bearing, not spacing: `overflow-x: auto` makes the
+   spec compute overflow-y to `auto` too, so this is a scroll box on BOTH
+   axes and anything sticking out above the content edge is clipped. The
+   NEXT badge overhangs its card by 7px, so the rail needs enough headroom
+   to contain it. Eric caught it cut in half at 2px. Keep >= 10px. */
 .tp-rail {
-    display: flex; gap: 10px; overflow-x: auto; padding: 2px 24px 6px;
+    display: flex; gap: 10px; overflow-x: auto; padding: 12px 24px 6px;
     scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
 }
 .tp-rail::-webkit-scrollbar { height: 0; }
