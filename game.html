@@ -582,6 +582,42 @@ html, body {
 .stream-link:hover { border-color: var(--accent); color: var(--accent); }
 .stream-link.primary { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
 
+/* ── Video hierarchy (2026-08-03) ──────────────────────────────────────
+   Every video used to render as an identical "▶ YouTube" chip, so a game
+   with a full recording, a highlight cut and five per-player reels looked
+   like seven interchangeable links. Mirrors the app's Manage-game video
+   list: grouped by kind, named, with a thumbnail. */
+.vid-group + .vid-group { margin-top: 18px; }
+.vid-group-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+}
+.vid-list { display: flex; flex-direction: column; gap: 8px; }
+.vid-row {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 8px; border-radius: 10px; text-align: left; cursor: pointer;
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+    color: var(--text-primary); font: inherit;
+}
+.vid-row:hover { border-color: var(--accent); }
+.vid-row.current { border-color: var(--accent); background: var(--accent-dim); }
+.vid-thumb {
+    flex: 0 0 auto; width: 84px; height: 47px; border-radius: 6px;
+    object-fit: cover; background: var(--bg-elevated);
+}
+.vid-thumb-fallback {
+    flex: 0 0 auto; width: 84px; height: 47px; border-radius: 6px;
+    background: var(--bg-elevated); display: flex; align-items: center;
+    justify-content: center; font-size: 18px;
+}
+.vid-meta { min-width: 0; flex: 1; }
+.vid-title {
+    font-size: 13px; font-weight: 700;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vid-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.vid-now { font-size: 11px; font-weight: 700; color: var(--accent); }
+
 .share-row {
     display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;
 }
@@ -1738,30 +1774,77 @@ function renderGame(hub, game) {
     // links open externally as before. The currently-playing entry is
     // highlighted with the orange "Now Playing" treatment.
     if (streams.length > 0) {
+        // 2026-08-03 — group videos the way the app's Manage-game list does:
+        // Full game, then Highlights, then a row per player's reel. Previously
+        // every entry was an identical "▶ YouTube" chip, so a game with seven
+        // videos looked like seven interchangeable links and you had to open
+        // each one to find a specific player.
+        //
+        // Classification reads the upload title the app writes
+        // ("Volleyball — Spikers vs AWAY — 2026-08-03 — Audrey Highlights").
+        // A live stream or a hand-added link has no such title and falls back
+        // to the platform name, exactly as before.
+        const classifyStream = (s) => {
+            const label = (s.label || '').trim();
+            const m = label.match(/—\s*([^—]+?)\s+Highlights\s*$/i);
+            if (m) return { kind: 'reel', title: m[1].trim(), sub: 'Player highlights' };
+            if (/—\s*Highlight\s*$/i.test(label)) {
+                return { kind: 'highlight', title: 'Highlights', sub: 'Best moments' };
+            }
+            if (s.source === 'save_to_youtube' || label) {
+                return { kind: 'full', title: 'Full game', sub: label || 'Full recording' };
+            }
+            return { kind: 'full', title: platformLabel(s.platform || detectPlatform(s.url)), sub: 'Live stream / replay' };
+        };
+
+        // YouTube hosts a thumbnail for every video at a predictable URL, so a
+        // reel that was uploaded gets a real frame for free — no storage, no
+        // generation. Anything not on YouTube gets a glyph instead.
+        const thumbFor = (s) => {
+            const id = (typeof extractYouTubeId === 'function') ? extractYouTubeId(s.url) : null;
+            return id
+                ? `<img class="vid-thumb" loading="lazy" alt=""
+                        src="https://img.youtube.com/vi/${encodeURIComponent(id)}/mqdefault.jpg">`
+                : `<div class="vid-thumb-fallback">${platformIcon(s.platform || detectPlatform(s.url))}</div>`;
+        };
+
         const renderStreamsCard = () => {
             const grid = $('streamGrid');
-            grid.innerHTML = streams.map((s, i) => {
-                const p = s.platform || detectPlatform(s.url);
-                const embeddableHere = canEmbed(s.url, p);
-                // Find this stream's playlist index by URL match (a stream
-                // that's not embeddable returns -1 and stays a normal link).
+            const rows = streams.map((s, i) => {
+                const info = classifyStream(s);
                 const plIdx = playlistStreams.findIndex(x => x.url === s.url);
-                const isCurrent = embeddableHere && plIdx === playlistIndex;
-                const isInPlaylist = plIdx >= 0;
-                if (isInPlaylist) {
-                    // Inline-jump button
-                    return `<button class="stream-link${isCurrent ? ' primary' : ''}"
-                                    type="button" data-pl-idx="${plIdx}">
-                        ${platformIcon(p)} ${platformLabel(p)}${isCurrent ? ' &mdash; Now Playing' : ''}
-                    </button>`;
-                }
-                // Non-embeddable: open externally
-                return `<a class="stream-link" href="${s.url}" target="_blank" rel="noopener">
-                    ${platformIcon(p)} ${platformLabel(p)}
-                </a>`;
+                return { s, info, plIdx, isCurrent: plIdx >= 0 && plIdx === playlistIndex };
+            });
+            const groups = [
+                { key: 'full',      label: 'Full game' },
+                { key: 'highlight', label: 'Highlights' },
+                { key: 'reel',      label: 'Player highlights' },
+            ];
+            grid.className = '';   // drop the flex chip grid; these are stacked rows
+            grid.innerHTML = groups.map(g => {
+                const mine = rows.filter(r => r.info.kind === g.key);
+                if (!mine.length) return '';
+                const items = mine.map(r => {
+                    const inner = `
+                        ${thumbFor(r.s)}
+                        <div class="vid-meta">
+                            <div class="vid-title">${escapeHtml(r.info.title)}</div>
+                            <div class="vid-sub">${escapeHtml(r.info.sub)}</div>
+                        </div>
+                        ${r.isCurrent ? '<div class="vid-now">Now playing</div>' : ''}`;
+                    // Embeddable entries jump the inline player; anything else
+                    // stays an external link, same rule as before.
+                    return r.plIdx >= 0
+                        ? `<button class="vid-row${r.isCurrent ? ' current' : ''}" type="button"
+                                   data-pl-idx="${r.plIdx}">${inner}</button>`
+                        : `<a class="vid-row" href="${r.s.url}" target="_blank" rel="noopener">${inner}</a>`;
+                }).join('');
+                return `<div class="vid-group">
+                    <div class="vid-group-label">${g.label}${mine.length > 1 ? ` · ${mine.length}` : ''}</div>
+                    <div class="vid-list">${items}</div>
+                </div>`;
             }).join('');
-            // Wire jump-to-index buttons.
-            grid.querySelectorAll('button.stream-link[data-pl-idx]').forEach(btn => {
+            grid.querySelectorAll('button.vid-row[data-pl-idx]').forEach(btn => {
                 btn.onclick = () => {
                     const idx = parseInt(btn.dataset.plIdx, 10);
                     if (!Number.isNaN(idx)) mountStreamAtIndex(idx);
