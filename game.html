@@ -1786,13 +1786,26 @@ function renderGame(hub, game) {
         // to the platform name, exactly as before.
         const classifyStream = (s) => {
             const label = (s.label || '').trim();
+            // Prefer the EXPLICIT fields the app writes (v1.1.1123+). Parsing
+            // the title was the first attempt and it can't work for anything
+            // uploaded before titles carried names — the name simply wasn't
+            // recorded. Structure belongs in fields, not in prose.
+            const kind = (s.kind || '').toLowerCase();
+            const player = (s.playerName || '').trim();
+            if (kind === 'reel' || player) {
+                return { kind: 'reel', title: player || 'Player', sub: 'Player highlights' };
+            }
+            if (kind === 'highlight') return { kind: 'highlight', title: 'Highlights', sub: 'Best moments' };
+            if (kind === 'full') return { kind: 'full', title: 'Full game', sub: 'Full recording' };
+
+            // Legacy fallback — titles written before the app sent structure.
             const m = label.match(/—\s*([^—]+?)\s+Highlights\s*$/i);
             if (m) return { kind: 'reel', title: m[1].trim(), sub: 'Player highlights' };
             if (/—\s*Highlight\s*$/i.test(label)) {
                 return { kind: 'highlight', title: 'Highlights', sub: 'Best moments' };
             }
             if (s.source === 'save_to_youtube' || label) {
-                return { kind: 'full', title: 'Full game', sub: label || 'Full recording' };
+                return { kind: 'full', title: 'Full game', sub: 'Full recording' };
             }
             return { kind: 'full', title: platformLabel(s.platform || detectPlatform(s.url)), sub: 'Live stream / replay' };
         };
