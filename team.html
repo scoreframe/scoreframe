@@ -108,6 +108,41 @@ html, body {
     font-variant-numeric: tabular-nums; color: var(--text-primary);
 }
 .tp-sl.win .v { color: var(--accent); }
+/* In-app team identity. The app hides .team-header (it draws its own bar), so
+   in-app there was NO team name, colours or logo at all — just anonymous stat
+   boxes. Eric 2026-08-03. Shown ONLY under body.app so a browser, which still
+   renders the real header, doesn't get two heroes. */
+#appTeamHero { display: none; }
+body.app #appTeamHero { display: block; margin: 0 24px 4px; }
+.app-hero-bar { height: 5px; border-radius: 3px; margin-bottom: 12px; }
+.app-hero-row { display: flex; align-items: center; gap: 12px; }
+.app-hero-emoji { font-size: 30px; line-height: 1; }
+.app-hero-name {
+    font-size: 22px; font-weight: 800; letter-spacing: -0.3px;
+    color: var(--text-primary);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-hero-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.app-hero-logo {
+    width: 44px; height: 44px; border-radius: 22px; object-fit: cover;
+}
+
+/* Share row — parity with the game page's "Share this game". */
+.team-share-card { margin: 18px 24px 24px; }
+.team-share-label {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+}
+.team-share-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.team-share-btn {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 12px 10px; border-radius: 10px; cursor: pointer;
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+    color: var(--text-primary); font-size: 13px; font-weight: 700;
+    text-decoration: none; font-family: inherit;
+}
+.team-share-btn:hover { border-color: var(--accent); }
+
 /* Season summary — one box under the hero. Eric 2026-08-03: season name,
    W-L, games played, and how many are still to come. The hero scoreline
    answers "how good are they"; this answers "how far through the season". */
@@ -588,6 +623,17 @@ html, body {
              summary box directly below says the same thing with more context
              (played + still scheduled). Eric: "the top two areas are now
              redundant." renderScoreline() no-ops when this element is absent. -->
+        <div id="appTeamHero">
+            <div class="app-hero-bar" id="appHeroBar"></div>
+            <div class="app-hero-row">
+                <img id="appHeroLogo" class="app-hero-logo" alt="" style="display:none;">
+                <div class="app-hero-emoji" id="appHeroEmoji"></div>
+                <div style="min-width:0;flex:1;">
+                    <div class="app-hero-name" id="appHeroName"></div>
+                    <div class="app-hero-sub" id="appHeroSub"></div>
+                </div>
+            </div>
+        </div>
         <div id="seasonStatsCard" class="tp-season-card" style="display:none;"></div>
         <!-- 2026-06-08 — Pending follower requests (owner/managers only).
              Surfaced from the email notification's "manage on the web" link
@@ -653,6 +699,15 @@ html, body {
         <div class="section">
             <div class="section-title">📊 Past Games <span id="managerBadge" style="display:none;" class="manager-badge">MANAGER</span></div>
             <div id="pastGames"></div>
+        </div>
+
+        <!-- Share, at the bottom — parity with the game page. -->
+        <div class="team-share-card" id="teamShareCard" style="display:none;">
+            <div class="team-share-label">Share this team</div>
+            <div class="team-share-grid">
+                <button class="team-share-btn" type="button" id="teamCopyBtn">&#128279; Copy Link</button>
+                <button class="team-share-btn" type="button" id="teamShareBtn">&#128228; Share</button>
+            </div>
         </div>
     </div>
 </div>
@@ -1278,6 +1333,63 @@ function renderHeader() {
     $('teamName').textContent = p.teamName || 'Team';
     $('teamSport').textContent = sportName(p.sport);
     $('teamCode').textContent = hubCode;
+
+    // In-app hero — the app hides .team-header, so without this there's no
+    // team name, colour or logo on the page at all.
+    const heroBar = $('appHeroBar');
+    if (heroBar) heroBar.style.background =
+        `linear-gradient(90deg, ${p.color || '#1565C0'}, ${p.color2 || '#FFFFFF'})`;
+    const heroName = $('appHeroName');
+    if (heroName) heroName.textContent = p.teamName || 'Team';
+    const heroEmoji = $('appHeroEmoji');
+    if (heroEmoji) heroEmoji.textContent = sportEmoji(p.sport);
+    const heroLogo = $('appHeroLogo');
+    if (heroLogo) {
+        if (rawLogo && rawLogo.startsWith('http')) {
+            heroLogo.src = rawLogo; heroLogo.style.display = 'block';
+            if (heroEmoji) heroEmoji.style.display = 'none';   // logo replaces the emoji
+        } else {
+            heroLogo.style.display = 'none';
+            if (heroEmoji) heroEmoji.style.display = '';
+        }
+    }
+    const heroSub = $('appHeroSub');
+    if (heroSub) {
+        const season = (teamSeasons || []).find(x => x.id === selectedSeasonId)
+            || (teamSeasons || []).find(x => x.isActive && !x.endDate);
+        heroSub.textContent = [sportName(p.sport), season?.name].filter(Boolean).join('  ·  ');
+    }
+
+    // Share row. navigator.share is absent in a plain desktop browser and in
+    // some WebViews, so Copy Link is always the reliable path and Share is
+    // hidden when unsupported rather than failing on tap.
+    const shareCard = $('teamShareCard');
+    if (shareCard) {
+        const url = `https://scoreframe.app/team.html?code=${encodeURIComponent(hubCode)}`;
+        const copyBtn = $('teamCopyBtn');
+        if (copyBtn) copyBtn.onclick = async () => {
+            try {
+                await navigator.clipboard.writeText(url);
+                copyBtn.innerHTML = '&#9989; Copied';
+                setTimeout(() => { copyBtn.innerHTML = '&#128279; Copy Link'; }, 1800);
+            } catch (_) {
+                window.prompt('Copy this link:', url);   // clipboard blocked
+            }
+        };
+        const shareBtn = $('teamShareBtn');
+        if (shareBtn) {
+            if (navigator.share) {
+                shareBtn.onclick = () => {
+                    navigator.share({ title: p.teamName || 'Team', url }).catch(() => {});
+                };
+            } else {
+                shareBtn.style.display = 'none';
+                const grid = shareBtn.parentElement;
+                if (grid) grid.style.gridTemplateColumns = '1fr';
+            }
+        }
+        shareCard.style.display = 'block';
+    }
     document.title = `${p.teamName} — ScoreFrame`;
 
     // v1.1.366 — ARCHIVED banner. Insert (or remove) a yellow pill right
@@ -1558,8 +1670,18 @@ async function loadSeasons() {
         });
         teamSeasons = seasons;
         // Seasons arrived — if the stats already rendered without them, the
-        // box hid itself. Paint it now.
+        // box hid itself. Paint it now. Same for the in-app hero subtitle,
+        // which renderHeader built before the season name was known.
         try { renderSeasonStats(undefined); } catch (_) {}
+        try {
+            const heroSub = $('appHeroSub');
+            if (heroSub && hubProfile) {
+                const sel = seasons.find(x => x.id === selectedSeasonId)
+                    || seasons.find(x => x.isActive && !x.endDate);
+                heroSub.textContent = [sportName(hubProfile.sport), sel?.name]
+                    .filter(Boolean).join('  ·  ');
+            }
+        } catch (_) {}
         // Default selection = the active season, if any.
         const activeSeason = seasons.find(s => s.isActive && !s.endDate);
         selectedSeasonId = activeSeason?.id || null;
