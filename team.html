@@ -584,7 +584,10 @@ html, body {
              because it draws its own header, so anything placed there renders
              in a browser and is invisible in-app. That's exactly what happened
              to the record scoreline and the season summary. -->
-        <div id="teamScoreline" class="tp-scoreline" style="display:none;"></div>
+        <!-- 2026-08-03 — the Won/Lost/Win% strip was removed: the season
+             summary box directly below says the same thing with more context
+             (played + still scheduled). Eric: "the top two areas are now
+             redundant." renderScoreline() no-ops when this element is absent. -->
         <div id="seasonStatsCard" class="tp-season-card" style="display:none;"></div>
         <!-- 2026-06-08 — Pending follower requests (owner/managers only).
              Surfaced from the email notification's "manage on the web" link
@@ -2381,25 +2384,17 @@ async function loadPastGames() {
             // built below can be appended to both buffers without re-
             // building it.
             const isRecent = (g.date || 0) >= weekAgoMs;
-            // Collect stream links from streams array or legacy streamUrl/streamCode
-            let streamLinks = '';
             const streams = g.streams || [];
-            if (streams.length > 0) {
-                streamLinks = streams.map((s, i) => {
-                    if (!s.url) return '';
-                    if (s.platform === 'youtube' || s.url.includes('youtube.com') || s.url.includes('youtu.be')) {
-                        return `<a href="${s.url}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;text-decoration:none;color:#FF0000;font-size:12px;font-weight:700;"><svg width="20" height="14" viewBox="0 0 24 17"><path fill="#FF0000" d="M23.5 2.5A3 3 0 0 0 21.4.4C19.5 0 12 0 12 0S4.5 0 2.6.4A3 3 0 0 0 .5 2.5 31 31 0 0 0 0 8.5a31 31 0 0 0 .5 6A3 3 0 0 0 2.6 16.6C4.5 17 12 17 12 17s7.5 0 9.4-.4a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-6 31 31 0 0 0-.5-6z"/><path fill="#FFF" d="M9.6 12.2l6.3-3.7-6.3-3.7z"/></svg> YouTube</a>`;
-                    }
-                    if (s.platform === 'google_photos' || s.url.includes('photos.app.goo.gl') || s.url.includes('photos.google.com')) {
-                        return `<a href="${s.url}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;text-decoration:none;color:#4285F4;font-size:12px;font-weight:700;"><svg width="18" height="18" viewBox="0 0 24 24"><path fill="#FBBC04" d="M12 12V2.6c0-.9-.4-1.7-1-2.3A3.3 3.3 0 0 0 8.7-.7C6.5-.4 5 1.5 5 3.7V12h7z"/><path fill="#EA4335" d="M12 12h9.4c.9 0 1.7-.4 2.3-1 .6-.7.9-1.5.7-2.3-.3-2.2-2.2-3.7-4.4-3.7H12v7z"/><path fill="#4285F4" d="M12 12v9.4c0 .9.4 1.7 1 2.3.7.6 1.5.9 2.3.7 2.2-.3 3.7-2.2 3.7-4.4V12h-7z"/><path fill="#34A853" d="M12 12H2.6c-.9 0-1.7.4-2.3 1-.6.7-.9 1.5-.7 2.3.3 2.2 2.2 3.7 4.4 3.7H12v-7z"/></svg> Google Photos</a>`;
-                    }
-                    const label = s.platform === 'twitch' ? '▶ Twitch' : s.platform === 'facebook' ? '▶ Facebook' : `▶ Stream ${i+1}`;
-                    return `<a href="${s.url}" target="_blank" style="color:var(--accent);font-size:12px;font-weight:700;margin-right:12px;text-decoration:none;">${label}</a>`;
-                }).join('');
-            } else if (g.streamUrl || g.streamCode) {
-                const url = g.streamUrl || `/watch.html?code=${g.streamCode}`;
-                streamLinks = `<a href="${url}" target="_blank" style="color:var(--accent);font-size:12px;font-weight:700;text-decoration:none;">▶ Watch Replay</a>`;
-            }
+            // 2026-08-03 (Eric) — the card used to list EVERY stream as its own
+            // red "YouTube" button, so a game with eight reels drew eight
+            // buttons and swamped the score. One quiet indicator instead: does
+            // this game have video at all? Tapping the card already opens the
+            // game page, which lists them properly grouped by player.
+            // NOTHING is removed from the game — this is display only.
+            const hasYouTube = streams.some(x => x && x.url && (
+                    x.platform === 'youtube' ||
+                    x.url.includes('youtube.com') || x.url.includes('youtu.be')))
+                || !!(g.youtubeVideoUrl || g.youtubeHighlightsUrl);
             const isBowling = (g.sport || '').toUpperCase() === 'BOWLING';
             const ps = g.playerScores || '';
             let titleLine, scoreLine;
@@ -2452,7 +2447,7 @@ async function loadPastGames() {
                         <div class="game-date">${formatDate(g.date)}</div>
                         <div class="game-opponent">${titleLine}</div>
                         ${isBowling && scoreLine ? `<div style="margin-top:6px;color:var(--accent);font-weight:700;font-size:13px;">${scoreLine}</div>` : ''}
-                        ${(isManager && streamLinks) ? `<div style="margin-top:6px;" onclick="event.stopPropagation();"><div style="font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:0.05em;margin-bottom:2px;">STREAMS</div>${streamLinks}</div>` : ''}
+                        ${hasYouTube ? `<div style="margin-top:6px;display:flex;align-items:center;gap:5px;color:var(--text-secondary);font-size:11px;font-weight:600;"><svg width="18" height="13" viewBox="0 0 24 17" aria-label="Has video"><path fill="#FF0033" d="M23.5 2.5A3 3 0 0 0 21.4.4C19.5 0 12 0 12 0S4.5 0 2.6.4A3 3 0 0 0 .5 2.5 31 31 0 0 0 0 8.5a31 31 0 0 0 .5 6A3 3 0 0 0 2.6 16.6C4.5 17 12 17 12 17s7.5 0 9.4-.4a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-6 31 31 0 0 0-.5-6z"/><path fill="#FFF" d="M9.6 12.2l6.3-3.7-6.3-3.7z"/></svg>Video</div>` : ''}
                     </div>
                     ${!isBowling ? `<div class="score">${scoreLine}</div>` : ''}
                 </div>
