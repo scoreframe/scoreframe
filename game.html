@@ -1093,13 +1093,17 @@ function canEmbed(url, platform) {
     return false;
 }
 
-function buildEmbedSrc(url, platform) {
+function buildEmbedSrc(url, platform, autoplay) {
     const p = platform || detectPlatform(url || '');
     if (p === 'youtube') {
         const id = extractYouTubeId(url);
         if (!id) return null;
         const ps = new URLSearchParams({
             modestbranding: '1', rel: '0', playsinline: '1',
+            // Set only when the user picked this video. Autoplay without a
+            // gesture is blocked anyway, and an unrequested autoplay on page
+            // load is hostile.
+            ...(autoplay ? { autoplay: '1' } : {}),
             color: 'white', iv_load_policy: '3', enablejsapi: '1',
             // 2026-06-09 — `origin` is required by the YouTube IFrame API
             // for postMessage between iframe and parent to be trusted in
@@ -1860,7 +1864,7 @@ function renderGame(hub, game) {
             grid.querySelectorAll('button.vid-row[data-pl-idx]').forEach(btn => {
                 btn.onclick = () => {
                     const idx = parseInt(btn.dataset.plIdx, 10);
-                    if (!Number.isNaN(idx)) mountStreamAtIndex(idx);
+                    if (!Number.isNaN(idx)) mountStreamAtIndex(idx, true);
                 };
             });
         };
@@ -1920,12 +1924,12 @@ function mountPrimaryStream(stream) {
 /** Build the iframe + wire YouTube IFrame API hooks. Auto-advance to the
  *  next playlist entry on YT.PlayerState.ENDED if the user has the
  *  "Auto-play next" checkbox on. */
-function mountEmbed(stream) {
+function mountEmbed(stream, autoplay) {
     const url = stream.url;
     const platform = stream.platform || detectPlatform(url);
     const allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
     if (canEmbed(url, platform)) {
-        const src = buildEmbedSrc(url, platform);
+        const src = buildEmbedSrc(url, platform, autoplay === true);
         // Use a known iframe id so the IFrame API can attach to it for
         // YouTube embeds. enablejsapi=1 is already in the embed src.
         const iframeId = 'sf-primary-player';
@@ -1975,11 +1979,28 @@ function mountEmbed(stream) {
 /** Mount the playlist entry at `idx`, refresh the playlist controls, and
  *  re-render the "Watch & Replays" card so the active link gets the
  *  "Now Playing" highlight. Idempotent: clamping handles invalid indices. */
-function mountStreamAtIndex(idx) {
+/**
+ * @param userInitiated true when this came from tapping a row in Watch &
+ *   Replays. Eric 2026-08-03: picking a video there left it loaded but paused,
+ *   and you had to scroll back up and press play. A deliberate pick should
+ *   take you to the video AND start it.
+ *
+ *   Only on a user tap: autoplay is blocked by browsers without a gesture, and
+ *   scrolling the page on the initial automatic mount would yank the reader
+ *   away from wherever they were.
+ */
+function mountStreamAtIndex(idx, userInitiated) {
     if (playlistStreams.length === 0) return;
     playlistIndex = Math.max(0, Math.min(idx, playlistStreams.length - 1));
-    mountEmbed(playlistStreams[playlistIndex]);
+    mountEmbed(playlistStreams[playlistIndex], userInitiated === true);
     refreshPlaylistControls();
+    if (userInitiated === true) {
+        const slot = document.getElementById('playerSlot');
+        if (slot && typeof slot.scrollIntoView === 'function') {
+            try { slot.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            catch (_) { slot.scrollIntoView(); }   // older WebViews: no options arg
+        }
+    }
     // Re-render the streams card so the active item gets the orange "Now
     // Playing" treatment without us having to track DOM nodes manually.
     if (typeof window.__rerenderStreamsCard === 'function') {
@@ -1990,13 +2011,14 @@ function mountStreamAtIndex(idx) {
 function playlistAdvance() {
     if (playlistStreams.length === 0) return;
     if (playlistIndex >= playlistStreams.length - 1) return; // last; no wrap
-    mountStreamAtIndex(playlistIndex + 1);
+    // Next/prev are deliberate taps too — advancing should PLAY, not just load.
+    mountStreamAtIndex(playlistIndex + 1, true);
 }
 
 function playlistBack() {
     if (playlistStreams.length === 0) return;
     if (playlistIndex <= 0) return;
-    mountStreamAtIndex(playlistIndex - 1);
+    mountStreamAtIndex(playlistIndex - 1, true);
 }
 
 function refreshPlaylistControls() {
