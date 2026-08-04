@@ -560,8 +560,6 @@ html, body {
              same games loadPastGames() already counts, so the two can never
              disagree. Falls back to the plain #teamRecord text above when
              there's nothing to summarise. -->
-        <div id="teamScoreline" class="tp-scoreline" style="display:none;"></div>
-        <div id="seasonStatsCard" class="tp-season-card" style="display:none;"></div>
         <div id="liveBadge" style="display:none;" class="live-badge">● LIVE NOW</div>
         <div class="team-code" id="teamCode"></div>
 
@@ -581,6 +579,13 @@ html, body {
 
     <!-- Content (visible to approved subscribers + managers for private, everyone for public) -->
     <div id="teamContent" style="display:none;">
+        <!-- 2026-08-03 — these live OUTSIDE .team-header on purpose. The app
+             hides that whole block (`body.app .team-header { display:none }`)
+             because it draws its own header, so anything placed there renders
+             in a browser and is invisible in-app. That's exactly what happened
+             to the record scoreline and the season summary. -->
+        <div id="teamScoreline" class="tp-scoreline" style="display:none;"></div>
+        <div id="seasonStatsCard" class="tp-season-card" style="display:none;"></div>
         <!-- 2026-06-08 — Pending follower requests (owner/managers only).
              Surfaced from the email notification's "manage on the web" link
              so owners can approve/block without opening the app. -->
@@ -1549,6 +1554,9 @@ async function loadSeasons() {
             return (b.startDate || 0) - (a.startDate || 0);
         });
         teamSeasons = seasons;
+        // Seasons arrived — if the stats already rendered without them, the
+        // box hid itself. Paint it now.
+        try { renderSeasonStats(undefined); } catch (_) {}
         // Default selection = the active season, if any.
         const activeSeason = seasons.find(s => s.isActive && !s.endDate);
         selectedSeasonId = activeSeason?.id || null;
@@ -1935,10 +1943,22 @@ function renderStage() {
  * single season to summarise, and inventing one would be worse than omitting
  * the box.
  */
+let lastSeasonStats = null;   // re-rendered when seasons finish loading
+
 function renderSeasonStats(stats) {
+    // loadSeasons() is NOT awaited before loadPastGames(), so this can run
+    // before teamSeasons exists — which silently hid the box. Remember the
+    // numbers and let loadSeasons re-render once it knows the season.
+    if (stats !== undefined) lastSeasonStats = stats;
+    stats = lastSeasonStats;
     const el = $('seasonStatsCard');
     if (!el) return;
-    const season = (teamSeasons || []).find(s => s.id === selectedSeasonId);
+    // Fall back to the active season when nothing is explicitly selected —
+    // a single-season team never touches the switcher, and hiding the summary
+    // for exactly those teams would be backwards.
+    const season = (teamSeasons || []).find(s => s.id === selectedSeasonId)
+        || (teamSeasons || []).find(s => s.isActive && !s.endDate)
+        || ((teamSeasons || []).length === 1 ? teamSeasons[0] : null);
     if (!season || !stats) { el.style.display = 'none'; return; }
 
     // Upcoming = what the schedule rail is already showing, minus anything
