@@ -108,6 +108,28 @@ html, body {
     font-variant-numeric: tabular-nums; color: var(--text-primary);
 }
 .tp-sl.win .v { color: var(--accent); }
+/* Season summary — one box under the hero. Eric 2026-08-03: season name,
+   W-L, games played, and how many are still to come. The hero scoreline
+   answers "how good are they"; this answers "how far through the season". */
+.tp-season-card {
+    margin: 14px 24px 0; padding: 14px 16px;
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+    border-radius: 12px;
+}
+.tp-season-name {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+}
+.tp-season-grid { display: flex; gap: 10px; }
+.tp-season-cell { flex: 1 1 0; text-align: center; }
+.tp-season-cell .v {
+    font-size: 19px; font-weight: 800; line-height: 1;
+    font-variant-numeric: tabular-nums; color: var(--text-primary);
+}
+.tp-season-cell .k {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--text-muted); margin-top: 5px;
+}
 .tp-sl .k {
     font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--text-muted); margin-top: 5px;
@@ -539,6 +561,7 @@ html, body {
              disagree. Falls back to the plain #teamRecord text above when
              there's nothing to summarise. -->
         <div id="teamScoreline" class="tp-scoreline" style="display:none;"></div>
+        <div id="seasonStatsCard" class="tp-season-card" style="display:none;"></div>
         <div id="liveBadge" style="display:none;" class="live-badge">● LIVE NOW</div>
         <div class="team-code" id="teamCode"></div>
 
@@ -1903,6 +1926,49 @@ function renderStage() {
 /** Team record as a scoreline. Bowling has no W-L, so it gets series
  *  average / high game / total instead — same component, sport-aware values,
  *  exactly how the game cards already behave. */
+/**
+ * Season summary box. Fed by the SAME numbers the scoreline and the schedule
+ * rail already computed, so the three can never disagree about how many games
+ * a season has.
+ *
+ * Hidden when the team has no season selected — an "All seasons" view has no
+ * single season to summarise, and inventing one would be worse than omitting
+ * the box.
+ */
+function renderSeasonStats(stats) {
+    const el = $('seasonStatsCard');
+    if (!el) return;
+    const season = (teamSeasons || []).find(s => s.id === selectedSeasonId);
+    if (!season || !stats) { el.style.display = 'none'; return; }
+
+    // Upcoming = what the schedule rail is already showing, minus anything
+    // postponed (no date to count toward "still to play").
+    const upcoming = (scheduleUpcoming || []).filter(g => g.status !== 'postponed').length;
+
+    const cells = stats.bowling
+        ? [
+            { v: stats.sessions, k: 'Sessions' },
+            { v: stats.games, k: 'Games' },
+            { v: stats.avg, k: 'Average' },
+            { v: upcoming, k: 'Scheduled' },
+          ]
+        : [
+            { v: stats.w, k: 'Won' },
+            { v: stats.l, k: 'Lost' },
+            ...(stats.t > 0 ? [{ v: stats.t, k: 'Tied' }] : []),
+            { v: stats.played, k: 'Played' },
+            { v: upcoming, k: 'Scheduled' },
+          ];
+
+    el.innerHTML =
+        `<div class="tp-season-name">${escapeHtml(season.name || 'Season')}</div>` +
+        `<div class="tp-season-grid">` +
+        cells.map(c => `<div class="tp-season-cell"><div class="v">${escapeHtml(String(c.v))}</div>` +
+                       `<div class="k">${c.k}</div></div>`).join('') +
+        `</div>`;
+    el.style.display = 'block';
+}
+
 function renderScoreline(stats) {
     const el = $('teamScoreline');
     const textEl = $('teamRecord');
@@ -2400,7 +2466,7 @@ async function loadPastGames() {
             $('teamRecord').textContent = '';
             // 2026-08-02 — Clear the scoreline too, or switching to a season
             // with no games leaves the previous season's record on screen.
-            try { stageLastCompleted = null; renderScoreline(null); renderStage(); }
+            try { stageLastCompleted = null; renderScoreline(null); renderSeasonStats(null); renderStage(); }
             catch (e) { console.error('stage render failed:', e); }
             return;
         }
@@ -2426,7 +2492,7 @@ async function loadPastGames() {
             $('teamRecord').textContent = '';
             // 2026-08-02 — No completed games, so the stage has no replay to
             // fall back to. Re-render in case the schedule already resolved.
-            try { stageLastCompleted = null; renderScoreline(null); renderStage(); }
+            try { stageLastCompleted = null; renderScoreline(null); renderSeasonStats(null); renderStage(); }
             catch (e) { console.error('stage render failed:', e); }
             return;
         }
@@ -2459,10 +2525,12 @@ async function loadPastGames() {
             const avg = totalGames > 0 ? Math.round(totalScore / totalGames) : 0;
             $('teamRecord').textContent = `${recordGames.length} session${recordGames.length !== 1 ? 's' : ''} · ${totalGames} games · Avg: ${avg} · High: ${highGame}`;
             try {
-                renderScoreline({
+                const seasonStats = {
                     bowling: true, avg, high: highGame,
                     games: totalGames, sessions: recordGames.length,
-                });
+                };
+                renderScoreline(seasonStats);
+                renderSeasonStats(seasonStats);
             } catch (e) { console.error('scoreline render failed:', e); }
         } else {
             let w = 0, l = 0, t = 0;
@@ -2479,7 +2547,11 @@ async function loadPastGames() {
             const pct = decided > 0
                 ? ((w + t / 2) / decided).toFixed(3).replace(/^0/, '')
                 : '—';
-            try { renderScoreline({ bowling: false, w, l, t, pct }); }
+            try {
+                const seasonStats = { bowling: false, w, l, t, pct, played: recordGames.length };
+                renderScoreline(seasonStats);
+                renderSeasonStats(seasonStats);
+            }
             catch (e) { console.error('scoreline render failed:', e); }
         }
         // Stage may have been waiting on a replay fallback.
