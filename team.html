@@ -58,7 +58,11 @@ body[data-palette="floodlight"] {
         --accent: #1C5FA8 !important; --accent-dim: rgba(28,95,168,0.15) !important;
     }
 }
-body.app .team-header { display: none; }
+/* 2026-08-03 — was `body.app .team-header { display:none }`, which hid the
+   team's NAME, colours, logo, record, code and follow controls in the app, not
+   just site chrome. The real chrome — #accountBar and .footer — is hidden on
+   its own below. Eric: "you should only be hiding the ScoreFrame header with
+   the login and the footer that has the Glavin Labs stuff." */
 body.app .section:first-of-type { padding-top: 16px; }
 /* 2026-06-19 — Hide the page's own ScoreFrame brand bar + "Sign Out"
    control + Powered-by footer when rendered inside the native iOS/Android
@@ -108,25 +112,6 @@ html, body {
     font-variant-numeric: tabular-nums; color: var(--text-primary);
 }
 .tp-sl.win .v { color: var(--accent); }
-/* In-app team identity. The app hides .team-header (it draws its own bar), so
-   in-app there was NO team name, colours or logo at all — just anonymous stat
-   boxes. Eric 2026-08-03. Shown ONLY under body.app so a browser, which still
-   renders the real header, doesn't get two heroes. */
-#appTeamHero { display: none; }
-body.app #appTeamHero { display: block; margin: 0 24px 4px; }
-.app-hero-bar { height: 5px; border-radius: 3px; margin-bottom: 12px; }
-.app-hero-row { display: flex; align-items: center; gap: 12px; }
-.app-hero-emoji { font-size: 30px; line-height: 1; }
-.app-hero-name {
-    font-size: 22px; font-weight: 800; letter-spacing: -0.3px;
-    color: var(--text-primary);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.app-hero-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-.app-hero-logo {
-    width: 44px; height: 44px; border-radius: 22px; object-fit: cover;
-}
-
 /* Share row — parity with the game page's "Share this game". */
 .team-share-card { margin: 18px 24px 24px; }
 .team-share-label {
@@ -614,26 +599,10 @@ body.app #appTeamHero { display: block; margin: 0 24px 4px; }
 
     <!-- Content (visible to approved subscribers + managers for private, everyone for public) -->
     <div id="teamContent" style="display:none;">
-        <!-- 2026-08-03 — these live OUTSIDE .team-header on purpose. The app
-             hides that whole block (`body.app .team-header { display:none }`)
-             because it draws its own header, so anything placed there renders
-             in a browser and is invisible in-app. That's exactly what happened
-             to the record scoreline and the season summary. -->
         <!-- 2026-08-03 — the Won/Lost/Win% strip was removed: the season
              summary box directly below says the same thing with more context
              (played + still scheduled). Eric: "the top two areas are now
              redundant." renderScoreline() no-ops when this element is absent. -->
-        <div id="appTeamHero">
-            <div class="app-hero-bar" id="appHeroBar"></div>
-            <div class="app-hero-row">
-                <img id="appHeroLogo" class="app-hero-logo" alt="" style="display:none;">
-                <div class="app-hero-emoji" id="appHeroEmoji"></div>
-                <div style="min-width:0;flex:1;">
-                    <div class="app-hero-name" id="appHeroName"></div>
-                    <div class="app-hero-sub" id="appHeroSub"></div>
-                </div>
-            </div>
-        </div>
         <div id="seasonStatsCard" class="tp-season-card" style="display:none;"></div>
         <!-- 2026-06-08 — Pending follower requests (owner/managers only).
              Surfaced from the email notification's "manage on the web" link
@@ -872,8 +841,10 @@ function formatDateRange(startMs, endMs) {
 // Accept ?code= (canonical) or ?hub= (older email links)
 const _params = new URLSearchParams(location.search);
 hubCode = _params.get('code') || _params.get('hub') || location.pathname.split('/').pop();
-// v13 — Android WebView wrapper appends ?app=1; we hide the in-page
-// team-header via body.app since the app already shows its own chrome.
+// v13 — Android WebView wrapper appends ?app=1. body.app hides only the
+// SITE chrome the app already draws: the ScoreFrame account bar and the
+// Glavin Labs footer. The team's own header — name, colours, logo, record,
+// code, follow controls — stays visible in both. Eric 2026-08-03.
 if (_params.get('app') === '1') document.body.classList.add('app');
 // v1.1.389 — SSO bridge. The native app appends #auth=<firebaseIdToken>
 // to the WebView URL before loading. We detect that hash, exchange the
@@ -1334,32 +1305,6 @@ function renderHeader() {
     $('teamSport').textContent = sportName(p.sport);
     $('teamCode').textContent = hubCode;
 
-    // In-app hero — the app hides .team-header, so without this there's no
-    // team name, colour or logo on the page at all.
-    const heroBar = $('appHeroBar');
-    if (heroBar) heroBar.style.background =
-        `linear-gradient(90deg, ${p.color || '#1565C0'}, ${p.color2 || '#FFFFFF'})`;
-    const heroName = $('appHeroName');
-    if (heroName) heroName.textContent = p.teamName || 'Team';
-    const heroEmoji = $('appHeroEmoji');
-    if (heroEmoji) heroEmoji.textContent = sportEmoji(p.sport);
-    const heroLogo = $('appHeroLogo');
-    if (heroLogo) {
-        if (rawLogo && rawLogo.startsWith('http')) {
-            heroLogo.src = rawLogo; heroLogo.style.display = 'block';
-            if (heroEmoji) heroEmoji.style.display = 'none';   // logo replaces the emoji
-        } else {
-            heroLogo.style.display = 'none';
-            if (heroEmoji) heroEmoji.style.display = '';
-        }
-    }
-    const heroSub = $('appHeroSub');
-    if (heroSub) {
-        const season = (teamSeasons || []).find(x => x.id === selectedSeasonId)
-            || (teamSeasons || []).find(x => x.isActive && !x.endDate);
-        heroSub.textContent = [sportName(p.sport), season?.name].filter(Boolean).join('  ·  ');
-    }
-
     // Share row. navigator.share is absent in a plain desktop browser and in
     // some WebViews, so Copy Link is always the reliable path and Share is
     // hidden when unsupported rather than failing on tap.
@@ -1670,18 +1615,9 @@ async function loadSeasons() {
         });
         teamSeasons = seasons;
         // Seasons arrived — if the stats already rendered without them, the
-        // box hid itself. Paint it now. Same for the in-app hero subtitle,
-        // which renderHeader built before the season name was known.
+        // box hid itself. Paint it now.
         try { renderSeasonStats(undefined); } catch (_) {}
-        try {
-            const heroSub = $('appHeroSub');
-            if (heroSub && hubProfile) {
-                const sel = seasons.find(x => x.id === selectedSeasonId)
-                    || seasons.find(x => x.isActive && !x.endDate);
-                heroSub.textContent = [sportName(hubProfile.sport), sel?.name]
-                    .filter(Boolean).join('  ·  ');
-            }
-        } catch (_) {}
+
         // Default selection = the active season, if any.
         const activeSeason = seasons.find(s => s.isActive && !s.endDate);
         selectedSeasonId = activeSeason?.id || null;
