@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Internal page: keep it out of search results entirely. The super-user gate
+     below is a SOFT gate (the markup is still readable via View Source), so
+     noindex is doing real work here, not decoration. -->
+<meta name="robots" content="noindex, nofollow">
+<title>ScoreFrame — Dev Status</title>
+<style>
+  :root {
+    --ground: #0d0d0d;
+    --surface: #161513;
+    --raised: #1f1e1b;
+    --line: #2c2a26;
+    --ink: #f4f1ec;
+    --ink-dim: #a09990;
+    --ink-faint: #6f6862;
+    --accent: #ff9640;
+    --blocked: #ef5350;
+    --active: #f5c542;
+    --done: #4cc98a;
+    --parked: #7d7a86;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --ground: #f7f5f1;
+      --surface: #ffffff;
+      --raised: #fdfcfa;
+      --line: #e2ddd4;
+      --ink: #1b1916;
+      --ink-dim: #5f584f;
+      --ink-faint: #8a827a;
+      --accent: #c25e00;
+      --blocked: #c62f2b;
+      --active: #9a7400;
+      --done: #1f7a4d;
+      --parked: #6c6875;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0d0d0d; --surface: #161513; --raised: #1f1e1b; --line: #2c2a26;
+    --ink: #f4f1ec; --ink-dim: #a09990; --ink-faint: #6f6862;
+    --accent: #ff9640; --blocked: #ef5350; --active: #f5c542; --done: #4cc98a; --parked: #7d7a86;
+  }
+  :root[data-theme="light"] {
+    --ground: #f7f5f1; --surface: #ffffff; --raised: #fdfcfa; --line: #e2ddd4;
+    --ink: #1b1916; --ink-dim: #5f584f; --ink-faint: #8a827a;
+    --accent: #c25e00; --blocked: #c62f2b; --active: #9a7400; --done: #1f7a4d; --parked: #6c6875;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 28px 18px 72px; }
+
+  .masthead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .masthead h1 {
+    font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin: 0;
+  }
+  .masthead .rule { flex: 1; height: 1px; background: var(--line); min-width: 20px; }
+  .stamp {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; color: var(--ink-faint); letter-spacing: 0.02em;
+  }
+  .lede { color: var(--ink-dim); font-size: 14px; margin: 10px 0 26px; max-width: 62ch; }
+
+  h2 {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.11em;
+    color: var(--ink-faint); margin: 30px 0 12px;
+  }
+
+  /* Ship state */
+  .channels { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 8px; }
+  .ch {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 12px 13px; display: flex; flex-direction: column; gap: 3px;
+  }
+  .ch-name { font-size: 11px; color: var(--ink-dim); letter-spacing: 0.03em; }
+  .ch-ver {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+  }
+  .ch-note { font-size: 11px; color: var(--ink-faint); }
+  .ch.live { border-color: color-mix(in srgb, var(--accent) 42%, var(--line)); }
+  .ch.live .ch-ver { color: var(--accent); }
+
+  /* Item blocks */
+  .items { display: flex; flex-direction: column; gap: 8px; }
+  .item {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    border-left: 3px solid var(--st, var(--line));
+    padding: 13px 15px;
+  }
+  .item-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .item-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .item-body { font-size: 13.5px; color: var(--ink-dim); margin-top: 5px; max-width: 66ch; }
+  .item-body strong { color: var(--ink); font-weight: 600; }
+
+  .chip {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+    padding: 3px 7px; border-radius: 4px; white-space: nowrap;
+    color: var(--st); background: color-mix(in srgb, var(--st) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--st) 32%, transparent);
+  }
+  .b-blocked { --st: var(--blocked); }
+  .b-active  { --st: var(--active); }
+  .b-done    { --st: var(--done); }
+  .b-parked  { --st: var(--parked); }
+
+  /* Compact rows for lists that don't need a card each */
+  .rows { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+  .row {
+    display: flex; gap: 11px; align-items: baseline;
+    padding: 10px 14px; border-top: 1px solid var(--line); font-size: 13.5px;
+  }
+  .row:first-child { border-top: none; }
+  .row .v {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; font-variant-numeric: tabular-nums; color: var(--accent);
+    flex: 0 0 auto; min-width: 68px;
+  }
+  .row .t { color: var(--ink-dim); }
+  .row .t b { color: var(--ink); font-weight: 600; }
+
+  .foot {
+    margin-top: 34px; padding-top: 14px; border-top: 1px solid var(--line);
+    font-size: 12px; color: var(--ink-faint); max-width: 66ch;
+  }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.88em; color: var(--ink); background: var(--raised);
+    padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line);
+  }
+</style>
+</head>
+<body>
+<!-- ============ SUPER-USER GATE — START ============ -->
+<!-- Visually hides the actual page until a super-user signs in.
+     Note: the HTML is still readable via View Source — this is a
+     soft access gate, not server-enforced protection. Acceptable for
+     internal strategy pages; revisit if true secrecy is ever needed. -->
+<style id="sf-pre-gate-style">body > *:not(#sf-superuser-gate) { display: none !important; }</style>
+<div id="sf-superuser-gate" style="position:fixed;inset:0;background:#0D0D0D;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#E0E0E0;text-align:center;padding:20px;">
+  <div style="font-size:22px;margin-bottom:14px;color:#FF9640;font-weight:700;">Restricted</div>
+  <div id="sf-gate-msg" style="font-size:14px;color:#999;margin-bottom:20px;max-width:420px;line-height:1.4;">Internal page. Sign in with a super-user Google account to continue.</div>
+  <button id="sf-gate-btn" style="background:#FF9640;color:#0D0D0D;border:0;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Sign in with Google</button>
+  <div id="sf-gate-err" style="color:#EF4444;font-size:12px;margin-top:14px;min-height:1em;"></div>
+</div>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+const app = initializeApp({
+  apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+  authDomain: "scoreframe-deploy.firebaseapp.com",
+  projectId: "scoreframe-deploy",
+  storageBucket: "scoreframe-deploy.firebasestorage.app",
+  messagingSenderId: "728886280072",
+  appId: "1:728886280072:android:0050478669b89fc76b043d"
+});
+const db = getFirestore(app);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(()=>{});
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: 'select_account' });
+const ua = navigator.userAgent || '';
+const useRedirect = /iP(hone|ad|od)|Safari/i.test(ua) && !/Chrome|CriOS|FxiOS/i.test(ua);
+const $g = document.getElementById('sf-superuser-gate');
+const $msg = document.getElementById('sf-gate-msg');
+const $btn = document.getElementById('sf-gate-btn');
+const $err = document.getElementById('sf-gate-err');
+const $style = document.getElementById('sf-pre-gate-style');
+async function signIn() {
+  $err.textContent = '';
+  try {
+    if (useRedirect) await signInWithRedirect(auth, provider);
+    else await signInWithPopup(auth, provider);
+  } catch (e) { $err.textContent = e.message || String(e); }
+}
+$btn.onclick = signIn;
+getRedirectResult(auth).catch(()=>{});
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    $msg.textContent = 'Internal page. Sign in with a super-user Google account to continue.';
+    $btn.textContent = 'Sign in with Google';
+    $btn.onclick = signIn;
+    return;
+  }
+  let isSuper = false;
+  try {
+    const snap = await getDoc(doc(db, 'app_config', 'super_users'));
+    const uids = snap.exists() ? (snap.data().uids || []) : [];
+    isSuper = Array.isArray(uids) && uids.includes(user.uid);
+  } catch (e) { console.warn('super-user check failed:', e); }
+  if (!isSuper) {
+    $msg.textContent = `Signed in as ${user.email}, but this account isn't on the super-user list.`;
+    $btn.textContent = 'Sign out';
+    $btn.onclick = async () => { await signOut(auth); location.reload(); };
+    return;
+  }
+  $style.remove();
+  $g.remove();
+});
+</script>
+<!-- ============ SUPER-USER GATE — END ============ -->
+
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>ScoreFrame — Dev Status</h1>
+    <span class="rule"></span>
+    <span class="stamp">5 Aug 2026</span>
+  </div>
+  <p class="lede">
+    What's moving right now, and what's waiting on you. Feature-by-feature detail
+    lives on the parity page; history lives in the session logs.
+  </p>
+
+  <h2>Where the code is</h2>
+  <div class="channels">
+    <div class="ch live">
+      <span class="ch-name">Play production</span>
+      <span class="ch-ver">1.1.1106</span>
+      <span class="ch-note">100% rollout · 51 behind</span>
+    </div>
+    <div class="ch">
+      <span class="ch-name">Android testers</span>
+      <span class="ch-ver">1.1.1157</span>
+      <span class="ch-note">App Distribution</span>
+    </div>
+    <div class="ch">
+      <span class="ch-name">iOS TestFlight</span>
+      <span class="ch-ver">1.2.173</span>
+      <span class="ch-note">build 586</span>
+    </div>
+    <div class="ch">
+      <span class="ch-name">Play alpha</span>
+      <span class="ch-ver">1.1.935</span>
+      <span class="ch-note">stale — ignore</span>
+    </div>
+  </div>
+
+  <h2>Needs a decision from you</h2>
+  <div class="items">
+    <div class="item b-blocked">
+      <div class="item-head">
+        <span class="item-title">Push to production?</span>
+        <span class="chip">Blocking</span>
+      </div>
+      <p class="item-body">
+        1106 → 1157 is <strong>51 builds in one jump</strong>. The alternative is
+        cherry-picking just the safe fixes onto something closer to 1106.
+        Everything else on this page waits on this — including the hub sweep,
+        which old clients would undo.
+      </p>
+    </div>
+    <div class="item b-parked">
+      <div class="item-head">
+        <span class="item-title">Validate the Club price</span>
+        <span class="chip">Tabled</span>
+      </div>
+      <p class="item-body">
+        <strong>Tabled at your call, 5 Aug.</strong> When it comes back: take
+        $120/team/season to two or three club directors, and ask what they pay for
+        video now and what their board approves without a meeting. Specs are
+        written and ready whenever a prospect turns up.
+      </p>
+    </div>
+    <div class="item b-blocked">
+      <div class="item-head">
+        <span class="item-title">Team page screenshot for the Play listing</span>
+        <span class="chip">Small</span>
+      </div>
+      <p class="item-body">Needs one of the current eight dropped to make room.</p>
+    </div>
+  </div>
+
+  <h2>Ready, waiting on something</h2>
+  <div class="items">
+    <div class="item b-active">
+      <div class="item-head">
+        <span class="item-title">Unshared-hub sweep</span>
+        <span class="chip">Hold</span>
+      </div>
+      <p class="item-body">
+        Written and dry-run clean: would retire <strong>73 hubs that were never
+        actually shared</strong>, keep 15. Teams, rosters, games and stats untouched.
+        <strong>Don't run it until a production build with lazy minting has
+        adoption</strong> — 1106 clients re-mint hubs on every save, so today it would
+        just churn.
+      </p>
+    </div>
+    <div class="item b-active">
+      <div class="item-head">
+        <span class="item-title">Marketing email</span>
+        <span class="chip">Hold</span>
+      </div>
+      <p class="item-body">
+        Held pending iOS App Store review. Check with
+        <code>node functions/check_ios_review.js</code>.
+      </p>
+    </div>
+  </div>
+
+  <h2>In progress</h2>
+  <div class="items">
+    <div class="item b-active">
+      <div class="item-head">
+        <span class="item-title">iOS parity backlog</span>
+        <span class="chip">6 of 10 done</span>
+      </div>
+      <p class="item-body">
+        <strong>8 of 10 done.</strong> Highlight Editor, the upload cluster, both stream
+        fixes, bowling player favourites and end-game ordering have all shipped.
+        Left: the end-of-game upload prompt, and the controller reel prompt. Both
+        touch the async end-game flow and want device testing rather than a blind
+        port.
+      </p>
+    </div>
+    <div class="item b-done">
+      <div class="item-head">
+        <span class="item-title">iOS edit → manage-overlay migration</span>
+        <span class="chip">Audited — no gaps left</span>
+      </div>
+      <p class="item-body">
+        Functionality is moving out of the team Edit screen into the MANAGE THIS
+        TEAM overlay, and the port stalled part-way. <strong>Sharing was the
+        casualty</strong> — there was no way to publish a team at all, and the banner
+        pointed at a control that didn't exist. Fixed in 1.2.170, along with an
+        editor that replaced itself with a spinner the moment you cleared the team
+        name. <strong>Not user-facing</strong> — the App Store build still has the old
+        working Edit path. All three overlays have now been audited line-by-line
+        against Android and match, and every hub-management action (Visibility,
+        Managers, Coaches, Subscribers, Sync Roster, Transfer Ownership, Remove
+        Hub) is present on iOS. Sharing was the only casualty.
+      </p>
+    </div>
+    <div class="item b-parked">
+      <div class="item-head">
+        <span class="item-title">Server-side share limits</span>
+        <span class="chip">May be unnecessary</span>
+      </div>
+      <p class="item-body">
+        The caps are still a UX gate only. But once lazy minting is on production,
+        most of the need disappears — so this is worth revisiting <em>after</em>
+        adoption, not before.
+      </p>
+    </div>
+  </div>
+
+  <h2>Shipped 5 Aug</h2>
+  <div class="rows">
+    <div class="row"><span class="v">iOS 586</span><span class="t"><b>End-game box stops narrating the burn</b> — it no longer opens over live video</span></div>
+    <div class="row"><span class="v">iOS 585</span><span class="t"><b>Bowling favourites can be a bowler</b>, not just a team — iOS had the inverse of Android's old gap</span></div>
+    <div class="row"><span class="v">iOS 584</span><span class="t"><b>Clear Stats on a player</b> — the function existed, the button never did</span></div>
+    <div class="row"><span class="v">iOS 583</span><span class="t"><b>iOS team sharing works again</b> — plus the editor no longer vanishes mid-edit</span></div>
+    <div class="row"><span class="v">iOS 582</span><span class="t"><b>Highlight Editor</b> — tag plays after the game, build per-player reels</span></div>
+    <div class="row"><span class="v">iOS 582</span><span class="t"><b>Upload cancel, Wi-Fi-only, failure reasons</b> — and a retry that knows what failed</span></div>
+    <div class="row"><span class="v">iOS 582</span><span class="t"><b>Upload videos that live in Photos</b> — the ones iOS had moved out of app storage</span></div>
+    <div class="row"><span class="v">iOS 582</span><span class="t"><b>Stream fixes</b> — delete commits immediately; stream highlights are editable</span></div>
+    <div class="row"><span class="v">1157</span><span class="t"><b>Team names no longer wiped on downgrade</b> — they were never a Pro feature</span></div>
+    <div class="row"><span class="v">1156</span><span class="t"><b>Sharing limits</b> — free 1, Pro 3 per sport; nothing taken from anyone</span></div>
+    <div class="row"><span class="v">1155</span><span class="t"><b>Lazy hub minting</b> — saved opponents stay private instead of becoming public pages</span></div>
+    <div class="row"><span class="v">1154</span><span class="t"><b>Reels attach to their game</b> — even when the game has no recording session</span></div>
+    <div class="row"><span class="v">1153</span><span class="t"><b>Editor tags actually save</b>, and Google Ads gets the real price</span></div>
+  </div>
+
+  <h2>Known open</h2>
+  <div class="rows">
+    <div class="row"><span class="t">Husk game records; cross-device delete and tombstones don't work</span></div>
+    <div class="row"><span class="t">Deletion-path audit across the 10 protected collections, plus a sanctioned safe-delete writer</span></div>
+    <div class="row"><span class="t">4 orphan <code>hubIndex</code> entries and ~6 hubs the sweep can't reach — small reconciliation</span></div>
+    <div class="row"><span class="t"><code>hubPublishGated</code> can't be removed yet — the repair machinery is still live</span></div>
+  </div>
+
+  <h2>Settled — not up for debate again</h2>
+  <div class="rows">
+    <div class="row"><span class="t"><b>Tiers:</b> free shares 1 team, Pro shares 3 per sport, Club unlimited in one program</span></div>
+    <div class="row"><span class="t"><b>Saving teams is unlimited</b> on every tier — the limit is on sharing, not saving</span></div>
+    <div class="row"><span class="t"><b>Downgrades take nothing away</b> — limits apply only to the next new share. Don't rebuild the picker</span></div>
+    <div class="row"><span class="t"><b>Club tier waits for a real prospect</b> — specs are written and ready</span></div>
+    <div class="row"><span class="t"><b>Co-managed teams</b> don't count against a manager — deferred into the Club design</span></div>
+  </div>
+
+  <p class="foot">
+    Kept current at the end of each session, from <code>STATUS.md</code> in the Android
+    repo. If this page and that file ever disagree, the file is right — tell me and
+    I'll fix the page.
+  </p>
+
+</div>
+</body>
+</html>
