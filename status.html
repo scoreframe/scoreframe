@@ -237,8 +237,8 @@ onAuthStateChanged(auth, async (user) => {
     </div>
     <div class="ch">
       <span class="ch-name">iOS TestFlight</span>
-      <span class="ch-ver">1.2.173</span>
-      <span class="ch-note">build 586</span>
+      <span class="ch-ver">1.2.174</span>
+      <span class="ch-note">build 587</span>
     </div>
     <div class="ch">
       <span class="ch-name">Play alpha</span>
@@ -311,17 +311,17 @@ onAuthStateChanged(auth, async (user) => {
 
   <h2>In progress</h2>
   <div class="items">
-    <div class="item b-active">
+    <div class="item b-done">
       <div class="item-head">
         <span class="item-title">iOS parity backlog</span>
-        <span class="chip">6 of 10 done</span>
+        <span class="chip">Complete — 10 of 10</span>
       </div>
       <p class="item-body">
-        <strong>8 of 10 done.</strong> Highlight Editor, the upload cluster, both stream
-        fixes, bowling player favourites and end-game ordering have all shipped.
-        Left: the end-of-game upload prompt, and the controller reel prompt. Both
-        touch the async end-game flow and want device testing rather than a blind
-        port.
+        <strong>Done.</strong> Highlight Editor, the upload cluster, both stream fixes,
+        bowling player favourites, end-game ordering and the post-game upload
+        prompt have all shipped. The controller reel prompt turned out not to be
+        missing at all — the full camera↔controller round trip already existed on
+        iOS and matches Android; the backlog entry was simply wrong.
       </p>
     </div>
     <div class="item b-done">
@@ -357,6 +357,7 @@ onAuthStateChanged(auth, async (user) => {
 
   <h2>Shipped 5 Aug</h2>
   <div class="rows">
+    <div class="row"><span class="v">iOS 587</span><span class="t"><b>Post-game upload nudge</b> — asks once the end-game work has actually finished, not on top of it</span></div>
     <div class="row"><span class="v">iOS 586</span><span class="t"><b>End-game box stops narrating the burn</b> — it no longer opens over live video</span></div>
     <div class="row"><span class="v">iOS 585</span><span class="t"><b>Bowling favourites can be a bowler</b>, not just a team — iOS had the inverse of Android's old gap</span></div>
     <div class="row"><span class="v">iOS 584</span><span class="t"><b>Clear Stats on a player</b> — the function existed, the button never did</span></div>
