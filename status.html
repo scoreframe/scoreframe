@@ -148,9 +148,9 @@
      internal strategy pages; revisit if true secrecy is ever needed. -->
 <style id="sf-pre-gate-style">body > *:not(#sf-superuser-gate) { display: none !important; }</style>
 <div id="sf-superuser-gate" style="position:fixed;inset:0;background:#0D0D0D;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#E0E0E0;text-align:center;padding:20px;">
-  <div style="font-size:22px;margin-bottom:14px;color:#FF9640;font-weight:700;">Restricted</div>
-  <div id="sf-gate-msg" style="font-size:14px;color:#999;margin-bottom:20px;max-width:420px;line-height:1.4;">Internal page. Sign in with a super-user Google account to continue.</div>
-  <button id="sf-gate-btn" style="background:#FF9640;color:#0D0D0D;border:0;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Sign in with Google</button>
+  <div id="sf-gate-title" style="font-size:22px;margin-bottom:14px;color:#FF9640;font-weight:700;">ScoreFrame</div>
+  <div id="sf-gate-msg" style="font-size:14px;color:#999;margin-bottom:20px;max-width:420px;line-height:1.4;">Checking access…</div>
+  <button id="sf-gate-btn" hidden style="background:#FF9640;color:#0D0D0D;border:0;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Sign in with Google</button>
   <div id="sf-gate-err" style="color:#EF4444;font-size:12px;margin-top:14px;min-height:1em;"></div>
 </div>
 <script type="module">
@@ -186,27 +186,56 @@ async function signIn() {
 }
 $btn.onclick = signIn;
 getRedirectResult(auth).catch(()=>{});
+const $title = document.getElementById('sf-gate-title');
+function unlock() { $style.remove(); $g.remove(); }
+// 2026-08-05 — Why the "log in every time" complaint: this gate used to render a
+// finished "Restricted / Sign in with Google" screen in STATIC HTML, before any
+// auth check ran. Firebase restores its session from IndexedDB asynchronously,
+// so on every visit you saw a login screen during that window, clicked it, and
+// got Google's account chooser (prompt:'select_account'). You were never signed
+// out — you were being shown a sign-in screen and taking it at its word. It now
+// opens on "Checking access…" with no button, and only offers sign-in once
+// onAuthStateChanged has actually reported nobody.
+//
+// The super-user verdict is also cached per-uid so a return visit unlocks
+// without waiting on a Firestore read, and a flaky read can't lock you out. That
+// cache is NOT a security weakening: this gate is already soft (the whole page
+// is readable via View Source), so it changes nothing an attacker couldn't do.
+const CACHE = (uid) => 'sf_super_ok_' + uid;
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
+    $title.textContent = 'Restricted';
     $msg.textContent = 'Internal page. Sign in with a super-user Google account to continue.';
+    $btn.hidden = false;
     $btn.textContent = 'Sign in with Google';
     $btn.onclick = signIn;
     return;
   }
-  let isSuper = false;
+  // Known-good from a previous visit: unlock immediately, then re-verify in the
+  // background so a revoked account still loses access on the next load.
+  const cached = localStorage.getItem(CACHE(user.uid)) === '1';
+  if (cached) unlock();
+  let isSuper = cached;
   try {
     const snap = await getDoc(doc(db, 'app_config', 'super_users'));
     const uids = snap.exists() ? (snap.data().uids || []) : [];
     isSuper = Array.isArray(uids) && uids.includes(user.uid);
-  } catch (e) { console.warn('super-user check failed:', e); }
+    localStorage.setItem(CACHE(user.uid), isSuper ? '1' : '0');
+  } catch (e) {
+    // Offline or blocked. Trust the cache if we had one; otherwise fall through
+    // to the sign-out path rather than silently opening the page.
+    console.warn('super-user check failed:', e);
+  }
   if (!isSuper) {
+    if (cached) { location.reload(); return; }   // access revoked since last visit
+    $title.textContent = 'Restricted';
     $msg.textContent = `Signed in as ${user.email}, but this account isn't on the super-user list.`;
+    $btn.hidden = false;
     $btn.textContent = 'Sign out';
     $btn.onclick = async () => { await signOut(auth); location.reload(); };
     return;
   }
-  $style.remove();
-  $g.remove();
+  if (!cached) unlock();
 });
 </script>
 <!-- ============ SUPER-USER GATE — END ============ -->
