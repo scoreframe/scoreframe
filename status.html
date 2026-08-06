@@ -262,7 +262,7 @@ onAuthStateChanged(auth, async (user) => {
     <div class="ch">
       <span class="ch-name">Android testers</span>
       <span class="ch-ver">1.1.1157</span>
-      <span class="ch-note">App Distribution</span>
+      <span class="ch-note">App Distribution · not frozen</span>
     </div>
     <div class="ch">
       <span class="ch-name">iOS TestFlight</span>
@@ -276,18 +276,19 @@ onAuthStateChanged(auth, async (user) => {
     </div>
   </div>
 
-  <h2>Needs a decision from you</h2>
+  <h2>Needs you</h2>
   <div class="items">
-    <div class="item b-blocked">
+    <div class="item b-active">
       <div class="item-head">
-        <span class="item-title">Push to production?</span>
-        <span class="chip">Blocking</span>
+        <span class="item-title">Production push — when it feels solid</span>
+        <span class="chip">Your call, per build</span>
       </div>
       <p class="item-body">
-        1106 → 1157 is <strong>51 builds in one jump</strong>. The alternative is
-        cherry-picking just the safe fixes onto something closer to 1106.
-        Everything else on this page waits on this — including the hub sweep,
-        which old clients would undo.
+        <strong>Nothing is blocked on this.</strong> Both platforms keep improving on
+        the test channels; production goes out when the work is solid, and the hub
+        sweep runs after that has adoption. Worth knowing when you do:
+        1106 → 1157 is 51 builds, so a staged rollout is friendlier than 100% on
+        day one.
       </p>
     </div>
     <div class="item b-parked">
@@ -321,9 +322,9 @@ onAuthStateChanged(auth, async (user) => {
       <p class="item-body">
         Written and dry-run clean: would retire <strong>73 hubs that were never
         actually shared</strong>, keep 15. Teams, rosters, games and stats untouched.
-        <strong>Don't run it until a production build with lazy minting has
-        adoption</strong> — 1106 clients re-mint hubs on every save, so today it would
-        just churn.
+        <strong>Runs last</strong>, once a production build with lazy minting has
+        adoption — 1106 clients re-mint hubs on every save, so running it sooner is
+        pure churn.
       </p>
     </div>
     <div class="item b-active">
@@ -415,6 +416,7 @@ onAuthStateChanged(auth, async (user) => {
     <div class="row"><span class="t"><b>Tiers:</b> free shares 1 team, Pro shares 3 per sport, Club unlimited in one program</span></div>
     <div class="row"><span class="t"><b>Saving teams is unlimited</b> on every tier — the limit is on sharing, not saving</span></div>
     <div class="row"><span class="t"><b>Downgrades take nothing away</b> — limits apply only to the next new share. Don't rebuild the picker</span></div>
+    <div class="row"><span class="t"><b>Ship order:</b> improve both platforms on test channels → production when solid → then the sweep</span></div>
     <div class="row"><span class="t"><b>Club tier waits for a real prospect</b> — specs are written and ready</span></div>
     <div class="row"><span class="t"><b>Co-managed teams</b> don't count against a manager — deferred into the Club design</span></div>
   </div>
