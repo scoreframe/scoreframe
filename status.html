@@ -245,7 +245,7 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">5 Aug 2026</span>
+    <span class="stamp">8 Aug 2026</span>
   </div>
   <p class="lede">
     What's moving right now, and what's waiting on you. Feature-by-feature detail
@@ -257,17 +257,17 @@ onAuthStateChanged(auth, async (user) => {
     <div class="ch live">
       <span class="ch-name">Play production</span>
       <span class="ch-ver">1.1.1106</span>
-      <span class="ch-note">100% rollout · 51 behind</span>
+      <span class="ch-note">100% rollout · 63 behind</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1157</span>
+      <span class="ch-ver">1.1.1169</span>
       <span class="ch-note">App Distribution · not frozen</span>
     </div>
     <div class="ch">
       <span class="ch-name">iOS TestFlight</span>
-      <span class="ch-ver">1.2.174</span>
-      <span class="ch-note">build 587</span>
+      <span class="ch-ver">1.2.180</span>
+      <span class="ch-note">build 593 · built, not installed</span>
     </div>
     <div class="ch">
       <span class="ch-name">Play alpha</span>
@@ -278,6 +278,33 @@ onAuthStateChanged(auth, async (user) => {
 
   <h2>Needs you</h2>
   <div class="items">
+    <div class="item b-blocked">
+      <div class="item-head">
+        <span class="item-title">Unlock the iPhone so 1.2.180 can go on</span>
+        <span class="chip">One command away</span>
+      </div>
+      <p class="item-body">
+        The iOS side of the announce / upload-on-stop work is written and builds
+        clean, but it can't be installed: <em>Audrey iPhone 17</em> is paired yet the
+        developer disk image won't mount — which means locked — and <em>Eric's
+        iPhone</em> reads unavailable. Connect and unlock whichever you want it on;
+        nothing else is needed.
+      </p>
+    </div>
+    <div class="item b-blocked">
+      <div class="item-head">
+        <span class="item-title">Going live now emails followers, where before it only pushed</span>
+        <span class="chip">Behaviour change — say yes or no</span>
+      </div>
+      <p class="item-body">
+        Flagging this because it changes an <strong>existing</strong> flow, not just new
+        code. The new game-start email hangs off the once-per-game ledger, and going
+        live is what claims that ledger — which is exactly what keeps followers to one
+        notification per game. Real effect today: one team has 3 email followers who
+        will start receiving a "game is on" email. Say the word if you'd rather the
+        email fire only on upload.
+      </p>
+    </div>
     <div class="item b-active">
       <div class="item-head">
         <span class="item-title">Production push — when it feels solid</span>
@@ -287,7 +314,7 @@ onAuthStateChanged(auth, async (user) => {
         <strong>Nothing is blocked on this.</strong> Both platforms keep improving on
         the test channels; production goes out when the work is solid, and the hub
         sweep runs after that has adoption. Worth knowing when you do:
-        1106 → 1157 is 51 builds, so a staged rollout is friendlier than 100% on
+        1106 → 1169 is 63 builds, so a staged rollout is friendlier than 100% on
         day one.
       </p>
     </div>
@@ -383,6 +410,15 @@ onAuthStateChanged(auth, async (user) => {
         adoption, not before.
       </p>
     </div>
+  </div>
+
+  <h2>Shipped 7–8 Aug</h2>
+  <div class="rows">
+    <div class="row"><span class="v">CF</span><span class="t"><b>There is now a game-start email at all</b> — there never had been one, on either the upload path or go-live. The only game email in the system was the final-score recap</span></div>
+    <div class="row"><span class="v">CF</span><span class="t"><b>Coaches and managers get told a game is on</b> — the announcement only ever went to followers, so a co-manager you'd invited heard nothing. Nobody is told twice</span></div>
+    <div class="row"><span class="v">1169</span><span class="t"><b>Mid-game uploads reach the game page</b> — a game started fresh had no page on the server until End Game, so uploading a set at a time quietly did nothing</span></div>
+    <div class="row"><span class="v">iOS 593</span><span class="t"><b>All of the above on iOS</b> — plus the same hole found in Manage-game upload, where a failed write was only logged</span></div>
+    <div class="row"><span class="v">1168</span><span class="t"><b>Announcing is opt-in</b> — a tick box on the upload prompt, not a decision made for you</span></div>
   </div>
 
   <h2>Shipped 5 Aug</h2>
