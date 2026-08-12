@@ -245,7 +245,7 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">8 Aug 2026</span>
+    <span class="stamp">12 Aug 2026</span>
   </div>
   <p class="lede">
     What's moving right now, and what's waiting on you. Feature-by-feature detail
@@ -256,18 +256,18 @@ onAuthStateChanged(auth, async (user) => {
   <div class="channels">
     <div class="ch live">
       <span class="ch-name">Play production</span>
-      <span class="ch-ver">1.1.1106</span>
-      <span class="ch-note">100% rollout · 63 behind</span>
+      <span class="ch-ver">1.1.1179</span>
+      <span class="ch-note">pushed 12 Aug · in review</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1169</span>
-      <span class="ch-note">App Distribution · not frozen</span>
+      <span class="ch-ver">1.1.1179</span>
+      <span class="ch-note">App Distribution · same build</span>
     </div>
     <div class="ch">
-      <span class="ch-name">iOS TestFlight</span>
-      <span class="ch-ver">1.2.180</span>
-      <span class="ch-note">build 593 · built, not installed</span>
+      <span class="ch-name">iOS</span>
+      <span class="ch-ver">1.2.181</span>
+      <span class="ch-note">build 606 · simulators only, not shipped</span>
     </div>
     <div class="ch">
       <span class="ch-name">Play alpha</span>
@@ -280,62 +280,25 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item b-blocked">
       <div class="item-head">
-        <span class="item-title">Unlock the iPhone so 1.2.180 can go on</span>
-        <span class="chip">One command away</span>
+        <span class="item-title">Five product calls I deliberately didn't make</span>
+        <span class="chip">Yes / no on each</span>
       </div>
       <p class="item-body">
-        The iOS side of the announce / upload-on-stop work is written and builds
-        clean, but it can't be installed: <em>Audrey iPhone 17</em> is paired yet the
-        developer disk image won't mount — which means locked — and <em>Eric's
-        iPhone</em> reads unavailable. Connect and unlock whichever you want it on;
-        nothing else is needed.
+        <strong>1. Move the tracking prompt.</strong> It fires on onboarding page one,
+        before anyone has seen the app, and iOS never asks twice — a reflexive "no" is
+        permanent and costs roughly half the ad revenue on that user. Natural moment is
+        just before the first ad, which is now after their second video; anyone who buys
+        Pro first never sees it at all.<br><br>
+        <strong>2. Two upsells from one tap.</strong> Saving a second team shows the
+        upgrade dialog stacked <em>underneath</em> the share prompt.<br><br>
+        <strong>3. Sign-out destroys unsynced work.</strong> "Sign Out Without Sync"
+        wipes local-only teams and games and warns only "local data cleared".<br><br>
+        <strong>4. No GDPR consent SDK</strong> on either platform — Google requires one
+        for personalised ads to EEA/UK users.<br><br>
+        <strong>5. Fallback prices are stale</strong> — $5.99/$49.99 in the code versus
+        $7.99/$59.99 on the listing. Play overwrites them at runtime, so this only shows
+        if the store doesn't answer.
       </p>
-    </div>
-    <div class="item b-blocked">
-      <div class="item-head">
-        <span class="item-title">Going live now emails followers, where before it only pushed</span>
-        <span class="chip">Behaviour change — say yes or no</span>
-      </div>
-      <p class="item-body">
-        Flagging this because it changes an <strong>existing</strong> flow, not just new
-        code. The new game-start email hangs off the once-per-game ledger, and going
-        live is what claims that ledger — which is exactly what keeps followers to one
-        notification per game. Real effect today: one team has 3 email followers who
-        will start receiving a "game is on" email. Say the word if you'd rather the
-        email fire only on upload.
-      </p>
-    </div>
-    <div class="item b-active">
-      <div class="item-head">
-        <span class="item-title">Production push — when it feels solid</span>
-        <span class="chip">Your call, per build</span>
-      </div>
-      <p class="item-body">
-        <strong>Nothing is blocked on this.</strong> Both platforms keep improving on
-        the test channels; production goes out when the work is solid, and the hub
-        sweep runs after that has adoption. Worth knowing when you do:
-        1106 → 1169 is 63 builds, so a staged rollout is friendlier than 100% on
-        day one.
-      </p>
-    </div>
-    <div class="item b-parked">
-      <div class="item-head">
-        <span class="item-title">Validate the Club price</span>
-        <span class="chip">Tabled</span>
-      </div>
-      <p class="item-body">
-        <strong>Tabled at your call, 5 Aug.</strong> When it comes back: take
-        $120/team/season to two or three club directors, and ask what they pay for
-        video now and what their board approves without a meeting. Specs are
-        written and ready whenever a prospect turns up.
-      </p>
-    </div>
-    <div class="item b-blocked">
-      <div class="item-head">
-        <span class="item-title">Team page screenshot for the Play listing</span>
-        <span class="chip">Small</span>
-      </div>
-      <p class="item-body">Needs one of the current eight dropped to make room.</p>
     </div>
   </div>
 
@@ -412,6 +375,17 @@ onAuthStateChanged(auth, async (user) => {
     </div>
   </div>
 
+  <h2>Shipped 12 Aug — to production</h2>
+  <div class="rows">
+    <div class="row"><span class="v">both</span><span class="t"><b>Teams made before signing in were being lost</b> — they only uploaded if you happened to sign in from the Home screen. From the Account tab, the obvious place, they stayed on the phone and invisible forever, because team lists read from the cloud. On iOS nothing uploaded on a normal sign-in <em>at all</em>. Sign-in now downloads your account then pushes up everything local — including seasons, career stats and logos, which an account switch used to delete outright</span></div>
+    <div class="row"><span class="v">1179</span><span class="t"><b>The camera permission was asked at the wrong moment, then not at all</b> — it fired on the Home screen before you'd picked a sport, and on the route a new user actually takes it was never requested, so you could reach the scoring screen with no camera and no prompt. Asked once now, after team and game setup</span></div>
+    <div class="row"><span class="v">both</span><span class="t"><b>"Enable Sharing" did nothing when signed out</b> — no dialog, straight back to Game Setup, so it looked like it had worked. It now asks you to create an account and resumes sharing afterwards. Same hole in the YouTube upload path</span></div>
+    <div class="row"><span class="v">both</span><span class="t"><b>Two Pro features we were advertising don't exist</b> — "Unlimited remote sessions" (remote scoring has always been free for both phones, no cap) and "Custom team names &amp; colors" (never gated). Removed. Android was also missing six real Pro features iOS listed; both now show the same twelve</span></div>
+    <div class="row"><span class="v">both</span><span class="t"><b>Share limit could be side-stepped</b> — create a team under a sport with room, share it, then switch its sport. Sport is now fixed once a team is shared or has played</span></div>
+    <div class="row"><span class="v">1179</span><span class="t"><b>Coach marks work and are verified</b> — the in-game ones were attaching invisibly, and the GO LIVE and Remote tips drew off the top of the screen. Whole new-user flow now driven automatically end to end: onboarding, both welcome tips, create-a-team, setup, permissions, rotate, all five in-game tips, scoring, recording</span></div>
+    <div class="row"><span class="v">both</span><span class="t"><b>Onboarding</b> — empty boxes now have icons (emoji in layouts silently render as nothing), page four shows Wi-Fi/Bluetooth/Internet, the Pro page said "7-day trial" in one line and "14 days" in the next, and wrapped text was cutting the bottom off letters like p and g</span></div>
+  </div>
+
   <h2>Shipped 11 Aug</h2>
   <div class="rows">
     <div class="row"><span class="v">iOS</span><span class="t"><b>iOS stopped giving away the first game</b> — a Free user's very first game got no watermark, no ads, unlimited highlights <em>and</em> unlimited recording on iOS, while Android gave none of that. Same app, two different first impressions. Now identical</span></div>
@@ -448,6 +422,8 @@ onAuthStateChanged(auth, async (user) => {
 
   <h2>Known open</h2>
   <div class="rows">
+    <div class="row"><span class="t"><b>iOS coach marks point at the wrong things</b> — the first has no highlight at all, the second frames Recent Games instead of the start-a-game card. Right on a used install, wrong on a fresh one, same phone — the layout is still settling when the highlight is measured</span></div>
+    <div class="row"><span class="t"><b>iOS can get stuck sideways</b> — recording pins the orientation and doesn't always release it; while stuck, the in-game tips can't appear either</span></div>
     <div class="row"><span class="t">Husk game records; cross-device delete and tombstones don't work</span></div>
     <div class="row"><span class="t">Deletion-path audit across the 10 protected collections, plus a sanctioned safe-delete writer</span></div>
     <div class="row"><span class="t">4 orphan <code>hubIndex</code> entries and ~6 hubs the sweep can't reach — small reconciliation</span></div>
