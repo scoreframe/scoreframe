@@ -245,7 +245,7 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">12 Aug 2026</span>
+    <span class="stamp">12 Aug 2026 · late</span>
   </div>
   <p class="lede">
     What's moving right now, and what's waiting on you. Feature-by-feature detail
@@ -257,22 +257,45 @@ onAuthStateChanged(auth, async (user) => {
     <div class="ch live">
       <span class="ch-name">Play production</span>
       <span class="ch-ver">1.1.1179</span>
-      <span class="ch-note">pushed 12 Aug · in review</span>
+      <span class="ch-note">pushed 12 Aug · healthy · untouched by tonight</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
       <span class="ch-ver">1.1.1179</span>
-      <span class="ch-note">App Distribution · same build</span>
+      <span class="ch-note">App Distribution · tonight's fixes NOT in a build yet</span>
+    </div>
+    <div class="ch b-blocked">
+      <span class="ch-name">iOS TestFlight</span>
+      <span class="ch-ver">1.2.182 (607)</span>
+      <span class="ch-note">BROKEN — crashes on launch. Do not install.</span>
     </div>
     <div class="ch">
-      <span class="ch-name">iOS</span>
-      <span class="ch-ver">1.2.181</span>
-      <span class="ch-note">build 606 · simulators only, not shipped</span>
+      <span class="ch-name">iOS App Store</span>
+      <span class="ch-ver">(older)</span>
+      <span class="ch-note">unaffected — nothing was submitted for review</span>
     </div>
-    <div class="ch">
-      <span class="ch-name">Play alpha</span>
-      <span class="ch-ver">1.1.935</span>
-      <span class="ch-note">stale — ignore</span>
+  </div>
+
+  <h2>Read this first</h2>
+  <div class="items">
+    <div class="item b-blocked">
+      <div class="item-head">
+        <span class="item-title">iOS 607 crashes on launch — fixed in code, not yet re-shipped</span>
+        <span class="chip">1 decision</span>
+      </div>
+      <p class="item-body">
+        I shipped 607 to TestFlight having only ever launched the app in the
+        <em>simulator</em>. On a real phone it dies instantly, every time.
+        <br><br>
+        <strong>Cause:</strong> <code>HomeScreen.collapsibleHomeSection</code> was one
+        ~120-line <code>VStack</code>. Its generated type nested deep enough that the Swift
+        runtime blew the stack just decoding it — SIGSEGV before the first frame. Pre-existing,
+        not from tonight's edits; the simulator never reproduces it, which is how it got out.
+        <br><br>
+        <strong>Fixed and verified on your iPhone SE:</strong> each branch is type-erased before
+        composition, the app launches, runs and syncs. Needs a bump to 608 and a re-upload —
+        <strong>say go and it's done.</strong>
+      </p>
     </div>
   </div>
 
@@ -280,24 +303,36 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item b-blocked">
       <div class="item-head">
-        <span class="item-title">Five product calls I deliberately didn't make</span>
-        <span class="chip">Yes / no on each</span>
+        <span class="item-title">Ship what's built?</span>
+        <span class="chip">Two yes/no</span>
       </div>
       <p class="item-body">
-        <strong>1. Move the tracking prompt.</strong> It fires on onboarding page one,
-        before anyone has seen the app, and iOS never asks twice — a reflexive "no" is
-        permanent and costs roughly half the ad revenue on that user. Natural moment is
-        just before the first ad, which is now after their second video; anyone who buys
-        Pro first never sees it at all.<br><br>
-        <strong>2. Two upsells from one tap.</strong> Saving a second team shows the
-        upgrade dialog stacked <em>underneath</em> the share prompt.<br><br>
-        <strong>3. Sign-out destroys unsynced work.</strong> "Sign Out Without Sync"
-        wipes local-only teams and games and warns only "local data cleared".<br><br>
-        <strong>4. No GDPR consent SDK</strong> on either platform — Google requires one
-        for personalised ads to EEA/UK users.<br><br>
-        <strong>5. Fallback prices are stale</strong> — $5.99/$49.99 in the code versus
-        $7.99/$59.99 on the listing. Play overwrites them at runtime, so this only shows
-        if the store doesn't answer.
+        <strong>iOS 608 to TestFlight</strong> — replaces the broken 607. Ready now.<br><br>
+        <strong>Android build to Firebase</strong> — tonight's five Android changes are written
+        and compiling but exist only on this machine. Production 1.1.1179 is healthy, so there is
+        no rush; nothing is at risk by waiting.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">AdMob console — 2 minutes, and only you can do it</span>
+        <span class="chip">Blocks a shipped feature</span>
+      </div>
+      <p class="item-body">
+        The GDPR consent flow is in the iOS build, but it stays <em>inert</em> until a consent
+        message exists in <strong>AdMob → Privacy &amp; messaging</strong> for the iOS app.
+        Until then the code runs, finds nothing to show, and returns.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">One open question</span>
+        <span class="chip">Answer when you can</span>
+      </div>
+      <p class="item-body">
+        Should the Google account picker pop <em>automatically</em> when a signed-out user opens
+        the Account page? You asked for it; I paused before building it so you could see this
+        status first. Small change either way.
       </p>
     </div>
   </div>
@@ -329,48 +364,73 @@ onAuthStateChanged(auth, async (user) => {
     </div>
   </div>
 
-  <h2>In progress</h2>
+  <h2>Done tonight — built and compiling, not shipped</h2>
   <div class="items">
-    <div class="item b-done">
-      <div class="item-head">
-        <span class="item-title">iOS parity backlog</span>
-        <span class="chip">Complete — 10 of 10</span>
-      </div>
+    <div class="item">
+      <div class="item-head"><span class="item-title">iOS coach marks — actually anchored now</span><span class="chip">verified by screenshot</span></div>
       <p class="item-body">
-        <strong>Done.</strong> Highlight Editor, the upload cluster, both stream fixes,
-        bowling player favourites, end-game ordering and the post-game upload
-        prompt have all shipped. The controller reel prompt turned out not to be
-        missing at all — the full camera↔controller round trip already existed on
-        iOS and matches Android; the backlog entry was simply wrong.
+        Mark 1 was a centred bubble with no cutout because the Account tab lives in the bottom
+        nav, outside the scroll view, so its position never reached the overlay. Mark 2 framed
+        RECENT GAMES instead of the card above it — the overlay was drawing in its own space and
+        every cutout sat one top-bar lower than it should. Both fixed; positions are now resolved
+        when each step is drawn, the way Android has always done it. All five in-game marks fire
+        after rotating too.
       </p>
     </div>
-    <div class="item b-done">
-      <div class="item-head">
-        <span class="item-title">iOS edit → manage-overlay migration</span>
-        <span class="chip">Audited — no gaps left</span>
-      </div>
+    <div class="item">
+      <div class="item-head"><span class="item-title">iOS orientation lock leak</span><span class="chip">not device-verified</span></div>
       <p class="item-body">
-        Functionality is moving out of the team Edit screen into the MANAGE THIS
-        TEAM overlay, and the port stalled part-way. <strong>Sharing was the
-        casualty</strong> — there was no way to publish a team at all, and the banner
-        pointed at a control that didn't exist. Fixed in 1.2.170, along with an
-        editor that replaced itself with a spinner the moment you cleared the team
-        name. <strong>Not user-facing</strong> — the App Store build still has the old
-        working Edit path. All three overlays have now been audited line-by-line
-        against Android and match, and every hub-management action (Visibility,
-        Managers, Coaches, Subscribers, Sync Roster, Transfer Ownership, Remove
-        Hub) is present on iOS. Sharing was the only casualty.
+        A dialog opening during a landscape recording could pin the whole app to portrait — it was
+        reading the physical device orientation, which reports "unknown" when the phone is flat or
+        on a simulator, and defaulting to portrait. Now reads what the app is actually displaying,
+        and End Game always releases the lock. <strong>Worth 30 seconds on your phone</strong> —
+        record in landscape, end the game, rotate.
       </p>
     </div>
-    <div class="item b-parked">
-      <div class="item-head">
-        <span class="item-title">Server-side share limits</span>
-        <span class="chip">May be unnecessary</span>
-      </div>
+    <div class="item">
+      <div class="item-head"><span class="item-title">Android — permissions moved where you asked</span><span class="chip">your call, done</span></div>
       <p class="item-body">
-        The caps are still a UX gate only. But once lazy minting is on production,
-        most of the need disappears — so this is worth revisiting <em>after</em>
-        adoption, not before.
+        All of them now fire once, right after the intro pages: camera, mic, notifications, storage.
+        Tapping outside no longer ends the flow — you get a non-dismissable dialog naming exactly
+        what's still needed. This also fixes the missing notification prompt: the old chain that
+        asked for it was only reachable by a path a fresh install no longer took.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head"><span class="item-title">Android — Google auto sign-in was silently blocked</span><span class="chip">regression, fixed</span></div>
+      <p class="item-body">
+        Auto sign-in waits for the first-run tour to complete. That flag used to be set by the old
+        tour dialog, which the new coach marks replaced — so on a fresh install it was never set and
+        auto sign-in was blocked permanently, with nothing on screen to show for it.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head"><span class="item-title">You could share a team but never un-share it</span><span class="chip">you found this</span></div>
+      <p class="item-body">
+        This morning's sport-lock copy told people to "stop sharing first" — an action that did not
+        exist anywhere in the app. The function was written and correct but had zero callers; its UI
+        was deleted in v14 because every team auto-minted a share code back then. Lazy minting ended
+        that on 5 Aug and nobody revisited it. <strong>Stop sharing</strong> is back, in the Sharing
+        section where it belongs. Nothing is deleted — the page comes down, the link stops working,
+        and the sport unlocks.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head"><span class="item-title">"Danger Zone" renamed on both platforms</span><span class="chip">your call, done</span></div>
+      <p class="item-body">
+        Two different sections shared that heading, so it identified neither. Now
+        <strong>Archive or Delete</strong> and <strong>Fix or Stop Sharing</strong> — named for what
+        they do. The scary part belongs in the confirmation, which is where it is.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head"><span class="item-title">Also: ATT moved, GDPR consent added, sign-out stops destroying work</span><span class="chip">your five calls</span></div>
+      <p class="item-body">
+        Tracking prompt now fires just before the first ad instead of onboarding page one. GDPR
+        consent flow added to iOS. Signing out keeps anything that never synced, on both platforms.
+        Share limits now show where you stand before you hit them. <strong>Prices were not a bug</strong> —
+        Play $5.99/$49.99 and Apple $7.99/$59.99 are deliberate, both already correct; two handoffs
+        had that wrong and it's now corrected in the notes.
       </p>
     </div>
   </div>
