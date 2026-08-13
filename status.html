@@ -245,7 +245,7 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">12 Aug 2026 · late</span>
+    <span class="stamp">12 Aug 2026 · v1180 / iOS on SE</span>
   </div>
   <p class="lede">
     What's moving right now, and what's waiting on you. Feature-by-feature detail
@@ -257,22 +257,22 @@ onAuthStateChanged(auth, async (user) => {
     <div class="ch live">
       <span class="ch-name">Play production</span>
       <span class="ch-ver">1.1.1179</span>
-      <span class="ch-note">pushed 12 Aug · healthy · untouched by tonight</span>
+      <span class="ch-note">healthy · does NOT have tonight's fixes</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1179</span>
-      <span class="ch-note">App Distribution · tonight's fixes NOT in a build yet</span>
+      <span class="ch-ver">1.1.1180</span>
+      <span class="ch-note">Firebase · has the delete fix + all Android work</span>
     </div>
     <div class="ch b-blocked">
       <span class="ch-name">iOS TestFlight</span>
       <span class="ch-ver">1.2.182 (607)</span>
-      <span class="ch-note">BROKEN — crashes on launch. Do not install.</span>
+      <span class="ch-note">STILL BROKEN — crashes on launch. Do not install.</span>
     </div>
     <div class="ch">
-      <span class="ch-name">iOS App Store</span>
-      <span class="ch-ver">(older)</span>
-      <span class="ch-note">unaffected — nothing was submitted for review</span>
+      <span class="ch-name">iOS — Eric's SE</span>
+      <span class="ch-ver">fixed build</span>
+      <span class="ch-note">direct install · everything below, not uploaded anywhere</span>
     </div>
   </div>
 
@@ -280,21 +280,19 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item b-blocked">
       <div class="item-head">
-        <span class="item-title">iOS 607 crashes on launch — fixed in code, not yet re-shipped</span>
-        <span class="chip">1 decision</span>
+        <span class="item-title">iOS 608 still needs uploading — 607 in TestFlight is broken</span>
+        <span class="chip">1 word from you</span>
       </div>
       <p class="item-body">
-        I shipped 607 to TestFlight having only ever launched the app in the
-        <em>simulator</em>. On a real phone it dies instantly, every time.
+        TWO separate launch crashes were found and fixed tonight, both by installing
+        on your SE. Both were the same root cause in different views:
+        <code>collapsibleHomeSection</code> and <code>ContentView.landscapeBody</code>
+        were each one ~120-line block whose generated type nested deep enough that
+        iOS blew its stack decoding it — before drawing a frame. The second is why
+        rotating to landscape killed the app and you never saw the in-game coach marks.
         <br><br>
-        <strong>Cause:</strong> <code>HomeScreen.collapsibleHomeSection</code> was one
-        ~120-line <code>VStack</code>. Its generated type nested deep enough that the Swift
-        runtime blew the stack just decoding it — SIGSEGV before the first frame. Pre-existing,
-        not from tonight's edits; the simulator never reproduces it, which is how it got out.
-        <br><br>
-        <strong>Fixed and verified on your iPhone SE:</strong> each branch is type-erased before
-        composition, the app launches, runs and syncs. Needs a bump to 608 and a re-upload —
-        <strong>say go and it's done.</strong>
+        Neither reproduces in the simulator. Neither was new code. 607 shipped because
+        it was never once launched on a phone.
       </p>
     </div>
   </div>
@@ -364,73 +362,82 @@ onAuthStateChanged(auth, async (user) => {
     </div>
   </div>
 
-  <h2>Done tonight — built and compiling, not shipped</h2>
+  <h2>Fixed tonight — Android shipped, iOS on your SE</h2>
   <div class="items">
     <div class="item">
-      <div class="item-head"><span class="item-title">iOS coach marks — actually anchored now</span><span class="chip">verified by screenshot</span></div>
+      <div class="item-head"><span class="item-title">Deleted games came back — and refresh could never remove one</span><span class="chip">in v1180</span></div>
       <p class="item-body">
-        Mark 1 was a centred bubble with no cutout because the Account tab lives in the bottom
-        nav, outside the scroll view, so its position never reached the overlay. Mark 2 framed
-        RECENT GAMES instead of the card above it — the overlay was drawing in its own space and
-        every cutout sat one top-bar lower than it should. Both fixed; positions are now resolved
-        when each step is drawn, the way Android has always done it. All five in-game marks fire
-        after rotating too.
+        You deleted 3 games on iOS and they stayed on Android through a restart, a
+        Sync Now and a pull to refresh. The refresh path was <strong>add-only</strong>:
+        it downloaded games and re-uploaded local ones, but nothing in it ever deleted.
+        Worse, that re-upload pushed games you'd deleted elsewhere back to the cloud —
+        almost certainly the long-running "deleted games come back" complaint. Refresh
+        now applies deletions first and never re-uploads something you deleted.
       </p>
     </div>
     <div class="item">
-      <div class="item-head"><span class="item-title">iOS orientation lock leak</span><span class="chip">not device-verified</span></div>
+      <div class="item-head"><span class="item-title">Tennis and pickleball never attached to a team</span><span class="chip">in v1180</span></div>
       <p class="item-body">
-        A dialog opening during a landscape recording could pin the whole app to portrait — it was
-        reading the physical device orientation, which reports "unknown" when the phone is flat or
-        on a simulator, and defaulting to portrait. Now reads what the app is actually displaying,
-        and End Game always releases the lock. <strong>Worth 30 seconds on your phone</strong> —
-        record in landscape, end the game, rotate.
+        Whatever team you picked, those two sports always saved with none — so
+        "this game isn't attached to a team" on upload, and the game stayed on your
+        device. Ten sports read the team you selected; tennis and pickleball read
+        fields nothing in the app ever sets. The team is now attached in ONE place for
+        every sport, so sport #13 can't repeat it. Existing tennis/pickleball games
+        are still unattached — recovering them needs a separate pass.
       </p>
     </div>
     <div class="item">
-      <div class="item-head"><span class="item-title">Android — permissions moved where you asked</span><span class="chip">your call, done</span></div>
+      <div class="item-head"><span class="item-title">Asked to share a team you'd just shared</span><span class="chip">in v1180 + iOS</span></div>
       <p class="item-body">
-        All of them now fire once, right after the intro pages: camera, mic, notifications, storage.
-        Tapping outside no longer ends the flow — you get a non-dismissable dialog naming exactly
-        what's still needed. This also fixes the missing notification prompt: the old chain that
-        asked for it was only reachable by a path a fresh install no longer took.
+        The lacrosse one, and you were right that it was a race. Sharing wrote the code
+        to the cloud but not to the local copy, and every "is this shared?" check reads
+        local — so for a few seconds the app sincerely believed an already-shared team
+        wasn't, asked again, and called the game device-only. Both platforms now write
+        it locally before returning.
       </p>
     </div>
     <div class="item">
-      <div class="item-head"><span class="item-title">Android — Google auto sign-in was silently blocked</span><span class="chip">regression, fixed</span></div>
+      <div class="item-head"><span class="item-title">You couldn't stop sharing a team</span><span class="chip">both platforms</span></div>
       <p class="item-body">
-        Auto sign-in waits for the first-run tour to complete. That flag used to be set by the old
-        tour dialog, which the new coach marks replaced — so on a fresh install it was never set and
-        auto sign-in was blocked permanently, with nothing on screen to show for it.
+        You spotted this: the sport-lock message told people to un-share, and there was
+        no way to. The function existed with zero callers — its UI was deleted back when
+        every team auto-minted a code, and lazy minting ended that on 5 Aug without
+        anyone revisiting it. It's back under Sharing → Fix or Stop Sharing.
       </p>
     </div>
     <div class="item">
-      <div class="item-head"><span class="item-title">You could share a team but never un-share it</span><span class="chip">you found this</span></div>
+      <div class="item-head"><span class="item-title">Permissions, sign-in, and the favourites picker</span><span class="chip">both platforms</span></div>
       <p class="item-body">
-        This morning's sport-lock copy told people to "stop sharing first" — an action that did not
-        exist anywhere in the app. The function was written and correct but had zero callers; its UI
-        was deleted in v14 because every team auto-minted a share code back then. Lazy minting ended
-        that on 5 Aug and nobody revisited it. <strong>Stop sharing</strong> is back, in the Sharing
-        section where it belongs. Nothing is deleted — the page comes down, the link stops working,
-        and the sport unlocks.
+        Notifications now asked once right after the intro pages (they were never asked
+        at all on a fresh install); camera and mic stay at the recording screen. Tapping
+        outside a prompt isn't treated as an answer. Google auto sign-in was silently
+        blocked on Android by a flag the new coach marks never set. The Account page
+        offers sign-in when you're signed out. And the iOS favourites picker now uses
+        the same sport grid as New Game, instead of a flat centred list.
       </p>
     </div>
     <div class="item">
-      <div class="item-head"><span class="item-title">"Danger Zone" renamed on both platforms</span><span class="chip">your call, done</span></div>
+      <div class="item-head"><span class="item-title">Compliance + the earlier calls</span><span class="chip">both platforms</span></div>
       <p class="item-body">
-        Two different sections shared that heading, so it identified neither. Now
-        <strong>Archive or Delete</strong> and <strong>Fix or Stop Sharing</strong> — named for what
-        they do. The scary part belongs in the confirmation, which is where it is.
+        GDPR consent now on BOTH platforms (you published the message — it's live for
+        iOS the moment 608 ships, and live for Android in v1180). Tracking prompt moved
+        to just before the first ad. Sign-out keeps unsynced work. Share limits show
+        where you stand. "Danger Zone" is now named for what it does.
       </p>
     </div>
+  </div>
+
+  <h2>To do — not started</h2>
+  <div class="items">
     <div class="item">
-      <div class="item-head"><span class="item-title">Also: ATT moved, GDPR consent added, sign-out stops destroying work</span><span class="chip">your five calls</span></div>
+      <div class="item-head"><span class="item-title">Promo: 2 months for the price of 1</span><span class="chip">your idea, 12 Aug</span></div>
       <p class="item-body">
-        Tracking prompt now fires just before the first ad instead of onboarding page one. GDPR
-        consent flow added to iOS. Signing out keeps anything that never synced, on both platforms.
-        Share limits now show where you stand before you hit them. <strong>Prices were not a bug</strong> —
-        Play $5.99/$49.99 and Apple $7.99/$59.99 are deliberate, both already correct; two handoffs
-        had that wrong and it's now corrected in the notes.
+        Both stores support this natively as an <strong>introductory offer</strong> on
+        the monthly plan — usually expressed as "1 month free, then $X/month". Console
+        setup first, app changes second. Two decisions before building: does it REPLACE
+        the 14-day trial or run alongside it, and who is it for? The stores allow one
+        intro offer per user per subscription group, so anyone who's used the trial may
+        be ineligible — lapsed subscribers need a separate "win-back" offer instead.
       </p>
     </div>
   </div>
