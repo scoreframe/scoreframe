@@ -245,7 +245,7 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">12 Aug 2026 · v1180 / iOS on SE</span>
+    <span class="stamp">13 Aug 2026 · server-side limits</span>
   </div>
   <p class="lede">
     What's moving right now, and what's waiting on you. Feature-by-feature detail
@@ -256,23 +256,23 @@ onAuthStateChanged(auth, async (user) => {
   <div class="channels">
     <div class="ch live">
       <span class="ch-name">Play production</span>
-      <span class="ch-ver">1.1.1179</span>
-      <span class="ch-note">healthy · does NOT have tonight's fixes</span>
+      <span class="ch-ver">1.1.1185</span>
+      <span class="ch-note">100% · healthy · has the data-loss + streams fixes</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1180</span>
-      <span class="ch-note">Firebase · has the delete fix + all Android work</span>
-    </div>
-    <div class="ch b-blocked">
-      <span class="ch-name">iOS TestFlight</span>
-      <span class="ch-ver">1.2.182 (607)</span>
-      <span class="ch-note">STILL BROKEN — crashes on launch. Do not install.</span>
+      <span class="ch-ver">1.1.1189</span>
+      <span class="ch-note">server-enforced limits · NOT in production</span>
     </div>
     <div class="ch">
-      <span class="ch-name">iOS — Eric's SE</span>
-      <span class="ch-ver">fixed build</span>
-      <span class="ch-note">direct install · everything below, not uploaded anywhere</span>
+      <span class="ch-name">TestFlight</span>
+      <span class="ch-ver">1.2.184 (614)</span>
+      <span class="ch-note">same feature set · nothing submitted for review</span>
+    </div>
+    <div class="ch">
+      <span class="ch-name">Cloud Function</span>
+      <span class="ch-ver">createTeamHub</span>
+      <span class="ch-note">deployed · never yet called by a released build</span>
     </div>
   </div>
 
@@ -280,19 +280,21 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item b-blocked">
       <div class="item-head">
-        <span class="item-title">iOS 608 still needs uploading — 607 in TestFlight is broken</span>
-        <span class="chip">1 word from you</span>
+        <span class="item-title">Don't push 1189 to production yet — test one thing first</span>
+        <span class="chip">5 minutes</span>
       </div>
       <p class="item-body">
-        TWO separate launch crashes were found and fixed tonight, both by installing
-        on your SE. Both were the same root cause in different views:
-        <code>collapsibleHomeSection</code> and <code>ContentView.landscapeBody</code>
-        were each one ~120-line block whose generated type nested deep enough that
-        iOS blew its stack decoding it — before drawing a frame. The second is why
-        rotating to landscape killed the app and you never saw the in-game coach marks.
+        <strong>Try sharing a 4th volleyball team.</strong> It should be refused, and the
+        refusal should come from the SERVER. That path has never run in a released build.
         <br><br>
-        Neither reproduces in the simulator. Neither was new code. 607 shipped because
-        it was never once launched on a phone.
+        1189 is the first version that puts a Cloud Function in the critical path of
+        sharing. If it misbehaves, nobody can share a team on either platform. Everything
+        else in this run REMOVED broken behaviour; this one ADDS a dependency, so it earns
+        a soak rather than a same-day production push. Production on 1.1.1185 is healthy
+        and already carries the fixes that actually mattered.
+        <br><br>
+        Also: your account sits at <strong>4 live shared volleyball teams on a cap of 3</strong>.
+        The guard only blocks new shares — nothing strips an existing one.
       </p>
     </div>
   </div>
