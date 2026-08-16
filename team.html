@@ -855,6 +855,10 @@ let currentUser = null;  // null = not signed in, object = signed in with Google
 let teamSeasons = [];
 let selectedSeasonId = null;
 let isManager = false;
+// Coaches are staff for SOME decisions and not others (see canDecideClaims).
+// Kept separate from isManager on purpose: isManager also gates editing the
+// schedule, past games and the team profile, none of which a coach may do.
+let isCoach = false;
 let isSubscriber = false;
 let subStatus = null;  // null, 'pending', 'approved', 'blocked'
 
@@ -1220,9 +1224,11 @@ async function loadTeam() {
 }
 
 async function checkAccess() {
-    if (!currentUser) { isManager = false; isSubscriber = false; subStatus = null; return; }
+    if (!currentUser) { isManager = false; isCoach = false; isSubscriber = false; subStatus = null; return; }
     const uid = currentUser.uid;
     try {
+        const coachDoc = await getDoc(doc(db, 'teams', teamId, 'coaches', uid)).catch(() => null);
+        isCoach = !!(coachDoc && coachDoc.exists());
         const managerDoc = await getDoc(doc(db, 'teams', teamId, 'managers', uid));
         isManager = managerDoc.exists();
         // Fallback: check by email (invited managers use email.hashCode() as doc ID)
@@ -1561,6 +1567,7 @@ window.doSignOut = async function() {
         await signOut(auth);
         currentUser = null;
         isManager = false;
+        isCoach = false;
         isSubscriber = false;
         subStatus = null;
         showContent();
@@ -2419,8 +2426,45 @@ function buildPlayerStatChips(p, sport) {
 // the Firestore response. Making it real means moving names out of the publicly
 // readable document. Worth being clear about so nobody treats this as more
 // protection than it is.
+// Who may approve or deny a family link. Eric, 2026-08-16: the coach is
+// usually the one who actually knows whether this adult is that child's
+// parent, and they were already being emailed about every request while
+// having no way to act on it. Mirrors canDecideFamilyClaim in firestore.rules
+// — if these two ever disagree, the rule wins and the UI just lies.
+function canDecideClaims() {
+    return !!(isManager || isCoach);
+}
+
+// ── Surname overlay (2026-08-16) ──────────────────────────────────────────
+//
+// As of the same date, teams/{id}/roster and /players carry only the SHORT
+// name ("Mia B.") — the surname lives in teams/{id}/rosterPrivate, readable
+// only under canSeePlayerNames. This fetches it for viewers who are allowed
+// it and merges by playerId, so staff and vetted followers see exactly what
+// they saw before while a passer-by can't get it at any price.
+//
+// Failure is not an error state: an unvetted viewer's read is DENIED by
+// design, and the short name already in the doc is the correct fallback.
+let fullNames = {};
+
+async function loadFullNames() {
+    fullNames = {};
+    if (!teamId || !currentUser) return;
+    try {
+        const snap = await getDocs(collection(db, 'teams', teamId, 'rosterPrivate'));
+        snap.forEach(d => { const n = (d.data() || {}).name; if (n) fullNames[d.id] = n; });
+    } catch (e) {
+        console.debug('loadFullNames (expected when not vetted):', e && e.code);
+    }
+}
+
+/** Full name if we're allowed it, otherwise whatever the public doc holds. */
+function resolvePlayerName(playerId, storedName) {
+    return fullNames[playerId] || storedName || 'Player';
+}
+
 function viewerSeesFullNames() {
-    return !!(isManager || isSubscriber);
+    return !!(isManager || isCoach || isSubscriber);
 }
 
 /** "Mia Bloomcamp" -> "Mia B."  Leaves single-word names alone. */
@@ -2437,9 +2481,12 @@ function displayPlayerName(full) {
 async function loadRoster() {
     if (!teamId) return;
     try {
-        const snap = await retryOnAuthDeny('loadRoster', () =>
-            getDocs(collection(db, 'teams', teamId, 'players'))
-        );
+        const [snap] = await Promise.all([
+            retryOnAuthDeny('loadRoster', () =>
+                getDocs(collection(db, 'teams', teamId, 'players'))
+            ),
+            loadFullNames(),
+        ]);
         if (snap.empty) return;
 
         const section = $('rosterSection');
@@ -2450,6 +2497,11 @@ async function loadRoster() {
         let html = '';
         snap.forEach(d => {
             const p = d.data();
+            // The doc's own `name` is already short; this only adds back a
+            // surname the viewer is entitled to. displayPlayerName stays on
+            // top of it as a belt-and-braces shortener for anything that
+            // slipped through before the trigger existed.
+            p.name = resolvePlayerName(d.id, p.name);
             const num = p.number || '';
             const pos = p.position ? `<div class="player-position">${p.position}</div>` : '';
 
@@ -2556,7 +2608,7 @@ async function loadMyClaims() {
 
 async function loadAllClaims() {
     allClaims = [];
-    if (!isManager || !teamId) return;
+    if (!canDecideClaims() || !teamId) return;
     try {
         const subs = await getDocs(collection(db, 'teams', teamId, 'subscribers'));
         for (const sub of subs.docs) {
@@ -2641,7 +2693,7 @@ async function decideClaim(uid, playerId, approve) {
 function renderClaimRequests() {
     const host = document.getElementById('familyRequests');
     if (!host) return;
-    if (!isManager) { host.style.display = 'none'; host.innerHTML = ''; return; }
+    if (!canDecideClaims()) { host.style.display = 'none'; host.innerHTML = ''; return; }
     if (hubProfile && hubProfile.visibility === 'public') {
         // Explain the absence rather than leaving a manager wondering where the
         // feature went — this is a deliberate protection, not a missing screen.

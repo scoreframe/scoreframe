@@ -993,6 +993,29 @@ async function resolveViewerAccess(teamId) {
     }
 }
 
+// ── Surname overlay (2026-08-16) ──────────────────────────────────────────
+// teams/{id}/roster, /players and games[].participants carry only the SHORT
+// name; the surname lives in teams/{id}/rosterPrivate behind
+// canSeePlayerNames. Fetch it when we're allowed it, merge by playerId.
+// A denied read is the expected path for an unvetted viewer, not an error —
+// the short name already in the document is the right fallback.
+let fullNames = {};
+
+async function loadFullNames(teamId) {
+    fullNames = {};
+    if (!teamId || !currentUser) return;
+    try {
+        const snap = await getDocs(collection(db, 'teams', teamId, 'rosterPrivate'));
+        snap.forEach(d => { const n = (d.data() || {}).name; if (n) fullNames[d.id] = n; });
+    } catch (e) {
+        console.debug('loadFullNames (expected when not vetted):', e && e.code);
+    }
+}
+
+function resolvePlayerName(playerId, storedName) {
+    return fullNames[playerId] || storedName || 'Player';
+}
+
 function shortenName(full) {
     const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
     if (parts.length < 2) return parts[0] || 'Player';
@@ -1231,6 +1254,7 @@ async function load() {
         // see displayPlayerName. Non-blocking failure: an unknown viewer simply
         // stays unvetted, which is the safe direction.
         await resolveViewerAccess(teamId);
+        await loadFullNames(teamId);
         const team = await retryOnAuthDeny('game.html team', () => getDoc(doc(db, 'teams', teamId)));
         if (!team.exists()) { showNotFound(); return; }
         const t = team.data();
@@ -2258,7 +2282,7 @@ function renderRoster(hub, game, isBowling) {
         return (words[0][0] + words[words.length - 1][0]).toUpperCase();
     };
     const cell = (p, ring) => {
-        const name = displayPlayerName(p.name);
+        const name = displayPlayerName(resolvePlayerName(p.playerId || p.savedPlayerId, p.name));
         const num = (p.number != null && String(p.number) !== '') ? `<div class="avatar-num">#${esc(p.number)}</div>` : '';
         return `<div class="avatar-cell">
             <div class="avatar" style="border-color:${esc(ring)};">${esc(initials(name))}</div>
@@ -3298,7 +3322,7 @@ function renderBoxSide(name, color, players, cols, sportKey) {
         const stats = (p.stats && typeof p.stats === 'object') ? p.stats : {};
         const cells = cols.map(c => `<td class="bx-stat">${c.fmt(stats, sportKey)}</td>`).join('');
         return `<tr><td class="bx-num">${escapeHtml(p.number || '–')}</td>` +
-            `<td class="bx-name">${escapeHtml(displayPlayerName(p.name))}</td>${cells}</tr>`;
+            `<td class="bx-name">${escapeHtml(displayPlayerName(resolvePlayerName(p.playerId || p.savedPlayerId, p.name)))}</td>${cells}</tr>`;
     }).join('');
     const totals = computeBoxTotals(players, cols, sportKey);
     const totalRow = totals ?
@@ -3621,7 +3645,7 @@ function __sfPerformers(game) {
             for (const k in stats) { const v = num(stats[k]); if (v > bestV) { bestV = v; bestK = k; } }
             if (bestV > 0) { value = bestV; label = __sfStatLabel(bestK); }
         }
-        if (value > 0) out.push({ name: displayPlayerName(p.name), value: Math.round(value), label });
+        if (value > 0) out.push({ name: displayPlayerName(resolvePlayerName(p.playerId || p.savedPlayerId, p.name)), value: Math.round(value), label });
     }
     return out.sort((a, b) => b.value - a.value).slice(0, 3);
 }
