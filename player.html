@@ -293,6 +293,19 @@ html, body {
 .center-state .emoji { font-size: 36px; margin-bottom: 12px; }
 .center-state .h { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
 .center-state .d { font-size: 12px; }
+
+/* Player video rows — reels + edited clips, newest first. */
+.pv-row { display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:8px;
+          background:var(--bg-surface,#1E1E1E); border:1px solid var(--outline,#333);
+          border-radius:10px; text-decoration:none; color:inherit; }
+.pv-row:hover { border-color:var(--sf-accent,#FF9640); }
+.pv-play { flex:0 0 auto; width:34px; height:34px; border-radius:50%;
+           background:var(--sf-accent,#FF9640); color:#1A1A1A; display:flex;
+           align-items:center; justify-content:center; font-size:14px; }
+.pv-meta { min-width:0; }
+.pv-title { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden;
+            text-overflow:ellipsis; }
+.pv-sub { font-size:11px; color:var(--text-muted,#999); margin-top:2px; }
 </style>
 <script>
 /* Palette param — mirrors the theme block above. Applied to <html> before
@@ -386,6 +399,15 @@ html, body {
                 <span>Calculating<span class="dots"></span></span>
             </div>
         </div>
+    </div>
+
+    <!-- Videos this player is in. Hidden unless there are some AND the
+         viewer is entitled to them — see canSeePlayerVideos in
+         firestore.rules. A denied read is the normal path for a visitor,
+         not an error, so the section simply doesn't appear. -->
+    <div id="videosSection" style="display:none;">
+        <div class="section-label" style="padding: 14px 16px 4px;">Videos</div>
+        <div id="videosList" style="padding: 0 16px;"></div>
     </div>
 
     <div id="gamesSection">
@@ -1253,10 +1275,85 @@ function filteredGames() {
     return games.filter((g) => g.seasonId === selectedSeasonId);
 }
 
+// ── Videos this player is in (2026-08-16) ────────────────────────────────
+//
+// Reels built from tagged stats, and clips made with the edit feature. NOT
+// full game videos — those are a team artifact, not a person's.
+//
+// Read from teams/{id}/playerVideos/{playerId}/videos, which is gated by
+// canSeePlayerVideos: staff, an approved follower of a non-public team, or an
+// approved guardian of THIS player. Deliberately not on the game document —
+// an unlisted YouTube URL is a bearer token, so a per-player list of them is
+// the sensitive object itself, not a pointer to one.
+//
+// Scans every team in scope so a player linked across teams shows one combined
+// list; a denied team contributes nothing and is not an error.
+let playerVideos = [];
+
+async function loadPlayerVideos() {
+    playerVideos = [];
+    // teamHubCodes holds hub CODES; playerVideos is keyed by teamId, so
+    // resolve through hubIndex. Only a handful of teams, and a failed lookup
+    // just drops that team from the scan.
+    const scope = [teamId];
+    if (viewAllTeams) {
+        for (const code of teamHubCodes) {
+            if (!code) continue;
+            try {
+                const idx = await getDoc(doc(db, 'hubIndex', code));
+                const tid = idx.exists() ? idx.data().teamId : null;
+                if (tid && !scope.includes(tid)) scope.push(tid);
+            } catch (e) {
+                console.debug('loadPlayerVideos hubIndex(' + code + '):', e && e.code);
+            }
+        }
+    }
+    for (const tid of scope.filter(Boolean)) {
+        try {
+            const snap = await getDocs(
+                collection(db, 'teams', tid, 'playerVideos', playerIdParam, 'videos'));
+            snap.forEach(d => {
+                const v = d.data() || {};
+                if (v.url) playerVideos.push({ id: d.id, teamId: tid, ...v });
+            });
+        } catch (e) {
+            console.debug('loadPlayerVideos(' + tid + '):', e && e.code);
+        }
+    }
+    playerVideos.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+function renderPlayerVideos() {
+    const section = $('videosSection');
+    const list = $('videosList');
+    if (!section || !list) return;
+    if (!playerVideos.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = playerVideos.map(v => {
+        const when = v.createdAt
+            ? new Date(v.createdAt).toLocaleDateString(undefined,
+                { month: 'short', day: 'numeric', year: 'numeric' })
+            : '';
+        const kind = v.kind === 'reel' ? 'Highlight reel' : 'Clip';
+        const sub = [kind, when].filter(Boolean).join('  ·  ');
+        return `<a class="pv-row" href="${escapeHtml(v.url)}" target="_blank" rel="noopener">
+            <span class="pv-play">&#9654;</span>
+            <span class="pv-meta">
+                <div class="pv-title">${escapeHtml(v.title || 'Untitled video')}</div>
+                <div class="pv-sub">${escapeHtml(sub)}</div>
+            </span>
+        </a>`;
+    }).join('');
+}
+
 function renderEverything() {
     renderStatCard();
     renderTrend();
     renderGameList();
+    renderPlayerVideos();
+    // Fire-and-forget: the videos are an addition to the page, not a gate on
+    // it, so nothing else waits for the fetch.
+    loadPlayerVideos().then(renderPlayerVideos);
 }
 
 // ── Per-game-score extraction (priority chain — Android/iOS parity) ──
