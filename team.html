@@ -2425,7 +2425,14 @@ async function loadRoster() {
             // page, so one implementation covers web, iOS and Android.
             const claim = myClaims[d.id];
             let familyHtml = '';
-            if (currentUser && !isManager) {
+            // NOT ON PUBLIC TEAMS (Eric, 2026-08-16). On a public hub anyone can
+            // follow and approval is automatic, so a passer-by could file a
+            // family claim on a child. The team has to be private or invite-only
+            // — meaning the owner already chose who may see the roster — before
+            // anyone can claim a person on it. The rules enforce this too; this
+            // just avoids offering a button that would be refused.
+            const claimsAllowed = hubProfile && hubProfile.visibility !== 'public';
+            if (currentUser && !isManager && claimsAllowed) {
                 if (!claim) {
                     familyHtml = `<button class="player-family-pill" data-claim-player="${escapeAttr(d.id)}" data-claim-name="${escapeAttr(p.name || 'Player')}">Follow</button>`;
                 } else if (claim.status === 'pending') {
@@ -2578,6 +2585,17 @@ function renderClaimRequests() {
     const host = document.getElementById('familyRequests');
     if (!host) return;
     if (!isManager) { host.style.display = 'none'; host.innerHTML = ''; return; }
+    if (hubProfile && hubProfile.visibility === 'public') {
+        // Explain the absence rather than leaving a manager wondering where the
+        // feature went — this is a deliberate protection, not a missing screen.
+        host.style.display = '';
+        host.innerHTML = `<h2 class="section-title">FAMILY LINKS</h2>
+            <p class="family-help">Family links are turned off while this team is
+            public, because anyone can follow a public team. Switch the team to
+            private or invite-only if you want parents and guardians to be able
+            to link themselves to a player.</p>`;
+        return;
+    }
     const pending = allClaims.filter(c => c.status === 'pending');
     const decided = allClaims.filter(c => c.status === 'approved');
     if (!pending.length && !decided.length) { host.style.display = 'none'; host.innerHTML = ''; return; }
