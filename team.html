@@ -459,6 +459,63 @@ html, body {
     background: var(--accent); color: #1A1A1A;
 }
 
+/* Family links (2026-08-16) — "this player is mine", manager-approved. */
+.player-family-pill {
+    flex-shrink: 0; align-self: center; margin-right: 6px;
+    padding: 5px 10px; border-radius: 999px;
+    border: 1px dashed var(--muted);
+    color: var(--muted); background: transparent;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.04em;
+    text-transform: uppercase; cursor: pointer; font-family: inherit;
+}
+button.player-family-pill:hover { border-color: var(--accent); color: var(--accent); }
+.player-family-pill.pending { border-style: dashed; cursor: default; }
+.player-family-pill.approved {
+    border: 1px solid var(--accent); color: var(--accent); cursor: default;
+}
+.player-family-pill.denied { opacity: 0.55; cursor: default; }
+
+.family-modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.72);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999; padding: 20px;
+}
+.family-modal-card {
+    background: var(--surface, #1E1E1E); border-radius: 14px;
+    padding: 22px; max-width: 380px; width: 100%;
+    border: 1px solid var(--outline, #333);
+}
+.family-modal-card h3 { margin: 0 0 6px; font-size: 19px; }
+.family-modal-sub { margin: 0 0 14px; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.family-opts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.family-opt { display: flex; align-items: center; gap: 9px; font-size: 15px; cursor: pointer; }
+.family-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.family-modal-actions button {
+    padding: 9px 16px; border-radius: 8px; font-size: 14px;
+    font-weight: 700; cursor: pointer; font-family: inherit; border: none;
+}
+.family-cancel { background: transparent; color: var(--muted); }
+.family-submit { background: var(--accent); color: #1A1A1A; }
+.family-submit:disabled { opacity: 0.6; cursor: default; }
+.family-modal-msg { margin-top: 10px; font-size: 13px; color: #FF8A80; }
+
+.family-help { font-size: 13px; color: var(--muted); margin: 0 0 12px; line-height: 1.45; }
+.family-req {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 12px 14px; margin-bottom: 8px;
+    background: var(--surface, #1E1E1E); border-radius: 10px;
+    border: 1px solid var(--outline, #333);
+}
+.family-req.approved-row { opacity: 0.8; }
+.family-req-text { flex: 1; font-size: 14px; line-height: 1.4; min-width: 200px; }
+.family-req-actions { display: flex; gap: 8px; }
+.family-req-actions button {
+    padding: 7px 13px; border-radius: 8px; font-size: 13px;
+    font-weight: 700; cursor: pointer; font-family: inherit; border: none;
+}
+.family-approve { background: var(--accent); color: #1A1A1A; }
+.family-deny { background: transparent; color: var(--muted); border: 1px solid var(--outline, #444) !important; }
+
 /* 2026-06-16 — Manager Edit Controls CSS removed. Web is view-only for
    the schedule; all edits live in the native dialogs. */
 .manager-badge {
@@ -662,6 +719,8 @@ html, body {
         <div class="section" id="rosterSection" style="display:none;">
             <div class="section-title">👥 Roster</div>
             <div id="rosterList"></div>
+            <!-- Family-link requests — managers only; hidden until there are any. -->
+            <div id="familyRequests" style="display:none"></div>
         </div>
 
         <!-- Past Games -->
@@ -1185,7 +1244,10 @@ function showContent() {
         $('teamContent').style.display = 'block';
         loadSeasons();
         loadSchedule();
-        loadRoster();
+        // Claims must land BEFORE the roster paints — the cards read myClaims
+        // to decide between "＋ My player", "⏳ Pending" and "✓ Your parent".
+        loadMyClaims().then(loadRoster);
+        loadAllClaims().then(renderClaimRequests);
             loadPastGames();
         listenForLive();
         loadPendingRequests();
@@ -1195,7 +1257,10 @@ function showContent() {
         $('teamContent').style.display = 'block';
         loadSeasons();
         loadSchedule();
-        loadRoster();
+        // Claims must land BEFORE the roster paints — the cards read myClaims
+        // to decide between "＋ My player", "⏳ Pending" and "✓ Your parent".
+        loadMyClaims().then(loadRoster);
+        loadAllClaims().then(renderClaimRequests);
             loadPastGames();
         listenForLive();
         loadPendingRequests();
@@ -2344,19 +2409,200 @@ async function loadRoster() {
             // this team. Use the doc ID (which IS the playerId) so the
             // page's primary lookup resolves directly.
             const playerHref = `/player.html?team=${encodeURIComponent(hubCode)}&player=${encodeURIComponent(d.id)}`;
+            // FAMILY LINK (2026-08-16). A follower — very often a grandparent
+            // who signed up here on the web and never installs the app — says
+            // which player on this roster is theirs, and a manager approves it.
+            // The approval is the whole safety model: without it anyone who can
+            // follow a public hub could declare themselves a child's relative.
+            // Rendered here rather than in the apps because BOTH apps wrap this
+            // page, so one implementation covers web, iOS and Android.
+            const claim = myClaims[d.id];
+            let familyHtml = '';
+            if (currentUser && !isManager) {
+                if (!claim) {
+                    familyHtml = `<button class="player-family-pill" data-claim-player="${escapeAttr(d.id)}" data-claim-name="${escapeAttr(p.name || 'Player')}">＋ My player</button>`;
+                } else if (claim.status === 'pending') {
+                    familyHtml = `<span class="player-family-pill pending" title="Waiting for a team manager to approve">⏳ Pending</span>`;
+                } else if (claim.status === 'approved') {
+                    familyHtml = `<span class="player-family-pill approved">✓ Your ${escapeHtml(claim.relationship)}</span>`;
+                } else if (claim.status === 'denied') {
+                    familyHtml = `<span class="player-family-pill denied" title="A team manager declined this request">Declined</span>`;
+                }
+            }
             html += `<div class="player-card">
                 <div class="player-number">${num || '–'}</div>
                 <div class="player-info">
                     <div class="player-name">${p.name || 'Player'}</div>
                     ${pos}${statHtml}
                 </div>
+                ${familyHtml}
                 <a class="player-stats-pill" href="${playerHref}">Stats</a>
             </div>`;
         });
         container.innerHTML = html;
+        container.querySelectorAll('[data-claim-player]').forEach(btn => {
+            btn.addEventListener('click', () => openFamilyLinkDialog(
+                btn.getAttribute('data-claim-player'),
+                btn.getAttribute('data-claim-name')
+            ));
+        });
     } catch (e) {
         console.error('Roster error:', e);
     }
+}
+
+// ── Family links ───────────────────────────────────────────────────────────
+//
+// teams/{teamId}/subscribers/{uid}/claims/{playerId}. A claim only makes sense
+// for someone already following the team, so nesting it under their own
+// subscriber doc makes the ownership check just the uid — and the security
+// rules refuse any client write where status isn't "pending", so a modified
+// client can't self-approve a relationship to a child.
+
+/** This visitor's own claims on this team, keyed by playerId. */
+let myClaims = {};
+/** Every claim on the team — managers only, drives the approval list. */
+let allClaims = [];
+
+const RELATIONSHIPS = ['Parent', 'Guardian', 'Grandparent', 'Other family'];
+
+// The existing escapeHtml (above) already escapes quotes, so it is safe in
+// attribute position too — escapeAttr is just an intention-revealing alias.
+const escapeAttr = escapeHtml;
+
+async function loadMyClaims() {
+    myClaims = {};
+    if (!currentUser || !teamId) return;
+    try {
+        const snap = await getDocs(collection(db, 'teams', teamId, 'subscribers', currentUser.uid, 'claims'));
+        snap.forEach(d => { myClaims[d.id] = d.data(); });
+    } catch (e) {
+        // A visitor who doesn't follow the team yet has no subscriber doc —
+        // not an error, just nothing to show.
+        console.debug('loadMyClaims:', e && e.code);
+    }
+}
+
+async function loadAllClaims() {
+    allClaims = [];
+    if (!isManager || !teamId) return;
+    try {
+        const subs = await getDocs(collection(db, 'teams', teamId, 'subscribers'));
+        for (const sub of subs.docs) {
+            const claims = await getDocs(collection(sub.ref, 'claims'));
+            claims.forEach(c => allClaims.push({ ...c.data(), _uid: sub.id, _playerId: c.id }));
+        }
+    } catch (e) {
+        console.error('loadAllClaims:', e);
+    }
+}
+
+function openFamilyLinkDialog(playerId, playerName) {
+    if (!currentUser) { alert('Sign in first so the team knows who is asking.'); return; }
+    const opts = RELATIONSHIPS.map((r, i) =>
+        `<label class="family-opt"><input type="radio" name="famrel" value="${escapeAttr(r)}"${i === 0 ? ' checked' : ''}> ${escapeHtml(r)}</label>`
+    ).join('');
+    const wrap = document.createElement('div');
+    wrap.className = 'family-modal';
+    wrap.innerHTML = `
+      <div class="family-modal-card">
+        <h3>${escapeHtml(playerName)}</h3>
+        <p class="family-modal-sub">Tell the team how you're related. A team manager
+           has to approve this before it's shown anywhere.</p>
+        <div class="family-opts">${opts}</div>
+        <div class="family-modal-actions">
+          <button class="family-cancel">Cancel</button>
+          <button class="family-submit">Send request</button>
+        </div>
+        <div class="family-modal-msg"></div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const close = () => wrap.remove();
+    wrap.addEventListener('click', e => { if (e.target === wrap) close(); });
+    wrap.querySelector('.family-cancel').addEventListener('click', close);
+    wrap.querySelector('.family-submit').addEventListener('click', async () => {
+        const rel = (wrap.querySelector('input[name=famrel]:checked') || {}).value || 'Parent';
+        const btn = wrap.querySelector('.family-submit');
+        const msg = wrap.querySelector('.family-modal-msg');
+        btn.disabled = true; btn.textContent = 'Sending…';
+        try {
+            await setDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid, 'claims', playerId), {
+                playerId,
+                playerName: playerName || '',
+                relationship: rel.toLowerCase(),
+                // Never anything but pending from a client; the rules enforce it.
+                status: 'pending',
+                claimantUid: currentUser.uid,
+                claimantName: currentUser.displayName || currentUser.email || 'A follower',
+                requestedAt: Date.now(),
+                decidedAt: 0
+            });
+            close();
+            await loadMyClaims();
+            await loadRoster();
+        } catch (e) {
+            console.error('claim failed', e);
+            btn.disabled = false; btn.textContent = 'Send request';
+            msg.textContent = (e && e.code === 'permission-denied')
+                ? 'You need to be following this team before you can do this.'
+                : 'Could not send that request. Please try again.';
+        }
+    });
+}
+
+async function decideClaim(uid, playerId, approve) {
+    try {
+        await updateDoc(doc(db, 'teams', teamId, 'subscribers', uid, 'claims', playerId), {
+            status: approve ? 'approved' : 'denied',
+            decidedAt: Date.now()
+        });
+        await loadAllClaims();
+        renderClaimRequests();
+    } catch (e) {
+        console.error('decideClaim failed', e);
+        alert('Could not save that. Please try again.');
+    }
+}
+
+function renderClaimRequests() {
+    const host = document.getElementById('familyRequests');
+    if (!host) return;
+    if (!isManager) { host.style.display = 'none'; host.innerHTML = ''; return; }
+    const pending = allClaims.filter(c => c.status === 'pending');
+    const decided = allClaims.filter(c => c.status === 'approved');
+    if (!pending.length && !decided.length) { host.style.display = 'none'; host.innerHTML = ''; return; }
+    host.style.display = '';
+    let h = '<h2 class="section-title">FAMILY LINKS</h2>';
+    if (pending.length) {
+        h += `<p class="family-help">Approving means this person is recorded as that
+              player's family. Only approve people you recognise.</p>`;
+        pending.forEach(c => {
+            h += `<div class="family-req">
+                <div class="family-req-text">
+                  <strong>${escapeHtml(c.claimantName || 'Someone')}</strong>
+                  says they are <strong>${escapeHtml(c.playerName)}</strong>'s ${escapeHtml(c.relationship)}.
+                </div>
+                <div class="family-req-actions">
+                  <button class="family-approve" data-u="${escapeAttr(c._uid)}" data-p="${escapeAttr(c._playerId)}">Approve</button>
+                  <button class="family-deny" data-u="${escapeAttr(c._uid)}" data-p="${escapeAttr(c._playerId)}">Decline</button>
+                </div>
+              </div>`;
+        });
+    }
+    decided.forEach(c => {
+        h += `<div class="family-req approved-row">
+            <div class="family-req-text">✓ ${escapeHtml(c.claimantName || 'Someone')}
+              — ${escapeHtml(c.playerName)}'s ${escapeHtml(c.relationship)}</div>
+            <div class="family-req-actions">
+              <button class="family-deny" data-u="${escapeAttr(c._uid)}" data-p="${escapeAttr(c._playerId)}">Remove</button>
+            </div>
+          </div>`;
+    });
+    host.innerHTML = h;
+    host.querySelectorAll('.family-approve').forEach(b => b.addEventListener('click',
+        () => decideClaim(b.getAttribute('data-u'), b.getAttribute('data-p'), true)));
+    host.querySelectorAll('.family-deny').forEach(b => b.addEventListener('click',
+        () => decideClaim(b.getAttribute('data-u'), b.getAttribute('data-p'), false)));
 }
 
 let pastGamesCache = [];  // Cache for edit operations
