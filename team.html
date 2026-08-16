@@ -487,6 +487,13 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
 }
 .family-modal-card h3 { margin: 0 0 6px; font-size: 19px; }
 .family-modal-sub { margin: 0 0 14px; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.family-notice {
+    font-size: 13px; line-height: 1.5; color: var(--muted);
+    background: rgba(255,150,64,0.10);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px; padding: 10px 12px; margin: 0 0 16px;
+}
+.family-notice strong { color: var(--accent); }
 .family-opts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
 .family-opt { display: flex; align-items: center; gap: 9px; font-size: 15px; cursor: pointer; }
 .family-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
@@ -2420,7 +2427,7 @@ async function loadRoster() {
             let familyHtml = '';
             if (currentUser && !isManager) {
                 if (!claim) {
-                    familyHtml = `<button class="player-family-pill" data-claim-player="${escapeAttr(d.id)}" data-claim-name="${escapeAttr(p.name || 'Player')}">＋ My player</button>`;
+                    familyHtml = `<button class="player-family-pill" data-claim-player="${escapeAttr(d.id)}" data-claim-name="${escapeAttr(p.name || 'Player')}">Follow</button>`;
                 } else if (claim.status === 'pending') {
                     familyHtml = `<span class="player-family-pill pending" title="Waiting for a team manager to approve">⏳ Pending</span>`;
                 } else if (claim.status === 'approved') {
@@ -2506,9 +2513,12 @@ function openFamilyLinkDialog(playerId, playerName) {
     wrap.className = 'family-modal';
     wrap.innerHTML = `
       <div class="family-modal-card">
-        <h3>${escapeHtml(playerName)}</h3>
-        <p class="family-modal-sub">Tell the team how you're related. A team manager
-           has to approve this before it's shown anywhere.</p>
+        <h3>Follow ${escapeHtml(playerName)}</h3>
+        <p class="family-modal-sub">Tell the team how you're related.</p>
+        <div class="family-notice">
+          <strong>Family members only.</strong> A team owner or manager reviews every
+          request, and will only approve people they know are this player's family.
+        </div>
         <div class="family-opts">${opts}</div>
         <div class="family-modal-actions">
           <button class="family-cancel">Cancel</button>
