@@ -2385,6 +2385,43 @@ function buildPlayerStatChips(p, sport) {
     return `<div class="player-stats-grid">${chips.join('')}</div>`;
 }
 
+
+// ── Player name display (2026-08-16) ───────────────────────────────────────
+//
+// Two conventions exist and they optimise for opposite things:
+//   • "J. Bloomcamp"  — the STATS convention (box scores, leaderboards). Reads
+//     naturally because in sport the surname IS the identity.
+//   • "Mia B."        — the CHILD-SAFETY convention, used by youth leagues
+//     precisely BECAUSE the surname is the identifying part.
+//
+// The surname is what makes a minor findable: it's the searchable token, and it
+// links the child to their family. "J. Bloomcamp #7, Storm 12 Black, Overland
+// Park, Saturdays" is barely less identifying than the full name. So which
+// convention is right depends on WHO is looking, not on taste:
+//
+//   vetted viewer (manager / coach / approved follower) → full name
+//   everyone else                                       → "Mia B."
+//
+// NOTE ON SCOPE: for a PUBLIC team this is a DISPLAY change, not a data one —
+// `players` is world-readable under canReadTeam, so the full name is still in
+// the Firestore response. Making it real means moving names out of the publicly
+// readable document. Worth being clear about so nobody treats this as more
+// protection than it is.
+function viewerSeesFullNames() {
+    return !!(isManager || isSubscriber);
+}
+
+/** "Mia Bloomcamp" -> "Mia B."  Leaves single-word names alone. */
+function shortenName(full) {
+    const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return parts[0] || 'Player';
+    return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+}
+
+function displayPlayerName(full) {
+    return viewerSeesFullNames() ? (full || 'Player') : shortenName(full);
+}
+
 async function loadRoster() {
     if (!teamId) return;
     try {
@@ -2434,7 +2471,7 @@ async function loadRoster() {
             const claimsAllowed = hubProfile && hubProfile.visibility !== 'public';
             if (currentUser && !isManager && claimsAllowed) {
                 if (!claim) {
-                    familyHtml = `<button class="player-family-pill" data-claim-player="${escapeAttr(d.id)}" data-claim-name="${escapeAttr(p.name || 'Player')}">Follow</button>`;
+                    familyHtml = `<button class="player-family-pill" data-claim-player="${escapeAttr(d.id)}" data-claim-name="${escapeAttr(displayPlayerName(p.name))}">Follow</button>`;
                 } else if (claim.status === 'pending') {
                     familyHtml = `<span class="player-family-pill pending" title="Waiting for a team manager to approve">⏳ Pending</span>`;
                 } else if (claim.status === 'approved') {
@@ -2446,7 +2483,7 @@ async function loadRoster() {
             html += `<div class="player-card">
                 <div class="player-number">${num || '–'}</div>
                 <div class="player-info">
-                    <div class="player-name">${p.name || 'Player'}</div>
+                    <div class="player-name">${escapeHtml(displayPlayerName(p.name))}</div>
                     ${pos}${statHtml}
                 </div>
                 ${familyHtml}

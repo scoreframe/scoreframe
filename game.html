@@ -950,6 +950,48 @@ getRedirectResult(auth).catch(e => {
 });
 let currentUser = null;
 
+// ── Player name display (2026-08-16) ───────────────────────────────────────
+//
+// Mirrors team.html. The surname is the identifying half for a minor — it's the
+// searchable token and it links the child to their family — so an unvetted
+// viewer sees "Mia B." while a manager, coach or approved follower sees the
+// full name. The stats convention ("J. Bloomcamp") is the WRONG one here: it
+// keeps the exact part that does the identifying.
+//
+// SCOPE: display only for a public team, whose docs are world-readable under
+// canReadTeam. Real protection needs names out of the public document.
+let viewerIsVetted = false;
+
+async function resolveViewerAccess(teamId) {
+    viewerIsVetted = false;
+    if (!currentUser || !teamId) return;
+    try {
+        const [mgr, coach, sub] = await Promise.all([
+            getDoc(doc(db, 'teams', teamId, 'managers', currentUser.uid)).catch(() => null),
+            getDoc(doc(db, 'teams', teamId, 'coaches', currentUser.uid)).catch(() => null),
+            getDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid)).catch(() => null),
+        ]);
+        viewerIsVetted = !!(
+            (mgr && mgr.exists()) ||
+            (coach && coach.exists()) ||
+            (sub && sub.exists() && (sub.data() || {}).status === 'approved')
+        );
+    } catch (e) {
+        console.debug('resolveViewerAccess:', e && e.code);
+    }
+}
+
+function shortenName(full) {
+    const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return parts[0] || 'Player';
+    return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+}
+
+function displayPlayerName(full) {
+    return viewerIsVetted ? (full || 'Player') : shortenName(full);
+}
+
+
 // 2026-06-09 — Token-refresh-retry wrapper for Firestore reads. See
 // team.html for the full rationale; in short, the in-app WebView
 // wrapper re-executes the page on `wv.goBack()` and the cached ID
@@ -1173,6 +1215,10 @@ async function load() {
         const idx = await getDoc(doc(db, 'hubIndex', hubCode));
         if (!idx.exists()) { showNotFound(); return; }
         teamId = idx.data().teamId;
+        // Decide whether this viewer gets full names BEFORE anything renders —
+        // see displayPlayerName. Non-blocking failure: an unknown viewer simply
+        // stays unvetted, which is the safe direction.
+        await resolveViewerAccess(teamId);
         const team = await retryOnAuthDeny('game.html team', () => getDoc(doc(db, 'teams', teamId)));
         if (!team.exists()) { showNotFound(); return; }
         const t = team.data();
@@ -2200,7 +2246,7 @@ function renderRoster(hub, game, isBowling) {
         return (words[0][0] + words[words.length - 1][0]).toUpperCase();
     };
     const cell = (p, ring) => {
-        const name = p.name || 'Player';
+        const name = displayPlayerName(p.name);
         const num = (p.number != null && String(p.number) !== '') ? `<div class="avatar-num">#${esc(p.number)}</div>` : '';
         return `<div class="avatar-cell">
             <div class="avatar" style="border-color:${esc(ring)};">${esc(initials(name))}</div>
@@ -3240,7 +3286,7 @@ function renderBoxSide(name, color, players, cols, sportKey) {
         const stats = (p.stats && typeof p.stats === 'object') ? p.stats : {};
         const cells = cols.map(c => `<td class="bx-stat">${c.fmt(stats, sportKey)}</td>`).join('');
         return `<tr><td class="bx-num">${escapeHtml(p.number || '–')}</td>` +
-            `<td class="bx-name">${escapeHtml(p.name || 'Player')}</td>${cells}</tr>`;
+            `<td class="bx-name">${escapeHtml(displayPlayerName(p.name))}</td>${cells}</tr>`;
     }).join('');
     const totals = computeBoxTotals(players, cols, sportKey);
     const totalRow = totals ?
@@ -3563,7 +3609,7 @@ function __sfPerformers(game) {
             for (const k in stats) { const v = num(stats[k]); if (v > bestV) { bestV = v; bestK = k; } }
             if (bestV > 0) { value = bestV; label = __sfStatLabel(bestK); }
         }
-        if (value > 0) out.push({ name: p.name, value: Math.round(value), label });
+        if (value > 0) out.push({ name: displayPlayerName(p.name), value: Math.round(value), label });
     }
     return out.sort((a, b) => b.value - a.value).slice(0, 3);
 }
