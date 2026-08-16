@@ -1,0 +1,12 @@
+# Crawling is ALLOWED on purpose.
+#
+# The pages that must not be indexed (team.html, game.html, player.html,
+# event.html — they carry rosters, numbers, schedules and venues for teams that
+# are often children) each carry <meta name="robots" content="noindex">.
+#
+# A crawler has to FETCH a page to see that tag. Disallowing them here would
+# have the opposite of the intended effect: Google can still index a disallowed
+# URL discovered from inbound links, it just does so without being able to read
+# the noindex. Allow the crawl, refuse the index.
+User-agent: *
+Allow: /

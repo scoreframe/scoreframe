@@ -2,6 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- NOT INDEXABLE (2026-08-16).
+     These pages carry roster names, jersey numbers, schedules and venues for
+     teams that are often children. A search engine turning that into a
+     findable profile — name + number + team + where they'll be on Saturday —
+     is a bigger exposure than any in-app viewer, and it's the one an outsider
+     actually stumbles across.
+
+     Deliberately NOT blocked in robots.txt: a disallowed page can't be
+     fetched, so the crawler never SEES this tag and Google may still index the
+     bare URL from inbound links. Allow the crawl, refuse the index. -->
+<meta name="robots" content="noindex, nofollow">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
@@ -482,6 +494,49 @@ if (params.get('app') === '1') document.body.classList.add('app');
 let teamId = '';
 let playerProfile = null;
 let currentUid = null;  // module-scoped; discovery + picker read this
+
+// ── Player name display + viewer vetting (2026-08-16) ──────────────────
+//
+// Ported from team.html / game.html, and the reason this page needed it is
+// the reason it was the actual hole: team.html shortens the roster to
+// "Mia B." on a public team, but every roster row's Stats pill links HERE,
+// and this page had no visibility check at all — it rendered the full name,
+// the number, and the game log to anyone with the URL. The shortening was
+// one click from being undone.
+//
+// SCOPE: display only. On a public team these docs are world-readable
+// under canReadTeam, so this raises the effort, it doesn't seal the data.
+// Real protection is names out of the public document.
+let viewerIsVetted = false;
+
+async function resolveViewerAccess(teamId) {
+    viewerIsVetted = false;
+    if (!currentUid || !teamId) return;
+    try {
+        const [mgr, coach, sub] = await Promise.all([
+            getDoc(doc(db, 'teams', teamId, 'managers', currentUid)).catch(() => null),
+            getDoc(doc(db, 'teams', teamId, 'coaches', currentUid)).catch(() => null),
+            getDoc(doc(db, 'teams', teamId, 'subscribers', currentUid)).catch(() => null),
+        ]);
+        viewerIsVetted = !!(
+            (mgr && mgr.exists()) ||
+            (coach && coach.exists()) ||
+            (sub && sub.exists() && (sub.data() || {}).status === 'approved')
+        );
+    } catch (e) {
+        console.debug('[player.html] resolveViewerAccess:', e && e.code);
+    }
+}
+
+function shortenName(full) {
+    const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return parts[0] || 'Player';
+    return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+}
+
+function displayPlayerName(full) {
+    return viewerIsVetted ? (full || 'Player') : shortenName(full);
+}
 let allGames = [];        // GameSummary-shaped docs filtered to this player
 let teamProfile = null;   // { name, sport, color, color2 }
 let teamSeasons = [];     // [{ id, name, startDate, isActive, teamId }]
@@ -617,6 +672,7 @@ async function loadPlayer() {
         }
         teamId = idx.data().teamId;
         console.log('[player.html] resolved hubCode=' + hubCode + ' -> teamId=' + teamId);
+        await resolveViewerAccess(teamId);
 
         // 2026-06-02 — Defensive player-profile resolution. The
         // teams/{teamId}/players/{id} doc is only written for TRACKED
@@ -751,10 +807,20 @@ async function loadPlayer() {
         // this player on its roster. Runs after playerProfile
         // resolves so the discovery function can match by name as a
         // fallback for cross-team SavedPlayer UUID drift.
-        const discoverTeamsP = discoverTeamsForPlayer(playerProfile?.name || '').catch((e) => {
-            console.warn('[player.html] team discovery failed:', e);
-            return [];
-        });
+        // 2026-08-16 — Vetted viewers only. Discovery matches by NAME across
+        // every team the viewer can read, and public team docs are readable by
+        // anyone; leaving it open let a stranger turn one public roster into a
+        // list of every team a child plays for. That aggregation is worse than
+        // any single page it draws from, and shortening the displayed name
+        // doesn't help — discovery matches on the stored name, not the shown
+        // one. Following a player across teams is the whole point of the
+        // picker, so it stays for the people it was built for.
+        const discoverTeamsP = viewerIsVetted
+            ? discoverTeamsForPlayer(playerProfile?.name || '').catch((e) => {
+                  console.warn('[player.html] team discovery failed:', e);
+                  return [];
+              })
+            : Promise.resolve([]);
 
         renderHero();
         renderPills(sports);
@@ -1067,7 +1133,7 @@ async function renderTeamPicker() {
 
 function renderHero() {
     $('heroWatermark').textContent = sportEmoji(selectedSport);
-    $('heroName').textContent = playerProfile.name || 'Player';
+    $('heroName').textContent = displayPlayerName(playerProfile.name);
     const bits = [];
     if (playerProfile.number) bits.push('#' + playerProfile.number);
     if (playerProfile.position) bits.push(playerProfile.position);
@@ -1076,7 +1142,9 @@ function renderHero() {
     // itself surfaces the active scope, so omit team name in that case.
     if (teamProfile?.name && !viewAllTeams) bits.push(teamProfile.name);
     $('heroMeta').textContent = bits.join('  ·  ');
-    document.title = `${playerProfile.name || 'Player'} — ScoreFrame`;
+    // The tab title leaks to browser history, shared screens and OS task
+    // switchers, so it gets the same treatment as the hero.
+    document.title = `${displayPlayerName(playerProfile.name)} — ScoreFrame`;
 }
 
 function renderPills(sports) {

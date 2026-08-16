@@ -2,6 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- NOT INDEXABLE (2026-08-16).
+     These pages carry roster names, jersey numbers, schedules and venues for
+     teams that are often children. A search engine turning that into a
+     findable profile — name + number + team + where they'll be on Saturday —
+     is a bigger exposure than any in-app viewer, and it's the one an outsider
+     actually stumbles across.
+
+     Deliberately NOT blocked in robots.txt: a disallowed page can't be
+     fetched, so the crawler never SEES this tag and Google may still index the
+     bare URL from inbound links. Allow the crawl, refuse the index. -->
+<meta name="robots" content="noindex, nofollow">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
@@ -2468,10 +2480,18 @@ async function loadRoster() {
             // — meaning the owner already chose who may see the roster — before
             // anyone can claim a person on it. The rules enforce this too; this
             // just avoids offering a button that would be refused.
+            // NOTE: the claim carries the player's FULL name even though the
+            // card may show "Mia B." — the claim record and the approval email
+            // are read by a manager deciding whether this is really that
+            // child's family, and "Mia B." is not enough to decide on. In
+            // practice the two are the same string, since claims only exist on
+            // private/invite-only teams where the viewer is an approved
+            // follower and therefore already sees full names; this just makes
+            // it true by construction rather than by coincidence.
             const claimsAllowed = hubProfile && hubProfile.visibility !== 'public';
             if (currentUser && !isManager && claimsAllowed) {
                 if (!claim) {
-                    familyHtml = `<button class="player-family-pill" data-claim-player="${escapeAttr(d.id)}" data-claim-name="${escapeAttr(displayPlayerName(p.name))}">Follow</button>`;
+                    familyHtml = `<button class="player-family-pill" data-claim-player="${escapeAttr(d.id)}" data-claim-name="${escapeAttr(p.name || 'Player')}">Follow</button>`;
                 } else if (claim.status === 'pending') {
                     familyHtml = `<span class="player-family-pill pending" title="Waiting for a team manager to approve">⏳ Pending</span>`;
                 } else if (claim.status === 'approved') {
