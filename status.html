@@ -245,7 +245,7 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">17 Aug 2026 · privacy rebuild + family links</span>
+    <span class="stamp">17 Aug 2026 · family links, invites, automation</span>
   </div>
   <p class="lede">
     What's moving right now, and what's waiting on you. Two days of work on how
@@ -268,13 +268,13 @@ onAuthStateChanged(auth, async (user) => {
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1223</span>
-      <span class="ch-note">player renames reach the web · follower names + family links</span>
+      <span class="ch-ver">1.1.1225</span>
+      <span class="ch-note">invite consent · security fix · untracked removal sticks</span>
     </div>
     <div class="ch">
       <span class="ch-name">TestFlight</span>
-      <span class="ch-ver">1.2.213 (650)</span>
-      <span class="ch-note">same work · 211 fixed a roster-removal regression, needs a device check</span>
+      <span class="ch-ver">1.2.214 (651)</span>
+      <span class="ch-note">same work · REQUIRED for invite acceptance on iOS</span>
     </div>
     <div class="ch">
       <span class="ch-name">Web (Pages)</span>
@@ -287,48 +287,51 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item b-blocked">
       <div class="item-head">
-        <span class="item-title">Player surnames are out of the public data</span>
-        <span class="chip">Structural, not cosmetic</span>
+        <span class="item-title">Anyone could add themselves to a private team</span>
+        <span class="chip">Found + closed today</span>
       </div>
       <p class="item-body">
-        A shared team's documents are readable by anyone — no sign-in, no follow. Shortening
-        names in the web page only changed what was <em>drawn</em>; the surname was still one
-        fetch away. And "approved follower" was never a gate on a public team, because
-        following one is approved automatically.
+        The rule that let a person create their own follower record put no
+        constraint on <em>status</em>. So any signed-in user could write
+        <code>{status:"approved"}</code> onto any private team and immediately read its
+        roster — and, because surname access trusts "approved follower", the players'
+        full names.
         <br><br>
-        Surnames now live in <code>teams/{id}/rosterPrivate</code> behind
-        <code>canSeePlayerNames</code> — staff, or an approved follower of a
-        <strong>non-public</strong> team. Everything public carries "Hayden H." Three Cloud
-        Function triggers hold that on every write, so it holds for every app version. 247
-        existing surnames migrated; the verifier reports <strong>zero</strong> world-readable
-        documents still carrying one.
+        Verified against a throwaway private team: the read was refused, the
+        self-approve succeeded, the read then worked. Now refused, and re-verified
+        after the fix — while a genuine request-to-follow and public auto-follow both
+        still work. Accepting an invite moved to the server, which checks the invite
+        really was sent to your address. <strong>iOS 1.2.214 is required</strong> for
+        invite acceptance; older builds will fail at it.
       </p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Family links work end to end</span>
-        <span class="chip">Web + app</span>
+        <span class="item-title">Surnames are out of the public data</span>
+        <span class="chip">Yes — informational</span>
       </div>
       <p class="item-body">
-        A follower picks a player, says how they're related, and staff approve. Coaches can
-        decide them too — they were already being emailed about every request while unable to
-        act on one. One <strong>Followers</strong> section on the team page shows each person,
-        the player, and the relationship, with approve, change and remove. The same list is in
-        the app's sharing section. Followers can change their own relationship (which goes back
-        for approval) or stop following.
+        You asked what this meant: a shared team's records used to be readable by
+        anyone, so a child's full name was one fetch away even though the page only
+        drew "Hayden H." Surnames now live in a separate place only staff and approved
+        followers of a private team can read, and a server rule enforces it on every
+        write. So — done, and it matches what you want.
       </p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Videos are tied to the players in them</span>
+        <span class="item-title">An approved family link now grants authority</span>
+        <span class="chip">Your call, built</span>
       </div>
       <p class="item-body">
-        Reels are built per player, but nothing recorded <em>which</em> player — the builder knew
-        as it wrote each file and handed back only a filename. Now recorded at build, published
-        at upload, and listed on the player's page behind
-        <code>canSeePlayerVideos</code>. Deliberately not on the game document: an unlisted
-        YouTube link works for anyone holding it, so a list of every video of one child is the
-        sensitive thing itself, not a pointer to one.
+        Approving a link now records a <em>verified</em> guardian relationship the
+        permission system can act on, instead of only flipping a status nothing read.
+        <br><br>
+        Mapped conservatively: <strong>parent and guardian</strong> become custodial;
+        <strong>grandparent and other family</strong> stop at "can see this player".
+        That reads "parent or guardian" literally — custodial authority following the
+        custodial relationship. Easy to widen when you decide what those people should
+        be able to do; much harder to walk back.
       </p>
     </div>
   </div>
@@ -337,41 +340,41 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item b-blocked">
       <div class="item-head">
-        <span class="item-title">Test roster removal on iOS 1.2.211+</span>
+        <span class="item-title">Install 1.1.1225 / iOS 1.2.214, then re-test two things</span>
         <span class="chip">Most important</span>
       </div>
       <p class="item-body">
-        Remove a player, Save, force-quit, reopen — they must stay gone. In 1.2.210 I made
-        removal wait for Save, which was right, but it dropped the only call that deletes the
-        player from the cloud (iOS's team sync never removes roster entries, only adds them).
-        Anyone you removed on 210 may have come back. Fixed in 211; unverified on hardware.
-      </p>
-    </div>
-    <div class="item b-blocked">
-      <div class="item-head">
-        <span class="item-title">Two decisions I'm holding</span>
-      </div>
-      <p class="item-body">
-        <strong>Does approving a family link confer authority?</strong> Permissions grants
-        "guardian of player" only from a verified <code>playerLinks</code> entry, and approving a
-        claim only flips the claim's status — the two never talk. Wiring them changes what an
-        approval <em>authorises</em>, so it's yours to call.
+        <strong>Roster removal.</strong> Remove a player, Save, force-quit, reopen —
+        must stay gone. The untracked case only started working in 1224; you were
+        testing 1222/1223, which is why Maebry kept coming back. Verified on an
+        emulator with a tracked <em>and</em> an untracked player sharing a number:
+        both are separate people and both delete.
         <br><br>
-        <strong>Birth month and year on the player page.</strong> You asked; I advised against
-        it, because the team's age division gives nearly the same matching power without holding
-        a date of birth for a child. If you still want it I'll build it gated like a surname —
-        say the word.
+        <strong>Invites.</strong> Invite a ScoreFrame user, then sign in as them —
+        the invitation should be waiting on their dashboard with Accept / No thanks,
+        without needing the email.
       </p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Small ones</span>
+        <span class="item-title">Husk teams — emailed, awaiting your call</span>
       </div>
       <p class="item-body">
-        <strong>Carter J.</strong> is tombstoned but still on Kansas City Royals — delete the
-        roster rows, or clear the tombstone? <strong>Micha</strong> is on no team — keep or
-        remove? And <strong>10 husk teams</strong> holding ~14 unreachable game records are
-        parked behind a flag until you say go.
+        11 husk teams, 34 leftover documents, 15 game records — all listed in the email
+        with dates, sports, teams and scores. Three look like yours (bowling on 9 May,
+        "Tre" on 12 Aug). Nothing deleted. They can also be re-parented to a live team
+        instead of purged, if you want any of it back.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Two questions I owe you an answer on, not the reverse</span>
+      </div>
+      <p class="item-body">
+        Cross-team player identity — who owns a shared player's name and number when
+        two accounts manage the same child — and how a possible match gets surfaced.
+        My position is in the reply rather than here, because it changes the data model
+        and I would rather you disagree with it before I build it.
       </p>
     </div>
   </div>
@@ -469,8 +472,118 @@ onAuthStateChanged(auth, async (user) => {
     </div>
   </div>
 
+  <h2>Test automation — where it actually stands</h2>
+  <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Web pages — working, and now the way things get checked</span>
+        <span class="chip">New today</span>
+      </div>
+      <p class="item-body">
+        A real browser signed in as a chosen account, driving scoreframe.app.
+        Screenshots, element probes, and layout measurement. This is how the roster
+        order was confirmed (#1 Maebry → #10 Arya, your order) and how the desktop
+        layout was measured at 760px centred rather than eyeballed.
+        <br><br>
+        It matters because the previous habit was fetching the HTML and grepping for a
+        string, which proves a file deployed and nothing else. Twice yesterday I
+        "verified" CSS that referenced selectors matching no element on the page.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">iOS simulator — never actually blocked. I misread it</span>
+        <span class="chip">My error</span>
+      </div>
+      <p class="item-body">
+        I reported this blocked on a permissions problem. It wasn't. Element dumps go
+        to the full log; I was reading the runner's filtered output, saw nothing, and
+        concluded the test harness couldn't see the app. The dump proves it could.
+        <br><br>
+        The real failure was mine twice over: my test used <em>Android's</em>
+        role-picker label, and I had only read the Android half of the automation notes
+        — the iOS half documents that exact flow, and the helper that handles it. No
+        permission from you was ever needed.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Android emulator — working</span>
+      </div>
+      <p class="item-body">
+        Driven end to end as a brand-new user: account creation, team creation, roster
+        edits, removal. That run found three bugs in my own roster work that no unit
+        test could reach, and reproduced the untracked-removal case to prove 1224 fixed
+        it. 88 unit tests, zero failures.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Backend — the strongest of the three</span>
+      </div>
+      <p class="item-body">
+        Security rules tested as <em>real signed-in users</em> over the REST API,
+        because the admin SDK bypasses rules and proves nothing about them: 17/17,
+        including that an approved follower of a public team is refused surnames. The
+        self-approve hole was both found and confirmed-closed this way.
+      </p>
+    </div>
+  </div>
+
   <h2>To do — not started</h2>
   <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Offer the other teams a player is on, when someone follows them</span>
+        <span class="chip">You asked today</span>
+      </div>
+      <p class="item-body">
+        After they pick a relationship, ask whether they also want to request to follow
+        the same player's other teams, with tick boxes, and send those requests to those
+        owners. Needs care: the list of teams a child is on is exactly the aggregation
+        we protect elsewhere, so it can only be offered once that person is an approved
+        family member of the player — not while they are merely asking.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Create a player without creating a team</span>
+      </div>
+      <p class="item-body">
+        No way to add a player on their own, and no single screen holding everything
+        about them. Confirmed today that birth month and year are NOT wanted there.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Players managing themselves</span>
+        <span class="chip">Design first</span>
+      </div>
+      <p class="item-body">
+        The end state you described: a player with their own account who owns their name.
+        Blocked on a decision rather than on code — a child registering makes ScoreFrame
+        a service collecting information from children, which is a compliance programme,
+        not a feature flag.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Edit-feature clips aren't tied to a player</span>
+      </div>
+      <p class="item-body">
+        Stat-driven reels index against the player they're of; clips made with the edit
+        feature upload with no player attached, so they never appear in a player's list.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Cross-device roster resurrection</span>
+      </div>
+      <p class="item-body">
+        A second device still holding a removed player can re-upload them: roster
+        membership has no tombstone, unlike deleted players.
+      </p>
+    </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">Create a player without creating a team</span>
