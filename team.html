@@ -1105,14 +1105,22 @@ async function autoAcceptFollowerInvitations() {
             const inviteHubCode = data.hubCode || '';
             if (!inviteTeamId) continue;
             try {
-                await setDoc(doc(db, 'teams', inviteTeamId, 'subscribers', currentUser.uid), {
-                    uid: currentUser.uid,
-                    name: currentUser.displayName || email.split('@')[0],
-                    email,
-                    status: 'approved',
-                    requestedAt: Date.now(),
-                    approvedAt: Date.now()
-                }, { merge: true });
+                // Accepting an invite goes through the SERVER (2026-08-17).
+                //
+                // This used to write `status:"approved"` straight from the
+                // client. The rule allowed that — and allowed it for ANY team,
+                // whether you'd been invited or not, which meant a signed-in
+                // stranger could self-approve into a private team and read its
+                // roster and its players' surnames. Verified, then closed.
+                //
+                // The rule now only lets a client self-create as "pending"
+                // (plus public auto-follow, where nothing is gained). An invite
+                // can't be checked in a rule because it carries the email in a
+                // FIELD and rules cannot query, so acceptHubInvite verifies it
+                // against the caller's token email and writes the approval.
+                const { getFunctions, httpsCallable } =
+                    await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
+                await httpsCallable(getFunctions(app), 'acceptHubInvite')({ teamId: inviteTeamId });
                 if (inviteHubCode) {
                     await setDoc(doc(db, 'users', currentUser.uid),
                         { subscribedHubs: arrayUnion(inviteHubCode) }, { merge: true });
@@ -1267,6 +1275,43 @@ async function loadTeam() {
     }
 }
 
+/**
+ * ?accept=1 — arriving from an invite email's "Accept and follow" button.
+ *
+ * The link is only a pointer: acceptHubInvite re-checks the invite against the
+ * signed-in user's own verified email, so forwarding that mail gets the
+ * recipient nothing. An invite now creates a PENDING follow (Eric 2026-08-17 —
+ * "we might have gotten the wrong person or they might just not want to"), and
+ * this is where the person themselves turns it into a follow.
+ */
+async function handleInviteAcceptance() {
+    const params = new URLSearchParams(location.search);
+    if (params.get('accept') !== '1' || !teamId) return;
+    if (!currentUser) {
+        // Signed out: the sign-in flow reloads this URL, so the flag survives.
+        const box = $('followStatus');
+        if (box) box.textContent = 'Sign in to accept this invitation.';
+        return;
+    }
+    try {
+        const { getFunctions, httpsCallable } =
+            await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
+        await httpsCallable(getFunctions(app), 'acceptHubInvite')({ teamId });
+        // Drop the flag so a refresh doesn't try again.
+        const clean = new URL(location.href);
+        clean.searchParams.delete('accept');
+        history.replaceState({}, '', clean);
+        await checkAccess();
+        showContent();
+    } catch (e) {
+        console.warn('acceptHubInvite:', e && e.message);
+        const box = $('followStatus');
+        if (box) box.textContent = (e && /no pending invite/i.test(e.message || ''))
+            ? "This invitation isn't waiting for your account any more — it may already be accepted."
+            : 'Could not accept that invitation. Please try again.';
+    }
+}
+
 async function checkAccess() {
     if (!currentUser) { isManager = false; isCoach = false; isSubscriber = false; subStatus = null; return; }
     const uid = currentUser.uid;
@@ -1319,6 +1364,7 @@ function showContent() {
             loadPastGames();
         listenForLive();
         loadPendingRequests();
+        handleInviteAcceptance();
     } else if (isManager || isSubscriber) {
         // Private hub but user has access
         $('accessGate').style.display = 'none';
@@ -1332,7 +1378,10 @@ function showContent() {
         listenForLive();
         loadPendingRequests();
     } else {
-        // Private hub, no access — show gate
+        // Private hub, no access — show gate. An invitee arriving from the email
+        // lands HERE (their follow is pending), so the accept handler has to run
+        // on this branch too or the button appears to do nothing.
+        handleInviteAcceptance();
         $('teamContent').style.display = 'none';
         $('accessGate').style.display = 'block';
 
@@ -2728,7 +2777,16 @@ async function loadRoster() {
             // follower and therefore already sees full names; this just makes
             // it true by construction rather than by coincidence.
             const claimsAllowed = hubProfile && hubProfile.visibility !== 'public';
-            if (currentUser && !isManager && claimsAllowed) {
+            // Staff can claim a player too (Eric, 2026-08-17: "I'm the owner and
+            // I'm actually a parent of one of the players"). This used to be
+            // hidden for managers, which assumed staff and family are different
+            // people — on a club team the coach is usually somebody's parent.
+            //
+            // No privilege escalation: an owner already sees every player's name
+            // and videos, so recording that they are Audrey's parent grants them
+            // nothing they didn't have. What it DOES do is put the relationship
+            // on the record, which is the thing the whole feature is for.
+            if (currentUser && claimsAllowed) {
                 if (!claim) {
                     familyHtml = `<button class="player-family-pill" data-claim-player="${escapeAttr(d.id)}" data-claim-name="${escapeAttr(p.name || 'Player')}">Follow</button>`;
                 } else if (claim.status === 'pending') {
@@ -2918,6 +2976,25 @@ function openFamilyLinkDialog(playerId, playerName) {
         const msg = wrap.querySelector('.family-modal-msg');
         btn.disabled = true; btn.textContent = 'Sending…';
         try {
+            // A claim is stored at subscribers/{uid}/claims/{playerId}, and the
+            // rule requires the claimant to already be an APPROVED subscriber.
+            // A follower always is. Staff usually are NOT — an owner never
+            // "followed" their own team — so the write would be refused with
+            // nothing on screen to explain why. Ensure the doc exists first.
+            //
+            // Approved immediately, and only for staff: they are the people who
+            // approve followers, so there is nobody left to ask. A non-staff
+            // visitor's subscriber doc is untouched by this.
+            if (isManager || isCoach) {
+                await setDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid), {
+                    name: currentUser.displayName || currentUser.email || 'Staff',
+                    email: currentUser.email || '',
+                    status: 'approved',
+                    requestedAt: Date.now(),
+                    approvedAt: Date.now(),
+                    source: 'staff_self',
+                }, { merge: true });
+            }
             await setDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid, 'claims', playerId), {
                 playerId,
                 playerName: playerName || '',
