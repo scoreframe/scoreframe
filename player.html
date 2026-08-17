@@ -26,6 +26,12 @@
     --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
     --success: #4CAF50; --error: #F44336;
     --win-green: #2E7D32; --loss-red: #C62828; --tie-grey: #777777;
+    /* 2026-08-17 — Aliases this stylesheet already used but never declared, so
+       they silently fell back to their dark literals (a #333 border on a white
+       page). --sf-accent is a var() alias and follows the theme on its own;
+       --outline needs a light override below because it has no base token. */
+    --sf-accent: var(--accent);
+    --outline: rgba(255,255,255,0.14);
 }
 body[data-theme="dark"] {
     --bg-deepest: #0D0D0D !important; --bg-deep: #141414 !important; --bg-surface: #1E1E1E !important;
@@ -38,6 +44,7 @@ body[data-theme="light"] {
     --bg-elevated: #ECECE8 !important; --accent: #E47A1F !important; --accent-dim: rgba(228,122,31,0.15) !important;
     --text-primary: #1A1A1A !important; --text-secondary: #555 !important; --text-muted: #888 !important;
     --win-green: #1B5E20 !important; --loss-red: #B71C1C !important; --tie-grey: #888888 !important;
+    --outline: rgba(0,0,0,0.14) !important;
 }
 
 /* ── In-app colour palette (?palette=) — added 2026-08-01 ─────────────
