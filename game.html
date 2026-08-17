@@ -787,7 +787,7 @@ html, body {
         <!-- 2026-08-17, Eric: team logo at the top of the game page. `margin:0 auto`
              is required — an img at display:block ignores the hero's text-align,
              which is exactly the bug that left team.html's logo pinned left. -->
-        <img id="heroLogo" alt="" style="display:none; width:64px; height:64px; border-radius:32px; object-fit:cover; margin:0 auto 10px; box-shadow:0 2px 10px rgba(0,0,0,0.4);" />
+        <img id="heroLogo" alt="" style="display:none; height:68px; width:auto; max-width:60%; object-fit:contain; margin:0 auto 10px;" />
         <!-- v18 — Event banner above the team identity. Populated from
              game.eventLabel / eventName when present; hidden otherwise.
              Sits above heroTeam so a tournament / conference label is
@@ -2436,7 +2436,7 @@ function renderTeamScore(hub, game) {
     const hubLogo = hub && hub.logoUrl && hub.logoUrl.startsWith('http') ? hub.logoUrl : null;
     const oppLogo = (opponentLogoUrl && opponentLogoUrl.startsWith('http')) ? opponentLogoUrl : null;
     const scoreLogo = (url, after) => url
-        ? `<img src="${url}" alt="" style="width:34px;height:34px;border-radius:17px;object-fit:cover;display:inline-block;vertical-align:middle;margin-${after ? 'left' : 'right'}:8px;box-shadow:0 1px 4px rgba(0,0,0,0.4);" />`
+        ? `<img src="${url}" alt="" style="height:34px;width:auto;max-width:56px;object-fit:contain;display:inline-block;vertical-align:middle;margin-${after ? 'left' : 'right'}:8px;" />`
         : '';
     const homeLogoHtml = scoreLogo(hubIsAwaySide ? oppLogo : hubLogo, false);
     const awayLogoHtml = scoreLogo(hubIsAwaySide ? hubLogo : oppLogo, true);

@@ -745,13 +745,19 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
         <div class="team-color-bar" id="colorBar"></div>
         <!-- v1.1.643 — Team logo, above the sport emoji whenever the team doc
              carries a `logoUrl` Firebase Storage download URL. Hidden when empty.
-             2026-08-17 — `margin: 0 auto` is load-bearing. This was
+             2026-08-17 — No longer a circular thumb. The logo editor crops a
+             RECTANGLE and can make the background transparent, so cover+border-radius
+             was cutting the sides off a wide crest and drawing a box-shadow around
+             empty space. object-fit:contain with width:auto shows the picture as the
+             user cropped it. Eric: "maybe we just show the picture without it being
+             in a circle."
+             `margin: 0 auto` is load-bearing. This was
              `margin-bottom:8px` only, and because an img at display:block is a
              BLOCK element, the header's text-align:center did nothing to it — the
              logo sat hard against the left edge while every other line in the
              header was centred. Eric: "it needs to be top and center."
              Do not reduce this back to a one-sided margin. -->
-        <img id="teamLogo" alt="" style="display:none; width:88px; height:88px; border-radius:44px; object-fit:cover; margin:0 auto 10px; box-shadow:0 2px 10px rgba(0,0,0,0.4);" />
+        <img id="teamLogo" alt="" style="display:none; height:96px; width:auto; max-width:72%; object-fit:contain; margin:0 auto 10px;" />
         <div class="team-emoji" id="teamEmoji"></div>
         <div class="team-name" id="teamName"></div>
         <div class="team-sport" id="teamSport"></div>
