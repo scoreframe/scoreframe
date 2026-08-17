@@ -107,6 +107,13 @@ html, body {
     text-align: center; margin-top: 32px; padding: 20px;
     background: var(--bg-surface); border-radius: 10px;
 }
+/* Default colour for every link on the page. There was no `a` rule at all,
+   so any anchor that didn't name a colour inherited the browser's blue/purple
+   link colours — invisible against #0D0D0D and the cause of the unreadable
+   Find Teams box. Every existing link already sets its own colour or lives in
+   .app-promo, so this changes nothing today; it stops the next one recurring. */
+a { color: var(--accent); }
+
 .app-promo a {
     color: var(--accent); text-decoration: none; font-weight: 600;
 }
@@ -755,9 +762,24 @@ async function loadDashboard() {
         // Search now requires sign-in (gated by Firestore rules); since
         // a signed-in user is already on this page, link them straight
         // to the search UI rather than making them hunt for it.
-        html += `<a href="/search.html" style="display:block; text-decoration:none; background:linear-gradient(135deg, rgba(255,150,64,0.18), rgba(255,150,64,0.06)); border:1px solid rgba(255,150,64,0.4); border-radius:12px; padding:14px 18px; margin-bottom:20px;">
+        // Eric 2026-08-17: this box's description rendered as unreadable purple.
+        // Two faults, and the typo was only the trigger:
+        //   1. `var(--text-mute)` is not a variable — it's `--text-muted`. An
+        //      unresolvable var makes the whole declaration invalid, so the div
+        //      inherited its colour from the <a>...
+        //   2. ...and the <a> set text-decoration but NO colour, so what it
+        //      inherited was the browser's default VISITED-link purple. Hence
+        //      purple only for people who had actually opened search.
+        // The anchor now names its own colour, which is the durable half: no
+        // descendant of it can ever fall through to the UA link colour again.
+        //
+        // Uses --text-secondary rather than --text-muted on purpose. At 12px on
+        // this orange-tinted panel, #666 is about 2.6:1 — below the 4.5:1
+        // minimum, so fixing only the typo would have left it just as hard to
+        // read. #999 lands near 5.2:1, and works in the light palette too.
+        html += `<a href="/search.html" style="display:block; text-decoration:none; color:var(--text-primary); background:linear-gradient(135deg, rgba(255,150,64,0.18), rgba(255,150,64,0.06)); border:1px solid rgba(255,150,64,0.4); border-radius:12px; padding:14px 18px; margin-bottom:20px;">
             <div style="font-size:15px; font-weight:700; color:var(--accent);">🔎 Find Teams</div>
-            <div style="font-size:12px; color:var(--text-mute); margin-top:4px;">Search by name, city, or sport across every team that has sharing enabled. Public auto-follow, Invite Only requires approval.</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Search by name, city, or sport across every team that has sharing enabled. Public auto-follow, Invite Only requires approval.</div>
         </a>`;
 
         if (ownedTeams.length > 0) {
