@@ -178,6 +178,15 @@ let currentUser = null;
 
 const $ = id => document.getElementById(id);
 
+/**
+ * HTML-escape user-supplied text before interpolation. Added 2026-08-16 with
+ * the family-link cards — a player's name is typed by a person and lands in
+ * innerHTML, so it can't go in raw.
+ */
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+}[c]));
+
 const sportEmoji = s => ({
     GENERIC:'\u{1F3AF}', VOLLEYBALL:'\u{1F3D0}', BOWLING:'\u{1F3B3}', BASKETBALL:'\u{1F3C0}',
     SOCCER:'\u26BD', FOOTBALL:'\u{1F3C8}', BASEBALL:'\u26BE', SOFTBALL:'\u{1F94E}',
@@ -400,6 +409,26 @@ window._declineInvite = async (invId) => {
 
 // Check if auth is already resolved
 console.log('Auth initial state:', auth.currentUser?.email || 'not signed in');
+
+/**
+ * Answer a family match request. Rules permit exactly this transition —
+ * pending -> confirmed|denied by the owning user and nothing else — so a
+ * forged or replayed write can't link two children together.
+ */
+window._decideMatch = async function(reqId, confirmed) {
+    if (!currentUser) return;
+    if (!confirmed && !window.confirm(
+        "We won't link them, and the other team won't be told anything. OK?")) return;
+    try {
+        await updateDoc(
+            doc(db, 'users', currentUser.uid, 'playerMatchRequests', reqId),
+            { status: confirmed ? 'confirmed' : 'denied', decidedAt: Date.now() });
+        loadDashboard();
+    } catch (e) {
+        console.error('decideMatch:', e);
+        alert('Could not save that. Please try again.');
+    }
+};
 
 // Auto-accept any pending follower invitations addressed to the signed-in user's email.
 // Adds them to teams/{teamId}/subscribers as approved + marks invitation accepted.
@@ -648,8 +677,60 @@ async function loadDashboard() {
             } catch (e) { console.error('Error loading hub', hubCode, e); }
         }
 
+        // ── Family match requests (2026-08-16) ──────────────────────────
+        //
+        // "Is this your child?" — asked when someone else creates a team with a
+        // player whose name matches one you're the approved guardian of.
+        //
+        // The person who typed that name is never told anything, which is the
+        // whole point: telling them would turn team creation into a way to test
+        // whether a given child is in ScoreFrame. Only the guardian is asked,
+        // and a denial looks exactly like no match having existed.
+        //
+        // Surfaced here as well as by email because an email gets lost, and
+        // this is the one place a guardian can always come back to. The email
+        // links HERE rather than carrying confirm/deny links of its own — a
+        // one-click link in a forwarded email is a bearer token, and this is a
+        // decision about a child's identity.
+        let matchRequests = [];
+        try {
+            const mrSnap = await getDocs(
+                collection(db, 'users', currentUser.uid, 'playerMatchRequests'));
+            mrSnap.forEach(d => {
+                const m = d.data() || {};
+                if (m.status === 'pending') matchRequests.push({ id: d.id, ...m });
+            });
+        } catch (e) {
+            console.debug('playerMatchRequests:', e && e.code);
+        }
+
         // Render
         let html = '';
+
+        if (matchRequests.length > 0) {
+            html += `<div class="section-header">Is this your player?</div>`;
+            for (const m of matchRequests) {
+                const emoji = sportEmoji((m.candidateSport || '').toUpperCase());
+                html += `
+                <div class="team-card" style="border-color:var(--accent);">
+                    <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.08em;text-transform:uppercase;">FAMILY LINK</div>
+                    <div style="font-size:15px;font-weight:700;margin:6px 0 4px;">
+                        ${emoji} A player named <strong>${esc(m.playerName || 'this player')}</strong>
+                        was added to <strong>${esc(m.candidateTeamName || 'another team')}</strong>.
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">
+                        Is that the same person as your player? Saying yes links their
+                        stats and videos together across both teams. It does not give
+                        you access to that team, and it does not tell them who you are —
+                        if you say no, or ignore this, they're told nothing at all.
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:10px;">
+                        <button onclick="window._decideMatch('${m.id}', true)" style="padding:8px 20px;background:var(--accent);color:#1A1A1A;border:none;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;">Yes, same player</button>
+                        <button onclick="window._decideMatch('${m.id}', false)" style="padding:8px 16px;background:transparent;color:var(--text-muted);border:1px solid var(--text-muted);border-radius:6px;font-size:14px;cursor:pointer;">No / not sure</button>
+                    </div>
+                </div>`;
+            }
+        }
 
         // Pending invitations
         if (pendingInvitations.length > 0) {
