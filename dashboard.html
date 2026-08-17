@@ -422,6 +422,36 @@ console.log('Auth initial state:', auth.currentUser?.email || 'not signed in');
  * pending -> confirmed|denied by the owning user and nothing else — so a
  * forged or replayed write can't link two children together.
  */
+/** Accept a follow invitation. The server re-checks it against your email. */
+window._acceptFollowInvite = async function(teamId) {
+    if (!currentUser) return;
+    try {
+        await httpsCallable(getFunctions(app), 'acceptHubInvite')({ teamId });
+        loadDashboard();
+    } catch (e) {
+        console.error('acceptFollowInvite:', e);
+        alert(/no pending invite/i.test(e && e.message || '')
+            ? "That invitation isn't waiting for your account any more."
+            : 'Could not accept that. Please try again.');
+    }
+};
+
+/** Decline it. Removes the pending follow as well as the invitation card —
+ *  the rules already let you delete your own subscriber doc. */
+window._declineFollowInvite = async function(teamId) {
+    if (!currentUser) return;
+    if (!window.confirm('Decline this invitation? You can be invited again later.')) return;
+    try {
+        await deleteDoc(doc(db, 'users', currentUser.uid, 'pendingFollowInvites', teamId));
+        try { await deleteDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid)); }
+        catch (e) { console.debug('no pending follow to remove:', e && e.code); }
+        loadDashboard();
+    } catch (e) {
+        console.error('declineFollowInvite:', e);
+        alert('Could not save that. Please try again.');
+    }
+};
+
 window._decideMatch = async function(reqId, confirmed) {
     if (!currentUser) return;
     if (!confirmed && !window.confirm(
@@ -699,6 +729,27 @@ async function loadDashboard() {
         // links HERE rather than carrying confirm/deny links of its own — a
         // one-click link in a forwarded email is a bearer token, and this is a
         // decision about a child's identity.
+        // FOLLOW INVITES THE INVITEE CAN FIND WITHOUT THE EMAIL.
+        //
+        // Eric 2026-08-17: "we can't rely solely on them clicking the button in
+        // the email they might just go directly to the website." An invite now
+        // creates a PENDING follow (an invite is an offer, not a decision made
+        // for you) plus a per-user record, which is what this reads. The team's
+        // own hubInvites doc lives under the TEAM, and "every team where I have
+        // an invite" isn't answerable from a client without a collection-group
+        // query; a per-user doc needs neither index nor extra permission.
+        let followInvites = [];
+        try {
+            const fiSnap = await getDocs(
+                collection(db, 'users', currentUser.uid, 'pendingFollowInvites'));
+            fiSnap.forEach(d => {
+                const v = d.data() || {};
+                if (v.status !== 'declined') followInvites.push({ id: d.id, ...v });
+            });
+        } catch (e) {
+            console.debug('pendingFollowInvites:', e && e.code);
+        }
+
         let matchRequests = [];
         try {
             const mrSnap = await getDocs(
@@ -713,6 +764,27 @@ async function loadDashboard() {
 
         // Render
         let html = '';
+
+        if (followInvites.length > 0) {
+            html += `<div class="section-header">Invitations to follow</div>`;
+            for (const inv of followInvites) {
+                const emoji = sportEmoji((inv.sport || '').toUpperCase());
+                html += `
+                <div class="team-card" style="border-color:var(--accent);">
+                    <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.08em;text-transform:uppercase;">INVITATION</div>
+                    <div style="font-size:15px;font-weight:700;margin:6px 0 4px;">
+                        ${emoji} You've been invited to follow <strong>${esc(inv.teamName || 'a team')}</strong>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);">
+                        Nothing is shared with you until you accept, and you can stop following at any time.
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:10px;">
+                        <button onclick="window._acceptFollowInvite('${esc(inv.teamId || inv.id)}')" style="padding:8px 20px;background:var(--accent);color:#1A1A1A;border:none;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;">Accept</button>
+                        <button onclick="window._declineFollowInvite('${esc(inv.teamId || inv.id)}')" style="padding:8px 16px;background:transparent;color:var(--text-muted);border:1px solid var(--text-muted);border-radius:6px;font-size:14px;cursor:pointer;">No thanks</button>
+                    </div>
+                </div>`;
+            }
+        }
 
         if (matchRequests.length > 0) {
             html += `<div class="section-header">Is this your player?</div>`;
