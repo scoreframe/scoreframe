@@ -245,7 +245,7 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">17 Aug 2026 · family links, invites, automation</span>
+    <span class="stamp">17 Aug 2026 · logo editor, follower-access fix</span>
   </div>
   <p class="lede">
     What's moving right now, and what's waiting on you. Two days of work on how
@@ -276,7 +276,7 @@ onAuthStateChanged(auth, async (user) => {
     <div class="ch live">
       <span class="ch-name">Play production</span>
       <span class="ch-ver">1.1.1200</span>
-      <span class="ch-note">live · 23 tester builds behind · production push is your call</span>
+      <span class="ch-note">live · 33 tester builds behind · production push is your call</span>
     </div>
     <div class="ch live">
       <span class="ch-name">App Store</span>
@@ -285,18 +285,18 @@ onAuthStateChanged(auth, async (user) => {
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1225</span>
-      <span class="ch-note">invite consent · security fix · untracked removal sticks</span>
+      <span class="ch-ver">1.1.1233</span>
+      <span class="ch-note">logo editor · follower-access fix · family requests in the bell</span>
     </div>
     <div class="ch">
       <span class="ch-name">TestFlight</span>
       <span class="ch-ver">1.2.214 (651)</span>
-      <span class="ch-note">same work · REQUIRED for invite acceptance on iOS</span>
+      <span class="ch-note">unchanged · 4 fixes built but NOT installed — no phone connected</span>
     </div>
     <div class="ch">
       <span class="ch-name">Web (Pages)</span>
-      <span class="ch-ver">deployed</span>
-      <span class="ch-note">followers surface · desktop layout · noindex on player pages</span>
+      <span class="ch-ver">queued</span>
+      <span class="ch-note">8 commits waiting on a GitHub Pages outage · auto-retrying</span>
     </div>
   </div>
 
@@ -357,19 +357,46 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item b-blocked">
       <div class="item-head">
-        <span class="item-title">Install 1.1.1225 / iOS 1.2.214, then re-test two things</span>
-        <span class="chip">Most important</span>
+        <span class="item-title">Plug in an iPhone</span>
+        <span class="chip">One cable away</span>
       </div>
       <p class="item-body">
-        <strong>Roster removal.</strong> Remove a player, Save, force-quit, reopen —
-        must stay gone. The untracked case only started working in 1224; you were
-        testing 1222/1223, which is why Maebry kept coming back. Verified on an
-        emulator with a tracked <em>and</em> an untracked player sharing a number:
-        both are separate people and both delete.
+        Four iOS bugs are fixed and building clean, but every iPhone reports
+        <code>unavailable</code> to <code>devicectl</code>, so none of it can be
+        installed. Connect one and a Release build goes on immediately.
         <br><br>
-        <strong>Invites.</strong> Invite a ScoreFrame user, then sign in as them —
-        the invitation should be waiting on their dashboard with Accept / No thanks,
-        without needing the email.
+        Waiting: visibility showing <em>Private</em> on an invite-only team; the false
+        &ldquo;failed to send invite&rdquo;; the jumbled roster order (and reordering
+        being baseball-only when your team is volleyball); and the slow first roster
+        load.
+      </p>
+    </div>
+
+    <div class="item b-active">
+      <div class="item-head">
+        <span class="item-title">GitHub Pages outage — nothing for you to do</span>
+        <span class="chip">Self-resolving</span>
+      </div>
+      <p class="item-body">
+        Eight web commits are pushed and queued; GitHub is in a partial outage and
+        Pages deployments aren&rsquo;t running. A watcher re-runs each failed deploy, so
+        the site updates itself when they recover. <strong>This page is in that
+        queue</strong> — if the date above still says 17 Aug when you read it, that is
+        why.
+      </p>
+    </div>
+
+    <div class="item b-done">
+      <div class="item-head">
+        <span class="item-title">Your follower account has been repaired</span>
+        <span class="chip">Done — no action</span>
+      </div>
+      <p class="item-body">
+        The team you only follow, and 11 of its players, had been copied into that
+        account&rsquo;s cloud lists. Both removed; the follow itself is untouched. The
+        team was never at risk — its owner and managers were intact throughout and the
+        server refused every write. What you saw was a convincing but powerless local
+        copy.
       </p>
     </div>
     <div class="item">
@@ -749,6 +776,18 @@ onAuthStateChanged(auth, async (user) => {
     <div class="row"><span class="v">both</span><span class="t"><b>Share limit could be side-stepped</b> — create a team under a sport with room, share it, then switch its sport. Sport is now fixed once a team is shared or has played</span></div>
     <div class="row"><span class="v">1179</span><span class="t"><b>Coach marks work and are verified</b> — the in-game ones were attaching invisibly, and the GO LIVE and Remote tips drew off the top of the screen. Whole new-user flow now driven automatically end to end: onboarding, both welcome tips, create-a-team, setup, permissions, rotate, all five in-game tips, scoring, recording</span></div>
     <div class="row"><span class="v">both</span><span class="t"><b>Onboarding</b> — empty boxes now have icons (emoji in layouts silently render as nothing), page four shows Wi-Fi/Bluetooth/Internet, the Pro page said "7-day trial" in one line and "14 days" in the next, and wrapped text was cutting the bottom off letters like p and g</span></div>
+  </div>
+
+  <h2>Shipped 17 Aug — evening</h2>
+  <div class="rows">
+    <div class="row"><span class="v">1233</span><span class="t"><b>Transparent logos keep their shape on video</b> — the board cropped every logo square and masked it to a circle, which cut the sides off a wide crest and undid the point of removing the background. Photos still get the round badge</span></div>
+    <div class="row"><span class="v">1232</span><span class="t"><b>Family link requests reach the notification bell</b> with Approve / Deny. The request had been carrying the team and the player but not <em>who was asking</em>, so nothing could act on it</span></div>
+    <div class="row"><span class="v">1231</span><span class="t"><b>Followed-team players cleared from My Players</b> — the local player list could only ever shrink when a player was explicitly deleted, so players arriving under another account had nothing that could remove them</span></div>
+    <div class="row"><span class="v">1230</span><span class="t"><b>Followed team cleared from My Teams</b> — the cleanup pass was skipped for anyone whose cloud team list was empty, which is exactly a follower. It could not tell &ldquo;you own none&rdquo; from &ldquo;the lookup failed&rdquo;</span></div>
+    <div class="row"><span class="v">1229</span><span class="t"><b>A team you only follow can no longer land in My Teams</b> — the step that rescues work made while signed out kept everything marked &ldquo;not yet uploaded&rdquo;, and an ordinary edit sets that mark. Also: setting a logo now uploads it immediately instead of waiting for Save</span></div>
+    <div class="row"><span class="v">1228</span><span class="t"><b>Assisted logo editor</b> — crop box, pinch zoom, zoom out past the edges into transparency, one-tap background removal, eraser, and two live previews. Logo added to the FINAL card burned into the end of a recording</span></div>
+    <div class="row"><span class="v">1228</span><span class="t"><b>Teams you follow show up again</b> — if you follow teams but own none, the Teams tab showed &ldquo;No teams or players yet&rdquo; and hid every one of them, plus the box for finding another</span></div>
+    <div class="row"><span class="v">web</span><span class="t"><b>Queued:</b> logo top-and-centre on the team page (it was rendering top-left), logos beside both final scores on the game page, the unreadable-dialog fix (contrast 1.04 → 17.4), followers moved to the bottom, STATS overflow, and a get-the-app bar for shared links</span></div>
   </div>
 
   <h2>Shipped 11 Aug</h2>
