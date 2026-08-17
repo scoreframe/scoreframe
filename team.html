@@ -673,6 +673,31 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
    width, which is what "bring the buttons in from the left and right" means.
    A ceiling rather than a redesign: the same markup, just stopped from
    spreading. */
+/* Get-the-app bar — see the markup near <body>. Uses the page's own tokens so
+   it follows light/dark and the in-app palette. */
+#appCta {
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--outline);
+}
+.app-cta-inner {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; max-width: 760px; margin: 0 auto;
+}
+.app-cta-text { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; flex: 1; }
+.app-cta-text strong { font-size: 13px; font-weight: 800; color: var(--text-primary); }
+.app-cta-text span { font-size: 11px; color: var(--muted); }
+.app-cta-btn {
+    flex-shrink: 0; text-decoration: none; white-space: nowrap;
+    background: var(--accent); color: #1A1A1A;
+    font-size: 12px; font-weight: 800; letter-spacing: 0.03em;
+    padding: 8px 14px; border-radius: 999px;
+}
+.app-cta-close {
+    flex-shrink: 0; background: transparent; border: 0; cursor: pointer;
+    color: var(--muted); font-size: 20px; line-height: 1; padding: 0 2px;
+    font-family: inherit;
+}
+
 @media (min-width: 900px) {
   #teamContent, #accessGate, .team-header {
     max-width: 760px;
@@ -706,6 +731,53 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
             }
         }
 
+        // ── Get-the-app bar ───────────────────────────────────────────
+        // Runs here (before paint, same block as ?theme=) so the bar never
+        // flashes in and shoves the page down after it has rendered.
+        //
+        // Android uses an intent:// URL because it does BOTH jobs in one tap:
+        // opens the app when installed, and falls through to the Play listing
+        // when it isn't. iOS has no equivalent — a universal link that misses
+        // just loads the web page — but iOS already opened the app on the way
+        // in if it was installed, so anyone still reading this bar on an iPhone
+        // doesn't have it, and the App Store is the right destination.
+        try {
+            var inApp = q.get('app') === '1';
+            var dismissed = false;
+            try { dismissed = localStorage.getItem('sf_app_cta_dismissed') === '1'; } catch (e) {}
+            if (!inApp && !dismissed) {
+                var ua = navigator.userAgent || '';
+                var isAndroid = /Android/i.test(ua);
+                var isIOS = /iPhone|iPad|iPod/i.test(ua) ||
+                            (/Mac/.test(ua) && navigator.maxTouchPoints > 1);
+                var PLAY = 'https://play.google.com/store/apps/details?id=com.scoreframe.android';
+                var APPSTORE = 'https://apps.apple.com/us/app/scoreframe/id6762281454';
+                var href = null, label = 'Open in app';
+                if (isAndroid) {
+                    href = 'intent://scoreframe.app' + location.pathname + location.search +
+                           '#Intent;scheme=https;package=com.scoreframe.android;' +
+                           'S.browser_fallback_url=' + encodeURIComponent(PLAY) + ';end';
+                } else if (isIOS) {
+                    href = APPSTORE; label = 'Get the app';
+                }
+                if (href) {
+                    document.addEventListener('DOMContentLoaded', function () {
+                        var bar = document.getElementById('appCta');
+                        var btn = document.getElementById('appCtaBtn');
+                        var close = document.getElementById('appCtaClose');
+                        if (!bar || !btn) return;
+                        btn.href = href;
+                        btn.textContent = label;
+                        bar.style.display = 'block';
+                        if (close) close.addEventListener('click', function () {
+                            bar.style.display = 'none';
+                            try { localStorage.setItem('sf_app_cta_dismissed', '1'); } catch (e) {}
+                        });
+                    });
+                }
+            }
+        } catch (e) {}
+
         var p = q.get('palette');
         if (p === 'trailhead' || p === 'floodlight') {
             document.documentElement.setAttribute('data-palette', p);
@@ -722,6 +794,30 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
 </script>
 </head>
 <body>
+
+<!-- ── Get-the-app bar (2026-08-17) ─────────────────────────────────────────
+     Eric shares a team link to recruit followers and wants it to drive people
+     into the app, not leave them on a web page: "really what I wanted to do is
+     go to the app and sign up".
+
+     The installed case already worked on both platforms — /team.html is a
+     verified Android App Link and is listed in the iOS
+     apple-app-site-association — so tapping the link from Messages opens the
+     app for anyone who has it. The gap was everyone else: they landed here with
+     nothing telling them an app exists.
+
+     Hidden inside the app's own WebView (?app=1), and dismissible, because a
+     bar you cannot get rid of is worse than no bar. -->
+<div id="appCta" style="display:none;">
+  <div class="app-cta-inner">
+    <div class="app-cta-text">
+      <strong id="appCtaTitle">Follow this team in the app</strong>
+      <span>Live scores, schedule and video — free.</span>
+    </div>
+    <a id="appCtaBtn" class="app-cta-btn" href="#">Open in app</a>
+    <button id="appCtaClose" class="app-cta-close" aria-label="Dismiss">&times;</button>
+  </div>
+</div>
 
 <div id="loadingScreen" class="loading">
     <div class="spinner"></div>
@@ -1623,6 +1719,10 @@ function renderHeader() {
     $('teamEmoji').textContent = hasLogo ? '' : sportEmoji(p.sport);
     $('teamEmoji').style.display = hasLogo ? 'none' : '';
     $('teamName').textContent = p.teamName || 'Team';
+    // Name the team in the get-the-app bar — "Follow PVA 14-1 Select in the
+    // app" is a reason to tap; "Follow this team" is furniture.
+    const appCtaTitle = $('appCtaTitle');
+    if (appCtaTitle && p.teamName) appCtaTitle.textContent = `Follow ${p.teamName} in the app`;
     $('teamSport').textContent = sportName(p.sport);
     $('teamCode').textContent = hubCode;
 
