@@ -784,6 +784,10 @@ html, body {
     <div class="hero">
         <div id="liveSlot"></div>
         <div class="team-color-bar" id="colorBar"></div>
+        <!-- 2026-08-17, Eric: team logo at the top of the game page. `margin:0 auto`
+             is required — an img at display:block ignores the hero's text-align,
+             which is exactly the bug that left team.html's logo pinned left. -->
+        <img id="heroLogo" alt="" style="display:none; width:64px; height:64px; border-radius:32px; object-fit:cover; margin:0 auto 10px; box-shadow:0 2px 10px rgba(0,0,0,0.4);" />
         <!-- v18 — Event banner above the team identity. Populated from
              game.eventLabel / eventName when present; hidden otherwise.
              Sits above heroTeam so a tournament / conference label is
@@ -1016,6 +1020,36 @@ async function resolveViewerAccess(teamId) {
 // A denied read is the expected path for an unvetted viewer, not an error —
 // the short name already in the document is the right fallback.
 let fullNames = {};
+
+// 2026-08-17 — The opponent's logo for the score card. Module scope on purpose:
+// renderTeamScore reads it synchronously and the live-sync path re-renders, so
+// it has to outlive a single load. Empty string means "no logo to draw", which
+// is the normal outcome for an opponent that's a typed-in name rather than a
+// real team, or a team this viewer isn't allowed to read.
+let opponentLogoUrl = '';
+
+/**
+ * Best-effort fetch of the opposing team's logo.
+ *
+ * A denied read is an EXPECTED path, not an error: the opponent may be a private
+ * team the viewer can't see. Swallow it and leave the side logo-less rather than
+ * logging noise or rendering a broken image.
+ */
+async function loadOpponentLogo(game) {
+    opponentLogoUrl = '';
+    try {
+        const hubId = hubProfile && hubProfile.teamId;
+        if (!hubId || !game) return;
+        const otherId =
+            (game.homeTeamId && game.homeTeamId !== hubId) ? game.homeTeamId :
+            (game.awayTeamId && game.awayTeamId !== hubId) ? game.awayTeamId : null;
+        if (!otherId) return;
+        const snap = await getDoc(doc(db, 'teams', otherId));
+        if (!snap.exists()) return;
+        const u = snap.data().logoUrl;
+        if (typeof u === 'string' && u.startsWith('http')) opponentLogoUrl = u;
+    } catch (_) { /* private or missing opponent team — no logo, no error */ }
+}
 
 async function loadFullNames(teamId) {
     fullNames = {};
@@ -1309,6 +1343,14 @@ async function load() {
     $('notFoundBack').href = `/team.html?code=${encodeURIComponent(hubCode)}`;
     $('colorBar').style.background = `linear-gradient(90deg, ${hubProfile.color}, ${hubProfile.color2})`;
     $('heroTeam').textContent = `${sportEmoji(hubProfile.sport)} ${hubProfile.teamName} · ${sportName(hubProfile.sport)}`;
+
+    // 2026-08-17 — Team logo at the top of the page. hubProfile.logoUrl is
+    // already validated as an http(s) Storage URL when the doc is parsed.
+    const heroLogoEl = $('heroLogo');
+    if (heroLogoEl && hubProfile.logoUrl) {
+        heroLogoEl.src = hubProfile.logoUrl;
+        heroLogoEl.style.display = 'block';
+    }
 
     // If no gameId, treat the page as "the active live stream" for this team
     // — useful for FCM links that point at /game.html?team=ABC without a
@@ -1843,6 +1885,13 @@ function renderGame(hub, game) {
         renderBowlingScore(game);
     } else {
         renderTeamScore(hub, game);
+        // 2026-08-17 — Paint the card immediately with the logo we already have,
+        // then fill in the opponent's once its team doc resolves. Awaiting the
+        // fetch here instead would hold the whole score card behind a network
+        // round trip that is allowed to fail.
+        loadOpponentLogo(game).then(() => {
+            if (opponentLogoUrl) renderTeamScore(hub, game);
+        });
     }
 
     // v20 — "Cast" roster rail (movie-style avatars). Above Game Info.
@@ -2371,13 +2420,26 @@ function renderTeamScore(hub, game) {
         setLine = `<div class="set-line">${parts.join('<span class="set-sep">·</span>')}</div>`;
     }
 
-    // v1.1.643 — Inline team logo on the score card. Hub (home) logo comes
-    // from the hub doc's logoUrl. Away logo would need a separate team-doc
-    // lookup, deferred. Only render when the URL is a valid http link.
+    // v1.1.643 / 2026-08-17 — Inline team logos on the score card, BOTH sides.
+    //
+    // Two fixes over the original. First, it hardcoded the hub logo onto the
+    // home block, but the hub team is the away side whenever someone records an
+    // away game — so this team's crest was being drawn next to the opponent's
+    // score. `hubIsAwaySide` is the same test renderResultBadge already uses.
+    // Second, the away logo is no longer "deferred": `opponentLogoUrl` is filled
+    // in by a best-effort read of the other team's doc. That read can legitimately
+    // fail (the opponent may be a private team this viewer can't read, or just a
+    // name typed into a game with no team behind it), in which case it stays
+    // empty and that side renders without a logo — never a broken image.
+    const hubIsAwaySide = !!(game.awayTeamId && hub.teamId && game.awayTeamId === hub.teamId
+        && game.homeTeamId !== hub.teamId);
     const hubLogo = hub && hub.logoUrl && hub.logoUrl.startsWith('http') ? hub.logoUrl : null;
-    const homeLogoHtml = hubLogo
-        ? `<img src="${hubLogo}" alt="" style="width:36px;height:36px;border-radius:18px;object-fit:cover;display:inline-block;vertical-align:middle;margin-right:8px;box-shadow:0 1px 4px rgba(0,0,0,0.4);" />`
+    const oppLogo = (opponentLogoUrl && opponentLogoUrl.startsWith('http')) ? opponentLogoUrl : null;
+    const scoreLogo = (url, after) => url
+        ? `<img src="${url}" alt="" style="width:34px;height:34px;border-radius:17px;object-fit:cover;display:inline-block;vertical-align:middle;margin-${after ? 'left' : 'right'}:8px;box-shadow:0 1px 4px rgba(0,0,0,0.4);" />`
         : '';
+    const homeLogoHtml = scoreLogo(hubIsAwaySide ? oppLogo : hubLogo, false);
+    const awayLogoHtml = scoreLogo(hubIsAwaySide ? hubLogo : oppLogo, true);
     $('scoreContent').innerHTML = `
         <div class="scoreline">
             <div class="team-block">
@@ -2387,7 +2449,7 @@ function renderTeamScore(hub, game) {
             </div>
             <div class="vs">VS</div>
             <div class="team-block" style="text-align:right;">
-                <div class="name">${away}</div>
+                <div class="name">${away}${awayLogoHtml}</div>
                 <div class="score ${awayWin ? 'winner' : (homeWin ? 'loser' : '')}">${as}</div>
                 ${awayPkBadge}
             </div>
