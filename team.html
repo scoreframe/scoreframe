@@ -1910,6 +1910,22 @@ async function loadPendingRequests() {
                     : `Says they are <strong>${escapeHtml(displayPlayerName(l.playerName))}</strong>'s ${escapeHtml(rel)}`;
                 row.appendChild(label);
 
+                // Staff can also CHANGE or REMOVE an approved link, not just
+                // approve it once. Eric 2026-08-17: an approval that can never
+                // be corrected or revoked is a one-way door, and relationships
+                // do get entered wrong.
+                if (l.status === 'approved' && canDecideClaims()) {
+                    const edit = document.createElement('button');
+                    edit.textContent = 'Change';
+                    edit.style.cssText = 'padding:6px 12px; background:transparent; color:var(--sf-accent,#FF9640); border:1px solid var(--sf-accent,#FF9640); border-radius:6px; font-weight:700; font-size:12px; cursor:pointer;';
+                    edit.onclick = () => staffEditLink(f, l);
+                    row.appendChild(edit);
+                    const del = document.createElement('button');
+                    del.textContent = 'Remove';
+                    del.style.cssText = 'padding:6px 12px; background:transparent; color:#e0796c; border:1px solid #e0796c; border-radius:6px; font-weight:700; font-size:12px; cursor:pointer;';
+                    del.onclick = () => staffRemoveLink(f, l);
+                    row.appendChild(del);
+                }
                 if (l.status === 'pending' && canDecideClaims()) {
                     const yes = document.createElement('button');
                     yes.textContent = 'Approve';
@@ -2643,7 +2659,13 @@ async function loadRoster() {
                 } else if (claim.status === 'pending') {
                     familyHtml = `<span class="player-family-pill pending" title="Waiting for a team manager to approve">⏳ Pending</span>`;
                 } else if (claim.status === 'approved') {
-                    familyHtml = `<span class="player-family-pill approved">✓ Your ${escapeHtml(claim.relationship)}</span>`;
+                    // Eric 2026-08-17: this read "✓ Your grandparent", which says
+                    // the PLAYER is your grandparent — backwards, and it's the
+                    // one line a newly-approved follower is certain to read.
+                    // Now it states the viewer's own role, and is a button so
+                    // they can change it or stop following without asking anyone.
+                    const rel = String(claim.relationship || 'family');
+                    familyHtml = `<button class="player-family-pill approved" data-manage-player="${escapeAttr(d.id)}" data-manage-name="${escapeAttr(p.name || 'Player')}" data-manage-rel="${escapeAttr(rel)}" title="Change your relationship, or stop following">✓ You're their ${escapeHtml(rel)} ⚙</button>`;
                 } else if (claim.status === 'denied') {
                     familyHtml = `<span class="player-family-pill denied" title="A team manager declined this request">Declined</span>`;
                 }
@@ -2665,10 +2687,95 @@ async function loadRoster() {
                 btn.getAttribute('data-claim-name')
             ));
         });
+        container.querySelectorAll('[data-manage-player]').forEach(btn => {
+            btn.addEventListener('click', () => openManageLinkDialog(
+                btn.getAttribute('data-manage-player'),
+                btn.getAttribute('data-manage-name'),
+                btn.getAttribute('data-manage-rel')
+            ));
+        });
     } catch (e) {
         console.error('Roster error:', e);
     }
 }
+
+// ── A follower managing their OWN link ─────────────────────────────────────
+//
+// Eric 2026-08-17: once approved there was nothing to click — no way to fix a
+// wrong relationship or stop following a player short of asking a manager.
+//
+// Changing the relationship puts it back to PENDING. That is the point: the
+// manager approved "grandparent", and silently letting that become "parent"
+// would turn an approval into a blank cheque. Unfollowing is the follower's own
+// business, so it just deletes — the rules already allow deleting your own claim.
+window.openManageLinkDialog = function(playerId, playerName, currentRel) {
+    if (!currentUser || !teamId) return;
+    const cur = String(currentRel || '').toLowerCase();
+    const opts = RELATIONSHIPS.map((r) =>
+        `<label class="family-opt"><input type="radio" name="mgrel" value="${escapeAttr(r)}"${r.toLowerCase() === cur ? ' checked' : ''}> ${escapeHtml(r)}</label>`
+    ).join('');
+    const wrap = document.createElement('div');
+    wrap.className = 'family-modal';
+    wrap.innerHTML = `
+      <div class="family-modal-card">
+        <h3>${escapeHtml(displayPlayerName(playerName))}</h3>
+        <p class="family-modal-sub">You're approved as their ${escapeHtml(cur)}.</p>
+        <div class="family-notice">
+          Changing this goes back to the team for approval, so you'll show as
+          pending until they confirm it.
+        </div>
+        <div class="family-opts">${opts}</div>
+        <div class="family-modal-actions">
+          <button class="family-cancel">Cancel</button>
+          <button class="family-submit">Request change</button>
+        </div>
+        <div class="family-modal-actions" style="margin-top:6px;">
+          <button class="family-unfollow" style="color:#e0796c;">Stop following this player</button>
+        </div>
+        <div class="family-modal-msg"></div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const close = () => wrap.remove();
+    wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
+    wrap.querySelector('.family-cancel').addEventListener('click', close);
+
+    const refresh = async () => {
+        await loadMyClaims();
+        await loadRoster();
+        await loadPendingRequests();
+    };
+
+    wrap.querySelector('.family-submit').addEventListener('click', async () => {
+        const picked = wrap.querySelector('input[name=mgrel]:checked');
+        const rel = picked ? picked.value.toLowerCase() : cur;
+        if (rel === cur) { close(); return; }
+        try {
+            // Back to PENDING on purpose: the manager approved "grandparent",
+            // and letting that silently become "parent" would turn one approval
+            // into a blank cheque.
+            await updateDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid, 'claims', playerId),
+                { relationship: rel, status: 'pending', requestedAt: Date.now(), decidedAt: 0 });
+            close();
+            await refresh();
+        } catch (e) {
+            console.error('relationship change failed', e);
+            wrap.querySelector('.family-modal-msg').textContent = 'Could not save that. Please try again.';
+        }
+    });
+
+    wrap.querySelector('.family-unfollow').addEventListener('click', async () => {
+        if (!window.confirm(`Stop following ${playerName}? You can ask again later.`)) return;
+        try {
+            await deleteDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid, 'claims', playerId));
+            close();
+            await refresh();
+        } catch (e) {
+            console.error('unfollow player failed', e);
+            wrap.querySelector('.family-modal-msg').textContent = 'Could not save that. Please try again.';
+        }
+    });
+};
+
 
 // ── Family links ───────────────────────────────────────────────────────────
 //
@@ -2756,6 +2863,49 @@ function openFamilyLinkDialog(playerId, playerName) {
                 : 'Could not send that request. Please try again.';
         }
     });
+}
+
+/** Staff changes an approved relationship to a different level. */
+async function staffEditLink(follower, link) {
+    const cur = String(link.relationship || '').toLowerCase();
+    const choices = RELATIONSHIPS.map((r, i) => `${i + 1}. ${r}`).join('\n');
+    const answer = window.prompt(
+        `${follower.name || 'This follower'} is currently ${link.playerName || 'this player'}'s ${cur}.\n\n` +
+        `Change to which?\n${choices}\n\nEnter a number:`, '');
+    if (!answer) return;
+    const idx = parseInt(answer, 10) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= RELATIONSHIPS.length) return;
+    const rel = RELATIONSHIPS[idx].toLowerCase();
+    if (rel === cur) return;
+    try {
+        // Staff setting it stays APPROVED — they are the approver, so there is
+        // nobody left to ask. (A FOLLOWER changing their own goes back to
+        // pending; see openManageLinkDialog.)
+        await updateDoc(doc(db, 'teams', teamId, 'subscribers', follower.id, 'claims', link.playerId),
+            { relationship: rel, status: 'approved', decidedAt: Date.now() });
+        await loadPendingRequests();
+        await loadRoster();
+    } catch (e) {
+        console.error('staffEditLink failed', e);
+        alert('Could not save that. Please try again.');
+    }
+}
+
+/** Staff removes a family link entirely. */
+async function staffRemoveLink(follower, link) {
+    const who = follower.name || 'this follower';
+    if (!window.confirm(
+        `Remove ${who} as ${link.playerName || 'this player'}'s ${link.relationship || 'family'}?\n\n` +
+        `They stay a follower of the team — this only removes the family link, ` +
+        `so they lose access to that player's videos.`)) return;
+    try {
+        await deleteDoc(doc(db, 'teams', teamId, 'subscribers', follower.id, 'claims', link.playerId));
+        await loadPendingRequests();
+        await loadRoster();
+    } catch (e) {
+        console.error('staffRemoveLink failed', e);
+        alert('Could not save that. Please try again.');
+    }
 }
 
 async function decideClaim(uid, playerId, approve) {
