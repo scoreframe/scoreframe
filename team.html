@@ -750,6 +750,12 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
             <div id="upcomingGames"></div>
         </div>
 
+        <!-- Who runs this team. Names only, never contact details. -->
+        <div class="section" id="staffSection" style="display:none;">
+            <div class="section-title">🧑‍🏫 Coaches &amp; managers</div>
+            <div id="staffList"></div>
+        </div>
+
         <!-- Roster / Players -->
         <div class="section" id="rosterSection" style="display:none;">
             <div class="section-title">👥 Roster</div>
@@ -1364,6 +1370,7 @@ function showContent() {
             loadPastGames();
         listenForLive();
         loadPendingRequests();
+        loadStaff();
         handleInviteAcceptance();
     } else if (isManager || isSubscriber) {
         // Private hub but user has access
@@ -1377,6 +1384,7 @@ function showContent() {
             loadPastGames();
         listenForLive();
         loadPendingRequests();
+        loadStaff();
     } else {
         // Private hub, no access — show gate. An invitee arriving from the email
         // lands HERE (their follow is pending), so the accept handler has to run
@@ -2683,6 +2691,66 @@ function shortenName(full) {
 
 function displayPlayerName(full) {
     return viewerSeesFullNames() ? (full || 'Player') : shortenName(full);
+}
+
+/**
+ * Who runs this team — owner, managers, coaches. Names ONLY.
+ *
+ * Eric 2026-08-17: "as an approved follower of a team I should be able to see
+ * who is the coach of the team and who is the owner as well as any managers
+ * listed... but no contact information just their names."
+ *
+ * Deliberately no email and no photo. A follower needs to know who is in charge
+ * of their kid's team; they do not need a directory of those people's contact
+ * details, and the staff never agreed to hand one out. Names come from
+ * users/{uid}, which any signed-in user may read, and fall back to the role
+ * alone rather than leaking an address.
+ */
+async function loadStaff() {
+    const section = $('staffSection');
+    const list = $('staffList');
+    if (!section || !list || !teamId) return;
+    // Followers and staff only. A drive-by visitor to a public team does not get
+    // a list of the adults involved.
+    if (!(isManager || isCoach || isSubscriber)) { section.style.display = 'none'; return; }
+    try {
+        const nameFor = async (uid) => {
+            try {
+                const u = await getDoc(doc(db, 'users', uid));
+                const d = u.exists() ? (u.data() || {}) : {};
+                return (d.displayName || d.name || '').trim();
+            } catch (e) { return ''; }
+        };
+        const rows = [];
+        const ownerUid = (hubProfile && hubProfile.ownerUid) || '';
+        const seen = new Set();
+        if (ownerUid) {
+            rows.push({ role: 'Owner', name: await nameFor(ownerUid) });
+            seen.add(ownerUid);
+        }
+        for (const [coll, role] of [['managers', 'Manager'], ['coaches', 'Coach']]) {
+            let snap;
+            try { snap = await getDocs(collection(db, 'teams', teamId, coll)); }
+            catch (e) { continue; }
+            for (const d of snap.docs) {
+                if (seen.has(d.id)) continue;      // the owner is usually a manager too
+                seen.add(d.id);
+                const stored = ((d.data() || {}).name || '').trim();
+                rows.push({ role, name: stored || await nameFor(d.id) });
+            }
+        }
+        const real = rows.filter(r => r.name);
+        if (!real.length) { section.style.display = 'none'; return; }
+        section.style.display = 'block';
+        list.innerHTML = real.map(r => `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <span style="font-size:14px;font-weight:600;flex:1;">${escapeHtml(r.name)}</span>
+                <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);">${escapeHtml(r.role)}</span>
+            </div>`).join('');
+    } catch (e) {
+        console.debug('loadStaff:', e && e.code);
+        section.style.display = 'none';
+    }
 }
 
 async function loadRoster() {
