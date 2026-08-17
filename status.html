@@ -245,11 +245,13 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">14 Aug 2026 · both stores shipped</span>
+    <span class="stamp">17 Aug 2026 · privacy rebuild + family links</span>
   </div>
   <p class="lede">
-    What's moving right now, and what's waiting on you. Feature-by-feature detail
-    lives on the parity page; history lives in the session logs.
+    What's moving right now, and what's waiting on you. Two days of work on how
+    player data is stored and who can see it, plus family links end to end.
+    Feature-by-feature detail lives on the parity page; history lives in the
+    session logs.
   </p>
 
   <h2>Where the code is</h2>
@@ -257,22 +259,27 @@ onAuthStateChanged(auth, async (user) => {
     <div class="ch live">
       <span class="ch-name">Play production</span>
       <span class="ch-ver">1.1.1200</span>
-      <span class="ch-note">in Google review · fixes the app-colour crash in 1197/1198</span>
+      <span class="ch-note">live · 23 tester builds behind · production push is your call</span>
     </div>
     <div class="ch live">
       <span class="ch-name">App Store</span>
       <span class="ch-ver">1.2.185 (621)</span>
-      <span class="ch-note">READY_FOR_SALE · live · jumped from 1.2.116</span>
+      <span class="ch-note">READY_FOR_SALE · nothing new submitted for review</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1200</span>
-      <span class="ch-note">crash fix · Redline theme · in-app support messages</span>
+      <span class="ch-ver">1.1.1223</span>
+      <span class="ch-note">player renames reach the web · follower names + family links</span>
     </div>
     <div class="ch">
-      <span class="ch-name">Admin app</span>
-      <span class="ch-ver">0.0.22</span>
-      <span class="ch-note">message one user from their record · honest metrics</span>
+      <span class="ch-name">TestFlight</span>
+      <span class="ch-ver">1.2.213 (650)</span>
+      <span class="ch-note">same work · 211 fixed a roster-removal regression, needs a device check</span>
+    </div>
+    <div class="ch">
+      <span class="ch-name">Web (Pages)</span>
+      <span class="ch-ver">deployed</span>
+      <span class="ch-note">followers surface · desktop layout · noindex on player pages</span>
     </div>
   </div>
 
@@ -280,22 +287,48 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item b-blocked">
       <div class="item-head">
-        <span class="item-title">1197 and 1198 shipped a crash to production</span>
-        <span class="chip">Fixed in 1200</span>
+        <span class="item-title">Player surnames are out of the public data</span>
+        <span class="chip">Structural, not cosmetic</span>
       </div>
       <p class="item-body">
-        Change the app colour, tap Home, crash — every time, fully reproducible.
-        <code>ScoreFrameActivity.onResume</code> called <code>recreate()</code> on an
-        already-visible screen, which takes Android's <em>local relaunch</em> path;
-        AppCompat rebuilds its sub-decor wrong there and the next
-        <code>setContentView</code> hits a null content frame.
+        A shared team's documents are readable by anyone — no sign-in, no follow. Shortening
+        names in the web page only changed what was <em>drawn</em>; the surname was still one
+        fetch away. And "approved follower" was never a gate on a public team, because
+        following one is approved automatically.
         <br><br>
-        A system light/dark switch never crashed — that's a config-change relaunch, a
-        different path. That contrast is what identified it. 1200 restarts the screen
-        cleanly instead of using <code>recreate()</code>.
-        <br><br>
-        <strong>An earlier fix (1199) did not work.</strong> It was shipped on a theory
-        that hadn't been reproduced. Worth remembering next time: reproduce first.
+        Surnames now live in <code>teams/{id}/rosterPrivate</code> behind
+        <code>canSeePlayerNames</code> — staff, or an approved follower of a
+        <strong>non-public</strong> team. Everything public carries "Hayden H." Three Cloud
+        Function triggers hold that on every write, so it holds for every app version. 247
+        existing surnames migrated; the verifier reports <strong>zero</strong> world-readable
+        documents still carrying one.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Family links work end to end</span>
+        <span class="chip">Web + app</span>
+      </div>
+      <p class="item-body">
+        A follower picks a player, says how they're related, and staff approve. Coaches can
+        decide them too — they were already being emailed about every request while unable to
+        act on one. One <strong>Followers</strong> section on the team page shows each person,
+        the player, and the relationship, with approve, change and remove. The same list is in
+        the app's sharing section. Followers can change their own relationship (which goes back
+        for approval) or stop following.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Videos are tied to the players in them</span>
+      </div>
+      <p class="item-body">
+        Reels are built per player, but nothing recorded <em>which</em> player — the builder knew
+        as it wrote each file and handed back only a filename. Now recorded at build, published
+        at upload, and listed on the player's page behind
+        <code>canSeePlayerVideos</code>. Deliberately not on the game document: an unlisted
+        YouTube link works for anyone holding it, so a list of every video of one child is the
+        sensitive thing itself, not a pointer to one.
       </p>
     </div>
   </div>
@@ -304,65 +337,107 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item b-blocked">
       <div class="item-head">
-        <span class="item-title">Send the product-update email</span>
-        <span class="chip">Waiting on Android review</span>
+        <span class="item-title">Test roster removal on iOS 1.2.211+</span>
+        <span class="chip">Most important</span>
       </div>
       <p class="item-body">
-        Draft is checked and current — reels now claim volleyball, basketball <em>and</em>
-        soccer with their real stat triggers (verified in code on both platforms), four
-        themes including Redline, a win-back block, and both store buttons.
+        Remove a player, Save, force-quit, reopen — they must stay gone. In 1.2.210 I made
+        removal wait for Save, which was right, but it dropped the only call that deletes the
+        player from the cloud (iOS's team sync never removes roster entries, only adds them).
+        Anyone you removed on 210 may have come back. Fixed in 211; unverified on hardware.
+      </p>
+    </div>
+    <div class="item b-blocked">
+      <div class="item-head">
+        <span class="item-title">Two decisions I'm holding</span>
+      </div>
+      <p class="item-body">
+        <strong>Does approving a family link confer authority?</strong> Permissions grants
+        "guardian of player" only from a verified <code>playerLinks</code> entry, and approving a
+        claim only flips the claim's status — the two never talk. Wiring them changes what an
+        approval <em>authorises</em>, so it's yours to call.
         <br><br>
-        <strong>Gate:</strong> 1.1.1200 must clear Google review first, because the email
-        names Redline. iOS is already live. Send with
-        <code>node functions/send_update_august_2026.js</code>.
+        <strong>Birth month and year on the player page.</strong> You asked; I advised against
+        it, because the team's age division gives nearly the same matching power without holding
+        a date of birth for a child. If you still want it I'll build it gated like a surname —
+        say the word.
       </p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Watch the iOS rollout</span>
-        <span class="chip">No crash reporting</span>
+        <span class="item-title">Small ones</span>
       </div>
       <p class="item-body">
-        There's no Crashlytics in the iOS project, so crashes are only visible in App Store
-        Connect analytics, a day or two behind. Server-side I can check for new orphan games,
-        dangling hub rows, and tickets — ask and I'll sweep.
+        <strong>Carter J.</strong> is tombstoned but still on Kansas City Royals — delete the
+        roster rows, or clear the tombstone? <strong>Micha</strong> is on no team — keep or
+        remove? And <strong>10 husk teams</strong> holding ~14 unreachable game records are
+        parked behind a flag until you say go.
       </p>
     </div>
   </div>
 
-  <h2>Fixed today</h2>
+  <h2>Fixed the last two days</h2>
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Sharing told you the wrong thing, twice</span>
+        <span class="item-title">Editing a player didn't reach anything</span>
       </div>
       <p class="item-body">
-        A refusal at your shared-team limit came back as "Check your connection". It now names
-        every team the server counted. And a team that had dropped out of your list was still
-        shared and still counting — invisible in the app, unfixable from it. Counted teams
-        missing from your list are now restored so you can act on them.
+        Add a player as "Audrey", add the surname later, and the roster kept showing "Audrey" —
+        the roster stored its own copy at add time and nothing refreshed it. The player now owns
+        their name; number and position stay per-team, because the same kid really does wear 7
+        here and 12 there. Then the same staleness turned up in the cloud, so the web page still
+        showed the old name: renaming now pushes to every team they're on, and your existing
+        teams have been repaired.
       </p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Archived teams, un-share, and stuck hubs</span>
+        <span class="item-title">Removing a player from a roster</span>
       </div>
       <p class="item-body">
-        An archived team can be re-shared at your cap (archived teams hold no slot — reviving
-        is where the limit belongs). Un-sharing now parks the code, so re-sharing keeps the
-        <em>same</em> link. A team that claimed a code with no lookup row showed as shared
-        while the web 404'd — both apps now verify before showing it as shared.
+        The ✕ deleted immediately and permanently, on a screen with a Save button. It now asks,
+        says what it costs, and waits for Save — marked rows stay visible, struck through, with
+        undo. Removing the <em>last</em> player also never reached the cloud at all: the sweep
+        that infers removals is guarded against stale caches, so deliberate removal now names
+        the player instead of being inferred.
       </p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Message one user in the app</span>
+        <span class="item-title">"Anonymous" followers</span>
       </div>
       <p class="item-body">
-        Admin app → User Lookup → their record → <strong>Send in-app message</strong>.
-        Delivers to a private per-user inbox, not email and not a broadcast, so it can't
-        leak to anyone else. Push is attempted too and the result is reported honestly.
-        Needs Android 1200 / iOS 622 on the recipient's phone.
+        The email invite looked the person up by address and then never saved their name.
+        Fixed at the invite, fixed when reading, and your existing followers repaired.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Web: unreadable box, signed-out top bar, mobile layout on desktop</span>
+      </div>
+      <p class="item-body">
+        The Find Teams description used a variable that doesn't exist, so it fell through to the
+        browser's visited-link purple — and even corrected, that grey measured 2.5:1 against the
+        panel, so it changed colour as well. The account bar showed "Sign In" after a Back
+        because the repaint only ran once the team document had loaded; it now repaints on every
+        auth event and on a bfcache restore. And above 900px the pages are a centred 760px
+        column instead of stretching edge to edge.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Verified, not assumed</span>
+        <span class="chip">17/17 · 88 · 9/9</span>
+      </div>
+      <p class="item-body">
+        The privacy rules were tested as <em>real signed-in users</em> through the REST API,
+        because the admin SDK bypasses rules and proves nothing: 17/17, including that an
+        approved follower of a public team is denied surnames. 88 unit tests, zero failures.
+        Android driven end to end on the emulator as a brand-new user — which found three bugs
+        in my own roster work that no test could reach. Web pages are now driven with a real
+        signed-in browser, which is how the layout numbers above were measured rather than
+        guessed.
       </p>
     </div>
   </div>
@@ -396,6 +471,44 @@ onAuthStateChanged(auth, async (user) => {
 
   <h2>To do — not started</h2>
   <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Create a player without creating a team</span>
+        <span class="chip">You asked · not started</span>
+      </div>
+      <p class="item-body">
+        There's no way to add a player on their own, and no single screen holding everything
+        about them. That's where the extra player detail belongs, and where you'd build a player
+        up before a team exists.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Edit-feature clips aren't tied to a player</span>
+      </div>
+      <p class="item-body">
+        Stat-driven reels index against the player they're of; clips made with the edit feature
+        upload with no player attached, so they don't appear in a player's video list.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Cross-team match requests have no in-app screen</span>
+      </div>
+      <p class="item-body">
+        A guardian is asked on the web dashboard and by email. The plumbing is done and tested;
+        there's no equivalent surface in the app yet.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Cross-device roster resurrection</span>
+      </div>
+      <p class="item-body">
+        A second device still holding a removed player re-uploads them on its next sync — roster
+        membership has no tombstone, unlike deleted players. Same shape as the "Greg" bug.
+      </p>
+    </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">App Check</span>
