@@ -764,7 +764,7 @@ async function loadDashboard() {
         // to the search UI rather than making them hunt for it.
         // Eric 2026-08-17: this box's description rendered as unreadable purple.
         // Two faults, and the typo was only the trigger:
-        //   1. `var(--text-mute)` is not a variable — it's `--text-muted`. An
+        //   1. It referenced `--text-mute`; the variable is `--text-muted`. An
         //      unresolvable var makes the whole declaration invalid, so the div
         //      inherited its colour from the <a>...
         //   2. ...and the <a> set text-decoration but NO colour, so what it
