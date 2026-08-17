@@ -49,7 +49,12 @@
 
        Before adding a var() to this page, confirm it is declared HERE. */
     --surface: var(--bg-surface);
-    --muted: var(--text-muted);
+    /* --text-secondary, NOT --text-muted. Measured after the fix above: #888 on
+       a white card is 3.54:1, under the 4.5:1 WCAG AA floor for body text, and
+       --muted is used for real prose here (the "Family members only" explainer),
+       not just faint captions. --text-secondary gives ~7:1 in light and ~6.4:1
+       on the dark card. */
+    --muted: var(--text-secondary);
     --sf-accent: var(--accent);
     --outline: rgba(255,255,255,0.14);
     --border: rgba(255,255,255,0.14);
