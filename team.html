@@ -587,6 +587,22 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
     position: absolute; top: 12px; right: 16px; background: none;
     border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;
 }
+
+/* ── DESKTOP LAYOUT (Eric, 2026-08-17) ────────────────────────────────────
+   These pages were built mobile-first with no width ceiling, so on a laptop
+   every row stretched the full window — a team name on the far left and its
+   buttons on the far right, with a metre of nothing between. Mobile is
+   untouched; above 900px the content becomes a centred column of readable
+   width, which is what "bring the buttons in from the left and right" means.
+   A ceiling rather than a redesign: the same markup, just stopped from
+   spreading. */
+@media (min-width: 900px) {
+  #teamContent, #accessGate, .team-header {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
 </style>
 <script>
 /* Palette param — mirrors the theme block above. Applied to <html> before
@@ -862,6 +878,23 @@ let subStatus = null;  // null, 'pending', 'approved', 'blocked'
 
 const $ = id => document.getElementById(id);
 
+// Back/forward-cache restore. A browser returning to this page via Back may
+// resume the FROZEN page rather than re-running it, in which case
+// onAuthStateChanged does not fire again and nothing repaints. `persisted`
+// tells us that happened; re-sync from the SDK's current user, which is
+// authoritative and needs no network.
+//
+// Not covered by the fix above — that one handles re-EXECUTION; this handles
+// resume. Both produce the same symptom, so both are handled.
+window.addEventListener('pageshow', (e) => {
+    if (!e.persisted) return;
+    try {
+        const u = auth && auth.currentUser;
+        currentUser = (u && !u.isAnonymous) ? u : null;
+        updateUserBar();
+    } catch (_) { /* auth not up yet — the listener will cover it */ }
+});
+
 // 2026-06-09 — Token-refresh-retry wrapper for Firestore reads. The
 // in-app WebView wrapper (TeamPageActivity / GamePageActivity / etc.)
 // re-executes the page on `wv.goBack()`. The cached Firebase ID token
@@ -1015,6 +1048,19 @@ if (!hubCode || hubCode.length < 4) {
             } catch (e) { console.error('User doc error:', e); }
             await autoAcceptFollowerInvitations();
         }
+        // Repaint the account bar on EVERY auth event.
+        //
+        // Eric 2026-08-17: after clicking a player's Stats and pressing Back,
+        // the bar showed "Sign In / Sign Up" while he was plainly signed in;
+        // a refresh fixed it. The repaint used to live only inside the
+        // `if (hubProfile)` branch below, so an auth event that arrived BEFORE
+        // the team doc had loaded — which is the normal order on a back-nav
+        // re-execution, and the `authReady` promise gives up after 2s and lets
+        // the page render as signed-out — never updated the bar. It also can't
+        // wait for hubProfile: the bar is chrome and has nothing to do with the
+        // team.
+        updateUserBar();
+
         // If page is already loaded, update the user bar (and re-check access since invites may now be accepted)
         if (hubProfile) {
             if (currentUser) await checkAccess();
@@ -2662,10 +2708,12 @@ async function loadRoster() {
                     // Eric 2026-08-17: this read "✓ Your grandparent", which says
                     // the PLAYER is your grandparent — backwards, and it's the
                     // one line a newly-approved follower is certain to read.
-                    // Now it states the viewer's own role, and is a button so
-                    // they can change it or stop following without asking anyone.
+                    // Now it just names the relationship — Eric 2026-08-17,
+                    // "instead of saying 'you're the grandparent' just put
+                    // 'grandparent'" — and it's a button so they can change it
+                    // or stop following without asking anyone.
                     const rel = String(claim.relationship || 'family');
-                    familyHtml = `<button class="player-family-pill approved" data-manage-player="${escapeAttr(d.id)}" data-manage-name="${escapeAttr(p.name || 'Player')}" data-manage-rel="${escapeAttr(rel)}" title="Change your relationship, or stop following">✓ You're their ${escapeHtml(rel)} ⚙</button>`;
+                    familyHtml = `<button class="player-family-pill approved" data-manage-player="${escapeAttr(d.id)}" data-manage-name="${escapeAttr(p.name || 'Player')}" data-manage-rel="${escapeAttr(rel)}" title="Change your relationship, or stop following">✓ ${escapeHtml(rel.charAt(0).toUpperCase() + rel.slice(1))} ⚙</button>`;
                 } else if (claim.status === 'denied') {
                     familyHtml = `<span class="player-family-pill denied" title="A team manager declined this request">Declined</span>`;
                 }

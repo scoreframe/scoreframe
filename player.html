@@ -306,6 +306,22 @@ html, body {
 .pv-title { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden;
             text-overflow:ellipsis; }
 .pv-sub { font-size:11px; color:var(--text-muted,#999); margin-top:2px; }
+
+/* ── DESKTOP LAYOUT (Eric, 2026-08-17) ────────────────────────────────────
+   These pages were built mobile-first with no width ceiling, so on a laptop
+   every row stretched the full window — a team name on the far left and its
+   buttons on the far right, with a metre of nothing between. Mobile is
+   untouched; above 900px the content becomes a centred column of readable
+   width, which is what "bring the buttons in from the left and right" means.
+   A ceiling rather than a redesign: the same markup, just stopped from
+   spreading. */
+@media (min-width: 900px) {
+  #playerPage, #loadingScreen, #notFoundScreen {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
 </style>
 <script>
 /* Palette param — mirrors the theme block above. Applied to <html> before
