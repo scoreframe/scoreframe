@@ -489,8 +489,15 @@ html, body {
     border-top: 1px solid var(--bg-elevated); margin-top: 20px;
 }
 /* Player Cards */
+/* 2026-08-17 — flex-wrap + min-width:0 fix the STATS pill running off the
+   right edge (Eric's screenshot, a long name plus a wide "✓ OTHER FAMILY ⚙"
+   pill). A flex item defaults to min-width:auto, so .player-info below could
+   not shrink past its text and pushed the row wider than the card instead.
+   min-width:0 lets the name column give way first; flex-wrap means that when
+   the pill and STATS still don't fit, they drop to a second line rather than
+   overflowing. Keep both. */
 .player-card {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
     background: var(--bg-surface); border-radius: 10px;
     padding: 10px 14px; margin-bottom: 8px;
     border: 1px solid var(--bg-elevated);
@@ -501,8 +508,8 @@ html, body {
     font-size: 13px; font-weight: 700; color: white;
     background: var(--bg-elevated); flex-shrink: 0;
 }
-.player-info { flex: 1; }
-.player-name { font-size: 14px; font-weight: 600; }
+.player-info { flex: 1 1 120px; min-width: 0; }
+.player-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
 .player-position { font-size: 11px; color: var(--text-muted); }
 .player-stat { font-size: 11px; color: var(--accent); font-weight: 600; }
 /* 2026-06-02 — Multi-stat chip grid per roster row. Each chip is a
@@ -796,13 +803,6 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
              (played + still scheduled). Eric: "the top two areas are now
              redundant." renderScoreline() no-ops when this element is absent. -->
         <div id="seasonStatsCard" class="tp-season-card" style="display:none;"></div>
-        <!-- 2026-06-08 — Pending follower requests (owner/managers only).
-             Surfaced from the email notification's "manage on the web" link
-             so owners can approve/block without opening the app. -->
-        <div class="section" id="pendingRequestsSection" style="display:none;">
-            <div class="section-title">👋 Followers</div>
-            <div id="pendingRequestsList"></div>
-        </div>
 
         <!-- Live Now -->
         <div id="liveSection" style="display:none;" class="section">
@@ -866,6 +866,20 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
         <div class="section">
             <div class="section-title">📊 Past Games <span id="managerBadge" style="display:none;" class="manager-badge">MANAGER</span></div>
             <div id="pastGames"></div>
+        </div>
+
+        <!-- 2026-06-08 — Pending follower requests + the follower list
+             (owner/managers only). Surfaced from the email notification's
+             "manage on the web" link so owners can approve/block without
+             opening the app.
+             2026-08-17 — Moved from the TOP of the page to down here. Eric:
+             "when I accepted, that needs to go away and followers should go all
+             the way at the bottom of the page for the owner." An owner opens
+             this page to look at the team, not at its administration, and the
+             requests card was the first thing above the schedule and roster. -->
+        <div class="section" id="pendingRequestsSection" style="display:none;">
+            <div class="section-title">👋 Followers</div>
+            <div id="pendingRequestsList"></div>
         </div>
 
         <!-- Share, at the bottom — parity with the game page. -->
@@ -2196,11 +2210,13 @@ async function approvePendingRequest(subUid, displayName, rowEl) {
                 await setDoc(doc(db, 'users', subUid), { subscribedHubs: arrayUnion(hubCode) }, { merge: true });
             } catch (e) { console.warn('subscribedHubs write failed:', e); }
         }
-        rowEl.remove();
-        // Hide the section if no more rows.
-        if ($('pendingRequestsList').children.length === 0) {
-            $('pendingRequestsSection').style.display = 'none';
-        }
+        // 2026-08-17 — Re-render instead of yanking the row out of the DOM.
+        // rowEl.remove() made the person disappear entirely on approval, so the
+        // owner lost the one thing they wanted to look at: who follows this team
+        // and how they're related to a player. Reloading the section drops the
+        // pending prompt (Eric: "when I accepted that needs to go away") AND
+        // lists them as an approved follower in the same pass.
+        await loadPendingRequests();
     } catch (e) {
         console.error('approve failed:', e);
         alert('Approve failed. Please try again.');
