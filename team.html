@@ -684,7 +684,7 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
              Surfaced from the email notification's "manage on the web" link
              so owners can approve/block without opening the app. -->
         <div class="section" id="pendingRequestsSection" style="display:none;">
-            <div class="section-title">👋 Pending follower requests</div>
+            <div class="section-title">👋 Followers</div>
             <div id="pendingRequestsList"></div>
         </div>
 
@@ -738,8 +738,6 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
         <div class="section" id="rosterSection" style="display:none;">
             <div class="section-title">👥 Roster</div>
             <div id="rosterList"></div>
-            <!-- Family-link requests — managers only; hidden until there are any. -->
-            <div id="familyRequests" style="display:none"></div>
         </div>
 
         <!-- Past Games -->
@@ -1272,7 +1270,6 @@ function showContent() {
         // Claims must land BEFORE the roster paints — the cards read myClaims
         // to decide between "＋ My player", "⏳ Pending" and "✓ Your parent".
         loadMyClaims().then(loadRoster);
-        loadAllClaims().then(renderClaimRequests);
             loadPastGames();
         listenForLive();
         loadPendingRequests();
@@ -1285,7 +1282,6 @@ function showContent() {
         // Claims must land BEFORE the roster paints — the cards read myClaims
         // to decide between "＋ My player", "⏳ Pending" and "✓ Your parent".
         loadMyClaims().then(loadRoster);
-        loadAllClaims().then(renderClaimRequests);
             loadPastGames();
         listenForLive();
         loadPendingRequests();
@@ -1787,61 +1783,161 @@ function matchesSelectedSeason(game) {
 // can approve / block right from the web page without opening the app.
 // Only renders for the team's owner / managers.
 async function loadPendingRequests() {
+    // ONE followers surface (Eric, 2026-08-17).
+    //
+    // Before this there were two half-surfaces and the thing he needed was in
+    // neither: this section listed only PENDING SUBSCRIBERS, while pending
+    // FAMILY LINKS rendered in a block nested inside #rosterSection — which
+    // starts hidden and is only revealed once a roster loads. A grandparent who
+    // is already an approved follower asking to be linked to a player therefore
+    // showed up nowhere useful, even though the email told him to come here and
+    // review it.
+    //
+    // So: every follower, with their family links inline. Pending things first,
+    // because those are the ones asking for a decision.
     const isOwner = currentUser && hubProfile && currentUser.uid === hubProfile.ownerUid;
-    if (!isOwner && !isManager) {
+    const canSeeFollowers = isOwner || isManager || isCoach;
+    if (!canSeeFollowers) {
         $('pendingRequestsSection').style.display = 'none';
         return;
     }
     try {
-        const snap = await retryOnAuthDeny('loadPendingRequests', () =>
+        const snap = await retryOnAuthDeny('loadFollowers', () =>
             getDocs(collection(db, 'teams', teamId, 'subscribers'))
         );
-        const pending = snap.docs
+        const followers = snap.docs
             .map((d) => ({ id: d.id, ...d.data() }))
-            .filter((s) => s.status === 'pending');
-        if (pending.length === 0) {
+            .filter((f) => f.status !== 'blocked');
+        if (followers.length === 0) {
             $('pendingRequestsSection').style.display = 'none';
             return;
         }
+
+        // Names, and family links, per follower.
+        //
+        // `name` on a subscriber doc is a denormalized copy taken at follow
+        // time, and the owner-invite path never wrote one — which is why these
+        // rows read "Anonymous"/"Unknown" for people who obviously had
+        // accounts. The doc id IS the uid, so the real name is one lookup away.
+        for (const f of followers) {
+            if (!(f.name || '').trim()) {
+                try {
+                    const u = await getDoc(doc(db, 'users', f.id));
+                    const ud = u.exists() ? (u.data() || {}) : {};
+                    f.name = (ud.displayName || ud.name || '').trim();
+                } catch (e) { /* fall through to the email */ }
+            }
+            if (!(f.name || '').trim() && f.email) f.name = String(f.email).split('@')[0];
+            try {
+                const cs = await getDocs(collection(db, 'teams', teamId, 'subscribers', f.id, 'claims'));
+                f.links = cs.docs.map((c) => ({ playerId: c.id, ...c.data() }))
+                                 .filter((l) => l.status !== 'denied');
+            } catch (e) { f.links = []; }
+        }
+
+        // Anything awaiting a decision sorts to the top.
+        const weight = (f) => (f.status === 'pending' ? 0
+            : (f.links || []).some((l) => l.status === 'pending') ? 1 : 2);
+        followers.sort((a, b) => weight(a) - weight(b) ||
+            String(a.name || '').localeCompare(String(b.name || '')));
+
         $('pendingRequestsSection').style.display = 'block';
         const list = $('pendingRequestsList');
         list.innerHTML = '';
-        for (const p of pending) {
-            const row = document.createElement('div');
-            row.style.cssText = 'padding:12px 14px; margin-bottom:8px; border:1px solid var(--sf-outline,#444); border-radius:10px; display:flex; align-items:center; gap:10px;';
+
+        for (const f of followers) {
+            const card = document.createElement('div');
+            const awaiting = f.status === 'pending' || (f.links || []).some((l) => l.status === 'pending');
+            card.style.cssText = 'padding:12px 14px; margin-bottom:8px; border-radius:10px; border:1px solid ' +
+                (awaiting ? 'var(--sf-accent,#FF9640)' : 'var(--sf-outline,#444)') + ';';
+
+            const head = document.createElement('div');
+            head.style.cssText = 'display:flex; align-items:center; gap:10px;';
             const info = document.createElement('div');
-            info.style.cssText = 'flex:1;';
+            info.style.cssText = 'flex:1; min-width:0;';
+
             const name = document.createElement('div');
-            name.textContent = p.name || 'Unknown';
+            name.textContent = f.name || 'Follower';
             name.style.cssText = 'font-weight:700; font-size:14px;';
             info.appendChild(name);
-            if (p.email) {
-                const email = document.createElement('div');
-                email.textContent = p.email;
-                email.style.cssText = 'font-size:12px; color:#888;';
-                info.appendChild(email);
+
+            const sub = [];
+            if (f.email) sub.push(f.email);
+            if (f.status === 'pending') sub.push('wants to follow');
+            else if (f.status === 'approved') sub.push('following');
+            const meta = document.createElement('div');
+            meta.textContent = sub.join('  ·  ');
+            meta.style.cssText = 'font-size:12px; color:#8b8b8b; overflow:hidden; text-overflow:ellipsis;';
+            info.appendChild(meta);
+
+            const when = f.requestedAt || f.since;
+            if (when) {
+                const w = document.createElement('div');
+                w.textContent = (f.status === 'pending' ? 'Requested ' : 'Since ') +
+                    new Date(when).toLocaleDateString();
+                w.style.cssText = 'font-size:11px; color:#777; margin-top:2px;';
+                info.appendChild(w);
             }
-            if (p.requestedAt) {
-                const when = document.createElement('div');
-                when.textContent = 'Requested ' + new Date(p.requestedAt).toLocaleDateString();
-                when.style.cssText = 'font-size:11px; color:#999; margin-top:2px;';
-                info.appendChild(when);
+            head.appendChild(info);
+
+            // Approving/blocking the FOLLOW itself stays owner+manager, matching
+            // the Firestore rules — a coach may decide family links but not who
+            // can see the team.
+            if (f.status === 'pending' && (isOwner || isManager)) {
+                const ok = document.createElement('button');
+                ok.textContent = 'Approve';
+                ok.style.cssText = 'padding:8px 14px; background:#FF9640; color:#1A1A1A; border:0; border-radius:6px; font-weight:700; cursor:pointer;';
+                ok.onclick = () => approvePendingRequest(f.id, f.name || 'Follower', card);
+                head.appendChild(ok);
+                const no = document.createElement('button');
+                no.textContent = 'Block';
+                no.style.cssText = 'padding:8px 14px; background:transparent; color:#888; border:1px solid #555; border-radius:6px; font-weight:700; cursor:pointer; margin-left:6px;';
+                no.onclick = () => blockPendingRequest(f.id, f.name || 'Follower', card);
+                head.appendChild(no);
             }
-            row.appendChild(info);
-            const approveBtn = document.createElement('button');
-            approveBtn.textContent = 'Approve';
-            approveBtn.style.cssText = 'padding:8px 14px; background:#FF9640; color:#1A1A1A; border:0; border-radius:6px; font-weight:700; cursor:pointer;';
-            approveBtn.onclick = () => approvePendingRequest(p.id, p.name || 'Follower', row);
-            row.appendChild(approveBtn);
-            const blockBtn = document.createElement('button');
-            blockBtn.textContent = 'Block';
-            blockBtn.style.cssText = 'padding:8px 14px; background:transparent; color:#888; border:1px solid #555; border-radius:6px; font-weight:700; cursor:pointer; margin-left:6px;';
-            blockBtn.onclick = () => blockPendingRequest(p.id, p.name || 'Follower', row);
-            row.appendChild(blockBtn);
-            list.appendChild(row);
+            card.appendChild(head);
+
+            // Family links — the part that had nowhere to live.
+            for (const l of (f.links || [])) {
+                const row = document.createElement('div');
+                row.style.cssText = 'margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:8px; flex-wrap:wrap;';
+                const label = document.createElement('div');
+                const rel = String(l.relationship || 'family');
+                const relCap = rel.charAt(0).toUpperCase() + rel.slice(1);
+                label.style.cssText = 'flex:1; min-width:12rem; font-size:13px;';
+                label.innerHTML = l.status === 'approved'
+                    ? `<span style="color:#4CAF50;">✓</span> ${escapeHtml(relCap)} of <strong>${escapeHtml(displayPlayerName(l.playerName))}</strong>`
+                    : `Says they are <strong>${escapeHtml(displayPlayerName(l.playerName))}</strong>'s ${escapeHtml(rel)}`;
+                row.appendChild(label);
+
+                if (l.status === 'pending' && canDecideClaims()) {
+                    const yes = document.createElement('button');
+                    yes.textContent = 'Approve';
+                    yes.style.cssText = 'padding:6px 12px; background:#FF9640; color:#1A1A1A; border:0; border-radius:6px; font-weight:700; font-size:12px; cursor:pointer;';
+                    yes.onclick = () => decideClaim(f.id, l.playerId, true);
+                    row.appendChild(yes);
+                    const deny = document.createElement('button');
+                    deny.textContent = 'Deny';
+                    deny.style.cssText = 'padding:6px 12px; background:transparent; color:#888; border:1px solid #555; border-radius:6px; font-weight:700; font-size:12px; cursor:pointer;';
+                    deny.onclick = () => decideClaim(f.id, l.playerId, false);
+                    row.appendChild(deny);
+                }
+                card.appendChild(row);
+            }
+
+            list.appendChild(card);
+        }
+
+        // Public teams can't have family links at all (anyone can follow one),
+        // so say that rather than leaving a manager wondering where it went.
+        if (hubProfile && hubProfile.visibility === 'public') {
+            const note = document.createElement('div');
+            note.style.cssText = 'font-size:12px; color:#8b8b8b; margin-top:6px;';
+            note.textContent = 'Family links are off while this team is public, because anyone can follow a public team. Switch to private or invite-only to let parents and guardians link themselves to a player.';
+            list.appendChild(note);
         }
     } catch (e) {
-        console.error('[team.html] loadPendingRequests failed:', e);
+        console.error('[team.html] loadFollowers failed:', e);
         $('pendingRequestsSection').style.display = 'none';
     }
 }
@@ -2585,7 +2681,6 @@ async function loadRoster() {
 /** This visitor's own claims on this team, keyed by playerId. */
 let myClaims = {};
 /** Every claim on the team — managers only, drives the approval list. */
-let allClaims = [];
 
 const RELATIONSHIPS = ['Parent', 'Guardian', 'Grandparent', 'Other family'];
 
@@ -2606,19 +2701,6 @@ async function loadMyClaims() {
     }
 }
 
-async function loadAllClaims() {
-    allClaims = [];
-    if (!canDecideClaims() || !teamId) return;
-    try {
-        const subs = await getDocs(collection(db, 'teams', teamId, 'subscribers'));
-        for (const sub of subs.docs) {
-            const claims = await getDocs(collection(sub.ref, 'claims'));
-            claims.forEach(c => allClaims.push({ ...c.data(), _uid: sub.id, _playerId: c.id }));
-        }
-    } catch (e) {
-        console.error('loadAllClaims:', e);
-    }
-}
 
 function openFamilyLinkDialog(playerId, playerName) {
     if (!currentUser) { alert('Sign in first so the team knows who is asking.'); return; }
@@ -2682,67 +2764,12 @@ async function decideClaim(uid, playerId, approve) {
             status: approve ? 'approved' : 'denied',
             decidedAt: Date.now()
         });
-        await loadAllClaims();
-        renderClaimRequests();
+        await loadPendingRequests();
     } catch (e) {
         console.error('decideClaim failed', e);
         alert('Could not save that. Please try again.');
     }
 }
-
-function renderClaimRequests() {
-    const host = document.getElementById('familyRequests');
-    if (!host) return;
-    if (!canDecideClaims()) { host.style.display = 'none'; host.innerHTML = ''; return; }
-    if (hubProfile && hubProfile.visibility === 'public') {
-        // Explain the absence rather than leaving a manager wondering where the
-        // feature went — this is a deliberate protection, not a missing screen.
-        host.style.display = '';
-        host.innerHTML = `<h2 class="section-title">FAMILY LINKS</h2>
-            <p class="family-help">Family links are turned off while this team is
-            public, because anyone can follow a public team. Switch the team to
-            private or invite-only if you want parents and guardians to be able
-            to link themselves to a player.</p>`;
-        return;
-    }
-    const pending = allClaims.filter(c => c.status === 'pending');
-    const decided = allClaims.filter(c => c.status === 'approved');
-    if (!pending.length && !decided.length) { host.style.display = 'none'; host.innerHTML = ''; return; }
-    host.style.display = '';
-    let h = '<h2 class="section-title">FAMILY LINKS</h2>';
-    if (pending.length) {
-        h += `<p class="family-help">Approving means this person is recorded as that
-              player's family. Only approve people you recognise.</p>`;
-        pending.forEach(c => {
-            h += `<div class="family-req">
-                <div class="family-req-text">
-                  <strong>${escapeHtml(c.claimantName || 'Someone')}</strong>
-                  says they are <strong>${escapeHtml(c.playerName)}</strong>'s ${escapeHtml(c.relationship)}.
-                </div>
-                <div class="family-req-actions">
-                  <button class="family-approve" data-u="${escapeAttr(c._uid)}" data-p="${escapeAttr(c._playerId)}">Approve</button>
-                  <button class="family-deny" data-u="${escapeAttr(c._uid)}" data-p="${escapeAttr(c._playerId)}">Decline</button>
-                </div>
-              </div>`;
-        });
-    }
-    decided.forEach(c => {
-        h += `<div class="family-req approved-row">
-            <div class="family-req-text">✓ ${escapeHtml(c.claimantName || 'Someone')}
-              — ${escapeHtml(c.playerName)}'s ${escapeHtml(c.relationship)}</div>
-            <div class="family-req-actions">
-              <button class="family-deny" data-u="${escapeAttr(c._uid)}" data-p="${escapeAttr(c._playerId)}">Remove</button>
-            </div>
-          </div>`;
-    });
-    host.innerHTML = h;
-    host.querySelectorAll('.family-approve').forEach(b => b.addEventListener('click',
-        () => decideClaim(b.getAttribute('data-u'), b.getAttribute('data-p'), true)));
-    host.querySelectorAll('.family-deny').forEach(b => b.addEventListener('click',
-        () => decideClaim(b.getAttribute('data-u'), b.getAttribute('data-p'), false)));
-}
-
-let pastGamesCache = [];  // Cache for edit operations
 
 async function loadPastGames() {
     try {
