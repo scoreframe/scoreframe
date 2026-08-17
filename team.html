@@ -2653,7 +2653,36 @@ async function loadRoster() {
 
         const sport = hubProfile.sport || '';
         let html = '';
-        snap.forEach(d => {
+
+        // ORDER THE ROSTER THE WAY THE COACH ORDERED IT (Eric, 2026-08-17).
+        //
+        // getDocs returns documents in DOCUMENT-ID order, and these ids are
+        // UUIDs — so the page showed the roster alphabetically by a random
+        // string, which looked like no order at all next to the deliberate order
+        // in the app. `battingOrder` is the field the app persists a drag-reorder
+        // into (1-based); it is now mirrored onto these docs too.
+        //
+        // Fallbacks matter because older docs predate the field: unset (0 or
+        // missing) sorts AFTER everyone who has one, then by jersey number
+        // NUMERICALLY (so 2 precedes 10, which a string sort gets wrong), then
+        // by name. Without the numeric step a team that never reordered still
+        // looked shuffled.
+        const ordered = snap.docs.slice().sort((a, b) => {
+            const A = a.data() || {}, B = b.data() || {};
+            const ao = Number(A.battingOrder) || 0, bo = Number(B.battingOrder) || 0;
+            if (ao !== bo) {
+                if (ao === 0) return 1;
+                if (bo === 0) return -1;
+                return ao - bo;
+            }
+            const an = parseInt(A.number, 10), bn = parseInt(B.number, 10);
+            const aHas = !isNaN(an), bHas = !isNaN(bn);
+            if (aHas && bHas && an !== bn) return an - bn;
+            if (aHas !== bHas) return aHas ? -1 : 1;
+            return String(A.name || '').localeCompare(String(B.name || ''));
+        });
+
+        ordered.forEach(d => {
             const p = d.data();
             // The doc's own `name` is already short; this only adds back a
             // surname the viewer is entitled to. displayPlayerName stays on
