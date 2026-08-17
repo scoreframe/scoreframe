@@ -254,6 +254,23 @@ onAuthStateChanged(auth, async (user) => {
     session logs.
   </p>
 
+  <div class="items" style="margin-bottom:8px;">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">If this page looked out of date earlier, that was GitHub</span>
+        <span class="chip">17 Aug outage</span>
+      </div>
+      <p class="item-body">
+        Two Pages deployments failed with a 503 from GitHub's own deployment API
+        during a partial GitHub outage — API and Actions in major outage, Pages
+        degraded. The commit built fine and sat undeployed. Nothing was lost and
+        nothing needed redoing; it only needed another run once GitHub recovered.
+        The functional pushes that day (dashboard invitations, the coaches list)
+        went out before it started.
+      </p>
+    </div>
+  </div>
+
   <h2>Where the code is</h2>
   <div class="channels">
     <div class="ch live">
@@ -381,6 +398,43 @@ onAuthStateChanged(auth, async (user) => {
 
   <h2>Fixed the last two days</h2>
   <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Invitations you can act on without the email</span>
+        <span class="chip">Verified in a browser</span>
+      </div>
+      <p class="item-body">
+        Inviting a ScoreFrame user used to make them a follower on the spot. It now
+        creates a pending follow and the invitation waits on their dashboard with
+        Accept / No thanks — checked by signing in as the invited account and reading
+        the rendered page, which shows "You've been invited to follow PVA 14-1 Select".
+        The email is a nudge; the dashboard is the durable surface.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Roster order, and who runs the team</span>
+      </div>
+      <p class="item-body">
+        The web roster now appears in the order you set it in the app. It had been
+        sorted by document id — UUIDs — because the records the page reads carried no
+        order field at all. Confirmed live as #1 Maebry through #10 Arya.
+        <br><br>
+        Followers can also now see the owner, managers and coaches. Names and roles
+        only: no email, no photo. Knowing who runs your kid's team is reasonable;
+        a contact directory for those people is not, and they never agreed to one.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Housekeeping you asked for</span>
+      </div>
+      <p class="item-body">
+        Carter J removed. Micha left alone for you to add to ONW. The husk inventory
+        emailed in full — 11 teams, 34 leftover documents, 15 game records with dates,
+        sports and scores — with nothing deleted.
+      </p>
+    </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">Editing a player didn't reach anything</span>
