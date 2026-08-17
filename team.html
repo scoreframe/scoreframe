@@ -1302,13 +1302,16 @@ async function handleInviteAcceptance() {
     try {
         const { getFunctions, httpsCallable } =
             await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
+        const box = $('followStatus');
+        if (box) box.textContent = 'Accepting…';
         await httpsCallable(getFunctions(app), 'acceptHubInvite')({ teamId });
-        // Drop the flag so a refresh doesn't try again.
+        // Reload rather than re-derive. Accepting flips access, the follow, the
+        // invite record and what the page is allowed to show, all at once —
+        // re-deriving that by hand is how a view ends up half-updated. Drop the
+        // flag first so the reload doesn't try to accept again.
         const clean = new URL(location.href);
         clean.searchParams.delete('accept');
-        history.replaceState({}, '', clean);
-        await checkAccess();
-        showContent();
+        location.replace(clean.toString());
     } catch (e) {
         console.warn('acceptHubInvite:', e && e.message);
         const box = $('followStatus');

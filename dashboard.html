@@ -423,32 +423,50 @@ console.log('Auth initial state:', auth.currentUser?.email || 'not signed in');
  * forged or replayed write can't link two children together.
  */
 /** Accept a follow invitation. The server re-checks it against your email. */
-window._acceptFollowInvite = async function(teamId) {
+window._acceptFollowInvite = async function(teamId, btn) {
     if (!currentUser) return;
+    // Eric 2026-08-17: "I clicked accept and it appears like nothing happens" —
+    // the call took a second or two with no feedback at all, and the re-render
+    // afterwards left the card up. Two separate faults: silence, and a stale
+    // view.
+    const row = btn && btn.parentElement;
+    const msg = row && row.querySelector('.invite-msg');
+    if (btn) { btn.disabled = true; btn.textContent = 'Accepting…'; btn.style.opacity = '0.7'; }
+    if (msg) msg.textContent = '';
     try {
         await httpsCallable(getFunctions(app), 'acceptHubInvite')({ teamId });
-        loadDashboard();
+        if (msg) msg.textContent = 'Done — reloading…';
+        // A full reload rather than a re-render. The accept changes auth-derived
+        // state in several places at once (the follow, the invite record, the
+        // team list), and re-deriving all of it by hand is how a view ends up
+        // half-updated — which is exactly what he saw.
+        location.reload();
     } catch (e) {
         console.error('acceptFollowInvite:', e);
-        alert(/no pending invite/i.test(e && e.message || '')
-            ? "That invitation isn't waiting for your account any more."
-            : 'Could not accept that. Please try again.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Accept'; btn.style.opacity = '1'; }
+        if (msg) msg.textContent = /no pending invite/i.test(e && e.message || '')
+            ? "This invitation isn't waiting for your account any more."
+            : 'Could not accept that — please try again.';
     }
 };
 
 /** Decline it. Removes the pending follow as well as the invitation card —
  *  the rules already let you delete your own subscriber doc. */
-window._declineFollowInvite = async function(teamId) {
+window._declineFollowInvite = async function(teamId, btn) {
     if (!currentUser) return;
     if (!window.confirm('Decline this invitation? You can be invited again later.')) return;
+    const row = btn && btn.parentElement;
+    const msg = row && row.querySelector('.invite-msg');
+    if (btn) { btn.disabled = true; btn.textContent = 'Declining…'; btn.style.opacity = '0.7'; }
     try {
         await deleteDoc(doc(db, 'users', currentUser.uid, 'pendingFollowInvites', teamId));
         try { await deleteDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid)); }
         catch (e) { console.debug('no pending follow to remove:', e && e.code); }
-        loadDashboard();
+        location.reload();
     } catch (e) {
         console.error('declineFollowInvite:', e);
-        alert('Could not save that. Please try again.');
+        if (btn) { btn.disabled = false; btn.textContent = 'No thanks'; btn.style.opacity = '1'; }
+        if (msg) msg.textContent = 'Could not save that — please try again.';
     }
 };
 
@@ -778,9 +796,10 @@ async function loadDashboard() {
                     <div style="font-size:12px;color:var(--text-muted);">
                         Nothing is shared with you until you accept, and you can stop following at any time.
                     </div>
-                    <div style="display:flex;gap:10px;margin-top:10px;">
-                        <button onclick="window._acceptFollowInvite('${esc(inv.teamId || inv.id)}')" style="padding:8px 20px;background:var(--accent);color:#1A1A1A;border:none;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;">Accept</button>
-                        <button onclick="window._declineFollowInvite('${esc(inv.teamId || inv.id)}')" style="padding:8px 16px;background:transparent;color:var(--text-muted);border:1px solid var(--text-muted);border-radius:6px;font-size:14px;cursor:pointer;">No thanks</button>
+                    <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+                        <button id="acc-${esc(inv.teamId || inv.id)}" onclick="window._acceptFollowInvite('${esc(inv.teamId || inv.id)}', this)" style="padding:8px 20px;background:var(--accent);color:#1A1A1A;border:none;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;">Accept</button>
+                        <button onclick="window._declineFollowInvite('${esc(inv.teamId || inv.id)}', this)" style="padding:8px 16px;background:transparent;color:var(--text-muted);border:1px solid var(--text-muted);border-radius:6px;font-size:14px;cursor:pointer;">No thanks</button>
+                        <span class="invite-msg" style="font-size:12px;color:var(--text-muted);"></span>
                     </div>
                 </div>`;
             }
