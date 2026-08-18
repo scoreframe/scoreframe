@@ -2476,6 +2476,24 @@ async function loadPendingRequests() {
             // Approving/blocking the FOLLOW itself stays owner+manager, matching
             // the Firestore rules — a coach may decide family links but not who
             // can see the team.
+            // AN APPROVED FOLLOWER CAN BE REMOVED HERE TOO (Eric, 2026-08-18):
+            // "why are there some followers on the team page HTML that I can
+            // remove and some that I can't… It looks like I can remove them
+            // fine within the app on the managed team sheet."
+            //
+            // The answer was that this page only ever drew buttons for PENDING
+            // requests. What he could "remove" were people who happened to have
+            // an approved FAMILY LINK — that row has its own Remove, one level
+            // down — so whether a follower looked removable depended on
+            // something unrelated to being a follower. Approved followers had
+            // no control at all.
+            if (f.status === 'approved' && (isOwner || isManager)) {
+                const rm = document.createElement('button');
+                rm.textContent = 'Remove';
+                rm.style.cssText = 'padding:8px 14px; background:transparent; color:#e0796c; border:1px solid #e0796c; border-radius:6px; font-weight:700; cursor:pointer;';
+                rm.onclick = () => removeFollower(f.id, f.name || 'this follower', card);
+                head.appendChild(rm);
+            }
             if (f.status === 'pending' && (isOwner || isManager)) {
                 const ok = document.createElement('button');
                 ok.textContent = 'Approve';
@@ -2587,6 +2605,31 @@ async function approvePendingRequest(subUid, displayName, rowEl) {
         console.error('approve failed:', e);
         alert('Approve failed. Please try again.');
         rowEl.style.opacity = '1';
+    }
+}
+
+/**
+ * Stop someone following this team — the web half of the app's Manage Team
+ * "Remove". Deletes the subscriber doc; the rules allow it for the owner and
+ * managers (canWriteTeam), which is the same set that sees the button.
+ *
+ * Deliberately DELETE rather than status:"blocked". Block is a judgement about
+ * a person and it is already offered on the pending row; removing an approved
+ * follower is usually just tidying up, and a blocked doc would silently stop
+ * them ever following again.
+ */
+async function removeFollower(subUid, displayName, rowEl) {
+    if (!confirm('Remove ' + displayName + " from this team's followers?\n\n" +
+                 'They stop seeing this team. They can request to follow again later.')) return;
+    if (rowEl) rowEl.style.opacity = '0.5';
+    try {
+        await deleteDoc(doc(db, 'teams', teamId, 'subscribers', subUid));
+        if (rowEl) rowEl.remove();
+        await loadPendingRequests();
+    } catch (e) {
+        console.error('remove follower failed:', e);
+        alert('Could not remove that follower. Please try again.');
+        if (rowEl) rowEl.style.opacity = '1';
     }
 }
 
