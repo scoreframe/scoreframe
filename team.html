@@ -2624,6 +2624,19 @@ async function removeFollower(subUid, displayName, rowEl) {
     if (rowEl) rowEl.style.opacity = '0.5';
     try {
         await deleteDoc(doc(db, 'teams', teamId, 'subscribers', subUid));
+        // Drop the hub from THEIR follow list too, the way self-unfollow does.
+        // Without this the team keeps showing under "Teams I Follow" in their
+        // app after the subscriber doc is gone — a removal that only half
+        // happened, which is the exact failure mode we keep chasing. The
+        // subscriber doc is what actually grants access, so a rules refusal
+        // here shouldn't fail the removal.
+        const hubCode = hubProfile?.hubCode || '';
+        if (hubCode) {
+            try {
+                await setDoc(doc(db, 'users', subUid),
+                             { subscribedHubs: arrayRemove(hubCode) }, { merge: true });
+            } catch (e) { console.warn('subscribedHubs cleanup failed:', e); }
+        }
         if (rowEl) rowEl.remove();
         await loadPendingRequests();
     } catch (e) {
