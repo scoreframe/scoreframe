@@ -590,6 +590,31 @@ async function loadDashboard() {
         // Get teams user owns (from myTeams array)
         const myTeamIds = userDoc.exists() ? (userDoc.data().myTeams || []) : [];
 
+        // "When did anything last happen with this team?" — the ordering for
+        // the team lists below.
+        //
+        // Eric 2026-08-18: "Can we list teams on a person's dashboard as well
+        // as in the app based on latest activity date instead of alphabetical."
+        //
+        // Computed from the games already fetched for the W-L record, so it
+        // costs no extra reads. FUTURE-DATED GAMES DON'T COUNT: a tournament
+        // scheduled for November isn't activity, and counting it would pin that
+        // team to the top for months over one playing every weekend. Falls back
+        // to the team doc's own updatedAt so a brand-new team with no games
+        // still sorts sensibly instead of dropping to the bottom.
+        const lastActivityFrom = (gameDocs, data) => {
+            const now = Date.now();
+            let latest = 0;
+            for (const g of gameDocs) {
+                const d = Number(g.date) || 0;
+                if (d > 0 && d <= now && d > latest) latest = d;
+            }
+            return Math.max(latest, Number(data && data.updatedAt) || 0);
+        };
+        const byRecentActivity = (a, b) =>
+            (b.lastActivity || 0) - (a.lastActivity || 0) ||
+            (a.name || '').localeCompare(b.name || '');
+
         // Resolve all team data
         const ownedTeams = [];
         const managedTeams = [];
@@ -602,17 +627,20 @@ async function loadDashboard() {
                 if (!teamDoc.exists()) continue;
                 const data = teamDoc.data();
                 let record = '';
+                let gameRows = [];
                 try {
                     const pastGames = await getDocs(query(
                         collection(db, 'teams', teamId, 'games'),
                         orderBy('date', 'desc'), fbLimit(50)
                     ));
-                    record = calcRecord(data.sport || data.hub?.sport || '', pastGames.docs.map(d => d.data()));
+                    gameRows = pastGames.docs.map(d => d.data());
+                    record = calcRecord(data.sport || data.hub?.sport || '', gameRows);
                 } catch (e) {
                     // Games query may fail without index — show team without record
                     try {
                         const pastGames = await getDocs(collection(db, 'teams', teamId, 'games'));
-                        record = calcRecord(data.sport || data.hub?.sport || '', pastGames.docs.map(d => d.data()));
+                        gameRows = pastGames.docs.map(d => d.data());
+                        record = calcRecord(data.sport || data.hub?.sport || '', gameRows);
                     } catch (_) {}
                 }
                 // Fetch next upcoming game — post-cutover from games/ with
@@ -650,7 +678,8 @@ async function loadDashboard() {
                     color: data.color || data.hub?.color || '#FF9640',
                     hubCode: data.hub?.hubCode || '',
                     record,
-                    nextGame
+                    nextGame,
+                    lastActivity: lastActivityFrom(gameRows, data)
                 });
             } catch (e) { console.error('Error loading team', teamId, e); }
         }
@@ -683,16 +712,19 @@ async function loadDashboard() {
                 }
 
                 let record = '';
+                let gameRows = [];
                 try {
                     const pastGames = await getDocs(query(
                         collection(db, 'teams', teamId, 'games'),
                         orderBy('date', 'desc'), fbLimit(50)
                     ));
-                    record = calcRecord(data.sport || data.hub?.sport || '', pastGames.docs.map(d => d.data()));
+                    gameRows = pastGames.docs.map(d => d.data());
+                    record = calcRecord(data.sport || data.hub?.sport || '', gameRows);
                 } catch (e) {
                     try {
                         const pastGames = await getDocs(collection(db, 'teams', teamId, 'games'));
-                        record = calcRecord(data.sport || data.hub?.sport || '', pastGames.docs.map(d => d.data()));
+                        gameRows = pastGames.docs.map(d => d.data());
+                        record = calcRecord(data.sport || data.hub?.sport || '', gameRows);
                     } catch (_) {}
                 }
 
@@ -725,7 +757,8 @@ async function loadDashboard() {
                     hubCode,
                     record,
                     isFollowing,
-                    nextGame
+                    nextGame,
+                    lastActivity: lastActivityFrom(gameRows, data)
                 };
                 if (role === 'manager') managedTeams.push(team);
                 else followedTeams.push(team);
@@ -875,17 +908,17 @@ async function loadDashboard() {
 
         if (ownedTeams.length > 0) {
             html += `<div class="section-header">My Teams</div>`;
-            for (const t of ownedTeams) html += teamCard(t, 'owner');
+            for (const t of ownedTeams.sort(byRecentActivity)) html += teamCard(t, 'owner');
         }
 
         if (managedTeams.length > 0) {
             html += `<div class="section-header">Managing</div>`;
-            for (const t of managedTeams) html += teamCard(t, 'manager');
+            for (const t of managedTeams.sort(byRecentActivity)) html += teamCard(t, 'manager');
         }
 
         if (followedTeams.length > 0) {
             html += `<div class="section-header">Following</div>`;
-            for (const t of followedTeams) html += teamCard(t, 'follower');
+            for (const t of followedTeams.sort(byRecentActivity)) html += teamCard(t, 'follower');
         }
 
         if (ownedTeams.length === 0 && managedTeams.length === 0 && followedTeams.length === 0) {
