@@ -666,12 +666,14 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
 /* Reveal button sits inside the field — see the markup comment. Padding-right
    on the input keeps typed text from running under it. */
 .auth-pw { position: relative; }
-.auth-pw .auth-input { padding-right: 62px; }
+.auth-pw .auth-input { padding-right: 46px; }
 .auth-pw-toggle {
-    position: absolute; top: 0; right: 8px; height: 40px;
-    background: none; border: none; cursor: pointer; padding: 0 4px;
-    color: var(--accent); font-size: 12px; font-weight: 600;
+    position: absolute; top: 0; right: 6px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; cursor: pointer; padding: 0 6px;
+    color: var(--text-secondary);
 }
+.auth-pw-toggle:hover { color: var(--accent); }
 .auth-input:focus { outline: none; border-color: var(--accent); }
 .auth-submit {
     width: 100%; padding: 10px; background: var(--accent); color: #1A1A1A;
@@ -1066,7 +1068,17 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
                 <input class="auth-input" type="password" id="authPassword" placeholder="Password" autocomplete="current-password">
                 <button type="button" class="auth-pw-toggle" id="authPwToggle"
                         onclick="togglePasswordVisible()"
-                        aria-label="Show password">Show</button>
+                        aria-label="Show password" title="Show password">
+                    <svg id="authEyeOpen" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <svg id="authEyeOff" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none;"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                </button>
             </div>
             <input class="auth-input" type="text" id="authName" placeholder="Display name" style="display:none;" autocomplete="name">
             <button class="auth-submit" id="authSubmit" onclick="doEmailSignIn()">Sign In</button>
@@ -1871,9 +1883,7 @@ window.setAuthMode = function(createMode) {
         isCreateMode ? 'new-password' : 'current-password');
     // Re-mask on every open / tab switch — a revealed password left showing
     // from a previous visit is a shoulder-surfing gift.
-    $('authPassword').type = 'password';
-    $('authPwToggle').textContent = 'Show';
-    $('authPwToggle').setAttribute('aria-label', 'Show password');
+    togglePasswordVisible(false);
     // Google is the same button either way — it signs you in if you have an
     // account and creates one if you don't. Say so, rather than leaving people
     // wondering whether they picked the wrong tab.
@@ -1890,12 +1900,15 @@ window.doSignIn = function(createMode) {
 /** Straight to the sign-up tab — what the Sign Up buttons call. */
 window.doSignUp = function() { doSignIn(true); };
 
-window.togglePasswordVisible = function() {
+window.togglePasswordVisible = function(force) {
     const input = $('authPassword'), btn = $('authPwToggle');
-    const show = input.type === 'password';
+    const show = force === undefined ? input.type === 'password' : !!force;
     input.type = show ? 'text' : 'password';
-    btn.textContent = show ? 'Hide' : 'Show';
-    btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    $('authEyeOpen').style.display = show ? 'none' : 'block';
+    $('authEyeOff').style.display = show ? 'block' : 'none';
+    const label = show ? 'Hide password' : 'Show password';
+    btn.setAttribute('aria-label', label);
+    btn.setAttribute('title', label);
 };
 
 window.closeAuth = function() {
