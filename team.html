@@ -635,6 +635,21 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
 }
 .auth-modal h2 { font-size: 18px; margin-bottom: 4px; }
 .auth-modal .subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+/* Sign in / Sign up as TABS (2026-08-17). Eric: "way at the bottom there's
+   some text to click to switch to the sign up flow. this is not intuitive."
+   Two equal tabs put both options in front of you before you type anything,
+   instead of hiding one behind a link under the fold. */
+.auth-tabs {
+    display: flex; gap: 4px; margin: 4px 0 18px;
+    background: var(--bg-deep); border-radius: 10px; padding: 4px;
+}
+.auth-tab {
+    flex: 1; padding: 9px 0; border: none; background: none; cursor: pointer;
+    color: var(--text-secondary); font-size: 14px; font-weight: 600;
+    border-radius: 7px; transition: background .12s, color .12s;
+}
+.auth-tab:hover { color: var(--text-primary); }
+.auth-tab.active { background: var(--accent); color: #1A1A1A; }
 .auth-divider {
     display: flex; align-items: center; gap: 12px; margin: 16px 0;
     font-size: 12px; color: var(--text-muted);
@@ -841,6 +856,7 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
     <div id="accountBar" style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg-deep);border-bottom:1px solid var(--bg-elevated);flex-wrap:wrap;">
         <a href="/" style="text-decoration:none;font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-right:auto;">Score<span style="color:var(--accent);">Frame</span></a>
         <button class="sign-in-btn" onclick="doSignIn()" style="font-size:12px;padding:6px 14px;">Sign In</button>
+        <button class="sign-in-btn" onclick="doSignUp()" style="font-size:12px;padding:6px 14px;background:var(--accent);color:#1A1A1A;">Sign Up</button>
     </div>
 
     <!-- Team Header -->
@@ -886,8 +902,16 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
     <!-- Access Gate (private/invite-only hubs — requires sign-in) -->
     <div id="accessGate" style="display:none;" class="access-section">
         <div class="access-title">🔒 This team is private</div>
-        <div class="access-desc" id="accessDesc">Sign in with your ScoreFrame account to request access.</div>
-        <button class="sign-in-btn" id="gateSignInBtn" onclick="doSignIn()" style="margin-bottom:12px;">Sign In</button>
+        <div class="access-desc" id="accessDesc">Sign in or create a free account to request access.</div>
+        <!-- Both options on the gate (2026-08-17). Eric: "can we add the sign
+             up button next to the sign in button on a private or invite only
+             team page because most people are going to click the sign up
+             button." Someone arriving from an invite link usually has no
+             account yet, so offering only Sign In asks them to fail first. -->
+        <div id="gateAuthBtns" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;">
+            <button class="sign-in-btn" id="gateSignInBtn" onclick="doSignIn()">Sign In</button>
+            <button class="sign-in-btn" id="gateSignUpBtn" onclick="doSignUp()" style="background:var(--accent);color:#1A1A1A;">Sign Up</button>
+        </div>
         <button class="access-btn" id="requestBtn" onclick="requestAccess()" style="display:none;">Request Access</button>
         <div class="access-status" id="accessStatus"></div>
     </div>
@@ -1003,8 +1027,15 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
 <div class="auth-overlay" id="authOverlay" onclick="if(event.target===this)closeAuth()">
     <div class="auth-modal" style="position:relative;">
         <button class="auth-close" onclick="closeAuth()">&times;</button>
-        <h2>Sign in to ScoreFrame</h2>
-        <div class="subtitle">Follow teams, get live notifications, and more</div>
+        <h2 id="authTitle">Sign in to ScoreFrame</h2>
+        <div class="subtitle" id="authSubtitle">Follow teams, get live notifications, and more</div>
+
+        <div class="auth-tabs" role="tablist">
+            <button class="auth-tab active" id="authTabIn" role="tab"
+                    onclick="setAuthMode(false)">Sign In</button>
+            <button class="auth-tab" id="authTabUp" role="tab"
+                    onclick="setAuthMode(true)">Sign Up</button>
+        </div>
 
         <button class="sign-in-btn" style="width:100%;justify-content:center;margin-bottom:0;" onclick="doGoogleSignIn()">
             <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
@@ -1018,9 +1049,9 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
             <input class="auth-input" type="password" id="authPassword" placeholder="Password" autocomplete="current-password">
             <input class="auth-input" type="text" id="authName" placeholder="Display name" style="display:none;" autocomplete="name">
             <button class="auth-submit" id="authSubmit" onclick="doEmailSignIn()">Sign In</button>
-            <div class="auth-toggle" id="authToggle">
-                Don't have an account? <a onclick="toggleAuthMode()">Create one</a>
-            </div>
+            <!-- Filled by setAuthMode — the old "Create one" link that lived
+                 here is now the Sign Up tab above. -->
+            <div class="auth-toggle" id="authToggle"></div>
         </div>
         <div class="auth-error" id="authError"></div>
     </div>
@@ -1618,13 +1649,15 @@ function showContent() {
 
         if (!currentUser) {
             // Not signed in — show sign-in prompt
-            $('accessDesc').textContent = 'Sign in with your Google account to request access.';
-            $('gateSignInBtn').style.display = 'inline-flex';
+            $('accessDesc').textContent = 'Sign in, or create a free account, to request access.';
+            // Toggle the PAIR — hiding only the Sign In button would leave a
+            // lone Sign Up button on screen for someone already signed in.
+            $('gateAuthBtns').style.display = 'flex';
             $('requestBtn').style.display = 'none';
             $('accessStatus').textContent = '';
         } else {
             // Signed in but not approved
-            $('gateSignInBtn').style.display = 'none';
+            $('gateAuthBtns').style.display = 'none';
             if (subStatus === 'pending') {
                 $('accessDesc').textContent = '';
                 $('requestBtn').style.display = 'none';
@@ -1654,7 +1687,7 @@ function updateUserBar() {
     if (!currentUser) {
         accountBar.innerHTML = `${logo}
             <button class="sign-in-btn" onclick="doSignIn()" style="font-size:12px;padding:6px 14px;">Sign In</button>
-            <button class="sign-in-btn" onclick="doSignIn()" style="font-size:12px;padding:6px 14px;background:var(--accent);color:#1A1A1A;">Sign Up</button>`;
+            <button class="sign-in-btn" onclick="doSignUp()" style="font-size:12px;padding:6px 14px;background:var(--accent);color:#1A1A1A;">Sign Up</button>`;
         if (followArea) followArea.innerHTML = isPublic ? emailFollowBoxHtml() : '';
         $('followStatus').textContent = '';
         return;
@@ -1793,34 +1826,51 @@ function renderHeader() {
 
 let isCreateMode = false;
 
-window.doSignIn = function() {
-    // Open auth modal
-    $('authOverlay').classList.add('show');
+/**
+ * Put the dialog in Sign In or Sign Up state.
+ *
+ * Eric, 2026-08-17: "even at the top if I click sign up I'm taken to the sign
+ * in dialogue which is just not right." The dialog only ever opened signed-in-
+ * first, with a link at the very bottom to switch. Now the mode is a parameter
+ * and the tabs show which one you're in, so Sign Up lands on Sign Up.
+ */
+window.setAuthMode = function(createMode) {
+    isCreateMode = !!createMode;
     $('authError').textContent = '';
-    isCreateMode = false;
-    $('authSubmit').textContent = 'Sign In';
-    $('authName').style.display = 'none';
-    $('authToggle').innerHTML = 'Don\'t have an account? <a onclick="toggleAuthMode()">Create one</a>';
+    $('authTabIn').classList.toggle('active', !isCreateMode);
+    $('authTabUp').classList.toggle('active', isCreateMode);
+    $('authTitle').textContent = isCreateMode
+        ? 'Create your ScoreFrame account' : 'Sign in to ScoreFrame';
+    $('authSubtitle').textContent = isCreateMode
+        ? 'Free — follow your team and get live updates'
+        : 'Follow teams, get live notifications, and more';
+    $('authSubmit').textContent = isCreateMode ? 'Create Account' : 'Sign In';
+    $('authName').style.display = isCreateMode ? 'block' : 'none';
+    $('authPassword').setAttribute('autocomplete',
+        isCreateMode ? 'new-password' : 'current-password');
+    // Google is the same button either way — it signs you in if you have an
+    // account and creates one if you don't. Say so, rather than leaving people
+    // wondering whether they picked the wrong tab.
+    $('authToggle').textContent = isCreateMode
+        ? 'Or use Google above — it creates your account automatically.'
+        : 'Or use Google above — no separate sign-up needed.';
 };
+
+window.doSignIn = function(createMode) {
+    $('authOverlay').classList.add('show');
+    setAuthMode(createMode === true);
+};
+
+/** Straight to the sign-up tab — what the Sign Up buttons call. */
+window.doSignUp = function() { doSignIn(true); };
 
 window.closeAuth = function() {
     $('authOverlay').classList.remove('show');
     $('authError').textContent = '';
 };
 
-window.toggleAuthMode = function() {
-    isCreateMode = !isCreateMode;
-    $('authError').textContent = '';
-    if (isCreateMode) {
-        $('authSubmit').textContent = 'Create Account';
-        $('authName').style.display = 'block';
-        $('authToggle').innerHTML = 'Already have an account? <a onclick="toggleAuthMode()">Sign in</a>';
-    } else {
-        $('authSubmit').textContent = 'Sign In';
-        $('authName').style.display = 'none';
-        $('authToggle').innerHTML = 'Don\'t have an account? <a onclick="toggleAuthMode()">Create one</a>';
-    }
-};
+/** Kept for any older inline handler still calling it. */
+window.toggleAuthMode = function() { setAuthMode(!isCreateMode); };
 
 window.doGoogleSignIn = async function() {
     $('authError').textContent = '';
@@ -2238,11 +2288,19 @@ async function loadPendingRequests() {
                 row.style.cssText = 'margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:8px; flex-wrap:wrap;';
                 const label = document.createElement('div');
                 const rel = String(l.relationship || 'family');
+                const isSelf = rel.toLowerCase() === 'self';
                 const relCap = rel.charAt(0).toUpperCase() + rel.slice(1);
+                const who = escapeHtml(displayPlayerName(l.playerName));
                 label.style.cssText = 'flex:1; min-width:12rem; font-size:13px;';
+                // "Self of Audrey" / "says they are Audrey's self" is nonsense —
+                // a self-claim is a different sentence, not a different noun.
                 label.innerHTML = l.status === 'approved'
-                    ? `<span style="color:#4CAF50;">✓</span> ${escapeHtml(relCap)} of <strong>${escapeHtml(displayPlayerName(l.playerName))}</strong>`
-                    : `Says they are <strong>${escapeHtml(displayPlayerName(l.playerName))}</strong>'s ${escapeHtml(rel)}`;
+                    ? (isSelf
+                        ? `<span style="color:#4CAF50;">✓</span> This is <strong>${who}</strong>`
+                        : `<span style="color:#4CAF50;">✓</span> ${escapeHtml(relCap)} of <strong>${who}</strong>`)
+                    : (isSelf
+                        ? `Says they <strong>are</strong> ${who}`
+                        : `Says they are <strong>${who}</strong>'s ${escapeHtml(rel)}`);
                 row.appendChild(label);
 
                 // Staff can also CHANGE or REMOVE an approved link, not just
@@ -3102,7 +3160,7 @@ async function loadRoster() {
                     // 'grandparent'" — and it's a button so they can change it
                     // or stop following without asking anyone.
                     const rel = String(claim.relationship || 'family');
-                    familyHtml = `<button class="player-family-pill approved" data-manage-player="${escapeAttr(d.id)}" data-manage-name="${escapeAttr(p.name || 'Player')}" data-manage-rel="${escapeAttr(rel)}" title="Change your relationship, or stop following">✓ ${escapeHtml(rel.charAt(0).toUpperCase() + rel.slice(1))} ⚙</button>`;
+                    familyHtml = `<button class="player-family-pill approved" data-manage-player="${escapeAttr(d.id)}" data-manage-name="${escapeAttr(p.name || 'Player')}" data-manage-rel="${escapeAttr(rel)}" title="Change your relationship, or stop following">✓ ${escapeHtml(relationshipPill(rel))} ⚙</button>`;
                 } else if (claim.status === 'denied') {
                     familyHtml = `<span class="player-family-pill denied" title="A team manager declined this request">Declined</span>`;
                 }
@@ -3226,7 +3284,40 @@ window.openManageLinkDialog = function(playerId, playerName, currentRel) {
 let myClaims = {};
 /** Every claim on the team — managers only, drives the approval list. */
 
-const RELATIONSHIPS = ['Parent', 'Guardian', 'Grandparent', 'Other family'];
+// 2026-08-17 — "This is me" added. A player old enough to have their own
+// ScoreFrame account can follow their own team, and had no way to say the person
+// on the roster IS them; the only options were ways of being someone ELSE'S
+// relative. It grants exactly what any other approved link grants — visibility
+// of that player's own videos — and it collects nothing new, because the person
+// asking already has an account. The gate is unchanged: a manager who knows the
+// roster approves it.
+//
+// Kept LAST in the list so the default selection stays Parent, which is who
+// actually files most of these.
+const RELATIONSHIPS = ['Parent', 'Guardian', 'Grandparent', 'Other family', 'This is me'];
+
+/** Stored value for a claim. Everything is lower-cased; "This is me" maps to the
+ *  `self` relationship the subscriber model already defines. */
+function relationshipValue(label) {
+    return label === 'This is me' ? 'self' : label;
+}
+
+/** How a stored relationship reads in a sentence. "Self of Audrey" is nonsense,
+ *  so `self` gets its own phrasing everywhere it is displayed. */
+function relationshipLabel(rel, playerName) {
+    const r = String(rel || 'family').toLowerCase();
+    const who = playerName || 'this player';
+    if (r === 'self') return `This is ${who}`;
+    const cap = r.charAt(0).toUpperCase() + r.slice(1);
+    return `${cap} of ${who}`;
+}
+
+/** Short form for the roster pill, where the player's name is already alongside. */
+function relationshipPill(rel) {
+    const r = String(rel || 'family').toLowerCase();
+    if (r === 'self') return 'This is me';
+    return r.charAt(0).toUpperCase() + r.slice(1);
+}
 
 // The existing escapeHtml (above) already escapes quotes, so it is safe in
 // attribute position too — escapeAttr is just an intention-revealing alias.
@@ -3249,7 +3340,7 @@ async function loadMyClaims() {
 function openFamilyLinkDialog(playerId, playerName) {
     if (!currentUser) { alert('Sign in first so the team knows who is asking.'); return; }
     const opts = RELATIONSHIPS.map((r, i) =>
-        `<label class="family-opt"><input type="radio" name="famrel" value="${escapeAttr(r)}"${i === 0 ? ' checked' : ''}> ${escapeHtml(r)}</label>`
+        `<label class="family-opt"><input type="radio" name="famrel" value="${escapeAttr(relationshipValue(r))}"${i === 0 ? ' checked' : ''}> ${escapeHtml(r)}</label>`
     ).join('');
     const wrap = document.createElement('div');
     wrap.className = 'family-modal';
@@ -3258,8 +3349,9 @@ function openFamilyLinkDialog(playerId, playerName) {
         <h3>Follow ${escapeHtml(playerName)}</h3>
         <p class="family-modal-sub">Tell the team how you're related.</p>
         <div class="family-notice">
-          <strong>Family members only.</strong> A team owner or manager reviews every
-          request, and will only approve people they know are this player's family.
+          <strong>Family, or the player themselves.</strong> A team owner or manager
+          reviews every request, and will only approve someone they know really is
+          this player or their family.
         </div>
         <div class="family-opts">${opts}</div>
         <div class="family-modal-actions">
