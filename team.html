@@ -2629,6 +2629,14 @@ function escapeHtml(s) {
 
 let scheduleUpcoming = [];   // top-level upcoming, set by loadSchedule()
 let stageLastCompleted = null; // newest completed game, set by loadPastGames()
+// Completed games this page has rendered, used for the W/L record and the
+// game-detail lookups. It was ASSIGNED in loadPastGames and never declared —
+// and this is a <script type="module">, so that is a ReferenceError, not an
+// implicit global. It stayed invisible because loadPastGames returns early
+// when a team has no completed games, so only a team that HAS one ever
+// reached the line. Eric scored PVA's first game on 2026-08-18 and the whole
+// past-games section died with "Unable to load past games".
+let pastGamesCache = [];
 let stageHasLive = false;    // set by listenForLive()
 let stageTimer = null;       // countdown interval; cleared before each re-render
 
