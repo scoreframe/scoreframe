@@ -505,7 +505,13 @@ html, body {
 .player-number {
     width: 32px; height: 32px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700; color: white;
+    /* Was `color: white`, which only ever suited the dark palette. The circle
+       sits on --bg-elevated, and in light that token is #ECECE8 — so white
+       digits landed at about 1.05:1 against their own background and the
+       jersey numbers effectively vanished (Eric, 2026-08-17). Taking the
+       foreground from the same token set as the surface behind it keeps it
+       legible in both: ~11:1 on dark, ~15:1 on light. */
+    font-size: 13px; font-weight: 700; color: var(--text-primary);
     background: var(--bg-elevated); flex-shrink: 0;
 }
 .player-info { flex: 1 1 120px; min-width: 0; }
