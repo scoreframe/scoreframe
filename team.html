@@ -1725,10 +1725,32 @@ function showContent() {
 
         if (!currentUser) {
             // Not signed in — show sign-in prompt
-            $('accessDesc').textContent = 'Sign in, or create a free account, to request access.';
-            // Toggle the PAIR — hiding only the Sign In button would leave a
-            // lone Sign Up button on screen for someone already signed in.
-            $('gateAuthBtns').style.display = 'flex';
+            // INSIDE THE APP, DON'T OFFER WEB AUTH (2026-08-18).
+            //
+            // Verified on an emulator with the app installed and no account:
+            // an emailed team link opens the app, lands here, and offered
+            // Sign In / Sign Up. Both are dead ends in a WebView. Google is
+            // the worst of them — it prompts "Leave ScoreFrame? This opens
+            // scoreframe-deploy.firebaseapp.com in your browser", and the
+            // session then lives in the BROWSER while the app stays signed
+            // out. Email/password is quieter but no better: it creates a
+            // WebView session the app knows nothing about, so the Account tab
+            // still reads "Sign in" and none of their teams sync.
+            //
+            // The app's own Account tab is the only place that produces a
+            // real app session, so point there instead. Eric: "we want them
+            // to create an account from the account button."
+            const inApp = document.body.classList.contains('app');
+            if (inApp) {
+                $('accessDesc').textContent =
+                    'Sign in from the Account tab at the bottom of the app, then come back here to request access.';
+                $('gateAuthBtns').style.display = 'none';
+            } else {
+                $('accessDesc').textContent = 'Sign in, or create a free account, to request access.';
+                // Toggle the PAIR — hiding only the Sign In button would leave
+                // a lone Sign Up button on screen for someone already signed in.
+                $('gateAuthBtns').style.display = 'flex';
+            }
             $('requestBtn').style.display = 'none';
             $('accessStatus').textContent = '';
         } else {
@@ -1943,6 +1965,14 @@ window.setAuthMode = function(createMode) {
 };
 
 window.doSignIn = function(createMode) {
+    // Every route into this dialog is a dead end inside the app's WebView —
+    // see the gate branch in showAccessGate. Refuse here as well, so a future
+    // caller can't reintroduce the trap by opening the dialog from somewhere
+    // else. Outside the app this is unchanged.
+    if (document.body.classList.contains('app')) {
+        alert('Use the Account tab at the bottom of the app to sign in or create an account.');
+        return;
+    }
     $('authOverlay').classList.add('show');
     setAuthMode(createMode === true);
 };
