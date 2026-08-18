@@ -3193,21 +3193,35 @@ async function loadStaff() {
         };
         const rows = [];
         const ownerUid = (hubProfile && hubProfile.ownerUid) || '';
-        const seen = new Set();
-        if (ownerUid) {
-            rows.push({ role: 'Owner', name: await nameFor(ownerUid) });
-            seen.add(ownerUid);
-        }
+        // ONE ROW PER PERSON, ALL THEIR ROLES ON IT (2026-08-17).
+        //
+        // This kept a `seen` set and skipped anyone already listed, so the
+        // owner — who is nearly always also a manager, and may have listed
+        // themselves as coach — only ever appeared as "Owner". Eric added
+        // himself as a coach and then couldn't find it here: "I don't see me
+        // listed as the coach on the team web page."
+        //
+        // Listing them twice would be worse (two rows, same face), so the roles
+        // collapse onto the one row: "Owner · Coach".
+        const byUid = new Map();
+        const addRole = (uid, role, storedName) => {
+            if (!uid) return;
+            const e = byUid.get(uid) || { uid, roles: [], name: (storedName || '').trim() };
+            if (!e.roles.includes(role)) e.roles.push(role);
+            if (!e.name && storedName) e.name = storedName.trim();
+            byUid.set(uid, e);
+        };
+        if (ownerUid) addRole(ownerUid, 'Owner', '');
         for (const [coll, role] of [['managers', 'Manager'], ['coaches', 'Coach']]) {
             let snap;
             try { snap = await getDocs(collection(db, 'teams', teamId, coll)); }
             catch (e) { continue; }
             for (const d of snap.docs) {
-                if (seen.has(d.id)) continue;      // the owner is usually a manager too
-                seen.add(d.id);
-                const stored = ((d.data() || {}).name || '').trim();
-                rows.push({ role, name: stored || await nameFor(d.id) });
+                addRole(d.id, role, (d.data() || {}).name || '');
             }
+        }
+        for (const e of byUid.values()) {
+            rows.push({ role: e.roles.join(' · '), name: e.name || await nameFor(e.uid) });
         }
         const real = rows.filter(r => r.name);
         if (!real.length) { section.style.display = 'none'; return; }
