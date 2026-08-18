@@ -686,6 +686,13 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
 }
 .auth-toggle a { color: var(--accent); cursor: pointer; text-decoration: none; }
 .auth-error { color: var(--error); font-size: 12px; margin-top: 8px; min-height: 16px; }
+.auth-link-btn {
+    width: 100%; margin-top: 10px; padding: 9px; background: none;
+    border: 1px solid var(--bg-elevated); border-radius: 8px;
+    color: var(--text-secondary); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.auth-link-btn:hover { border-color: var(--accent); color: var(--accent); }
+.auth-link-btn:disabled { opacity: .55; cursor: default; }
 .auth-close {
     position: absolute; top: 12px; right: 16px; background: none;
     border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;
@@ -1041,7 +1048,7 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
         <h2 id="authTitle">Sign in to ScoreFrame</h2>
         <div class="subtitle" id="authSubtitle">Follow teams, get live notifications, and more</div>
 
-        <div class="auth-tabs" role="tablist">
+        <div class="auth-tabs" role="tablist" id="authTabs">
             <button class="auth-tab active" id="authTabIn" role="tab"
                     onclick="setAuthMode(false)">Sign In</button>
             <button class="auth-tab" id="authTabUp" role="tab"
@@ -1082,9 +1089,31 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
             </div>
             <input class="auth-input" type="text" id="authName" placeholder="Display name" style="display:none;" autocomplete="name">
             <button class="auth-submit" id="authSubmit" onclick="doEmailSignIn()">Sign In</button>
+            <!-- Passwordless (2026-08-17). The follower this page is built for
+                 is a parent or grandparent who arrives from one invite email,
+                 visits a handful of times a season, and will not remember a
+                 password between games. They are already proving they own the
+                 address by clicking the invite. Offered on BOTH tabs, because
+                 a link both signs you in and creates the account. -->
+            <button type="button" class="auth-link-btn" id="authLinkBtn"
+                    onclick="sendEmailLink()">✉ Email me a sign-in link instead</button>
+
             <!-- Filled by setAuthMode — the old "Create one" link that lived
                  here is now the Sign Up tab above. -->
             <div class="auth-toggle" id="authToggle"></div>
+        </div>
+
+        <!-- Shown after a sign-in link is sent. A panel rather than an
+             overwrite of emailForm, so reopening the dialog still has inputs. -->
+        <div id="authLinkSent" style="display:none;font-size:14px;line-height:1.5;text-align:left;">
+            📬 <strong>Check your email.</strong><br>
+            We sent a sign-in link to <strong id="authLinkSentTo"></strong>.
+            Open it on this device and you'll be signed straight in — no password needed.
+            <div style="font-size:12px;color:var(--text-muted);margin-top:10px;">
+                Not there? Check spam, and make sure the address is right.
+            </div>
+            <button type="button" class="auth-link-btn" style="margin-top:12px;"
+                    onclick="setAuthMode(isCreateMode)">Use a password instead</button>
         </div>
         <div class="auth-error" id="authError"></div>
     </div>
@@ -1107,6 +1136,7 @@ import { getDatabase, ref, onValue }
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
     signInWithEmailAndPassword, createUserWithEmailAndPassword,
     signInWithCustomToken,
+    sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink,
     GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile,
     setPersistence, browserLocalPersistence }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -1373,7 +1403,14 @@ if (!hubCode || hubCode.length < 4) {
     // the in-app session (when a token was present + valid) so
     // loadTeam → showContent renders the unlocked content directly
     // instead of flashing accessGate / notFound.
-    Promise.all([tryAppAuthHandoff(), authReady]).then(() => loadTeam());
+    // completeEmailLinkSignIn FIRST, and awaited: arriving through an emailed
+    // sign-in link means the session doesn't exist yet, and loadTeam on a
+    // private team would hit permission-denied and fall through to the gate —
+    // the exact race the authReady comment above describes, just arriving by a
+    // different door. It returns immediately when the URL isn't a sign-in link.
+    completeEmailLinkSignIn()
+        .then(() => Promise.all([tryAppAuthHandoff(), authReady]))
+        .then(() => loadTeam());
 }
 
 // Auto-accept any pending follower invitations addressed to the signed-in user's email.
@@ -1884,6 +1921,13 @@ window.setAuthMode = function(createMode) {
     // Re-mask on every open / tab switch — a revealed password left showing
     // from a previous visit is a shoulder-surfing gift.
     togglePasswordVisible(false);
+    // Back from the "check your email" panel if a link was sent last time.
+    $('emailForm').style.display = 'block';
+    $('authTabs').style.display = 'flex';
+    $('authLinkSent').style.display = 'none';
+    const linkBtn = $('authLinkBtn');
+    linkBtn.disabled = false;
+    linkBtn.textContent = '✉ Email me a sign-in link instead';
     // Google is the same button either way — it signs you in if you have an
     // account and creates one if you don't. Say so, rather than leaving people
     // wondering whether they picked the wrong tab.
@@ -1899,6 +1943,87 @@ window.doSignIn = function(createMode) {
 
 /** Straight to the sign-up tab — what the Sign Up buttons call. */
 window.doSignUp = function() { doSignIn(true); };
+
+/* ── Passwordless sign-in ────────────────────────────────────────────────
+ *
+ * Send a one-time link to the address, and complete the sign-in when the
+ * person comes back through it. Firebase treats this as both sign-in AND
+ * sign-up: an address with no account gets one, which is why the button sits
+ * on both tabs rather than only under Sign Up.
+ *
+ * The `url` is THIS page, code and all, so the link puts them back on the team
+ * they were trying to reach instead of a generic landing page.
+ *
+ * Known sharp edge, handled below: Firebase remembers the address in
+ * localStorage on the device that ASKED for the link. Open the link on that
+ * same device and it is one tap. Open it somewhere else — mailed to a phone,
+ * clicked on a laptop — and there is nothing to read, so we ask for the
+ * address again rather than failing with "invalid link".
+ */
+const EMAIL_LINK_KEY = 'sf_emailForSignIn';
+
+window.sendEmailLink = async function() {
+    const email = $('authEmail').value.trim();
+    const btn = $('authLinkBtn');
+    $('authError').textContent = '';
+    if (!email || !email.includes('@')) {
+        $('authError').textContent = 'Enter your email address first.';
+        $('authEmail').focus();
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+        await sendSignInLinkToEmail(auth, email, {
+            url: window.location.href,
+            handleCodeInApp: true,
+        });
+        try { window.localStorage.setItem(EMAIL_LINK_KEY, email); } catch (_) {}
+        // Swap the panels rather than overwriting the form's markup — blowing
+        // away emailForm's innerHTML would leave the inputs gone for good when
+        // the dialog is reopened.
+        $('authLinkSentTo').textContent = email;
+        $('emailForm').style.display = 'none';
+        $('authTabs').style.display = 'none';
+        $('authLinkSent').style.display = 'block';
+    } catch (e) {
+        console.error('email link send failed', e);
+        btn.disabled = false;
+        btn.textContent = '✉ Email me a sign-in link instead';
+        $('authError').textContent =
+            (e && e.code === 'auth/invalid-email') ? 'That email address doesn\'t look right.'
+            : 'Could not send the link. Please try again.';
+    }
+};
+
+/** Completes a sign-in when the page is opened via an emailed link. */
+async function completeEmailLinkSignIn() {
+    if (!isSignInWithEmailLink(auth, window.location.href)) return false;
+    let email = null;
+    try { email = window.localStorage.getItem(EMAIL_LINK_KEY); } catch (_) {}
+    if (!email) {
+        // Different device from the one that requested it — see the note above.
+        email = window.prompt('Confirm the email address this link was sent to:');
+        if (!email) return false;
+    }
+    try {
+        const result = await signInWithEmailLink(auth, email.trim(), window.location.href);
+        try { window.localStorage.removeItem(EMAIL_LINK_KEY); } catch (_) {}
+        currentUser = result.user;
+        // Strip the one-time code out of the address bar. Left there, a refresh
+        // retries an already-consumed link and reports failure on a sign-in
+        // that actually worked — and the URL is a bearer token in history.
+        const clean = new URL(window.location.href);
+        ['apiKey', 'oobCode', 'mode', 'lang', 'continueUrl', 'tenantId']
+            .forEach(p => clean.searchParams.delete(p));
+        window.history.replaceState({}, document.title, clean.toString());
+        return true;
+    } catch (e) {
+        console.error('email link sign-in failed', e);
+        alert('That sign-in link didn\'t work — it may have expired or already been used. Please request a new one.');
+        return false;
+    }
+}
 
 window.togglePasswordVisible = function(force) {
     const input = $('authPassword'), btn = $('authPwToggle');
