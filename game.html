@@ -542,6 +542,18 @@ html, body {
     color: var(--text-primary); font-weight: 600;
     min-width: 110px;
 }
+/* A tracked player's name opens their page. Underlined rather than
+   accent-coloured: a whole column of orange reads as an alert, and the
+   underline is the affordance people already know. Untracked participants
+   render as plain text in the same cell, so the two have to be told apart at
+   a glance. */
+.box-table td.bx-name a.bx-player {
+    color: inherit; text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 1.5px;
+}
+.box-table td.bx-name a.bx-player:hover { color: var(--accent); }
 .box-table td.bx-num, .box-table th.bx-num {
     width: 28px; text-align: center;
     color: var(--text-muted); font-weight: 700;
@@ -3390,6 +3402,16 @@ function renderBoxScore(hub, game, sport) {
     if (sections.length === 0) return;
     content.innerHTML = sections.join('');
     card.style.display = '';
+    // ONE LIST OF NAMES, NOT TWO (Eric, 2026-08-18): "I don't think we need the
+    // other area that lists the players out where it has the circle icon things
+    // when there's a stats section available."
+    //
+    // Hidden from HERE rather than by reordering the render calls: the Box
+    // Score is the thing that knows whether it drew, and every early return
+    // above leaves the rail alone, which is exactly the "no stats section"
+    // case where Eric still wants the cast list.
+    const rail = $('rosterCard');
+    if (rail) rail.style.display = 'none';
 }
 
 function renderBoxSide(name, color, players, cols, sportKey) {
@@ -3399,8 +3421,21 @@ function renderBoxSide(name, color, players, cols, sportKey) {
     const bodyRows = players.map(p => {
         const stats = (p.stats && typeof p.stats === 'object') ? p.stats : {};
         const cells = cols.map(c => `<td class="bx-stat">${c.fmt(stats, sportKey)}</td>`).join('');
+        const label = escapeHtml(displayPlayerName(
+            resolvePlayerName(p.playerId || p.savedPlayerId, p.name)));
+        // 2026-08-18 (Eric) — "make the update to the game page so that we can
+        // click on the names of the players inside the stats section."
+        //
+        // Only a TRACKED player has a page to open: the id is what player.html
+        // looks the season up by. An untracked participant is a name typed into
+        // a lineup and nothing else, so it stays plain text rather than
+        // becoming a link to an empty page.
+        const pid = p.playerId || p.savedPlayerId || '';
+        const nameCell = pid
+            ? `<a class="bx-player" href="/player.html?team=${encodeURIComponent(hubCode)}&player=${encodeURIComponent(pid)}">${label}</a>`
+            : label;
         return `<tr><td class="bx-num">${escapeHtml(p.number || '–')}</td>` +
-            `<td class="bx-name">${escapeHtml(displayPlayerName(resolvePlayerName(p.playerId || p.savedPlayerId, p.name)))}</td>${cells}</tr>`;
+            `<td class="bx-name">${nameCell}</td>${cells}</tr>`;
     }).join('');
     const totals = computeBoxTotals(players, cols, sportKey);
     const totalRow = totals ?
