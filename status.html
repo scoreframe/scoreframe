@@ -576,11 +576,11 @@ onAuthStateChanged(auth, async (user) => {
   <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>224 cases</strong> across 49 areas.</p>
   <div class="tkey">
     <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>143</em></span>
-    <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>41</em></span>
-    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>2</em></span>
+    <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>42</em></span>
+    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>1</em></span>
     <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>38</em></span>
   </div>
-  <div class="tgrid"><div class="tg-head tg-span">&#10060; 2 items waiting on you <span class="tg-tally">Divergence found: Android prompts with no hub to share to · Card system remains Android-only</span></div></div>
+  <div class="tgrid"><div class="tg-head tg-span">&#10060; 1 item waiting on you <span class="tg-tally">Card system remains Android-only</span></div></div>
   <div class="tgrid">
     <div class="tg-head tg-span">Harness <span class="tg-tally">&#9989;5 &#10067;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
@@ -1813,7 +1813,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">Android</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">iOS parity (2026-08-19) <span class="tg-tally">&#9989;2 &#10060;2</span></div>
+    <div class="tg-head tg-span">iOS parity (2026-08-19) <span class="tg-tally">&#9989;2 &#128736;1 &#10060;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">Soccer scoring mode now remembered on iOS too</div>
         <div class="tg-detail">Audited rather than assumed: iOS had the identical hole. soccerScoringMode was a hardcoded &quot;simple&quot; that nothing persisted. Volleyball was the ONE sport that remembered (vb_scoringMode), which is why the bug was only ever reported against soccer on both platforms. Added soccer_scoringMode + soccer_halfLengthMinutes following the volleyball pattern, free forced back to Simple. Builds clean</div>
@@ -1824,7 +1824,7 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">iOS was AHEAD of Android structurally — the alert is presented at the app root, so it already followed the user across screens, which is exactly what Android lacked. But its wait was a 1s poll capped at 60 attempts, and a multi-clip reel run outlasts 60s, at which point the question was silently dropped. Added an onReceive on EndGameProgressStore.$active so run-completion is itself a trigger, dispatched async because $active publishes on willSet</div>
         <div class="tg-ev">ScoreFrameApp.swift</div>
       </div><div class="tg-plat">iOS</div></div>
-    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+    <div class="tg-row"><div class="tg-ic">&#128736;</div><div>
         <div class="tg-name">Divergence found: Android prompts with no hub to share to</div>
         <div class="tg-detail">iOS ShareUploadPrompt.target() requires a hub code — no hub means no shareable page, so the nudge would be selling something that doesn&#x27;t exist. Android&#x27;s hasUnsharedVideo has no such check, so a game with local video and no hub still gets a dialog whose copy reads &quot;the game page you can share doesn&#x27;t have it yet&quot;. iOS is right here. NOT changed unilaterally — it alters when Android users see the prompt at all, so it is Eric&#x27;s call</div>
         <div class="tg-ev">ShareUploadPrompt.hasUnsharedVideo</div>
