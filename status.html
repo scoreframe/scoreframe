@@ -573,9 +573,9 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>222 cases</strong> across 48 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>224 cases</strong> across 49 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>141</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>143</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>41</em></span>
     <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>2</em></span>
     <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>38</em></span>
@@ -1834,6 +1834,19 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">createMatchupCard and the five surfaces built on it (stream thumbnail, uploaded-game thumbnail, game outro, reel intro, endcards) have no iOS equivalent — no matchupCard reference anywhere in 3402 Swift files. iOS sets stream thumbnails via YouTubeLiveManager but with the old art. This is the real outstanding parity debt, and it is a design port, not a mechanical one</div>
         <div class="tg-ev">ScoreboardTextureCache / YouTubeLiveManager</div>
       </div><div class="tg-plat">iOS</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Production release (2026-08-19) <span class="tg-tally">&#9989;2</span></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Android 1.1.1288 live on Play production at 100%</div>
+        <div class="tg-detail">Production was on 1200; this is 88 builds of accumulated change going out at once. Eric chose 100% over a staged rollout. Verified after commit: production status=completed versions=[&#x27;1288&#x27;] rollout=100%. Same build also pushed to App Distribution</div>
+        <div class="tg-ev">deploy.py --track production</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Upload prompt now requires a hub before it appears</div>
+        <div class="tg-detail">Shipped in 1288 ahead of the production push. The dialog&#x27;s whole pitch is &quot;the game page you can share doesn&#x27;t have your video&quot; — with no hub there is no such page, so it promised something that didn&#x27;t exist. Pre-existing, but 1287 made it common by moving the prompt from two screens to every screen. Hub resolution copied verbatim from GamePageActivity.intentForGame rather than rewritten, so the two can&#x27;t drift. iOS already had this check</div>
+        <div class="tg-ev">ShareUploadPrompt.hasUnsharedVideo</div>
+      </div><div class="tg-plat">Android</div></div>
   </div>
 
   <h2>Test automation — where it actually stands</h2>
