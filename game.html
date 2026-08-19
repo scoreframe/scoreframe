@@ -365,6 +365,10 @@ html, body {
 .set-line .set-pair.set-away { color: var(--text-secondary); }
 .set-line .set-pair.set-tie { color: var(--text-muted); }
 .set-line .set-sep { color: var(--text-muted); }
+.set-line .set-label {
+    color: var(--text-muted); font-weight: 700; font-size: 10.5px;
+    letter-spacing: 0.06em; text-transform: uppercase; margin-right: 2px;
+}
 
 .bowling-list { display: grid; gap: 10px; }
 .bowling-row {
@@ -952,7 +956,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v40</span>
+    <span class="page-version">game.html v41</span>
 </div>
 
 <script type="module">
@@ -2420,8 +2424,29 @@ function renderTeamScore(hub, game) {
     // Per-set point line for VB (and any other sport that ships home/awaySetScores).
     // homeScore/awayScore are SETS WON (e.g. 3-1); homeSetScores/awaySetScores are
     // POINTS-PER-SET (e.g. [25,23,25,25] / [18,25,22,15]) — render under the final.
-    const homeSets = Array.isArray(game.homeSetScores) ? game.homeSetScores : [];
-    const awaySets = Array.isArray(game.awaySetScores) ? game.awaySetScores : [];
+    let homeSets = Array.isArray(game.homeSetScores) ? game.homeSetScores : [];
+    let awaySets = Array.isArray(game.awaySetScores) ? game.awaySetScores : [];
+    let periodWord = '';
+    // FALLBACK for every sport that is NOT volleyball. Only VB writes the
+    // top-level home/awaySetScores; hockey, football, lacrosse and basketball
+    // put their line score in sportSpecificStats as scoreByPeriod/ByQuarter.
+    // The shareable game-card canvas already reads those (see __sfSetLine), so
+    // without this the CARD showed a period line score that the PAGE did not.
+    // Found 2026-08-19 on a real lacrosse game: homeScoreByQuarter [3,0,0,0],
+    // final 3-0, and no line score anywhere on the page.
+    if (!homeSets.length) {
+        const ss = game.sportSpecificStats || {};
+        const h = ss.homeScoreBySet || ss.homeScoreByPeriod || ss.homeScoreByQuarter;
+        const a = ss.awayScoreBySet || ss.awayScoreByPeriod || ss.awayScoreByQuarter;
+        if (Array.isArray(h) && Array.isArray(a) && h.length && h.length === a.length
+            // An untouched game ships all-zero periods. Four "0–0" pairs under a
+            // 0-0 final is noise, so only show the line once something happened.
+            && h.concat(a).some(v => Number(v) > 0)) {
+            homeSets = h.map(Number);
+            awaySets = a.map(Number);
+            periodWord = ss.homeScoreByPeriod ? 'By period' : 'By quarter';
+        }
+    }
     let setLine = '';
     if (homeSets.length > 0 && homeSets.length === awaySets.length) {
         const parts = homeSets.map((h, i) => {
@@ -2429,7 +2454,10 @@ function renderTeamScore(hub, game) {
             const winnerClass = h > a ? 'set-home' : (a > h ? 'set-away' : 'set-tie');
             return `<span class="set-pair ${winnerClass}">${h}–${a}</span>`;
         });
-        setLine = `<div class="set-line">${parts.join('<span class="set-sep">·</span>')}</div>`;
+        // Sets need no label — a volleyball reader knows. Periods and quarters do,
+        // otherwise "0–0 · 3–0 · 0–0 · 0–0" reads as a set score.
+        const lbl = periodWord ? `<span class="set-label">${periodWord}</span>` : '';
+        setLine = `<div class="set-line">${lbl}${parts.join('<span class="set-sep">·</span>')}</div>`;
     }
 
     // v1.1.643 / 2026-08-17 — Inline team logos on the score card, BOTH sides.
