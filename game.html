@@ -956,7 +956,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v41</span>
+    <span class="page-version">game.html v42</span>
 </div>
 
 <script type="module">
@@ -2436,15 +2436,19 @@ function renderTeamScore(hub, game) {
     // final 3-0, and no line score anywhere on the page.
     if (!homeSets.length) {
         const ss = game.sportSpecificStats || {};
-        const h = ss.homeScoreBySet || ss.homeScoreByPeriod || ss.homeScoreByQuarter;
-        const a = ss.awayScoreBySet || ss.awayScoreByPeriod || ss.awayScoreByQuarter;
+        // player1Sets/player2Sets is TENNIS — games won in each set, e.g.
+        // [6,6] / [0,0] for a 6-0 6-0 win. Same shape, different key names,
+        // so it rides the same renderer.
+        const h = ss.homeScoreBySet || ss.homeScoreByPeriod || ss.homeScoreByQuarter || ss.player1Sets;
+        const a = ss.awayScoreBySet || ss.awayScoreByPeriod || ss.awayScoreByQuarter || ss.player2Sets;
         if (Array.isArray(h) && Array.isArray(a) && h.length && h.length === a.length
             // An untouched game ships all-zero periods. Four "0–0" pairs under a
             // 0-0 final is noise, so only show the line once something happened.
             && h.concat(a).some(v => Number(v) > 0)) {
             homeSets = h.map(Number);
             awaySets = a.map(Number);
-            periodWord = ss.homeScoreByPeriod ? 'By period' : 'By quarter';
+            periodWord = ss.player1Sets ? 'By set'
+                       : ss.homeScoreByPeriod ? 'By period' : 'By quarter';
         }
     }
     let setLine = '';
