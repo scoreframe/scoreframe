@@ -539,6 +539,932 @@ onAuthStateChanged(auth, async (user) => {
     </div>
   </div>
 
+  <h2 id="testing">Automated test run — 19 Aug</h2>
+  <p class="lede">173 recorded steps. Every sport scored on the emulator and asserted in Firestore, every public team and game page rendered and checked, free and Pro. <strong>115 passed · 12 failed · 17 bugs found · 26 notes</strong></p>
+  <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Harness</span>
+        <span class="chip">5 pass · 1 note</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Android UI driver reads the screen<br>
+        <span style="color:var(--ink-dim)">Node-attribute parser; 41 elements read from Account screen</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">tools/e2e/droid.py</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Sign in with a test account<br>
+        <span style="color:var(--ink-dim)">frametest@scoreframe.app authenticated</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">Firebase lastSignInTime 03:07:40Z</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Team + 3-player roster created on Android<br>
+        <span style="color:var(--ink-dim)">E2E Volleyball / Ava, Bree2, Cara3</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Results now publish into the deployed status page<br>
+        <span style="color:var(--ink-dim)">One page you already open, rather than a second one to remember</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">tools/e2e/publish_status.py</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; App state can wedge after repeated automation<br>
+        <span style="color:var(--ink-dim)">&#x27;Start&#x27; stopped opening the sport picker until a force-stop/relaunch. Worth a restart between sports rather than chasing a phantom app bug</span><br>
+        <br>
+        <strong>PASS</strong> &middot; New reusable web validator: tools/e2e/web/<br>
+        <span style="color:var(--ink-dim)">check.js renders any team/game page as a logged-out visitor via the cached Chromium and reports only what is COMPUTED-VISIBLE, plus a screenshot. sweep.sh walks every sport. scrollcheck.js measures overflow. This is what found the tennis/pickleball box-score bug and what stopped two false bugs (hidden LIVE badge, clipped AVG column)</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Data protection</span>
+        <span class="chip">9 pass · 1 fail · 1 bug</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Frames survive an iOS whole-object re-upload<br>
+        <span style="color:var(--ink-dim)">participants rebuilt without framesByGame; vault restored</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">80 frames before and after</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Frames survive a metadata edit (the location bug)<br>
+        <span style="color:var(--ink-dim)">the exact write that destroyed Eric&#x27;s series</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">80 frames retained</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Frames survive bowlers[] being thinned<br>
+        <span style="color:var(--ink-dim)">the second frame slot</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">80 frames retained</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Frames survive a BURST of 5 lossy writes<br>
+        <span style="color:var(--ink-dim)">this is what defeated the old shrink guard (9 heals, still lost)</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">80 frames retained</span><br>
+        <br>
+        <strong>BUG</strong> &middot; Live reproduction of the original data loss<br>
+        <span style="color:var(--ink-dim)">Adding a location on iOS stripped every roll from both bowlers; guard healed 9x in 2s and still lost</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">guardGameShrink logs 02:12:44-46</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Shrink-guard unit suite<br>
+        <span style="color:var(--ink-dim)">both frame slots covered</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">23/23 in functions/lib/shrink_guard.test.js</span><br>
+        <br>
+        <strong>PASS</strong> &middot; frameVault deployed and firing<br>
+        <span style="color:var(--ink-dim)">restores from the vault, not the previous doc</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">us-central1, verified in logs</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Firestore rules deny deleting frames/scorebooks<br>
+        <span style="color:var(--ink-dim)">allow delete: if false on both subcollections</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">rules deployed</span><br>
+        <br>
+        <strong>PASS</strong> &middot; The exact destructive edit is healed, byte for byte<br>
+        <span style="color:var(--ink-dim)">Replayed what an editing client does — set(merge:true) with a full participants array carrying NO frame data, plus a location change — against a REAL Android-scored bowling game. Frames were back within 2 seconds and the restored framesByGame is character-identical to the vault copy (565 chars, both). The location edit survived, so the heal is not a blanket revert</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">teams/e2e-bowling/games/d079e30b</span><br>
+        <br>
+        <strong>PASS</strong> &middot; This is Eric&#x27;s July incident, reproduced and now survivable<br>
+        <span style="color:var(--ink-dim)">&#x27;adding a LOCATION to a finished series deleted every frame.&#x27; Same shape of write, same game type, real data — and the frames came back on their own</span><br>
+        <br>
+        <strong>FAIL</strong> &middot; Live iOS UI automation was NOT achievable this session<br>
+        <span style="color:var(--ink-dim)">The booted simulator exposes no device window to System Events (Window &gt; device does not materialise one), and idb is not installed — so no taps could be sent. The iOS build with tonight&#x27;s fixes installs and launches, but every iOS behaviour below is code-verified and compile-verified ONLY, never device-verified. The cross-platform round trip Eric asked for specifically (score on Android, edit on iOS) was substituted with a faithful replay of the iOS write shape, which tests the SERVER protection but not the iOS client</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Cross-sport data audit</span>
+        <span class="chip">2 pass · 1 bug</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; 162 completed games scanned for array-nested rich data<br>
+        <span style="color:var(--ink-dim)">bowling exposed; volleyball/soccer participant stats are flat numbers today</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">tools: functions/audit_rich_fields.js</span><br>
+        <br>
+        <strong>BUG</strong> &middot; Baseball scorebooks were never in the cloud<br>
+        <span style="color:var(--ink-dim)">saveBaseballScorebook wrote a local file only; ScoreFrameSync never referenced it — lost with the device</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">GameHistoryManager.kt:544</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Volleyball set scores are safe<br>
+        <span style="color:var(--ink-dim)">top-level [Int] arrays, fully representable on both platforms</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">homeSetScores/awaySetScores</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">End Game flow</span>
+        <span class="chip">5 pass · 1 note</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; What&#x27;s New renders the new 4-item layout<br>
+        <span style="color:var(--ink-dim)">icon badge + one line + orange location; colour themes restored</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">verified on screen during first run</span><br>
+        <br>
+        <strong>PASS</strong> &middot; No scheduled games → setup opens directly (no picker)<br>
+        <span style="color:var(--ink-dim)">Android behaviour I ported to iOS this session</span><br>
+        <br>
+        <strong>PASS</strong> &middot; End Game (no recording) runs the full sequence<br>
+        <span style="color:var(--ink-dim)">box showed &#x27;Saving game summary&#x27; → Done; no reel/upload rows offered, correctly — nothing was recorded, tier is Free and no YouTube account is linked</span><br>
+        <br>
+        <strong>PASS</strong> &middot; End Game opens the game it just saved<br>
+        <span style="color:var(--ink-dim)">landed on &#x27;E2E Volleyball vs AWAY&#x27; game page, not Home</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">RT-37 equivalent</span><br>
+        <br>
+        <strong>PASS</strong> &middot; End Game with no media goes straight to the summary<br>
+        <span style="color:var(--ink-dim)">Tennis match ended with no recording: confirm dialog showed the right final (&#x27;E2E Tennis 2 - 0 AWAY, Set 1: 6-0, Set 2: 6-0&#x27;), then the game detail page. No empty status box, no orphan prompts — correct, there is nothing to sequence when there is no video</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; End Game WITH a recording is still unexercised on the emulator<br>
+        <span style="color:var(--ink-dim)">The emulator cannot start the GL preview, so record -&gt; highlight reel -&gt; upload picker cannot run there. That branch has only been exercised by Eric on real hardware. It is the part of the flow that changed most this session, so it needs a device pass before it can be called verified</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Scoring parity (code audit)</span>
+        <span class="chip">3 pass · 11 bug</span>
+      </div>
+      <p class="item-body">
+        <strong>BUG</strong> &middot; Volleyball per-player stats never saved on iOS<br>
+        <span style="color:var(--ink-dim)">kills/aces/assists/errors/missedServes/digs/blocks are tracked tap-by-tap then discarded at save; no VB participant writer exists. Career VB stats read from participants, so an iOS-scored match contributes ZERO</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView.swift autoSaveGameSummary — GameParticipant() only built for bowling/basketball/soccer</span><br>
+        <br>
+        <strong>BUG</strong> &middot; Baseball scorebook output discarded on iOS<br>
+        <span style="color:var(--ink-dim)">Pro-gated Full Scorebook writes no participants and no hits/errors/innings. Worse: iOS keeps ONE shared baseball_game_state.json with no gameId, so the next baseball game overwrites the previous scorebook</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">BaseballFullGame.swift:600-634</span><br>
+        <br>
+        <strong>BUG</strong> &middot; Tennis saves a point index as the match score<br>
+        <span style="color:var(--ink-dim)">iOS uses player1GameScore when no set is complete — that&#x27;s the 0/15/30/40/AD INDEX. Ending during set 1 saves homeScore=2 meaning &#x27;30&#x27;. Same bug class as the volleyball one fixed 08-18; tennis and pickleball were missed</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView.swift:9931-9940 vs Android MainActivity:9653</span><br>
+        <br>
+        <strong>BUG</strong> &middot; Pickleball saves rally points as the match score<br>
+        <span style="color:var(--ink-dim)">iOS falls back to team1Score (raw rally points) when no game is complete; Android always saves games won</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView.swift:9941-9950 vs Android MainActivity:9669</span><br>
+        <br>
+        <strong>BUG</strong> &middot; No participants for 5 sports on iOS = no W-L ever<br>
+        <span style="color:var(--ink-dim)">Football, hockey, lacrosse, generic and simple-mode baseball write no participants; iOS derives career W-L from participants[].side, so no player accrues a win or loss in those sports</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">GameHistoryManager.swift:397-407</span><br>
+        <br>
+        <strong>BUG</strong> &middot; Tennis/pickleball participants missing on iOS<br>
+        <span style="color:var(--ink-dim)">setsWon / gamesWon never recorded — same W-L consequence</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">Android MainActivity:9034-9072</span><br>
+        <br>
+        <strong>BUG</strong> &middot; Bowling H2H team series inflated on iOS<br>
+        <span style="color:var(--ink-dim)">iOS sums ALL bowlers including the head-to-head opponent into the home team&#x27;s series; Android excludes the opponent. Also missing Android&#x27;s double-count guard locally, so the game card and the cloud doc can disagree</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView.swift:10078-10087 vs Android MainActivity:9426-9437</span><br>
+        <br>
+        <strong>BUG</strong> &middot; Basketball stat timeline loses attribution on iOS<br>
+        <span style="color:var(--ink-dim)">playerId, side and statKey are dropped in the flattening; per-stat highlight reels and jump-to-time chips can&#x27;t be rebuilt from an iOS game</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView.swift:10253-10260</span><br>
+        <br>
+        <strong>BUG</strong> &middot; Per-period line scores missing on iOS<br>
+        <span style="color:var(--ink-dim)">homeScoreByPeriod/ByQuarter absent for basketball, football, hockey, lacrosse — no box score on the game page for iOS-scored games</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">Android MainActivity:9367,9386,9691,9708</span><br>
+        <br>
+        <strong>BUG</strong> &middot; Baseball R/H/E dropped on iOS<br>
+        <span style="color:var(--ink-dim)">homeHits/awayHits/homeErrors/awayErrors/innings tracked live, never persisted</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">BaseballState.swift:20-23</span><br>
+        <br>
+        <strong>BUG</strong> &middot; Bowling frames/percentages only reach cloud on iOS<br>
+        <span style="color:var(--ink-dim)">strikes/spares/splits/framesByGame are written by uploadBowlingFrameData only, which returns early with no teamId — offline or team-less iOS bowling keeps no frames at all</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ScoreFrameSync.swift:1087-1119</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Advanced/simple Pro gates match on both platforms<br>
+        <span style="color:var(--ink-dim)">soccer, volleyball, baseball scorebook, bowling maxBowlers all identical</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">FeatureGate.kt vs FeatureGate.swift</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Volleyball homeScore now matches (sets won)<br>
+        <span style="color:var(--ink-dim)">both count the in-progress set — the 08-18 fix verified against Android</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView:9915-9930 vs MainActivity:9595-9606</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Soccer stat parity is complete<br>
+        <span style="color:var(--ink-dim)">all 9 per-player keys + 14 team keys + PK/ending-method identical</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Regression catalogue</span>
+        <span class="chip">1 pass · 3 note</span>
+      </div>
+      <p class="item-body">
+        <strong>NOTE</strong> &middot; 46 regression tests catalogued from 68 session logs<br>
+        <span style="color:var(--ink-dim)">T1 data loss 18 · T2 cross-device 6 · T3 disappear/reappear 8 · T4 end game 8 · T5 stats 4 · T6 security 2</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">tools/e2e/TESTPLAN.md</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; Harness rule: never trust a green screen<br>
+        <span style="color:var(--ink-dim)">The 2026-08-11 run reported TEST SUCCEEDED while Firestore had 0 games written. Every UI assertion in this suite is paired with a cloud assertion</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">tools/uitest/README.md</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; Harness rule: confirm dialogs by button id<br>
+        <span style="color:var(--ink-dim)">Android titles dialogs with the same words as their positive buttons, so text matching taps the title and does nothing; tapIfPresent never fails</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">android:id/button1</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Camera GL failure no longer kills the process<br>
+        <span style="color:var(--ink-dim)">The emulator has no working GL for the preview. Old code: uncaught throwable on the render thread SIGKILLed the app and a paused game could never be reopened. Now: &#x27;Camera unavailable ... Keep scoring&#x27; and the game carried on to a full tennis match. Confirmed live this run</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Fixes made during this run</span>
+        <span class="chip">8 pass · 1 bug</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Tennis saved a point index as the match score<br>
+        <span style="color:var(--ink-dim)">now always sets won; in-progress set counts to whoever leads — Android parity</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView.swift TENNIS branch</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Pickleball saved rally points as the match score<br>
+        <span style="color:var(--ink-dim)">now always games won</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView.swift PICKLEBALL branch</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Volleyball per-player stats now saved on iOS<br>
+        <span style="color:var(--ink-dim)">kills/aces/assists/errors/missedServes/digs/blocks summed across archived sets PLUS the set in progress, for both rosters — Android parity</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView.swift VOLLEYBALL participant block</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Baseball scorebook no longer overwritten by the next game<br>
+        <span style="color:var(--ink-dim)">archived per game id under Documents/scorebooks/; hasFullScorebook now actually set</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">BaseballFullGame.archive()</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Baseball R/H/E and innings now persisted on iOS<br>
+        <span style="color:var(--ink-dim)">homeHits/awayHits/homeErrors/awayErrors/innings</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Roster participants added for 8 sports on iOS<br>
+        <span style="color:var(--ink-dim)">football, hockey, lacrosse, generic, tennis, pickleball, baseball, softball — career W-L can finally accrue; tennis carries setsWon, pickleball gamesWon</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Per-period line scores now written on iOS<br>
+        <span style="color:var(--ink-dim)">basketball/hockey periods, football/lacrosse quarters, plus hockey+lacrosse shots on goal — box scores can render for iOS games</span><br>
+        <br>
+        <strong>BUG</strong> &middot; My iOS tennis fix diverged from Android<br>
+        <span style="color:var(--ink-dim)">I replaced the point-index bug with &#x27;whoever leads the current game gets 1&#x27; — copied from the volleyball rule where a led SET does count. Tennis is stricter: Android awards nothing until a set is actually won. Verified on device: Android saved 0-0 where my iOS code would save 1-0.</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView.swift TENNIS branch</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Tennis + pickleball corrected to STRICT Android parity<br>
+        <span style="color:var(--ink-dim)">both now save only sets/games actually won. The original bug (a point index / rally count as the match score) is gone, and so is my over-correction — testing against the reference platform is what caught the second one</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView.swift</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Roster sync</span>
+        <span class="chip">1 bug · 1 note</span>
+      </div>
+      <p class="item-body">
+        <strong>NOTE</strong> &middot; App showed 3 players, cloud had 1 tracked + 1 empty-name untracked<br>
+        <span style="color:var(--ink-dim)">Local roster: Ava, Bree2, Cara3. Cloud: roster/=1 (Ava), untrackedRoster=[{name:&#x27;&#x27;,number:&#x27;2&#x27;}]. My harness produced malformed input (name+number merged, empty numbers) so this is NOT yet attributable to the app — re-testing with clean input before calling it a bug</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">teams/b2c959bd…/untrackedRoster</span><br>
+        <br>
+        <strong>BUG</strong> &middot; An empty-named participant reached the cloud<br>
+        <span style="color:var(--ink-dim)">participants included an entry with an empty name (&#x27;&#x27;), from the malformed untracked roster row seen earlier. A nameless player will render as a blank row on the game page and in stats</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">participants: [&#x27;Ava:0keys&#x27;, &#x27;:0keys&#x27;]</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Onboarding</span>
+        <span class="chip">1 bug</span>
+      </div>
+      <p class="item-body">
+        <strong>BUG</strong> &middot; Portrait coach-mark scrim traps the user<br>
+        <span style="color:var(--ink-dim)">The first-run &quot;Turn your phone sideways&quot; overlay is a full-screen scrim that swallows every tap — including the &quot;Use Portrait&quot; button rendered underneath it. On a phone with rotation locked, or a tablet in a stand, the only listed way out is the one action the user may not be able to perform. Reproduced on the emulator, which refuses user_rotation while the activity locks orientation.</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">CoachMarkOverlay portrait blocking overlay</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Crash resilience</span>
+        <span class="chip">1 pass · 1 bug</span>
+      </div>
+      <p class="item-body">
+        <strong>BUG</strong> &middot; Resuming a paused game crashed the whole app<br>
+        <span style="color:var(--ink-dim)">eglCreateWindowSurface failed threw out of RenderThread.run — an uncaught exception on a background thread SIGKILLs the process. It recurred on EVERY resume, so the paused game became permanently unopenable: tap Resume, watch the app die, repeat. Game data survived; the way back in did not.</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">EGLManager.kt:80 ← CameraRenderer.initialize ← RenderThread.run</span><br>
+        <br>
+        <strong>PASS</strong> &middot; App now survives a GL failure and keeps the game<br>
+        <span style="color:var(--ink-dim)">&#x27;Camera unavailable — keep scoring&#x27; instead of SIGKILL; the paused game reopens</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">verified on the emulator that reproduced the crash</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Volleyball scoring</span>
+        <span class="chip">1 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Set-completion confirmation appears<br>
+        <span style="color:var(--ink-dim)">&#x27;E2E Volleyball wins set 1, 15-0&#x27; with Yes / No—Undo Point</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Volleyball match complete</span>
+        <span class="chip">8 pass · 1 fail</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Winning the match offers a choice, not a verdict<br>
+        <span style="color:var(--ink-dim)">&#x27;Match complete — E2E Volleyball wins 2-0. Nothing is final until you tap End Game&#x27; with Play another set / Keep scoring / End Game</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">v1.1.1264 change verified live</span><br>
+        <br>
+        <strong>PASS</strong> &middot; &#x27;Keep scoring&#x27; unlocks the panel again<br>
+        <span style="color:var(--ink-dim)">points 15 → ?; UNDO available for a mis-scored set-winning point</span><br>
+        <br>
+        <strong>PASS</strong> &middot; &#x27;Keep scoring&#x27; really does unlock scoring<br>
+        <span style="color:var(--ink-dim)">scored a 16th point after the match was won, which re-raised the set-complete confirmation — so the panel is genuinely live again and UNDO is reachable</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">&#x27;E2E Volleyball wins set 2, 16-0&#x27;</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Undo reverses a mis-scored point after match win<br>
+        <span style="color:var(--ink-dim)">points back to 15; Set 2 (to 15)  |  Best of 3  |  2-0</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Match-complete offers a choice instead of locking the game<br>
+        <span style="color:var(--ink-dim)">Won 2 sets of a best-of-3 and got &#x27;Match complete — E2E Volleyball wins 2-0. Nothing is final until...&#x27; with three buttons: Play another set / Keep scoring / End Game. Exactly what Eric asked for — the game is not finalised behind his back</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">/tmp/sf-vb-matchcomplete.png</span><br>
+        <br>
+        <strong>PASS</strong> &middot; &#x27;Play another set&#x27; extends the format instead of refusing<br>
+        <span style="color:var(--ink-dim)">Best of 3 became Best of 5 so a 3rd set is legal, and scoring re-opened</span><br>
+        <br>
+        <strong>PASS</strong> &middot; THE SAVE-LATCHING DEFECT IS FIXED<br>
+        <span style="color:var(--ink-dim)">This is the bug I fixed this session: the provisional save at match complete used to latch gameAlreadySavedToHistory, so a set played AFTER it never reached the record. Played set 3 to 6-0 and ended mid-set: Firestore holds homeSetScores [15,15,6] and score 3-0. The third set is in there</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">teams/b2c959bd.../games latest: 3-0, [15,15,6]/[0,0,0]</span><br>
+        <br>
+        <strong>PASS</strong> &middot; iOS volleyball scoring now provably matches Android<br>
+        <span style="color:var(--ink-dim)">Android counts the IN-PROGRESS set for whoever leads: set 3 at 6-0 saved as a won set, final 3-0. My iOS branch computes the same (includeCurrent when the running score is non-zero), so both platforms produce 3-0 from this game. This is the measurement that the tennis mistake taught me to take BEFORE trusting the fix</span><br>
+        <br>
+        <strong>FAIL</strong> &middot; The End Game dialog previews the WRONG score<br>
+        <span style="color:var(--ink-dim)">The confirmation read &#x27;E2E Volleyball 2 - 0 AWAY&#x27; while the game saved as 3-0. The preview counts only ARCHIVED sets; the save also counts the in-progress set. The user confirms one number and gets another — and with a recap toggle right there, that is the number they think they are broadcasting</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">dialog: 2 - 0 | Firestore: 3 - 0, homeSetScores [15,15,6]</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Data assertions (cloud)</span>
+        <span class="chip">3 pass · 1 note</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Volleyball game saved with the right score MEANING<br>
+        <span style="color:var(--ink-dim)">homeScore/awayScore = 2-0 (SETS won), not points</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">teams/b2c959bd…/games/548a465d</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Set line score persisted<br>
+        <span style="color:var(--ink-dim)">homeSetScores [15,15] / awaySetScores [0,0]</span><br>
+        <br>
+        <strong>PASS</strong> &middot; recapDecided stamped at End Game<br>
+        <span style="color:var(--ink-dim)">the flag added tonight so the post-upload prompt can&#x27;t ask a second time</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; Simple mode writes participants with no per-player stats<br>
+        <span style="color:var(--ink-dim)">Ava present with 0 stat keys — correct for Simple (Advanced is the Pro gate). Re-testing on Pro to confirm kills/aces/digs land</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Pro gating</span>
+        <span class="chip">2 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Advanced volleyball unlocks on Pro<br>
+        <span style="color:var(--ink-dim)">lock glyph gone from the Advanced option after the tier switch</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">debug_tier_override=pro</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Advanced mode produces per-player stats; Simple does not<br>
+        <span style="color:var(--ink-dim)">same team, same sport: Simple game wrote 0 stat keys, Advanced wrote 7 — the gate does what it claims</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">games 548a465d vs 9cc3f9d7</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Volleyball (Pro / Advanced)</span>
+        <span class="chip">3 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; All 7 per-player stats fire and persist<br>
+        <span style="color:var(--ink-dim)">UI showed Kill 3 · Ace 1 · Asst 2 · Dig 1 · Blk 1 · Err 1; cloud stored {kills:3, assists:2, aces:1, digs:1, blocks:1, errors:1, missedServes:0} — exact match</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">games/9cc3f9d7 participants[Ava]</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Match score is sets won, counting the set in progress<br>
+        <span style="color:var(--ink-dim)">homeScore 1-0 with homeSetScores [10] / awaySetScores [1] — the leading in-progress set counts, which is the behaviour the iOS fix was matched to</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Players with no stats still recorded as participants<br>
+        <span style="color:var(--ink-dim)">4 other roster entries present with 0 stat keys — needed for career W-L</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Cloud → device sync</span>
+        <span class="chip">1 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Teams seeded in Firestore appear on the device<br>
+        <span style="color:var(--ink-dim)">9+ of 12 teams downloaded after a cold start. The first run of this check reported 0 — that was MY harness tapping Settings instead of Teams (hardcoded nav y), not the app. Corrected after fixing nav() to resolve coordinates at call time.</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Basketball scoring</span>
+        <span class="chip">1 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Game reaches Firestore after End Game<br>
+        <span style="color:var(--ink-dim)">cloud games 0 → 1; saved {&#x27;id&#x27;: &#x27;08fdc4fc&#x27;, &#x27;sport&#x27;: &#x27;BASKETBALL&#x27;, &#x27;home&#x27;: 4, &#x27;away&#x27;: 2, &#x27;parts&#x27;: 3, &#x27;withStats&#x27;: 3, &#x27;sss&#x27;: 5}</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">e2e-basketball</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Soccer scoring</span>
+        <span class="chip">3 note · 1 skip</span>
+      </div>
+      <p class="item-body">
+        <strong>SKIP</strong> &middot; Could not reach Home<br>
+        <span style="color:var(--ink-dim)">Start button not on screen</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; Game reaches Firestore after End Game<br>
+        <span style="color:var(--ink-dim)">cloud 0 → 0 — SUPERSEDED — this was MY harness, not the app. The first attempt mis-navigated (a tap landed on the wrong screen and still &#x27;succeeded&#x27;), so no game was ever scored to write. The re-run scored and saved the game correctly; see the passing entry for this sport. Kept in the record so the run is honest about what needed a second attempt.</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">e2e-soccer</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; End Game not reachable<br>
+        <span style="color:var(--ink-dim)">scoring panel did not expose End Game — SUPERSEDED — this was MY harness, not the app. The first attempt mis-navigated (a tap landed on the wrong screen and still &#x27;succeeded&#x27;), so no game was ever scored to write. The re-run scored and saved the game correctly; see the passing entry for this sport. Kept in the record so the run is honest about what needed a second attempt.</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; End Game not reachable<br>
+        <span style="color:var(--ink-dim)">scoring panel did not expose End Game — SUPERSEDED — this was MY harness, not the app. The first attempt mis-navigated (a tap landed on the wrong screen and still &#x27;succeeded&#x27;), so no game was ever scored to write. The re-run scored and saved the game correctly; see the passing entry for this sport. Kept in the record so the run is honest about what needed a second attempt.</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Football scoring</span>
+        <span class="chip">1 pass · 1 note · 1 skip</span>
+      </div>
+      <p class="item-body">
+        <strong>SKIP</strong> &middot; Could not reach Home<br>
+        <span style="color:var(--ink-dim)">Start button not on screen</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; Game reaches Firestore after End Game<br>
+        <span style="color:var(--ink-dim)">cloud 0 → 0 — SUPERSEDED — this was MY harness, not the app. The first attempt mis-navigated (a tap landed on the wrong screen and still &#x27;succeeded&#x27;), so no game was ever scored to write. The re-run scored and saved the game correctly; see the passing entry for this sport. Kept in the record so the run is honest about what needed a second attempt.</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">e2e-football</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Game reaches Firestore after End Game<br>
+        <span style="color:var(--ink-dim)">score 0-0, 3 participants (0 with stats), 4 sport keys</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">e2e-football</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Generic scoring</span>
+        <span class="chip">1 pass · 1 note · 1 skip</span>
+      </div>
+      <p class="item-body">
+        <strong>SKIP</strong> &middot; Could not reach Home<br>
+        <span style="color:var(--ink-dim)">Start button not on screen</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; Game reaches Firestore after End Game<br>
+        <span style="color:var(--ink-dim)">cloud 0 → 0 — SUPERSEDED — this was MY harness, not the app. The first attempt mis-navigated (a tap landed on the wrong screen and still &#x27;succeeded&#x27;), so no game was ever scored to write. The re-run scored and saved the game correctly; see the passing entry for this sport. Kept in the record so the run is honest about what needed a second attempt.</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">e2e-generic</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Game reaches Firestore after End Game<br>
+        <span style="color:var(--ink-dim)">score 0-0, 3 participants (0 with stats), 2 sport keys</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">e2e-generic</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Soccer (Pro / Advanced)</span>
+        <span class="chip">4 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Goal prompts for the scorer<br>
+        <span style="color:var(--ink-dim)">&#x27;Goal! — Scored by&#x27; with the roster + &#x27;Add to scoring summary&#x27;</span><br>
+        <br>
+        <strong>PASS</strong> &middot; All 9 per-player stats persist<br>
+        <span style="color:var(--ink-dim)">Alex: goals 1, assists 2, shotsOnGoal 1, corners 1, offsides 1, yellowCards 1, redCards 1, fouls 0, saves 0 — zeros kept for the other two, which is what career W-L needs</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">teams/e2e-soccer</span><br>
+        <br>
+        <strong>PASS</strong> &middot; 20 team-level stat keys written<br>
+        <br>
+        <strong>PASS</strong> &middot; Match score is goals<br>
+        <span style="color:var(--ink-dim)">1-0</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Bowling scoring</span>
+        <span class="chip">1 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Roll entry disables impossible pin counts<br>
+        <span style="color:var(--ink-dim)">after a 9-count first ball, numerals 1-9 are disabled and the spare is entered with &#x27;/&#x27; (with &#x27;-&#x27; for a miss and &#x27;X&#x27; correctly disabled on roll 2) — not a bug, a deliberate control set</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Bowling (frames)</span>
+        <span class="chip">3 pass · 1 note</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Frame-by-frame data persists from a real scored game<br>
+        <span style="color:var(--ink-dim)">bowled a full game in the app; participants[Casey].framesByGame present with 17 stat keys, series 190</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">teams/e2e-bowling</span><br>
+        <br>
+        <strong>PASS</strong> &middot; frameVault captured it automatically<br>
+        <span style="color:var(--ink-dim)">1 vault document created under games/{id}/frames without any client knowing the vault exists — this is the protection working on a genuine app write, not a simulated one</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">teams/e2e-bowling/games/*/frames</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; The two frame slots really do disagree<br>
+        <span style="color:var(--ink-dim)">participants[].stats.framesByGame was written; sportSpecificStats.bowlers[].framesByGame was NOT. Confirms the asymmetry found in the cloud audit — anything reading only one slot sees an empty game. The vault reads both, which is why it caught this one</span><br>
+        <br>
+        <strong>PASS</strong> &middot; The location bug, reproduced on a genuinely scored game — and defeated<br>
+        <span style="color:var(--ink-dim)">took the game just bowled in the app, applied the exact write that destroyed Eric&#x27;s series (location edit + participants rebuilt without frames); frames were back within 1 second</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">functions/vault_live_test.js</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Tennis (reference behaviour)</span>
+        <span class="chip">1 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Android saves sets won — never the in-progress game<br>
+        <span style="color:var(--ink-dim)">ended at Game 30-0 with no set complete; saved homeScore 0-0, participants setsWon 0, sportSpecificStats player1Sets [0]</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">teams/e2e-tennis</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Pickleball (reference behaviour)</span>
+        <span class="chip">1 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Android saves games won — never rally points<br>
+        <span style="color:var(--ink-dim)">4 rally points with no game complete saved homeScore 0-0, participants gamesWon 0</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">teams/e2e-pickleball</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Method</span>
+        <span class="chip">2 note</span>
+      </div>
+      <p class="item-body">
+        <strong>NOTE</strong> &middot; Testing against the reference platform caught my own bug<br>
+        <span style="color:var(--ink-dim)">The parity audit found the tennis defect from code alone, but only running Android on a device revealed that my replacement was ALSO wrong. Code review found the bug; the device found the fix&#x27;s bug</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; Reading two code paths side by side found what the emulator could not<br>
+        <span style="color:var(--ink-dim)">The burn-in bug needs a working camera to observe, which the emulator does not have. It surfaced by diffing the save path against the overlay path after the device run proved what the save SHOULD produce. Device measurement first, then code comparison — neither alone would have caught it</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Hockey scoring</span>
+        <span class="chip">1 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Game reaches Firestore after End Game<br>
+        <span style="color:var(--ink-dim)">score 0-0, 3 participants (0 with stats), 4 sport keys</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">e2e-hockey</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Lacrosse scoring</span>
+        <span class="chip">1 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Game reaches Firestore after End Game<br>
+        <span style="color:var(--ink-dim)">score 3-0, 3 participants (0 with stats), 4 sport keys</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">e2e-lacrosse</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Baseball scoring</span>
+        <span class="chip">1 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Game reaches Firestore after End Game<br>
+        <span style="color:var(--ink-dim)">score 0-0, 3 participants (0 with stats), 5 sport keys</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">e2e-baseball</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Softball scoring</span>
+        <span class="chip">1 pass · 2 note</span>
+      </div>
+      <p class="item-body">
+        <strong>NOTE</strong> &middot; Game reaches Firestore after End Game<br>
+        <span style="color:var(--ink-dim)">no game written — SUPERSEDED — this was MY harness, not the app. The first attempt mis-navigated (a tap landed on the wrong screen and still &#x27;succeeded&#x27;), so no game was ever scored to write. The re-run scored and saved the game correctly; see the passing entry for this sport. Kept in the record so the run is honest about what needed a second attempt.</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">e2e-softball</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; A softball game prefers an existing BASEBALL team<br>
+        <span style="color:var(--ink-dim)">With both an &#x27;E2E Baseball&#x27; and an &#x27;E2E Softball&#x27; team saved, starting a Softball game pre-selected the BASEBALL team. Intended (cross-sport aliases let one roster serve both), but with a same-sport team available it is a surprising pick — worth Eric&#x27;s call on whether exact-sport should win</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Softball game DID save — under the Baseball team<br>
+        <span style="color:var(--ink-dim)">teams/e2e-baseball holds SOFTBALL 0-0 and BASEBALL 0-0. The softball game attached to the baseball team via the documented cross-sport alias, which is why the first check on teams/e2e-softball found nothing</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">teams/e2e-baseball: [SOFTBALL, BASEBALL]</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Per-sport sport-key coverage (Android reference)</span>
+        <span class="chip">6 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Hockey writes period scores + shots on goal<br>
+        <span style="color:var(--ink-dim)">homeScoreByPeriod, awayScoreByPeriod, homeShotsOnGoal, awayShotsOnGoal — the keys iOS was missing</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Lacrosse writes quarter scores + shots on goal<br>
+        <span style="color:var(--ink-dim)">homeScoreByQuarter, awayScoreByQuarter, home/awayShotsOnGoal</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Football writes quarter scores + touchdowns<br>
+        <span style="color:var(--ink-dim)">homeScoreByQuarter, awayScoreByQuarter, home/awayTouchdowns</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Baseball writes R/H/E + innings<br>
+        <span style="color:var(--ink-dim)">homeHits, awayHits, homeErrors, awayErrors, innings — the keys iOS was dropping</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Generic writes period label<br>
+        <span style="color:var(--ink-dim)">currentPeriod, periodLabel</span><br>
+        <br>
+        <strong>PASS</strong> &middot; All 5 sports write roster participants<br>
+        <span style="color:var(--ink-dim)">3 participants each — this is what career W-L is built from, and what iOS wrote for none of them until tonight&#x27;s fix</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Web validation (game.html / team.html)</span>
+        <span class="chip">13 pass · 4 fail · 5 note</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; team.html renders a shared team to a logged-out visitor<br>
+        <span style="color:var(--ink-dim)">hub CK8EGF8U: name, sport, 2W-0L record, both games with correct scores, roster, follow-by-email box. Confirmed with COMPUTED visibility, not raw DOM</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; The private gate and LIVE badge are in the DOM but hidden<br>
+        <span style="color:var(--ink-dim)">A raw --dump-dom shows &#x27;This team is private&#x27; and &#x27;LIVE NOW&#x27; on a public team with no live game. Both are display:none. Any future web check MUST use computed visibility or it will report two bugs that do not exist</span><br>
+        <br>
+        <strong>PASS</strong> &middot; game.html renders the volleyball game correctly<br>
+        <span style="color:var(--ink-dim)">WON 2-0, set line score &#x27;15-0 · 15-0&#x27;, box score with the volleyball columns (K/A/AST/D/B/ERR/MSV), game info, more-from-team rail, share row</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Volleyball score = sets won, end-to-end<br>
+        <span style="color:var(--ink-dim)">The 10-1 in-progress-set game saved 1-0 and the two-complete-set game saved 2-0 — the exact behaviour the iOS fix was written to match. Points are no longer presented as a match result</span><br>
+        <br>
+        <strong>FAIL</strong> &middot; A nameless lineup slot becomes a phantom &#x27;Player&#x27; row in the PUBLIC box score<br>
+        <span style="color:var(--ink-dim)">Team untrackedRoster held {name:&#x27;&#x27;, number:&#x27;2&#x27;}. That saved into the game as a participant with name:&#x27;&#x27; and playerId:&#x27;&#x27;, and game.html falls back to the label &#x27;Player&#x27; — so a stranger sees a roster of &#x27;Ava&#x27; and &#x27;Player&#x27;. Adding a lineup row creates it blank, so this is the DEFAULT state of any slot the user does not finish filling in. Neither app filters empty-named participants on save</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">teams/b2c959bd.../games/548a465d participants[1] = {number:&#x27;2&#x27;,name:&#x27;&#x27;,playerId:&#x27;&#x27;}</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Bowling game page renders for a logged-out visitor<br>
+        <span style="color:var(--ink-dim)">FRAME-BY-FRAME DATA IS ON THE PUBLIC PAGE: strike/spare marks (X, /, 9, O), running totals 19/38/57/76/95/114/133/152/171, High 190, 10 (91%). The frame vault survives all the way to a stranger&#x27;s browser</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Basketball game page renders for a logged-out visitor<br>
+        <span style="color:var(--ink-dim)">Won 4-2, full box score (PTS/FG/3P/FT/REB/AST/STL/BLK/TO/PF), 3 players</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Soccer game page renders for a logged-out visitor<br>
+        <span style="color:var(--ink-dim)">Won 1-0, box score (G/A/SOG/F/OFF/YC/RC/SAV/CK), goal timeline, and a Match Stats block</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Baseball / Softball game page renders for a logged-out visitor<br>
+        <span style="color:var(--ink-dim)">Box score with AB/R/H/RBI/HR/BB/K/AVG, 3 players, correct sport label per game</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Tennis / Pickleball game page renders for a logged-out visitor<br>
+        <span style="color:var(--ink-dim)">Renders with a W/L box score</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Football / Hockey / Lacrosse game page renders for a logged-out visitor<br>
+        <span style="color:var(--ink-dim)">Renders header, final and a player rail</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Generic game page renders for a logged-out visitor<br>
+        <span style="color:var(--ink-dim)">Renders</span><br>
+        <br>
+        <strong>FAIL</strong> &middot; game.html showed NO period line score even with real data<br>
+        <span style="color:var(--ink-dim)">The page body only read top-level homeSetScores/awaySetScores, which ONLY volleyball writes. Hockey, football, lacrosse and basketball put theirs in sportSpecificStats.scoreByPeriod/ByQuarter and got nothing — while the shareable game-card canvas (__sfSetLine) has always read them. So the CARD showed a line score the PAGE did not. FIXED: game.html v41 adds the same fallback, labelled &#x27;By period&#x27;/&#x27;By quarter&#x27;, suppressed when all-zero</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">Lacrosse e2e-lacrosse/8e89a4a3: homeScoreByQuarter [3,0,0,0], final 3-0, no line score</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; A hub written without hubIndex/{code} is invisible to the web<br>
+        <span style="color:var(--ink-dim)">Sharing a team writes BOTH teams/{id}.hub.hubCode AND hubIndex/{CODE} -&gt; teamId. Setting only the team field makes team.html say &#x27;Team Not Found&#x27; and game.html say &quot;We couldn&#x27;t find this game&quot;. Cost one full sweep to diagnose; noted so future test tooling seeds both</span><br>
+        <br>
+        <strong>FAIL</strong> &middot; Tennis and pickleball box scores always read 0 / 0<br>
+        <span style="color:var(--ink-dim)">game.html&#x27;s W/L columns read stats.wins / stats.losses. NEITHER app has ever written those — tennis writes setsWon, pickleball writes gamesWon, and both platforms agree. A 6-0 6-0 straight-sets win published as W 0, L 0 to anyone who opened the link. FIXED in v43: read the real keys, label the column SETS / GAMES</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">Tennis 2-0 match: participants setsWon 2 and 0; page showed W 0 L 0 for both</span><br>
+        <br>
+        <strong>FAIL</strong> &middot; Tennis set scores were missing from the line score<br>
+        <span style="color:var(--ink-dim)">Tennis stores per-set games as sportSpecificStats.player1Sets/player2Sets, which the v41 fallback did not cover. FIXED in v42 — now renders &#x27;BY SET 6-0 · 6-0&#x27;</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Tennis game page correct end-to-end after the fixes<br>
+        <span style="color:var(--ink-dim)">Scored a full 2-0 match on the emulator, ended it through the app, and the public page shows WON 2-0, BY SET 6-0 · 6-0, and a SETS box score reading 2 and 0. Verified by screenshot</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">/tmp/sf-game-E2ETENN1-7c4d38e3.png</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Systematic key audit: every other sport&#x27;s box score reads what the apps write<br>
+        <span style="color:var(--ink-dim)">Compared game.html&#x27;s per-sport column keys against the stat keys actually present in Firestore for the E2E games. Volleyball (7 keys), soccer (9), basketball (13), tennis and pickleball all match after the v43 fix. Tennis/pickleball were the ONLY mismatch — and this audit is what would have caught it on day one</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; Basketball captures 2PM/2PA/OREB/DREB that the web never shows<br>
+        <span style="color:var(--ink-dim)">The app records the two-point split and the offensive/defensive rebound split; game.html shows only combined FG and total REB. The data is safely stored, just not surfaced — an enhancement, not a defect</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; Baseball/softball per-player batting lines are UNVERIFIED<br>
+        <span style="color:var(--ink-dim)">My baseball and softball runs scored no at-bats, so participants carried no AB/R/H/RBI stats and the box score could not be checked against real values. The columns render; the numbers were never exercised</span><br>
+        <br>
+        <strong>PASS</strong> &middot; The box score table scrolls rather than clipping — verified, not assumed<br>
+        <span style="color:var(--ink-dim)">At 390px the wraps measure scrollWidth 385/389 vs clientWidth 320 with overflow-x:auto, and the page body does NOT scroll sideways. The AVG column looked cut off in a screenshot only because a screenshot captures scroll position 0. Measured before reporting — this would have been a false bug</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; Nothing signals that the box score scrolls<br>
+        <span style="color:var(--ink-dim)">On a narrow phone the AVG column sits off-screen with no fade, shadow or arrow to suggest sideways scrolling. Works, but discoverability is poor</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">End Game coach mark (new feature)</span>
+        <span class="chip">3 pass · 1 note</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Coach mark fires when a tennis match completes<br>
+        <span style="color:var(--ink-dim)">Drove 48 points to 2-0 sets on the emulator. At MATCH COMPLETE the overlay appeared, ring + glow on the End Game pill, bubble tail pointing at it, &#x27;Step 1 of 1 · Tap to dismiss&#x27;. Verified by screenshot</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">/tmp/sf-coachmark-tennis.png</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Wired to the real completion signals, not a heuristic<br>
+        <span style="color:var(--ink-dim)">Tennis (advanceTennisPoint, only on the false-&gt;true flip) and pickleball (advancePickleballPoint). Volleyball already has the explicit match-complete dialog with an End Game button, so it is not double-prompted</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Self-gates so it cannot nag<br>
+        <span style="color:var(--ink-dim)">Once ever (SharedPreferences / @AppStorage), skipped when a controller owns End Game, when the first-run tour is up, when the end-game status box is active, and when the End pill is not on screen</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; Period-based sports have NO completion signal to hook<br>
+        <span style="color:var(--ink-dim)">Basketball, football, hockey and lacrosse set the period by direct selection — there is no &#x27;regulation over&#x27; event in the model, and only soccer has a running clock. Bowling series are open-ended (New Game forever). Rather than guess and nag mid-game, those sports are left alone; a real signal would have to be added first</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Scoring parity — second pass</span>
+        <span class="chip">3 pass · 2 fail</span>
+      </div>
+      <p class="item-body">
+        <strong>FAIL</strong> &middot; iOS burned the WRONG final score into the video<br>
+        <span style="color:var(--ink-dim)">burnEndGameOverlay computed the score independently of the save, and still carried every fallback I fixed on 2026-08-18: volleyball fell through to running POINTS, tennis to player1GameScore (the 0/15/30/40 INDEX), pickleball to the raw rally count. The saved game said 1-0 while the video the family keeps said 10-7 — and the video is the artifact that outlives the record. FIXED: extracted finalScoreAsSaved(for:) and both paths now call it</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView.burnEndGameOverlay vs autoSaveGameSummary</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Android has no equivalent burn-in bug<br>
+        <span style="color:var(--ink-dim)">Android&#x27;s showEndGameOverlay is bowling-only (createMultiBowlerScoreboard) — there is no generic per-sport score computed a second time, so nothing to drift</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Android End Game preview now shares the save&#x27;s computation<br>
+        <span style="color:var(--ink-dim)">Extracted volleyballSetsAsSaved(); the confirmation dialog and buildGameSummary call the same function, so the 2-0 preview / 3-0 save mismatch cannot recur</span><br>
+        <br>
+        <strong>FAIL</strong> &middot; The highlight reel&#x27;s intro card showed the wrong final score — BOTH platforms<br>
+        <span style="color:var(--ink-dim)">The reel intro card is built from vb.homeSets/awaySets, which count only ARCHIVED sets. A match that ended mid-set therefore under-reported its own final on the card: a game saved 2-0 introduced itself as 1-0, and one saved 1-0 as 0-0. This is the branded card at the head of the video a parent actually shares. FIXED on Android (volleyballSetsAsSaved) and iOS (VolleyballState.setsWonAsSaved, 2 call sites)</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">MainActivity:6603, ContentView:7011 and 9440</span><br>
+        <br>
+        <strong>PASS</strong> &middot; The live in-play scoreboard is correctly left alone<br>
+        <span style="color:var(--ink-dim)">ScoreboardTextureCache draws running points and the in-progress set strip on the video DURING play — that is supposed to show in-progress values. Only surfaces presenting a FINAL result were changed, so the live scoreboard still reads like a scoreboard</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Baseball full scorebook (Pro)</span>
+        <span class="chip">3 pass · 1 fail</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Per-player batting lines reach the cloud AND the public page<br>
+        <span style="color:var(--ink-dim)">Recorded real at-bats in Full Scorebook mode. Batter 3&#x27;s home run saved as AB 1, R 1, H 1, RBI 2, HR 1, TB 4, AVG 1.000, SLG 4, OPS 5 — the derived sabermetrics are computed, not just the counting stats — and the public box score renders both team sections with a correct totals row (2/2/1/2/1/0/1). This closes the coverage gap I flagged earlier in the run</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">/tmp/sf-game-E2EBASE1-86cb3db6.png</span><br>
+        <br>
+        <strong>PASS</strong> &middot; hasFullScorebook is set and the scorebook uploads<br>
+        <span style="color:var(--ink-dim)">hasFullScorebook: true on the saved game — the archive + cloud-sync path I added this session fires from a real scorebook game, not just in theory</span><br>
+        <br>
+        <strong>PASS</strong> &middot; R/H/E summary saved alongside<br>
+        <span style="color:var(--ink-dim)">homeHits 0, awayHits 2, homeErrors 0, awayErrors 0, innings 1</span><br>
+        <br>
+        <strong>FAIL</strong> &middot; An opponent with no roster publishes 9 fake &#x27;Batter N.&#x27; rows<br>
+        <span style="color:var(--ink-dim)">The AWAY placeholder lineup saved as nine participants named &#x27;Batter 1.&#x27; … &#x27;Batter 9.&#x27;, seven of them all zeros, and all nine render in the PUBLIC box score. A stranger sees a nine-man opposing lineup that does not exist. Same family as the nameless-slot finding: placeholder roster entries are being published as people</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">teams/e2e-baseball/games/86cb3db6: 12 participants, 9 of them &#x27;Batter N.&#x27;</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Builds shipped</span>
+        <span class="chip">3 pass</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; Android 1.1.1272 → Firebase App Distribution<br>
+        <span style="color:var(--ink-dim)">assembleDebug + appDistributionUploadDebug run together (uploading alone re-ships the previous APK). Release notes updated in the same edit as the version bump</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">versionCode 1272 / 1.1.1272</span><br>
+        <br>
+        <strong>PASS</strong> &middot; iOS 1.2.234 (671) → TestFlight<br>
+        <span style="color:var(--ink-dim)">Archived with the required flags (SWIFT_OPTIMIZATION_LEVEL=-O plus the HaishinKit SIL-verifier flags — without them the build launch-crashes on iOS 26.4.2), exported with destination=upload. &#x27;Uploaded ScoreFrame&#x27;. The dSYM warnings for absl/grpc/openssl are cosmetic</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">MARKETING_VERSION 1.2.234, build 671</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Android 1.1.1274 + iOS 1.2.236 — scoreboard growth, name lengths, unshared team page<br>
+        <span style="color:var(--ink-dim)">Android on App Distribution; iOS archived for TestFlight. Release notes updated in the same edit as each bump</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Scoreboard grow-to-fit (ticket SF-G5DLHS)</span>
+        <span class="chip">8 pass · 2 note</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; New harness renders every scoreboard to PNG for eyeballing<br>
+        <span style="color:var(--ink-dim)">ScoreboardRenderAndroid.kt renders all 11 boards at 3 name lengths (short / &#x27;União Micaelense&#x27; / a 20-char max) and writes PNGs. Overflow only exists in the rendered bitmap — no UI dump or unit test could see it, and the emulator can&#x27;t burn a real overlay (no GL). Run it with `am instrument` directly, NOT connectedAndroidTest: gradle uninstalls the app afterwards and takes the PNGs with it</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">tools/e2e/../androidTest</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Soccer simple board grows to fit<br>
+        <span style="color:var(--ink-dim)">The board the ticket actually hit — createScoreboard routes to createSoccerSimpleScoreboard unless scoringMode==&#x27;advanced&#x27;. 400 -&gt; 458 (&#x27;União Micaelense&#x27;) -&gt; 511 (20 chars). Score, half and timer all clear; accented characters render correctly</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">/tmp/sf-sb/soccer_simple__long.png</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Soccer advanced board grows to fit<br>
+        <span style="color:var(--ink-dim)">650 -&gt; 724 -&gt; 780, with the cards/SOG/CK/FLS columns intact</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">/tmp/sf-sb/soccer_stats__max20.png</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Football grows to fit — was overlapping the quarter indicator<br>
+        <span style="color:var(--ink-dim)">At 20 chars the home name ran over &#x27;1ST QTR&#x27; and into the box-score grid. Both team blocks now widen: 1060 -&gt; 1096 -&gt; 1175. Needed two passes — each block holds a 90px SCORE BAND as well as the name, and sizing against the whole block left the name starting outside it, half rendered grey on the centre panel</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">/tmp/sf-sb/football__max20.png</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Baseball grows to fit — was silently truncating<br>
+        <span style="color:var(--ink-dim)">This board never overlapped; it cut names with take(10).uppercase(), so &#x27;Santa Clara&#x27; rendered as &#x27;SANTA CLAR&#x27;. Truncation removed, column grows: 670 -&gt; 786 -&gt; 853. Full names now show</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">/tmp/sf-sb/baseball__max20.png</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Short names render pixel-identically — no regression<br>
+        <span style="color:var(--ink-dim)">Every board at &#x27;Lions&#x27;/&#x27;Bears&#x27; is byte-for-byte the same size as before the change (soccer 400/650, football 1060, baseball 670, and the seven already-adaptive boards unchanged). The growth is strictly additive</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">/tmp/sf-sb/baseball__short.png</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; Growth is capped<br>
+        <span style="color:var(--ink-dim)">Each board coerces its growth into 0..260px, so a pasted 200-character name cannot produce a scoreboard wider than the video frame. The seven already-adaptive boards still have NO cap — separate follow-up</span><br>
+        <br>
+        <strong>PASS</strong> &middot; iOS ported: soccer, football and baseball all grow to fit<br>
+        <span style="color:var(--ink-dim)">Line-for-line port of the Android change, same geometry constants. Soccer uses a translated CGContext state across both draw branches; football widens both team blocks; baseball drops prefix(10) and grows its column</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ScoreboardTextureCache.swift</span><br>
+        <br>
+        <strong>PASS</strong> &middot; iOS growth verified by test, and the base widths match Android exactly<br>
+        <span style="color:var(--ink-dim)">New ScoreboardGrowthTests asserts soccer==400, football==1060, baseball==670 for short names — the same numbers Android renders — then that each grows for &#x27;União Micaelense&#x27; and a 20-char name, stays under the +260 cap, and that the seven already-adaptive boards never shrink. TEST SUCCEEDED on the simulator. This matters beyond regression: if the two platforms sized these boards differently, the same game would look different depending on which phone filmed it</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ScoreFrameTests/ScoreboardGrowthTests.swift</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; iOS rendering was NOT eyeballed<br>
+        <span style="color:var(--ink-dim)">Android returns a Bitmap I can write to PNG and look at; iOS returns an MTLTexture, so pixel readback would need extra work. iOS is verified by DIMENSION, not by appearance. The layouts are a direct port of ones I did look at, but a visual pass on a device is still worth doing</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Parity audit — everything changed 2026-08-19</span>
+        <span class="chip">6 pass · 2 fail · 1 note</span>
+      </div>
+      <p class="item-body">
+        <strong>PASS</strong> &middot; MATCHED — Scoreboard grow-to-fit<br>
+        <span style="color:var(--ink-dim)">Soccer (both modes), football and baseball fixed on BOTH platforms with identical geometry constants. Verified: iOS base widths 400/1060/670 match Android exactly</span><br>
+        <br>
+        <strong>PASS</strong> &middot; MATCHED — Reel intro card final score<br>
+        <span style="color:var(--ink-dim)">Fixed on both (volleyballSetsAsSaved / VolleyballState.setsWonAsSaved)</span><br>
+        <br>
+        <strong>PASS</strong> &middot; MATCHED — End Game coach mark<br>
+        <span style="color:var(--ink-dim)">Built on both, wired to tennis + pickleball match-complete on both</span><br>
+        <br>
+        <strong>PASS</strong> &middot; MATCHED — Unshared team page<br>
+        <span style="color:var(--ink-dim)">Built on both — crest, sport, record, roster, recent games and the not-shared note. Same content, native on each</span><br>
+        <br>
+        <strong>PASS</strong> &middot; MATCHED — Player name length 30<br>
+        <span style="color:var(--ink-dim)">Android: 2 team-editor fields, 2 in-game &#x27;Name&#x27; fields (were UNCAPPED), bowler row (was 15). iOS: team editor, player editor, both bowling editors. Now 30 everywhere on both</span><br>
+        <br>
+        <strong>PASS</strong> &middot; MATCHED — Team name length 20<br>
+        <span style="color:var(--ink-dim)">Android already had it; added to iOS, which had NO cap on any name field</span><br>
+        <br>
+        <strong>FAIL</strong> &middot; GAP — iOS End Game sheet shows no score at all<br>
+        <span style="color:var(--ink-dim)">Android&#x27;s End Game dialog previews the final (&#x27;E2E Volleyball 2 — 0 AWAY, Sets: 15-0, 15-0&#x27;) and carries the recap toggle. iOS shows only &#x27;End this game and return to the home screen?&#x27; — the user confirms blind, and with a recap toggle right there they are broadcasting a number they were never shown. Not introduced today; surfaced by today&#x27;s audit</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">ContentView EndGameConfirmationSheet ~11686</span><br>
+        <br>
+        <strong>FAIL</strong> &middot; GAP — the volleyball match-complete dialog is Android-only<br>
+        <span style="color:var(--ink-dim)">Eric asked for &#x27;after the 3rd set in best of 3 I should be asked if I want to do a new set … we should close the game until the user clicks End Game.&#x27; Built and verified on Android this session (Play another set / Keep scoring / End Game, plus the save-latching fix). iOS has no equivalent — no such dialog exists in the Swift source. Per the same-session parity rule this should have been ported when it was built</span><br>
+        <br>
+        <strong>NOTE</strong> &middot; MATCHED by omission — bowling boards and ad-hoc name fields<br>
+        <span style="color:var(--ink-dim)">Bowling (1920) and H2H bowling (760) are still fixed-width on BOTH platforms, and Game Setup&#x27;s ad-hoc home/away name fields are uncapped on BOTH. Consistent across platforms, but both still open</span><br>
+        <br>
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Unshared team page (Eric&#x27;s request)</span>
+        <span class="chip">1 pass · 1 fail</span>
+      </div>
+      <p class="item-body">
+        <strong>FAIL</strong> &middot; Opening an unshared team was blank and refresh spun forever<br>
+        <span style="color:var(--ink-dim)">Two symptoms, one cause: the backdrop was added BELOW a MATCH_PARENT SwipeRefreshLayout whose WebView was merely hidden, so it was pushed off-screen; and the refresh listener called wv.reload() on a WebView that had never loaded a URL, so onPageFinished never fired to clear the spinner. FIXED: hide the whole refresh layout, and short-circuit refresh when there is no URL</span><br>
+        <span style="color:var(--ink-faint);font-size:12.5px">TeamPageActivity</span><br>
+        <br>
+        <strong>PASS</strong> &middot; Local team page now shows real information<br>
+        <span style="color:var(--ink-dim)">Crest + sport, a &#x27;Not shared&#x27; card explaining what sharing gives you, record (W-L-T + game count), roster with numbers, and the last 5 games with results. Built from local data — no network. Same content on iOS as a native SwiftUI view</span><br>
+        <br>
+      </p>
+    </div>
+  </div>
+
   <h2>Test automation — where it actually stands</h2>
   <div class="items">
     <div class="item">
