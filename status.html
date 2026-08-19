@@ -573,12 +573,12 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>198 cases</strong> across 43 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>210 cases</strong> across 45 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>130</em></span>
-    <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>34</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>134</em></span>
+    <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>41</em></span>
     <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>0</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>34</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>35</em></span>
   </div>
   <div class="tgrid"><div class="tg-head tg-span">&#9989; Nothing is waiting on you right now <span class="tg-tally">every open item is closed</span></div></div>
   <div class="tgrid">
@@ -686,7 +686,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">both</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">End Game flow <span class="tg-tally">&#9989;5 &#10067;1</span></div>
+    <div class="tg-head tg-span">End Game flow <span class="tg-tally">&#9989;5 &#128736;1 &#10067;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">What&#x27;s New renders the new 4-item layout</div>
         <div class="tg-detail">icon badge + one line + orange location; colour themes restored</div>
@@ -713,6 +713,11 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-name">End Game WITH a recording is still unexercised on the emulator</div>
         <div class="tg-detail">The emulator cannot start the GL preview, so record -&gt; highlight reel -&gt; upload picker cannot run there. That branch has only been exercised by Eric on real hardware. It is the part of the flow that changed most this session, so it needs a device pass before it can be called verified</div>
       </div><div class="tg-plat">Android emulator limitation</div></div>
+    <div class="tg-row tg-fix"><div class="tg-ic">&#128736;</div><div>
+        <div class="tg-name">Upload picker&#x27;s buttons were cut off in landscape</div>
+        <div class="tg-detail">Eric: &#x27;it doesn&#x27;t scroll enough for me to see the okay button when I was in landscape mode. I could just see the very top of it so I couldn&#x27;t click it.&#x27; The end-game card is WRAP_CONTENT, so with several videos it grew TALLER THAN THE DISPLAY and the bottom was clipped. weight=1f on the inner ScrollView did nothing, because a WRAP_CONTENT parent has no spare height to distribute. FIXED: measure after layout and shrink the scroll area by exactly the overflow, so short lists keep today&#x27;s compact card and only long ones scroll</div>
+        <div class="tg-ev">EndGameProgressOverlay</div>
+      </div><div class="tg-plat">Android</div></div>
   </div>
   <div class="tgrid">
     <div class="tg-head tg-span">Scoring parity (code audit) <span class="tg-tally">&#9989;3 &#128736;11</span></div>
@@ -1121,7 +1126,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">Android → Firestore</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Method <span class="tg-tally">&#10067;2</span></div>
+    <div class="tg-head tg-span">Method <span class="tg-tally">&#10067;3</span></div>
     <div class="tg-row tg-warn"><div class="tg-ic">&#10067;</div><div>
         <div class="tg-name">Testing against the reference platform caught my own bug</div>
         <div class="tg-detail">The parity audit found the tennis defect from code alone, but only running Android on a device revealed that my replacement was ALSO wrong. Code review found the bug; the device found the fix&#x27;s bug</div>
@@ -1129,6 +1134,10 @@ onAuthStateChanged(auth, async (user) => {
     <div class="tg-row tg-warn"><div class="tg-ic">&#10067;</div><div>
         <div class="tg-name">Reading two code paths side by side found what the emulator could not</div>
         <div class="tg-detail">The burn-in bug needs a working camera to observe, which the emulator does not have. It surfaced by diffing the save path against the overlay path after the device run proved what the save SHOULD produce. Device measurement first, then code comparison — neither alone would have caught it</div>
+      </div><div class="tg-plat">Method note</div></div>
+    <div class="tg-row tg-warn"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">I misread a screenshot as a success</div>
+        <div class="tg-detail">Eric sent the broken full-screen frame and I read it as the grow-to-fit fix working, because the long team name did render correctly in it. He had to tell me it was the bug. The name WAS fine — I anchored on the part I had been working on instead of asking what I was looking at</div>
       </div><div class="tg-plat">Method note</div></div>
   </div>
   <div class="tgrid">
@@ -1530,7 +1539,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">iOS</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Card system (approved 2026-08-19) <span class="tg-tally">&#9989;8 &#128736;1 &#10067;3</span></div>
+    <div class="tg-head tg-span">Card system (approved 2026-08-19) <span class="tg-tally">&#9989;8 &#128736;3 &#10067;3</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">Shared card primitives built</div>
         <div class="tg-detail">drawCardGround (team-colour bleed, or a solo glow for player cards), drawCardLockup (crest above ScoreFrame.app, crest dropped when the team has no logo) and drawCardEyebrow. One place to change the language, five surfaces consume it</div>
@@ -1585,9 +1594,19 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-name">Broadcaster photo dropped from the live card</div>
         <div class="tg-detail">The old card fetched the Google profile photo over the network, making thumbnail generation depend on a call that can fail or stall at the exact moment of going live. The display name does the same job with no network dependency. Trivial to restore if Eric misses it</div>
       </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-fix"><div class="tg-ic">&#128736;</div><div>
+        <div class="tg-name">Long team name pushed VS and the opponent off-centre</div>
+        <div class="tg-detail">Eric: &#x27;the teams don&#x27;t center themselves in their respective left and right positions especially when the team I&#x27;m streaming with has a very long name that pushes the versus and the other team over to the right.&#x27; The row was centred as ONE block, so a long home name shoved everything right of it. FIXED: VS is pinned to the frame centre, each team is centred in its own half, and each name shrinks against its OWN half budget — then both sides match so one long name can&#x27;t leave a giant/tiny pair. Verified with &#x27;União Micaelense&#x27; vs &#x27;AWAY&#x27; at 1280x720</div>
+        <div class="tg-ev">/tmp/sf-cards/card__yt_live_longhome.png</div>
+      </div><div class="tg-plat">Android emulator</div></div>
+    <div class="tg-row tg-fix"><div class="tg-ic">&#128736;</div><div>
+        <div class="tg-name">Sport emoji was too faint to read</div>
+        <div class="tg-detail">Eric: &#x27;I can see the soccer ball but it&#x27;s very faint.&#x27; Was alpha 30/255 (~12%). FIXED at 78/255 (~30%) — reads clearly as a sport without competing with the team names over it. Verified by render</div>
+        <div class="tg-ev">/tmp/sf-cards/emoji_test.png</div>
+      </div><div class="tg-plat">Android emulator</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Streaming — Go Live simplification <span class="tg-tally">&#128736;2 &#10067;1</span></div>
+    <div class="tg-head tg-span">Streaming — Go Live simplification <span class="tg-tally">&#9989;3 &#128736;2 &#10067;1</span></div>
     <div class="tg-row tg-fix"><div class="tg-ic">&#128736;</div><div>
         <div class="tg-name">YouTube live ELIGIBILITY refusals had no handler</div>
         <div class="tg-detail">A channel can be signed in and authorised and still be refused: unverified phone, or a live restriction in the last 90 days. YouTube returns liveStreamingNotAllowed / liveBroadcastNotAllowed and nothing matched them, so it fell through to a generic message. Survivable while Go Live offered five services; a dead end once it leads straight to YouTube. FIXED with a specific, actionable message</div>
@@ -1602,6 +1621,49 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-name">Decision: other services go behind ADVANCED, not Pro</div>
         <div class="tg-detail">Eric first proposed making Twitch/Facebook/RTMP Pro-only. I raised two problems — it charges for the one path we call untested, and it makes YouTube eligibility a hard wall with no fallback for free users. He agreed: &#x27;don&#x27;t get it behind Pro but just make it advanced.&#x27; NOT YET BUILT</div>
       </div><div class="tg-plat">Android + iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Go Live now goes straight to YouTube</div>
+        <div class="tg-detail">showStreamSetupDialog no longer opens the five-way picker. It routes to showYouTubeStreamDialog, which already falls through to sign-in when the account isn&#x27;t connected — so it is genuinely one tap from Go Live to being live</div>
+        <div class="tg-ev">MainActivity.showStreamSetupDialog</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Other services moved behind an Advanced toggle, not a paywall</div>
+        <div class="tg-detail">New &#x27;Other services&#x27; tile in Quick Settings, off by default, disabled while a stream is running. Twitch, Facebook, Custom RTMP and the YouTube stream-key path all sit behind it</div>
+        <div class="tg-ev">QuickSettingsPanel</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Existing non-YouTube users are migrated, not broken</div>
+        <div class="tg-detail">One-time migration reads the saved rtmp_platform: anyone who has previously streamed to something other than YouTube quick-start gets the Advanced toggle switched ON automatically. Taking a working setup away from a user who already had it would be worse than never offering it</div>
+      </div><div class="tg-plat">Android</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Game setup <span class="tg-tally">&#9989;1 &#128736;2</span></div>
+    <div class="tg-row tg-fix"><div class="tg-ic">&#128736;</div><div>
+        <div class="tg-name">Advanced scoring mode reset to Simple every new game</div>
+        <div class="tg-detail">Eric: &#x27;I set it to advanced and then I come back and do another one it&#x27;s defaulting back to simple scoring.&#x27; Game Setup seeded the radio from the IN-FLIGHT game state, which is reset for a new game — so every game started at the sport&#x27;s default. FIXED: remembered per sport in prefs. Applied to soccer, volleyball and baseball/softball&#x27;s scorebook mode</div>
+        <div class="tg-ev">MainActivity</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Pro gate is on READ, not just write</div>
+        <div class="tg-detail">rememberedScoringMode returns the free default when FeatureGate.isPro is false, so a lapsed subscription cannot resurrect a Pro-only mode from a stored preference. Free always starts Simple</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-fix"><div class="tg-ic">&#128736;</div><div>
+        <div class="tg-name">My first &#x27;remember Advanced&#x27; fix was inert</div>
+        <div class="tg-detail">I seeded with `soccerScore.scoringMode.ifEmpty { remembered }` — but the constructor default is &quot;simple&quot;, NOT empty, so ifEmpty never fired and nothing changed. Eric caught it in one test: &#x27;I started a game selected advanced then I immediately end the game and then I come back and start another game and it&#x27;s set to simple.&#x27; Root cause is deeper: a new game CLEARS ScoreFrameState, so every sport rebuilds at its default. FIXED with a startingFreshGame flag set where the state is cleared, consulted by all three seeds</div>
+      </div><div class="tg-plat">Android</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Recording safety <span class="tg-tally">&#128736;2</span></div>
+    <div class="tg-row tg-fix"><div class="tg-ic">&#128736;</div><div>
+        <div class="tg-name">Roster button silently ended the recording</div>
+        <div class="tg-detail">Eric: &#x27;I clicked roster and it immediately took me out of the recording ... and then I came back in it was in a weird full screen mode where the video took up the entire screen and I really couldn&#x27;t do anything and I was stuck.&#x27; Both roster entry points launched SportSettingsActivity unconditionally, tearing down the camera session. FIXED: one guarded openRosterEditor() that asks before leaving and names the cost; plus applyOrientationLayout on return, which was missing and caused the stuck fullscreen</div>
+        <div class="tg-ev">MainActivity</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-fix"><div class="tg-ic">&#128736;</div><div>
+        <div class="tg-name">Stuck full-screen video on return — root cause found</div>
+        <div class="tg-detail">applyOrientationLayout early-returns when the orientation is unchanged: `if (orientation == lastAppliedOrientation) return`. Coming back from another Activity is exactly that case, so the rebuild was SKIPPED and whatever state the layout was left in survived — full-bleed video, no scoring panel, no way out. My first attempt called applyOrientationLayout on return and was therefore also a no-op. FIXED with a force parameter that bypasses both the early-exit and the sensor debounce</div>
+        <div class="tg-ev">MainActivity ~41641</div>
+      </div><div class="tg-plat">Android</div></div>
   </div>
 
   <h2>Test automation — where it actually stands</h2>
