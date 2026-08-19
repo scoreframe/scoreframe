@@ -573,32 +573,14 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug automated run. <strong>173 cases</strong> across 39 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the ticket work that followed. <strong>183 cases</strong> across 41 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>115</em></span>
-    <span class="tk tk-fix"><b>&#128736;</b> Was broken — fixed and verified <em>25</em></span>
-    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>4</em></span>
-    <span class="tk tk-warn"><b>&#10067;</b> Not verified / needs a decision <em>29</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>122</em></span>
+    <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>31</em></span>
+    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>0</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>30</em></span>
   </div>
-  <div class="tgrid tgrid-open">
-    <div class="tg-head tg-span">&#10060; Still needs addressing</div>
-    <div class="tg-row">
-      <div class="tg-ic">&#10060;</div>
-      <div><div class="tg-name">A nameless lineup slot becomes a phantom &#x27;Player&#x27; row in the PUBLIC box score</div><div class="tg-area">Web validation (game.html / team.html)</div><div class="tg-detail">Team untrackedRoster held {name:&#x27;&#x27;, number:&#x27;2&#x27;}. That saved into the game as a participant with name:&#x27;&#x27; and playerId:&#x27;&#x27;, and game.html falls back to the label &#x27;Player&#x27; — so a stranger sees a roster of &#x27;Ava&#x27; and &#x27;Player&#x27;. Adding a lineup row creates it blank, so this is the DEFAULT state of any slot the user does not finish filling in. Neither app filters empty-named participants on save</div></div>
-    </div>
-    <div class="tg-row">
-      <div class="tg-ic">&#10060;</div>
-      <div><div class="tg-name">An opponent with no roster publishes 9 fake &#x27;Batter N.&#x27; rows</div><div class="tg-area">Baseball full scorebook (Pro)</div><div class="tg-detail">The AWAY placeholder lineup saved as nine participants named &#x27;Batter 1.&#x27; … &#x27;Batter 9.&#x27;, seven of them all zeros, and all nine render in the PUBLIC box score. A stranger sees a nine-man opposing lineup that does not exist. Same family as the nameless-slot finding: placeholder roster entries are being published as people</div></div>
-    </div>
-    <div class="tg-row">
-      <div class="tg-ic">&#10060;</div>
-      <div><div class="tg-name">GAP — iOS End Game sheet shows no score at all</div><div class="tg-area">Parity audit — everything changed 2026-08-19</div><div class="tg-detail">Android&#x27;s End Game dialog previews the final (&#x27;E2E Volleyball 2 — 0 AWAY, Sets: 15-0, 15-0&#x27;) and carries the recap toggle. iOS shows only &#x27;End this game and return to the home screen?&#x27; — the user confirms blind, and with a recap toggle right there they are broadcasting a number they were never shown. Not introduced today; surfaced by today&#x27;s audit</div></div>
-    </div>
-    <div class="tg-row">
-      <div class="tg-ic">&#10060;</div>
-      <div><div class="tg-name">GAP — the volleyball match-complete dialog is Android-only</div><div class="tg-area">Parity audit — everything changed 2026-08-19</div><div class="tg-detail">Eric asked for &#x27;after the 3rd set in best of 3 I should be asked if I want to do a new set … we should close the game until the user clicks End Game.&#x27; Built and verified on Android this session (Play another set / Keep scoring / End Game, plus the save-latching fix). iOS has no equivalent — no such dialog exists in the Swift source. Per the same-session parity rule this should have been ported when it was built</div></div>
-    </div>
-  </div>
+  <div class="tgrid"><div class="tg-head tg-span">&#9989; Nothing is waiting on you right now <span class="tg-tally">every open item from this run is closed</span></div></div>
   <div class="tgrid">
     <div class="tg-head tg-span">Harness <span class="tg-tally">&#9989;5 &#10067;1</span></div>
     <div class="tg-row tg-ok">
@@ -1594,7 +1576,7 @@ onAuthStateChanged(auth, async (user) => {
     </div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Softball scoring <span class="tg-tally">&#9989;1 &#10067;2</span></div>
+    <div class="tg-head tg-span">Softball scoring <span class="tg-tally">&#9989;1 &#128736;1 &#10067;1</span></div>
     <div class="tg-row tg-warn">
       <div class="tg-ic">&#10067;</div>
       <div>
@@ -1604,11 +1586,11 @@ onAuthStateChanged(auth, async (user) => {
       </div>
       <div class="tg-plat">Android → Firestore</div>
     </div>
-    <div class="tg-row tg-warn">
-      <div class="tg-ic">&#10067;</div>
+    <div class="tg-row tg-fix">
+      <div class="tg-ic">&#128736;</div>
       <div>
         <div class="tg-name">A softball game prefers an existing BASEBALL team</div>
-        <div class="tg-detail">With both an &#x27;E2E Baseball&#x27; and an &#x27;E2E Softball&#x27; team saved, starting a Softball game pre-selected the BASEBALL team. Intended (cross-sport aliases let one roster serve both), but with a same-sport team available it is a surprising pick — worth Eric&#x27;s call on whether exact-sport should win</div>
+        <div class="tg-detail">With both an &#x27;E2E Baseball&#x27; and an &#x27;E2E Softball&#x27; team saved, starting a Softball game pre-selected the BASEBALL team. Intended (cross-sport aliases let one roster serve both), but with a same-sport team available it is a surprising pick — worth Eric&#x27;s call on whether exact-sport should win — FIXED 2026-08-19 after Eric&#x27;s answer.</div>
       </div>
       <div class="tg-plat">Android</div>
     </div>
@@ -1674,7 +1656,7 @@ onAuthStateChanged(auth, async (user) => {
     </div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Web validation (game.html / team.html) <span class="tg-tally">&#9989;13 &#128736;3 &#10060;1 &#10067;5</span></div>
+    <div class="tg-head tg-span">Web validation (game.html / team.html) <span class="tg-tally">&#9989;13 &#128736;4 &#10067;5</span></div>
     <div class="tg-row tg-ok">
       <div class="tg-ic">&#9989;</div>
       <div>
@@ -1707,11 +1689,11 @@ onAuthStateChanged(auth, async (user) => {
       </div>
       <div class="tg-plat">Android -&gt; Firestore -&gt; web</div>
     </div>
-    <div class="tg-row tg-bad">
-      <div class="tg-ic">&#10060;</div>
+    <div class="tg-row tg-fix">
+      <div class="tg-ic">&#128736;</div>
       <div>
         <div class="tg-name">A nameless lineup slot becomes a phantom &#x27;Player&#x27; row in the PUBLIC box score</div>
-        <div class="tg-detail">Team untrackedRoster held {name:&#x27;&#x27;, number:&#x27;2&#x27;}. That saved into the game as a participant with name:&#x27;&#x27; and playerId:&#x27;&#x27;, and game.html falls back to the label &#x27;Player&#x27; — so a stranger sees a roster of &#x27;Ava&#x27; and &#x27;Player&#x27;. Adding a lineup row creates it blank, so this is the DEFAULT state of any slot the user does not finish filling in. Neither app filters empty-named participants on save</div>
+        <div class="tg-detail">Team untrackedRoster held {name:&#x27;&#x27;, number:&#x27;2&#x27;}. That saved into the game as a participant with name:&#x27;&#x27; and playerId:&#x27;&#x27;, and game.html falls back to the label &#x27;Player&#x27; — so a stranger sees a roster of &#x27;Ava&#x27; and &#x27;Player&#x27;. Adding a lineup row creates it blank, so this is the DEFAULT state of any slot the user does not finish filling in. Neither app filters empty-named participants on save — FIXED 2026-08-19 after Eric&#x27;s answer.</div>
         <div class="tg-ev">teams/b2c959bd.../games/548a465d participants[1] = {number:&#x27;2&#x27;,name:&#x27;&#x27;,playerId:&#x27;&#x27;}</div>
       </div>
       <div class="tg-plat">scoreframe.app/game.html box score</div>
@@ -1938,7 +1920,7 @@ onAuthStateChanged(auth, async (user) => {
     </div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Baseball full scorebook (Pro) <span class="tg-tally">&#9989;3 &#10060;1</span></div>
+    <div class="tg-head tg-span">Baseball full scorebook (Pro) <span class="tg-tally">&#9989;3 &#128736;1</span></div>
     <div class="tg-row tg-ok">
       <div class="tg-ic">&#9989;</div>
       <div>
@@ -1964,11 +1946,11 @@ onAuthStateChanged(auth, async (user) => {
       </div>
       <div class="tg-plat">Android -&gt; Firestore</div>
     </div>
-    <div class="tg-row tg-bad">
-      <div class="tg-ic">&#10060;</div>
+    <div class="tg-row tg-fix">
+      <div class="tg-ic">&#128736;</div>
       <div>
         <div class="tg-name">An opponent with no roster publishes 9 fake &#x27;Batter N.&#x27; rows</div>
-        <div class="tg-detail">The AWAY placeholder lineup saved as nine participants named &#x27;Batter 1.&#x27; … &#x27;Batter 9.&#x27;, seven of them all zeros, and all nine render in the PUBLIC box score. A stranger sees a nine-man opposing lineup that does not exist. Same family as the nameless-slot finding: placeholder roster entries are being published as people</div>
+        <div class="tg-detail">The AWAY placeholder lineup saved as nine participants named &#x27;Batter 1.&#x27; … &#x27;Batter 9.&#x27;, seven of them all zeros, and all nine render in the PUBLIC box score. A stranger sees a nine-man opposing lineup that does not exist. Same family as the nameless-slot finding: placeholder roster entries are being published as people — FIXED 2026-08-19 after Eric&#x27;s answer.</div>
         <div class="tg-ev">teams/e2e-baseball/games/86cb3db6: 12 participants, 9 of them &#x27;Batter N.&#x27;</div>
       </div>
       <div class="tg-plat">Android -&gt; web</div>
@@ -2095,7 +2077,7 @@ onAuthStateChanged(auth, async (user) => {
     </div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Parity audit — everything changed 2026-08-19 <span class="tg-tally">&#9989;6 &#10060;2 &#10067;1</span></div>
+    <div class="tg-head tg-span">Parity audit — everything changed 2026-08-19 <span class="tg-tally">&#9989;6 &#128736;2 &#10067;1</span></div>
     <div class="tg-row tg-ok">
       <div class="tg-ic">&#9989;</div>
       <div>
@@ -2144,20 +2126,20 @@ onAuthStateChanged(auth, async (user) => {
       </div>
       <div class="tg-plat">Android + iOS</div>
     </div>
-    <div class="tg-row tg-bad">
-      <div class="tg-ic">&#10060;</div>
+    <div class="tg-row tg-fix">
+      <div class="tg-ic">&#128736;</div>
       <div>
         <div class="tg-name">GAP — iOS End Game sheet shows no score at all</div>
-        <div class="tg-detail">Android&#x27;s End Game dialog previews the final (&#x27;E2E Volleyball 2 — 0 AWAY, Sets: 15-0, 15-0&#x27;) and carries the recap toggle. iOS shows only &#x27;End this game and return to the home screen?&#x27; — the user confirms blind, and with a recap toggle right there they are broadcasting a number they were never shown. Not introduced today; surfaced by today&#x27;s audit</div>
+        <div class="tg-detail">Android&#x27;s End Game dialog previews the final (&#x27;E2E Volleyball 2 — 0 AWAY, Sets: 15-0, 15-0&#x27;) and carries the recap toggle. iOS shows only &#x27;End this game and return to the home screen?&#x27; — the user confirms blind, and with a recap toggle right there they are broadcasting a number they were never shown. Not introduced today; surfaced by today&#x27;s audit — FIXED 2026-08-19 after Eric&#x27;s answer.</div>
         <div class="tg-ev">ContentView EndGameConfirmationSheet ~11686</div>
       </div>
       <div class="tg-plat">iOS</div>
     </div>
-    <div class="tg-row tg-bad">
-      <div class="tg-ic">&#10060;</div>
+    <div class="tg-row tg-fix">
+      <div class="tg-ic">&#128736;</div>
       <div>
         <div class="tg-name">GAP — the volleyball match-complete dialog is Android-only</div>
-        <div class="tg-detail">Eric asked for &#x27;after the 3rd set in best of 3 I should be asked if I want to do a new set … we should close the game until the user clicks End Game.&#x27; Built and verified on Android this session (Play another set / Keep scoring / End Game, plus the save-latching fix). iOS has no equivalent — no such dialog exists in the Swift source. Per the same-session parity rule this should have been ported when it was built</div>
+        <div class="tg-detail">Eric asked for &#x27;after the 3rd set in best of 3 I should be asked if I want to do a new set … we should close the game until the user clicks End Game.&#x27; Built and verified on Android this session (Play another set / Keep scoring / End Game, plus the save-latching fix). iOS has no equivalent — no such dialog exists in the Swift source. Per the same-session parity rule this should have been ported when it was built — FIXED 2026-08-19 after Eric&#x27;s answer.</div>
       </div>
       <div class="tg-plat">iOS</div>
     </div>
@@ -2188,6 +2170,95 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">Crest + sport, a &#x27;Not shared&#x27; card explaining what sharing gives you, record (W-L-T + game count), roster with numbers, and the last 5 games with results. Built from local data — no network. Same content on iOS as a native SwiftUI view</div>
       </div>
       <div class="tg-plat">Android + iOS</div>
+    </div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Volleyball match-complete (Eric&#x27;s spec, 19 Aug) <span class="tg-tally">&#9989;3 &#128736;1 &#10067;2</span></div>
+    <div class="tg-row tg-ok">
+      <div class="tg-ic">&#9989;</div>
+      <div>
+        <div class="tg-name">Banner survives &#x27;Keep scoring&#x27; and names the winner</div>
+        <div class="tg-detail">&#x27;★ HOME WINS THE MATCH 2-0&#x27; plus &#x27;Not saved until you tap End Game →&#x27; stay on the panel after Keep scoring. Previously matchComplete did double duty — &#x27;match is over&#x27; AND &#x27;panel locked&#x27; — so Keep scoring erased the banner. Now the banner keys off a DERIVED isVolleyballMatchDecided(sets), which Keep scoring doesn&#x27;t touch</div>
+        <div class="tg-ev">/tmp/sf-vb-final.png</div>
+      </div>
+      <div class="tg-plat">Android emulator</div>
+    </div>
+    <div class="tg-row tg-ok">
+      <div class="tg-ic">&#9989;</div>
+      <div>
+        <div class="tg-name">Persistent + NEW SET button on the scoreboard</div>
+        <div class="tg-detail">Set 2 -&gt; Set 3 with the format promoted 3 -&gt; 5 and sets held at 2-0. Shares one function with the dialog&#x27;s &#x27;Play another set&#x27; so they can&#x27;t drift. The banner then correctly clears, because 2 sets no longer decides a best-of-5</div>
+      </div>
+      <div class="tg-plat">Android emulator</div>
+    </div>
+    <div class="tg-row tg-warn">
+      <div class="tg-ic">&#10067;</div>
+      <div>
+        <div class="tg-name">End Game stays in the header, not duplicated in the panel</div>
+        <div class="tg-detail">The red End Game pill sits in the header row directly above the panel and is always visible, so the panel only adds + NEW SET. A second End Game would have cost the width New Set needs — the landscape panel is tight</div>
+      </div>
+      <div class="tg-plat">Android</div>
+    </div>
+    <div class="tg-row tg-warn">
+      <div class="tg-ic">&#10067;</div>
+      <div>
+        <div class="tg-name">Layout trap: views added after a weighted row get zero height</div>
+        <div class="tg-detail">First attempt put the banner AFTER the score row. The score buttons are weighted and eat every remaining pixel, so the banner built fine and rendered invisible — it never appeared in the UI dump either. Moving it ABOVE the score row fixed it. Worth remembering for any future panel addition</div>
+      </div>
+      <div class="tg-plat">Android</div>
+    </div>
+    <div class="tg-row tg-fix">
+      <div class="tg-ic">&#128736;</div>
+      <div>
+        <div class="tg-name">Self-inflicted: a bad splice duplicated 6,860 lines of MainActivity</div>
+        <div class="tg-detail">My edit anchored on &#x27;End Game&quot;)&#x27;, which appears several times, so the slice end landed BEFORE the start and the region got duplicated instead of replaced — buildVolleyballPanel, makeVbScoreButton and the dialog all appeared twice. Caught immediately by the compiler. Repaired by locating both copies via content anchors and removing the duplicate; all markers back to a single occurrence and the APK rebuilt. No work lost. The lesson is the one already in the harness README: never anchor an edit on a string that repeats</div>
+        <div class="tg-ev">MainActivity.kt 49534 -&gt; 42674 lines</div>
+      </div>
+      <div class="tg-plat">Android</div>
+    </div>
+    <div class="tg-row tg-ok">
+      <div class="tg-ic">&#9989;</div>
+      <div>
+        <div class="tg-name">iOS port: dialog, banner and New Set all built</div>
+        <div class="tg-detail">iOS had the banner markup but nothing ever presented a prompt. Added: isMatchDecided (derived from sets), startAnotherSet() and keepScoringAfterMatch() on the view model; a confirmationDialog fired on the false-&gt;true flip of matchComplete with End Game / Play another set / Keep scoring; and the same compact one-row banner with + New Set. Builds clean</div>
+        <div class="tg-ev">VolleyballScoringViewModel + Panel + ContentView</div>
+      </div>
+      <div class="tg-plat">iOS</div>
+    </div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Email answers — 19 Aug <span class="tg-tally">&#9989;4</span></div>
+    <div class="tg-row tg-ok">
+      <div class="tg-ic">&#9989;</div>
+      <div>
+        <div class="tg-name">#1 Placeholder participants filtered on save</div>
+        <div class="tg-detail">Both platforms. Dropped at the GameSummary boundary that feeds Firestore and the public box score; the live scoreboard and the baseball scorebook keep their own state and still show every slot, which is what Eric asked for. A placeholder that actually accumulated a stat is KEPT</div>
+      </div>
+      <div class="tg-plat">Android + iOS</div>
+    </div>
+    <div class="tg-row tg-ok">
+      <div class="tg-ic">&#9989;</div>
+      <div>
+        <div class="tg-name">#2 Baseball and softball separated for teams and rosters</div>
+        <div class="tg-detail">getSportAliases is now identity in TeamManager and PlayerManager on Android, and in PlayerManager + GameSetupScreen on iOS. Scoring, panels and scoreboards still share everything — only the roster is exclusive</div>
+      </div>
+      <div class="tg-plat">Android + iOS</div>
+    </div>
+    <div class="tg-row tg-ok">
+      <div class="tg-ic">&#9989;</div>
+      <div>
+        <div class="tg-name">#3 idb installed and driving the simulator</div>
+        <div class="tg-detail">idb 1.5.0 via brew. `idb list-targets` sees all simulators and `idb ui describe-all` returns the full accessibility tree with AXLabel, frames and AXUniqueId. The `pip install fb-idb` half was unnecessary — the brew formula ships its own bundled Python and the CLI is what gets driven</div>
+      </div>
+      <div class="tg-plat">iOS simulator</div>
+    </div>
+    <div class="tg-row tg-ok">
+      <div class="tg-ic">&#9989;</div>
+      <div>
+        <div class="tg-name">#6a iOS End Game now previews the score</div>
+        <div class="tg-detail">Added endGameSummaryText() built on finalScoreAsSaved, so the preview and the save cannot disagree — the exact bug that had to be fixed on Android. Per-sport detail: volleyball set scores, tennis sets, baseball R/H/E, soccer shots on goal</div>
+      </div>
+      <div class="tg-plat">iOS</div>
     </div>
   </div>
 
