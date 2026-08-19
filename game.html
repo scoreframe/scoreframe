@@ -956,7 +956,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v42</span>
+    <span class="page-version">game.html v43</span>
 </div>
 
 <script type="module">
@@ -3529,10 +3529,20 @@ function boxScoreColumnsForSport(s) {
             { key: 'missedServes', label: 'MSV',  fmt: (st) => num(st.missedServes), sum: true },
         ];
     }
-    if (s === 'TENNIS' || s === 'PICKLEBALL') {
+    // Both apps write setsWon (tennis) / gamesWon (pickleball) — never
+    // wins/losses, which is what this used to read, so every tennis and
+    // pickleball box score showed 0 / 0 no matter the result. A 6-0 6-0 win
+    // rendered as W 0 L 0. wins/losses kept as a fallback for old rows.
+    if (s === 'TENNIS') {
         return [
-            { key: 'wins',   label: 'W', fmt: (st) => num(st.wins),   sum: true },
-            { key: 'losses', label: 'L', fmt: (st) => num(st.losses), sum: true },
+            { key: 'setsWon', label: 'SETS',
+              fmt: (st) => num(st.setsWon !== undefined ? st.setsWon : st.wins), sum: true },
+        ];
+    }
+    if (s === 'PICKLEBALL') {
+        return [
+            { key: 'gamesWon', label: 'GAMES',
+              fmt: (st) => num(st.gamesWon !== undefined ? st.gamesWon : st.wins), sum: true },
         ];
     }
     if (s === 'SOCCER') {
