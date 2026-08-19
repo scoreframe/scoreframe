@@ -573,12 +573,12 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>191 cases</strong> across 42 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>198 cases</strong> across 43 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>128</em></span>
-    <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>32</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>130</em></span>
+    <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>34</em></span>
     <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>0</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>31</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>34</em></span>
   </div>
   <div class="tgrid"><div class="tg-head tg-span">&#9989; Nothing is waiting on you right now <span class="tg-tally">every open item is closed</span></div></div>
   <div class="tgrid">
@@ -1530,7 +1530,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">iOS</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Card system (approved 2026-08-19) <span class="tg-tally">&#9989;6 &#128736;1 &#10067;1</span></div>
+    <div class="tg-head tg-span">Card system (approved 2026-08-19) <span class="tg-tally">&#9989;8 &#128736;1 &#10067;3</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">Shared card primitives built</div>
         <div class="tg-detail">drawCardGround (team-colour bleed, or a solo glow for player cards), drawCardLockup (crest above ScoreFrame.app, crest dropped when the team has no logo) and drawCardEyebrow. One place to change the language, five surfaces consume it</div>
@@ -1567,6 +1567,40 @@ onAuthStateChanged(auth, async (user) => {
     <div class="tg-row tg-warn"><div class="tg-ic">&#10067;</div><div>
         <div class="tg-name">NOT yet done — game intro muxing, and iOS</div>
         <div class="tg-detail">The intro card RENDERS but is not yet attached to any recording: the read-source-format, match-encode, mux and skip-on-mismatch path is still to build. iOS has none of the five surfaces yet. Reel intro also needs team colour/name threaded through VideoPipeline.buildReels, which currently only receives a gameLine</div>
+      </div><div class="tg-plat">Android + iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Sport emoji restored as a watermark on both YouTube cards</div>
+        <div class="tg-detail">Eric: &#x27;I really liked on the original YouTube live thumbnails we had a large icon emoji for the sport.&#x27; Drawn at 12% opacity behind the matchup, so the card keeps a recognisable shape at grid size without costing the team names any room. Rendered and checked at 1280x720</div>
+        <div class="tg-ev">/tmp/sf-cards/card__yt_live.png</div>
+      </div><div class="tg-plat">Android emulator</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">LIVE badge redone as a broadcast dot, not a filled box</div>
+        <div class="tg-detail">Eric: &#x27;the live red square box ... doesn&#x27;t look right.&#x27; Now a red dot plus letterspaced LIVE, the broadcast convention</div>
+      </div><div class="tg-plat">Android emulator</div></div>
+    <div class="tg-row tg-warn"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">YouTube mark deliberately NOT used on the thumbnail</div>
+        <div class="tg-detail">Eric asked whether to use the YouTube symbol instead of the LIVE box; I pushed back and he agreed. The card is uploaded TO YouTube, where their mark would read as official YouTube content, and their brand terms disallow use implying endorsement — with an active YouTube ToS compliance tracker in this repo that is not worth spending. The dot carries no brand risk</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-warn"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">Broadcaster photo dropped from the live card</div>
+        <div class="tg-detail">The old card fetched the Google profile photo over the network, making thumbnail generation depend on a call that can fail or stall at the exact moment of going live. The display name does the same job with no network dependency. Trivial to restore if Eric misses it</div>
+      </div><div class="tg-plat">Android</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Streaming — Go Live simplification <span class="tg-tally">&#128736;2 &#10067;1</span></div>
+    <div class="tg-row tg-fix"><div class="tg-ic">&#128736;</div><div>
+        <div class="tg-name">YouTube live ELIGIBILITY refusals had no handler</div>
+        <div class="tg-detail">A channel can be signed in and authorised and still be refused: unverified phone, or a live restriction in the last 90 days. YouTube returns liveStreamingNotAllowed / liveBroadcastNotAllowed and nothing matched them, so it fell through to a generic message. Survivable while Go Live offered five services; a dead end once it leads straight to YouTube. FIXED with a specific, actionable message</div>
+        <div class="tg-ev">YouTubeLiveManager</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-fix"><div class="tg-ic">&#128736;</div><div>
+        <div class="tg-name">The 403 message was a debug dump citing a requirement that no longer exists</div>
+        <div class="tg-detail">It listed the Google Cloud OAuth consent screen and a &#x27;50+ subscribers&#x27; threshold YouTube REMOVED in 2023 — sending users chasing a phantom requirement. FIXED: two things a user can actually do, in order, and the stale claim is gone</div>
+        <div class="tg-ev">YouTubeLiveManager</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-warn"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">Decision: other services go behind ADVANCED, not Pro</div>
+        <div class="tg-detail">Eric first proposed making Twitch/Facebook/RTMP Pro-only. I raised two problems — it charges for the one path we call untested, and it makes YouTube eligibility a hard wall with no fallback for free users. He agreed: &#x27;don&#x27;t get it behind Pro but just make it advanced.&#x27; NOT YET BUILT</div>
       </div><div class="tg-plat">Android + iOS</div></div>
   </div>
 
