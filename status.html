@@ -573,14 +573,14 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>287 cases</strong> across 57 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>292 cases</strong> across 57 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>175</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>176</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>48</em></span>
-    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>10</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>54</em></span>
+    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>13</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>55</em></span>
   </div>
-  <div class="tgrid"><div class="tg-head tg-span">&#10060; 10 items waiting on you <span class="tg-tally">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working · Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for · BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</span></div></div>
+  <div class="tgrid"><div class="tg-head tg-span">&#10060; 13 items waiting on you <span class="tg-tally">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working · Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for · BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</span></div></div>
   <div class="tgrid">
     <div class="tg-head tg-span">Harness <span class="tg-tally">&#9989;5 &#10067;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
@@ -2075,7 +2075,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">Android</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Remote scoring rig (2026-08-20) <span class="tg-tally">&#9989;9 &#10060;10 &#10067;3</span></div>
+    <div class="tg-head tg-span">Remote scoring rig (2026-08-20) <span class="tg-tally">&#9989;10 &#10060;13 &#10067;4</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">TWO EMULATORS NOW PAIR — no hack was needed</div>
         <div class="tg-detail">Created a second AVD (SF_Controller, port 5556) from the same system image and booted both on -gpu host. Eric offered a hack to make them see each other; none was required. NSD discovery works ACROSS emulators — the controller found &#x27;📷 ScoreFrame · Wi-Fi · 10.0.2.16:9876&#x27; by itself and connected. Camera reads &#x27;Connected to Controller&#x27;, controller reads &#x27;Connected to Camera Phone&#x27;. adb forward/reverse bridges were set up as a fallback and turned out to be unnecessary. Combined with recording now working, the full controller↔camera matrix is testable here for the first time</div>
@@ -2185,6 +2185,31 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-name">Good behaviour worth keeping: the controller parks its own local game</div>
         <div class="tg-detail">While connected, the controller shows &#x27;🏐 Your local Volleyball game is paused. Disconnect to resume it.&#x27; — it does not silently discard the scorekeeper&#x27;s own in-progress game, and it explains exactly how to get back to it. That is the right instinct; the problem is only that Disconnect is currently unreachable</div>
         
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">RETRACTED: the controller&#x27;s Home screen was NOT frozen</div>
+        <div class="tg-detail">I reported this as the most serious find; it is wrong and the correction matters more than the finding did. A screenshot shows a modal &#x27;ENDING GAME&#x27; dialog open on the controller — &#x27;Camera phone · 10.0.2.16 / Saving game summary / Saved · synced to cloud / Done&#x27;. It was swallowing every tap, which is what a modal is supposed to do. uiautomator dump returned the Home hierarchy BEHIND it, so all three controls I tested looked present, clickable and enabled while being unreachable. A KEYCODE_BACK went through immediately, which is what first showed the app was alive. No app bug here</div>
+        <div class="tg-ev">/tmp/ctrl_home.png</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Eric&#x27;s &#x27;dialogs on both phones&#x27; rule is already implemented</div>
+        <div class="tg-detail">The end-game progress dialog DOES appear on the controller, and it is honest about whose work it is showing: the header reads &#x27;Camera phone · 10.0.2.16&#x27; above &#x27;Saving game summary&#x27;. So the controller watches the camera&#x27;s end-game run rather than pretending to do it, which is exactly the split Eric described — both phones see it, only the controller can trigger it</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">HARNESS TRAP: a dump can miss the very dialog that is blocking input</div>
+        <div class="tg-detail">uiautomator dump returned the background activity while a modal dialog was on screen and taking all touches. Every element in that dump reported clickable=true and enabled=true, so a tap-and-check harness concludes the UI is dead. Other dialogs in this app DO appear in dumps, so it is inconsistent rather than absolute. RULE: when taps stop working, screenshot before diagnosing — and try a key event, which reaches the app even when a dialog owns the touch surface</div>
+        <div class="tg-ev">README lesson</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">VIOLATION FOUND: a game CAN end up saved on the controller</div>
+        <div class="tg-detail">Eric&#x27;s rule is &#x27;never ever&#x27;, and there is a path that breaks it. It is not the remote game&#x27;s own save — that one is correctly blocked (verified 0→0 earlier). It is the LEFTOVER. During a remote session the controller shows &#x27;Your local Volleyball game is paused. Disconnect to resume it.&#x27; After disconnecting, Home offers a &#x27;Resume Volleyball&#x27; card with its own End Game button. Tapping it saved a record: controller game_history went 0 → 1, &#x27;Game saved locally: 0e1d3512…&#x27;. I never started a purely local game on that phone in this session — the only volleyball I started was &#x27;Start a Game on Camera Phone&#x27;, so the remote flow appears to leave a resumable local session behind that later saves as a real game on the scorekeeper&#x27;s phone</div>
+        <div class="tg-ev">files/game_history/game_0e1d3512-….json</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">DATA BUG: that saved game has the WRONG SPORT</div>
+        <div class="tg-detail">The same record proves a second, separate defect. The parked session declared sport=VOLLEYBALL, the Home card said &#x27;Resume Volleyball&#x27; with &#x27;Set 1: 0-0&#x27; (volleyball terminology), and the file written has sport=BASKETBALL — with the SAME id and sessionId, 0e1d3512-8ca0-49c4-8d75-b3eeed2748c7. Basketball is what the controller had mirrored in memory from the camera during the remote session. So ending a parked game stamps whatever sport the app currently holds rather than the sport that game was actually played as. A volleyball match saved as a basketball game takes its stats, its scoreboard and its box score with it</div>
+        <div class="tg-ev">controller game_history record vs active_game_session</div>
       </div><div class="tg-plat">Android</div></div>
   </div>
 
