@@ -573,14 +573,14 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>234 cases</strong> across 51 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>245 cases</strong> across 52 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>149</em></span>
-    <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>42</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>157</em></span>
+    <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>43</em></span>
     <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>4</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>39</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>41</em></span>
   </div>
-  <div class="tgrid"><div class="tg-head tg-span">&#10060; 4 items waiting on you <span class="tg-tally">Card system remains Android-only · iOS Go Live still shows the RTMP fields inline · iOS has three palettes, Android has four</span></div></div>
+  <div class="tgrid"><div class="tg-head tg-span">&#10060; 4 items waiting on you <span class="tg-tally">iOS Go Live still shows the RTMP fields inline · iOS has three palettes, Android has four · game.html ignores Android&#x27;s 4th palette (Redline)</span></div></div>
   <div class="tgrid">
     <div class="tg-head tg-span">Harness <span class="tg-tally">&#9989;5 &#10067;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
@@ -1813,7 +1813,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">Android</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">iOS parity (2026-08-19) <span class="tg-tally">&#9989;2 &#128736;1 &#10060;3</span></div>
+    <div class="tg-head tg-span">iOS parity (2026-08-19) <span class="tg-tally">&#9989;2 &#128736;2 &#10060;2</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">Soccer scoring mode now remembered on iOS too</div>
         <div class="tg-detail">Audited rather than assumed: iOS had the identical hole. soccerScoringMode was a hardcoded &quot;simple&quot; that nothing persisted. Volleyball was the ONE sport that remembered (vb_scoringMode), which is why the bug was only ever reported against soccer on both platforms. Added soccer_scoringMode + soccer_halfLengthMinutes following the volleyball pattern, free forced back to Simple. Builds clean</div>
@@ -1829,7 +1829,7 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">iOS ShareUploadPrompt.target() requires a hub code — no hub means no shareable page, so the nudge would be selling something that doesn&#x27;t exist. Android&#x27;s hasUnsharedVideo has no such check, so a game with local video and no hub still gets a dialog whose copy reads &quot;the game page you can share doesn&#x27;t have it yet&quot;. iOS is right here. NOT changed unilaterally — it alters when Android users see the prompt at all, so it is Eric&#x27;s call</div>
         <div class="tg-ev">ShareUploadPrompt.hasUnsharedVideo</div>
       </div><div class="tg-plat">Android</div></div>
-    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+    <div class="tg-row"><div class="tg-ic">&#128736;</div><div>
         <div class="tg-name">Card system remains Android-only</div>
         <div class="tg-detail">createMatchupCard and the five surfaces built on it (stream thumbnail, uploaded-game thumbnail, game outro, reel intro, endcards) have no iOS equivalent — no matchupCard reference anywhere in 3402 Swift files. iOS sets stream thumbnails via YouTubeLiveManager but with the old art. This is the real outstanding parity debt, and it is a design port, not a mechanical one</div>
         <div class="tg-ev">ScoreboardTextureCache / YouTubeLiveManager</div>
@@ -1903,6 +1903,64 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">iOS shows the same &#x27;⚽ Create a Soccer team?&#x27; interstitial before Game Setup that Android does, with the same Not now escape. Incidental finding, but it is the surface that broke the Android fix earlier today when the dialog re-entered itself</div>
         
       </div><div class="tg-plat">iOS/Android</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">iOS card system (2026-08-19) <span class="tg-tally">&#9989;8 &#10060;1 &#10067;2</span></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">CardRenderer.swift — the shared card language ported to Core Graphics</div>
+        <div class="tg-detail">Android&#x27;s ScoreboardRenderer card section (Card palette, drawCardGround/Lockup/Eyebrow, createMatchupCard, createReelIntro, drawTwoTeamSummary) ported as a mirror of the maths rather than rebuilt to taste — the two platforms&#x27; cards land side by side on one YouTube channel. Every dimension stays a fraction of frame width, so the same code serves a 1280x720 thumbnail and a 1920x1080 video frame. Where the platforms genuinely differ (Android&#x27;s global Side logo state vs iOS&#x27;s TeamLogoImageCache) the Swift API takes the image directly</div>
+        <div class="tg-ev">Compositor/CardRenderer.swift</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">BUG FOUND: renderer was producing 3x the requested pixels</div>
+        <div class="tg-detail">UIGraphicsImageRenderer defaults to the DEVICE scale, so a requested 1920x1080 came back 5760x3240 — over YouTube&#x27;s 2MB thumbnail limit and the wrong dimensions for a video overlay. Caught by checking the PNG dimensions rather than trusting the render. Format scale pinned to 1; outputs now measure exactly 1280x720 and 1920x1080</div>
+        <div class="tg-ev">CardRenderer.renderer(_:)</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">Sport emoji needed different constants from Android</div>
+        <div class="tg-detail">Android uses size 0.34 of frame width at alpha 78. Apple&#x27;s colour emoji are photographic and fill a taller glyph box, so those numbers produced a ball that competed with the team names instead of sitting behind them. Matched by eye to the Android card at 0.29 / alpha 52 — same visual weight, different constants. Alpha has to go on the CONTEXT, not the colour: colour emoji ignore foregroundColor</div>
+        
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Surface 1 of 4 — both stream thumbnails</div>
+        <div class="tg-detail">ScheduledBroadcastThumbnail drew its own layout (sport emoji, accent stripes, corner pill) and served both the scheduled-broadcast countdown splash and the live thumbnail. Now a thin adapter over matchupCard. Old drawing code DELETED rather than left behind a flag — two thumbnail layouts is how they drift. Callers unchanged: the opponent is recovered from the existing displayLine</div>
+        <div class="tg-ev">Views/ScheduledBroadcastThumbnail.swift</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Surface 2 of 4 — end-of-recording outro</div>
+        <div class="tg-detail">EndGameOverlayBuilder.make&#x27;s bespoke 1920x1080 layout replaced by twoTeamSummary. perSportStatText kept untouched — choosing WHICH numbers a sport shows is real per-sport knowledge, separate from how the card is drawn, and it already returns exactly the one pre-formatted line the card&#x27;s line-score row takes. Input gained optional team ids so the lockup carries the winner&#x27;s real crest</div>
+        <div class="tg-ev">Compositor/EndGameOverlayBuilder.swift</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Surface 3 of 4 — reel intro, with the team threaded through</div>
+        <div class="tg-detail">reelIntroImage now defers to CardRenderer.reelIntro. Closed the gap RESUME flagged: ReelRequest carried no team, so the intro had no colour or crest to draw. Added defaulted teamName/teamColorHex/teamId and resolved them at the ContentView call site</div>
+        <div class="tg-ev">Recording/HighlightExtractor.swift</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Surface 4 of 4 — thumbnail on uploaded game videos</div>
+        <div class="tg-detail">New on iOS. Gated on uKind == &quot;full&quot;, the distinction the upload loop already drew for player attribution, so reels keep their own player card. No score on the card. Best-effort: the video is already on YouTube by then, so a thumbnail failure never fails the upload. Mirrors VideoJobService.applyGameThumbnail</div>
+        <div class="tg-ev">Views/GamePageView.swift</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">All 8 card variants rendered and eyeballed</div>
+        <div class="tg-detail">New CardRenderTests renders every variant to /tmp/sfcards the way androidTest/ScoreboardRenderAndroid does. Checked: live thumbnail, upload thumbnail, long-name matchup, 1080 intro, reel intro, reel with unsplittable stat text, outro home win with a 4-set line score, outro away win with a long name and no stats. The long-name case confirms VS stays pinned to centre with each name shrinking only as far as its own half needs</div>
+        <div class="tg-ev">/tmp/sfcards</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">Android reel intro got the same team plumbing — FLAGGED to Eric</div>
+        <div class="tg-detail">Scope call I made and should have raised first: Android&#x27;s createReelIntro has taken teamColor/teamName since the card rewrite, but VideoPipeline.buildReels never received them, so Android reels have been rendering generic blue with no crest. RESUME already listed it as not done. Two files, defaulted params, no behaviour change beyond the card getting its colour. Shipped to App Distribution as 1.1.1289 — production is still 1288, so it is trivially revertable if Eric wants Android frozen</div>
+        <div class="tg-ev">VideoPipeline / VideoJobService</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">FINDING: ScoreboardGrowthTests.swift has never run</div>
+        <div class="tg-detail">The iOS scoreboard grow-to-fit test file exists on disk but was never added to the Xcode project — no PBXBuildFile, no PBXFileReference, not in the test target&#x27;s Sources. It has never executed once. Found while adding CardRenderTests, which needed the same four pbxproj entries</div>
+        <div class="tg-ev">ScoreFrameTests/ScoreboardGrowthTests.swift</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Shipped: iOS 676 to the SE, Android 1.1.1289 to App Distribution</div>
+        <div class="tg-detail">iOS build 676 installed to Eric&#x27;s iPhone SE by devicectl (Release, per the debug-dylib rule). Android 1289 to Firebase App Distribution. Neither touches a production track: App Store is 1.2.237 in review, Play is 1288</div>
+        
+      </div><div class="tg-plat">Both</div></div>
   </div>
 
   <h2>Test automation — where it actually stands</h2>
