@@ -573,12 +573,12 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>245 cases</strong> across 52 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>248 cases</strong> across 52 areas.</p>
   <div class="tkey">
     <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>157</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>43</em></span>
     <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>4</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>41</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>44</em></span>
   </div>
   <div class="tgrid"><div class="tg-head tg-span">&#10060; 4 items waiting on you <span class="tg-tally">iOS Go Live still shows the RTMP fields inline · iOS has three palettes, Android has four · game.html ignores Android&#x27;s 4th palette (Redline)</span></div></div>
   <div class="tgrid">
@@ -1905,7 +1905,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">iOS/Android</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">iOS card system (2026-08-19) <span class="tg-tally">&#9989;8 &#10060;1 &#10067;2</span></div>
+    <div class="tg-head tg-span">iOS card system (2026-08-19) <span class="tg-tally">&#9989;8 &#10060;1 &#10067;5</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">CardRenderer.swift — the shared card language ported to Core Graphics</div>
         <div class="tg-detail">Android&#x27;s ScoreboardRenderer card section (Card palette, drawCardGround/Lockup/Eyebrow, createMatchupCard, createReelIntro, drawTwoTeamSummary) ported as a mirror of the maths rather than rebuilt to taste — the two platforms&#x27; cards land side by side on one YouTube channel. Every dimension stays a fraction of frame width, so the same code serves a 1280x720 thumbnail and a 1920x1080 video frame. Where the platforms genuinely differ (Android&#x27;s global Side logo state vs iOS&#x27;s TeamLogoImageCache) the Swift API takes the image directly</div>
@@ -1961,6 +1961,21 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">iOS build 676 installed to Eric&#x27;s iPhone SE by devicectl (Release, per the debug-dylib rule). Android 1289 to Firebase App Distribution. Neither touches a production track: App Store is 1.2.237 in review, Play is 1288</div>
         
       </div><div class="tg-plat">Both</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">The 3x-scale defect IS in the submitted build — but it is harmless</div>
+        <div class="tg-detail">Eric asked whether the render-scale bug is in 1.2.237 (build 675), now in App Store review. Yes: the UIGraphicsImageRenderer-without-format pattern is pre-existing code, not something the port introduced, and 675 was archived before CardRenderer existed. Impact measured rather than guessed: the 3840x2160 JPEG it produced is 372KB against YouTube&#x27;s 2,097,152-byte limit — 5x more bytes than needed, comfortably accepted. The reel intro was never affected either: encodeImageToVideo draws the CGImage into a fixed 1920x1080 pixel buffer, so an oversized image just downscales. The outro never used that API at all (raw CGContext at explicit dimensions). Verdict: wasteful, not broken — no reason to pull the build from review</div>
+        <div class="tg-ev">measured via CardRenderTests</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">DECISION: 1.2.237 ships as submitted; cards ride the next release</div>
+        <div class="tg-detail">Eric&#x27;s call, and the right one. The build in review carries the data-loss fixes users are hitting now (volleyball per-player stats, baseball scorebook, tennis/pickleball scores, bowling frames); the 3x-scale defect in it is wasteful rather than broken (372KB against a 2MB cap). Swapping the build would restart review AND put those fixes behind code that has never run. Build 676 with all four card surfaces is installed on his SE for device verification first</div>
+        
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">WHAT STILL NEEDS TESTING ON A REAL DEVICE</div>
+        <div class="tg-detail">Every card so far has been produced by a test harness calling the renderer directly — not once by the running app. In priority order: (1) END A GAME WHILE RECORDING and confirm the outro burns into the video, which is the only path I cannot exercise at all since the simulator can&#x27;t record; (2) start a YouTube stream and check the thumbnail on the watch page; (3) build a highlight reel and confirm the intro carries the team colour and crest; (4) upload a full game video and check its thumbnail. 1 is the one that matters — the other three fail visibly and harmlessly, while a broken outro corrupts the end of a recording</div>
+        <div class="tg-ev">build 676 on the SE</div>
+      </div><div class="tg-plat">iOS</div></div>
   </div>
 
   <h2>Test automation — where it actually stands</h2>
