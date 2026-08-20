@@ -573,14 +573,14 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>224 cases</strong> across 49 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>233 cases</strong> across 51 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>143</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>148</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>42</em></span>
-    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>1</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>38</em></span>
+    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>4</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>39</em></span>
   </div>
-  <div class="tgrid"><div class="tg-head tg-span">&#10060; 1 item waiting on you <span class="tg-tally">Card system remains Android-only</span></div></div>
+  <div class="tgrid"><div class="tg-head tg-span">&#10060; 4 items waiting on you <span class="tg-tally">Card system remains Android-only · iOS Go Live still shows the RTMP fields inline · iOS has three palettes, Android has four</span></div></div>
   <div class="tgrid">
     <div class="tg-head tg-span">Harness <span class="tg-tally">&#9989;5 &#10067;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
@@ -1813,7 +1813,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">Android</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">iOS parity (2026-08-19) <span class="tg-tally">&#9989;2 &#128736;1 &#10060;1</span></div>
+    <div class="tg-head tg-span">iOS parity (2026-08-19) <span class="tg-tally">&#9989;2 &#128736;1 &#10060;3</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">Soccer scoring mode now remembered on iOS too</div>
         <div class="tg-detail">Audited rather than assumed: iOS had the identical hole. soccerScoringMode was a hardcoded &quot;simple&quot; that nothing persisted. Volleyball was the ONE sport that remembered (vb_scoringMode), which is why the bug was only ever reported against soccer on both platforms. Added soccer_scoringMode + soccer_halfLengthMinutes following the volleyball pattern, free forced back to Simple. Builds clean</div>
@@ -1834,6 +1834,16 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">createMatchupCard and the five surfaces built on it (stream thumbnail, uploaded-game thumbnail, game outro, reel intro, endcards) have no iOS equivalent — no matchupCard reference anywhere in 3402 Swift files. iOS sets stream thumbnails via YouTubeLiveManager but with the old art. This is the real outstanding parity debt, and it is a design port, not a mechanical one</div>
         <div class="tg-ev">ScoreboardTextureCache / YouTubeLiveManager</div>
       </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">iOS Go Live still shows the RTMP fields inline</div>
+        <div class="tg-detail">Android now goes straight to YouTube with every other service behind an Advanced option. The iOS GoLiveSheet still presents &quot;OR enter a custom RTMP destination&quot; in the main body next to the YouTube one-tap, so the seamless path Eric asked for exists on Android only. Not the 5-way chooser Android had — iOS never had that — but not the new flow either</div>
+        <div class="tg-ev">ContentView.swift GoLiveSheet ~3355</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">iOS has three palettes, Android has four</div>
+        <div class="tg-detail">Android&#x27;s Redline (crimson) has no iOS equivalent — AppPalette is ember/trailhead/floodlight only. Compounding it, game.html whitelists only trailhead and floodlight, so Redline falls back to brand orange on the web page too. Redline is effectively Android-chrome-only today</div>
+        <div class="tg-ev">ThemeStore.swift:22 / game.html:727</div>
+      </div><div class="tg-plat">iOS/Web</div></div>
   </div>
   <div class="tgrid">
     <div class="tg-head tg-span">Production release (2026-08-19) <span class="tg-tally">&#9989;2</span></div>
@@ -1847,6 +1857,47 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">Shipped in 1288 ahead of the production push. The dialog&#x27;s whole pitch is &quot;the game page you can share doesn&#x27;t have your video&quot; — with no hub there is no such page, so it promised something that didn&#x27;t exist. Pre-existing, but 1287 made it common by moving the prompt from two screens to every screen. Hub resolution copied verbatim from GamePageActivity.intentForGame rather than rewritten, so the two can&#x27;t drift. iOS already had this check</div>
         <div class="tg-ev">ShareUploadPrompt.hasUnsharedVideo</div>
       </div><div class="tg-plat">Android</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Theme parity (2026-08-19) <span class="tg-tally">&#9989;1 &#10060;1 &#10067;1</span></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">game.html ignores Android&#x27;s 4th palette (Redline)</div>
+        <div class="tg-detail">The page whitelists only &#x27;trailhead&#x27; and &#x27;floodlight&#x27; — `if (p === &#x27;trailhead&#x27; || p === &#x27;floodlight&#x27;)`. Android has a fourth theme, Redline, whose id passes through and matches nothing, so a Redline user&#x27;s game page falls back to brand orange. Verified by rendering game.html with each value and reading the computed --accent: trailhead #8E9A45, floodlight #4E9CE8, redline #E47A1F (= no palette). iOS only has three palettes, so it cannot hit this</div>
+        <div class="tg-ev">tools/e2e/web/palettecheck.js</div>
+      </div><div class="tg-plat">Web</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Palette plumbing itself is correct on both platforms</div>
+        <div class="tg-detail">Ruled out as the cause of Eric&#x27;s green-app/blue-page report. Android GamePageActivity and iOS GamePageView both append &amp;palette=&lt;id&gt; for every non-Ember theme, on BOTH the hub and local-game branches, and both use the same ids as the page. The page applies them correctly pre-paint on &lt;html&gt; and &lt;body&gt;</div>
+        <div class="tg-ev">GamePageActivity 368 / GamePageView 302,322</div>
+      </div><div class="tg-plat">Android/iOS</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">Green-app/blue-page report: not a defect, per-device setting</div>
+        <div class="tg-detail">Eric withdrew it. Traced anyway and the plumbing is sound end to end: the only blue hex values in game.html are the two floodlight palette definitions, so the page can ONLY render blue when the app sends palette=floodlight. The palette lives in per-device storage (UserDefaults / SharedPreferences), so the newly installed SE was still on Floodlight while his main phone is on Trailhead. One real bug did fall out of the trace — see the Redline row</div>
+        <div class="tg-ev">ThemeStore.swift / game.html</div>
+      </div><div class="tg-plat">iOS</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">iOS device pass (2026-08-19) <span class="tg-tally">&#9989;4</span></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">idb now drives the iOS app end to end</div>
+        <div class="tg-detail">First real iOS UI automation in this project — previously recorded as NOT achievable. Simulator only: idb cannot see physical devices (Eric&#x27;s SE is invisible to it, visible to devicectl). Trap worth keeping: describe-all frames are in POINTS and include scrolled-out content, so tapping an element below the fold silently does nothing — the &#x27;Debug: Tier Override&#x27; row at y=1258 on a 956pt screen. State is far easier to seed with `simctl spawn &lt;sim&gt; defaults write` than by tapping</div>
+        <div class="tg-ev">tools/e2e (ios driver in /tmp/ios.py)</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Soccer Advanced is remembered — VERIFIED RUNNING on iOS</div>
+        <div class="tg-detail">Not just compiled. Seeded soccer_scoringMode=advanced + debug_tier_override=pro, launched, Record → Soccer → Not now: the segmented control comes up on ADVANCED with the Half length 45 min stepper visible, and the Event Name lock is gone. Screenshot confirms</div>
+        <div class="tg-ev">/tmp/sim3.png</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Free tier still forced to Simple on iOS</div>
+        <div class="tg-detail">Same seeded advanced pref, tier flipped to free: no Half length row (so Simple is selected) and Event Name shows its padlock. Matches the Android behaviour verified earlier today</div>
+        
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Create-a-team offer fires identically on both platforms</div>
+        <div class="tg-detail">iOS shows the same &#x27;⚽ Create a Soccer team?&#x27; interstitial before Game Setup that Android does, with the same Not now escape. Incidental finding, but it is the surface that broke the Android fix earlier today when the dialog re-entered itself</div>
+        
+      </div><div class="tg-plat">iOS/Android</div></div>
   </div>
 
   <h2>Test automation — where it actually stands</h2>
