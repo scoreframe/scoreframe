@@ -573,12 +573,12 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>259 cases</strong> across 54 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>261 cases</strong> across 55 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>163</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>164</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>43</em></span>
     <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>5</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>48</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>49</em></span>
   </div>
   <div class="tgrid"><div class="tg-head tg-span">&#10060; 5 items waiting on you <span class="tg-tally">iOS Go Live still shows the RTMP fields inline · iOS has three palettes, Android has four · game.html ignores Android&#x27;s 4th palette (Redline)</span></div></div>
   <div class="tgrid">
@@ -2036,6 +2036,19 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-name">Schedule no longer carries the Your Stats footer</div>
         <div class="tg-detail">Eric: &quot;the your stats section in the schedule at the bottom probably doesn&#x27;t need to be there.&quot; Removed from the Schedule tab only — the code comment there admitted it existed to match All Games, which keeps it. Schedule answers what&#x27;s next; a lifetime total is a different question. Android-only surface: iOS&#x27;s ScheduleScreen has no equivalent, so removing it closes a parity gap rather than opening one</div>
         <div class="tg-ev">GameHistoryActivity ~1131</div>
+      </div><div class="tg-plat">Android</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Baseball H investigation (2026-08-20) <span class="tg-tally">&#9989;1 &#10067;1</span></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">The real bug behind the H question: substitutes inherit the starter&#x27;s at-bats</div>
+        <div class="tg-detail">Chased Eric&#x27;s question to ground instead of leaving it as a hypothetical. substituteBatter replaces the lineup entry IN PLACE and moves the starter to benchHistory, so both players share one batting slot and every at-bat in it carries the same batterIndex. The exported scorebook grouped by slot against the CURRENT lineup, so the starter&#x27;s at-bats printed under the substitute&#x27;s name and the starter vanished from the box score. Team R/H/E was always correct — only attribution was wrong, which is precisely what makes it look like a totals bug. Fixed: at-bats are claimed by name+number first, slot only as fallback, and a subbed-out starter keeps their own line</div>
+        <div class="tg-ev">BaseballScorebookExporter ~330</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">CLOSED: the hypothetical divergence I flagged cannot happen</div>
+        <div class="tg-detail">Last night I flagged that an at-bat with a batterIndex outside the displayed lineup would count toward team H but show on no line, and asked Eric to confirm whether substitutes could cause it. Answered by reading the code rather than asking again: substitutes reuse the starter&#x27;s battingPosition and the lineup never grows past nine, so the index is always in range and the totals always reconcile. That question is closed — but chasing it is what surfaced the attribution bug above</div>
+        <div class="tg-ev">BaseballFullGame.substituteBatter</div>
       </div><div class="tg-plat">Android</div></div>
   </div>
 
