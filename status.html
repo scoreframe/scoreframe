@@ -573,14 +573,14 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>248 cases</strong> across 52 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>258 cases</strong> across 53 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>157</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>162</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>43</em></span>
-    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>4</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>44</em></span>
+    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>5</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>48</em></span>
   </div>
-  <div class="tgrid"><div class="tg-head tg-span">&#10060; 4 items waiting on you <span class="tg-tally">iOS Go Live still shows the RTMP fields inline · iOS has three palettes, Android has four · game.html ignores Android&#x27;s 4th palette (Redline)</span></div></div>
+  <div class="tgrid"><div class="tg-head tg-span">&#10060; 5 items waiting on you <span class="tg-tally">iOS Go Live still shows the RTMP fields inline · iOS has three palettes, Android has four · game.html ignores Android&#x27;s 4th palette (Redline)</span></div></div>
   <div class="tgrid">
     <div class="tg-head tg-span">Harness <span class="tg-tally">&#9989;5 &#10067;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
@@ -1976,6 +1976,59 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">Every card so far has been produced by a test harness calling the renderer directly — not once by the running app. In priority order: (1) END A GAME WHILE RECORDING and confirm the outro burns into the video, which is the only path I cannot exercise at all since the simulator can&#x27;t record; (2) start a YouTube stream and check the thumbnail on the watch page; (3) build a highlight reel and confirm the intro carries the team colour and crest; (4) upload a full game video and check its thumbnail. 1 is the one that matters — the other three fail visibly and harmlessly, while a broken outro corrupts the end of a recording</div>
         <div class="tg-ev">build 676 on the SE</div>
       </div><div class="tg-plat">iOS</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Overnight gap-closing (2026-08-19) <span class="tg-tally">&#9989;5 &#10060;1 &#10067;4</span></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">ScoreboardGrowthTests wired up — and it had never compiled</div>
+        <div class="tg-detail">Added the orphaned file to the Xcode test target and it failed to build: ScoreboardTextureCache gained a `device` argument some time after the test was written, and with the file outside the project nothing ever caught it. Fixed and run: all four cases pass — soccer/football/baseball boards grow for long names, short names still produce the original widths, and the already-adaptive boards are unchanged. The iOS half of ticket SF-G5DLHS is now genuinely verified rather than asserted</div>
+        <div class="tg-ev">ScoreFrameTests/ScoreboardGrowthTests.swift</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Redline palette added to iOS — palettes now 4 on both platforms</div>
+        <div class="tg-detail">Values lifted from Android&#x27;s rd_light_* colours and their values-night overrides rather than re-picked, so the two platforms are the same theme instead of two different reds. Recording and LIVE keep the brighter scarlet against the brand crimson, matching Android&#x27;s reasoning: red already means recording, so an indicator that matches the surrounding UI stops reading as one</div>
+        <div class="tg-ev">Models/ThemeStore.swift</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">game.html v44 — Redline supported on the web</div>
+        <div class="tg-detail">The page whitelisted only trailhead and floodlight, so an Android user on Redline got brand orange on their game page. Added the palette CSS (dark #E5484D / light #B3261E) and the whitelist entry. Verified by rendering each value and reading the computed accent: redline now resolves to #E5484D instead of falling through to orange. Deployed to Pages</div>
+        <div class="tg-ev">tools/e2e/web/palettecheck.js</div>
+      </div><div class="tg-plat">Web</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">iOS Go Live simplified — RTMP behind Advanced</div>
+        <div class="tg-detail">The last big parity gap. The sheet showed &#x27;OR enter a custom RTMP destination&#x27; with the URL and key fields inline next to the YouTube one-tap; Android had already been simplified to go straight to YouTube. Now a quiet &#x27;Advanced — stream somewhere else&#x27; disclosure, closed by default, that re-opens itself for anyone who has actually streamed over RTMP before (go_live_used_rtmp) so a Twitch user isn&#x27;t demoted two taps. Not behind Pro — Eric&#x27;s explicit call. VERIFIED ON THE SIMULATOR: sheet shows YouTube one-tap, title, quality and the collapsed Advanced row with no RTMP fields; tapping it reveals the explanation, both fields and Start Streaming</div>
+        <div class="tg-ev">Views/ContentView.swift GoLiveSheet</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">Harness lesson: idb taps need the row ON screen</div>
+        <div class="tg-detail">The Advanced row sat at y=987 on a 956pt screen — 30pt below the fold — so the tap dismissed the sheet instead. Probing the frame first, then swiping ~180pt, made it tappable. Same trap as the Debug Tier Override row earlier; worth checking the frame against screen height before believing a tap failed</div>
+        <div class="tg-ev">README lesson 27</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Baseball per-player H vs team hits — RECONCILES</div>
+        <div class="tg-detail">Eric asked for a clean re-test after a messy input sequence left it ambiguous. Done as a unit test rather than one careful UI run, because a UI run proves one sequence while this proves the invariant. Both totals come from different code over the same source: recordAtBat bumps HalfInningRecord.hits on resultIsHit and the box score sums those half-innings, while getBatterGameStats re-counts at-bats with the same predicate. Verified they agree over a controlled sequence, that home hits don&#x27;t leak into away, and that walks, HBP, sacrifices, errors, fielder&#x27;s choice, double plays, catcher&#x27;s interference and infield flies all count as non-hits</div>
+        <div class="tg-ev">app/src/test/.../BaseballHitsReconcileTest.kt</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">The ONE way those two numbers can legitimately disagree</div>
+        <div class="tg-detail">An at-bat whose batterIndex falls outside the displayed lineup counts toward the team total but appears on no batting line — so the box score would show more team H than the lines add up to. Pinned in a test rather than asserted away. Whether this is reachable depends on what index a substitute gets and whether the box score renders lines beyond the starting nine — worth Eric confirming, since it is the shape of the discrepancy he originally thought he saw</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">My own test arithmetic was wrong first time</div>
+        <div class="tg-detail">The first run failed on my expected value (I said 5 hits for a sequence containing 4), not on the app. Worth recording because it is the failure mode of writing an expectation and a subject together: the test was right to fail and the product was never wrong</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">Emulator recording: real progress, still blocked — but now on ONE line</div>
+        <div class="tg-detail">The AVD was running ANGLE-over-SwiftShader (software Vulkan). Relaunched with `-gpu host` and it now reports &#x27;Google (Apple), Apple M4, 4.1 Metal&#x27;. The camera stack initialises where it previously did nothing — cameraserver and GCH_CameraDeviceSession come up. The failure moved to a single specific call: eglCreateWindowSurface fails in CameraEngine&#x27;s render thread. NOTE eglChooseConfig SUCCEEDS first, so a config is returned and then rejected for a window surface. Prime suspect: EGLManager.chooseEglConfig asks for EGL_SURFACE_TYPE = WINDOW_BIT|PBUFFER_BIT in a single config — fine on real hardware, scarce on ANGLE. NOT changed: the EGL config governs recording on every real phone, and loosening it to please an emulator is not a change to make unattended</div>
+        <div class="tg-ev">EGLManager.kt:48-66</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">Emulator relaunch recipe, for next time</div>
+        <div class="tg-detail">`adb emu kill`, remove the stale ~/.android/avd/&lt;AVD&gt;.avd/multiinstance.lock (the kill leaves it behind and the next launch dies with &#x27;Running multiple emulators with the same AVD&#x27;), then `emulator -avd SF_Samsung_S26_Ultra -gpu host -no-snapshot-load -no-boot-anim`. Confirm with `adb shell dumpsys SurfaceFlinger | grep GLES:` — you want &#x27;Apple M4 / Metal&#x27;, not SwiftShader. Landscape is required before the app will record: `settings put system accelerometer_rotation 0` then `user_rotation 1`</div>
+        
+      </div><div class="tg-plat">Android</div></div>
   </div>
 
   <h2>Test automation — where it actually stands</h2>
