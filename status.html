@@ -573,12 +573,12 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>292 cases</strong> across 57 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>295 cases</strong> across 57 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>176</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>178</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>48</em></span>
     <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>13</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>55</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>56</em></span>
   </div>
   <div class="tgrid"><div class="tg-head tg-span">&#10060; 13 items waiting on you <span class="tg-tally">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working · Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for · BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</span></div></div>
   <div class="tgrid">
@@ -2075,7 +2075,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">Android</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Remote scoring rig (2026-08-20) <span class="tg-tally">&#9989;10 &#10060;13 &#10067;4</span></div>
+    <div class="tg-head tg-span">Remote scoring rig (2026-08-20) <span class="tg-tally">&#9989;12 &#10060;13 &#10067;5</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">TWO EMULATORS NOW PAIR — no hack was needed</div>
         <div class="tg-detail">Created a second AVD (SF_Controller, port 5556) from the same system image and booted both on -gpu host. Eric offered a hack to make them see each other; none was required. NSD discovery works ACROSS emulators — the controller found &#x27;📷 ScoreFrame · Wi-Fi · 10.0.2.16:9876&#x27; by itself and connected. Camera reads &#x27;Connected to Controller&#x27;, controller reads &#x27;Connected to Camera Phone&#x27;. adb forward/reverse bridges were set up as a fallback and turned out to be unnecessary. Combined with recording now working, the full controller↔camera matrix is testable here for the first time</div>
@@ -2210,6 +2210,21 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-name">DATA BUG: that saved game has the WRONG SPORT</div>
         <div class="tg-detail">The same record proves a second, separate defect. The parked session declared sport=VOLLEYBALL, the Home card said &#x27;Resume Volleyball&#x27; with &#x27;Set 1: 0-0&#x27; (volleyball terminology), and the file written has sport=BASKETBALL — with the SAME id and sessionId, 0e1d3512-8ca0-49c4-8d75-b3eeed2748c7. Basketball is what the controller had mirrored in memory from the camera during the remote session. So ending a parked game stamps whatever sport the app currently holds rather than the sport that game was actually played as. A volleyball match saved as a basketball game takes its stats, its scoreboard and its box score with it</div>
         <div class="tg-ev">controller game_history record vs active_game_session</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">FIXED: a parked game is saved as the sport it was played as</div>
+        <div class="tg-detail">Root cause read from the code rather than guessed: buildGameSummary trusted the live `scoreboardMode` and only consulted the session when the live mode had degraded to GENERIC. scoreboardMode drifts — a controller mirrors the camera&#x27;s sport — so the parked volleyball game saved as BASKETBALL. Inverted: the SESSION&#x27;s sport now wins, falling back to the live mode only when there is no session or the session is GENERIC. Safe because a sport change calls createSession(sport = newMode) rather than mutating the current session, so a session&#x27;s sport is by construction what its game was played as. A disagreement is now logged rather than silently resolved. Five unit tests pin the rule, including the exact rig case</div>
+        <div class="tg-ev">MainActivity.buildGameSummary / SessionSportWinsTest</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">FIXED: the controller no longer inherits a ghost game</div>
+        <div class="tg-detail">Traced with the project&#x27;s own RemoteRoleGuard, which has been logging this since July and named the symptom exactly: &#x27;this is how a ghost resume game card appears&#x27;. Its stack trace pointed at the culprit — the controller&#x27;s Game Setup completion callback (MainActivity:1318) calling saveStateToPreferences(). The guard only REPORTED the write; the write still landed, and ScoreFrameState outlives the connection. Once disconnected isNonOwningController goes false, no session is found, and recoverStrandedSession() faithfully rebuilds one from the leftover — the ghost card, and the route to saving a game on the wrong phone. Fix: added shouldBlockLocalGameWrite so the write is BLOCKED rather than narrated. VERIFIED on the rig: ran the exact planting sequence, guard logged BLOCKED, and afterwards active_game_session=0, no resume card, history 0 — where before there was a session, a &#x27;Resume Volleyball&#x27; card and a saved record</div>
+        <div class="tg-ev">RemoteRoleGuard.shouldBlockLocalGameWrite / MainActivity.saveStateToPreferences</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">The guard was right for a month and nobody could act on it</div>
+        <div class="tg-detail">Worth drawing out: RemoteRoleGuard was added 2026-07-30 precisely because these bugs &#x27;all FAILED SILENTLY&#x27;, and it correctly identified this one every time it happened. But it was deliberately non-fatal and purely informational, so the bad write proceeded anyway and the only detector remained Eric in a gym. A guard that can name a violation that precisely can usually PREVENT it — worth revisiting the other checkLocalGameWrite call sites on the same principle</div>
+        
       </div><div class="tg-plat">Android</div></div>
   </div>
 
