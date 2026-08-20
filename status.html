@@ -573,9 +573,9 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>233 cases</strong> across 51 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>234 cases</strong> across 51 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>148</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>149</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>42</em></span>
     <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>4</em></span>
     <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>39</em></span>
@@ -1846,7 +1846,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">iOS/Web</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Production release (2026-08-19) <span class="tg-tally">&#9989;2</span></div>
+    <div class="tg-head tg-span">Production release (2026-08-19) <span class="tg-tally">&#9989;3</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">Android 1.1.1288 live on Play production at 100%</div>
         <div class="tg-detail">Production was on 1200; this is 88 builds of accumulated change going out at once. Eric chose 100% over a staged rollout. Verified after commit: production status=completed versions=[&#x27;1288&#x27;] rollout=100%. Same build also pushed to App Distribution</div>
@@ -1857,6 +1857,11 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">Shipped in 1288 ahead of the production push. The dialog&#x27;s whole pitch is &quot;the game page you can share doesn&#x27;t have your video&quot; — with no hub there is no such page, so it promised something that didn&#x27;t exist. Pre-existing, but 1287 made it common by moving the prompt from two screens to every screen. Hub resolution copied verbatim from GamePageActivity.intentForGame rather than rewritten, so the two can&#x27;t drift. iOS already had this check</div>
         <div class="tg-ev">ShareUploadPrompt.hasUnsharedVideo</div>
       </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">iOS 1.2.237 (build 675) submitted to App Store review</div>
+        <div class="tg-detail">Confirmed from the API: version 1.2.237 state=WAITING_FOR_REVIEW with build 675 attached. Apple took ~20 minutes (31 polls) to finish processing before the build was visible. App Store production was on 1.2.185, so this is a 52-version jump. releaseType=AFTER_APPROVAL — it goes live on its own once Apple approves, no further action needed. Shipped WITHOUT the card system by Eric&#x27;s decision, to avoid delaying the verified data-loss fixes</div>
+        <div class="tg-ev">asc_submit_1237.py</div>
+      </div><div class="tg-plat">iOS</div></div>
   </div>
   <div class="tgrid">
     <div class="tg-head tg-span">Theme parity (2026-08-19) <span class="tg-tally">&#9989;1 &#10060;1 &#10067;1</span></div>
