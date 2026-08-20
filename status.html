@@ -573,14 +573,14 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>265 cases</strong> across 56 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>287 cases</strong> across 57 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>166</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>175</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>48</em></span>
-    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>0</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>51</em></span>
+    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>10</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>54</em></span>
   </div>
-  <div class="tgrid"><div class="tg-head tg-span">&#9989; Nothing is waiting on you right now <span class="tg-tally">every open item is closed</span></div></div>
+  <div class="tgrid"><div class="tg-head tg-span">&#10060; 10 items waiting on you <span class="tg-tally">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working · Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for · BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</span></div></div>
   <div class="tgrid">
     <div class="tg-head tg-span">Harness <span class="tg-tally">&#9989;5 &#10067;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
@@ -2071,6 +2071,119 @@ onAuthStateChanged(auth, async (user) => {
     <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
         <div class="tg-name">NEEDS ERIC: one real recording on 1.1.1292</div>
         <div class="tg-detail">The EGL change is reasoned and safe — same pixel format, same GL version, fewer requirements — and it is a no-op on hardware where both config types exist. But it IS the recording path on every phone, so it deserves one real capture before it goes anywhere near production</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Remote scoring rig (2026-08-20) <span class="tg-tally">&#9989;9 &#10060;10 &#10067;3</span></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">TWO EMULATORS NOW PAIR — no hack was needed</div>
+        <div class="tg-detail">Created a second AVD (SF_Controller, port 5556) from the same system image and booted both on -gpu host. Eric offered a hack to make them see each other; none was required. NSD discovery works ACROSS emulators — the controller found &#x27;📷 ScoreFrame · Wi-Fi · 10.0.2.16:9876&#x27; by itself and connected. Camera reads &#x27;Connected to Controller&#x27;, controller reads &#x27;Connected to Camera Phone&#x27;. adb forward/reverse bridges were set up as a fallback and turned out to be unnecessary. Combined with recording now working, the full controller↔camera matrix is testable here for the first time</div>
+        <div class="tg-ev">emulator-5554 (camera) / emulator-5556 (controller)</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working</div>
+        <div class="tg-detail">On entering remote camera mode the phone shows a modal: &#x27;Camera unavailable — this device wouldn&#x27;t start the video preview, so recording is off for now… (eglCreateWindowSurface failed)&#x27;. But the live preview is rendering BEHIND that dialog, the volleyball scoreboard is composited over it, REC is enabled, and dumpsys media.camera confirms an active client with cameraEngine=true. So the app is telling the user recording is off while it is plainly on. Either a stale error state survives a successful re-open, or a SECOND surface (the remote preview channel) fails and is reported as if the whole camera died. Exactly the class of thing Eric asked me to hunt: technically open to failure, and alarming to a user mid-game</div>
+        <div class="tg-ev">/tmp/cam5554.png</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for</div>
+        <div class="tg-detail">Picking a sport on the CONTROLLER pops &#x27;Viewing full screen — to exit, swipe down from the top / Got it&#x27;. The controller has no video; the hint belongs to the camera&#x27;s preview. A modal that has to be dismissed before scoring, on the device whose entire job is scoring, is friction in the exact place it costs most</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Full game setup IS controllable from the controller</div>
+        <div class="tg-detail">Eric&#x27;s requirement checked: the controller&#x27;s Game Setup carries home/away team pickers, both team names, both custom colours, Scoring Mode and Match Format, with a note that teams are managed on the camera. Sport choice happens on the controller too. Nothing had to be done on the camera to set the game up</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</div>
+        <div class="tg-detail">Camera = Pro (cached_tier_pro=true). Controller = free (no billing prefs). The controller&#x27;s Game Setup shows &#x27;Advanced 🔒&#x27; and tapping it throws the FULL PAYWALL — 14-day trial, $5.99/mo, $49.99/yr. So a volunteer scorekeeper holding the controller is asked to buy Pro in order to score the game that the Pro user is paying for and recording. Eric&#x27;s rule is the opposite: the controller should be free and the session should follow the RECORDER&#x27;s tier. The recorder&#x27;s tier is never consulted on the controller side</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Scoring propagates controller → camera (volleyball)</div>
+        <div class="tg-detail">Tapped the HOME score three times on the controller; the camera&#x27;s scoreboard reads HOME 3 / AWAY 0, matching. Sport selection propagated too — the camera&#x27;s persisted state flipped to VOLLEYBALL when the controller chose it. The camera also retains its own full scoring panel, so both ends can score</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">End Game lives ONLY on the controller — Eric&#x27;s rule holds</div>
+        <div class="tg-detail">Checked both screens while connected: the controller carries Game Setup / Reset / End Game; the camera has ZERO occurrences of End Game. Still to test: that the camera REGAINS it when the controller disconnects, which is the other half of the rule</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">A free controller shows ADS inside a Pro user&#x27;s session</div>
+        <div class="tg-detail">Same root cause as the paywall: the controller renders an ad banner under the scoring panel because IT is free, regardless of the recorder being Pro. A Pro subscriber&#x27;s game is therefore scored on an ad-supported screen by their volunteer. Under Eric&#x27;s rule the session should inherit the recorder&#x27;s tier, which would remove both the paywall and the ads</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">HARNESS CORRECTION: the camera modal IS dismissible</div>
+        <div class="tg-detail">I reported it as blocking. It is not — my tap matcher was substring-matching &#x27;Keep scoring&#x27; against the message body (&#x27;you can keep scoring, and everything saves as normal&#x27;), which is not clickable, instead of the button. Tapping the button&#x27;s exact bounds dismisses it. The BUG remains real — it claims recording is off while the camera works, and re-fires on every new game — but it does not trap the user</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">FIXED: controller now inherits the RECORDER&#x27;s tier</div>
+        <div class="tg-detail">The recorder&#x27;s tier rides every STATE_UPDATE as `recorderIsPro`; the controller adopts it into a new FeatureGate.sessionProOverride which ranks below the debug tier switcher but above the controller&#x27;s own billing. Chosen over a handshake field so a controller joining late or reconnecting is correct within one broadcast. Released in BOTH teardown paths — explicit disconnect and dropped connection — so a controller never keeps someone else&#x27;s subscription. VERIFIED on the rig: free controller + Pro camera now shows &#x27;Advanced&#x27; with NO padlock (was &#x27;Advanced 🔒&#x27; → full paywall) and zero ad nodes (was an ad banner under the scoring panel)</div>
+        <div class="tg-ev">FeatureGate / RemoteScoringServer / RemoteScoringClient / ConnectionManager</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Tier rule holds in BOTH directions</div>
+        <div class="tg-detail">Inverted the rig — camera FREE, controller PRO — and re-paired. The controller&#x27;s Advanced went back to &#x27;Advanced 🔒&#x27;. So a Pro phone held by the scorekeeper cannot lift a free user&#x27;s recording into Pro, which is the abuse Eric&#x27;s &#x27;recorder&#x27;s tier always wins&#x27; answer was guarding against. Combined with the earlier check (free controller + Pro camera = unlocked), the session now follows the recorder in both directions</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">FIXED: &#x27;Camera unavailable&#x27; now only fires when the camera is really down</div>
+        <div class="tg-detail">Root cause: onInitFailed deliberately clears the render thread so the next surfaceCreated can retry — and that retry usually succeeds. The warning was fired by the failed attempt and nothing retracted it, so users saw &#x27;recording is off for now&#x27; over a live preview with REC enabled, re-firing on every new game. Fix: added CameraEngine.isRendering, and the handler now waits 2.5s and stays silent if the renderer came back, announcing at most once per session. PROVEN BOTH WAYS on the rig: a run where GL failed then recovered showed ZERO dialog nodes with 15 active camera client refs; a run where the camera genuinely never came up still warns</div>
+        <div class="tg-ev">CameraEngine.isRendering / MainActivity onRenderInitFailed</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">Emulator quirk worth knowing: GL init fails in landscape, succeeds in portrait</div>
+        <div class="tg-detail">On this AVD eglCreateWindowSurface fails for the landscape surface but the portrait retry works — which is why the earlier successful recording was portrait. Useful as a free source of genuine-failure cases for testing the warning path, but it is an emulator surface quirk and should NOT be read as a device bug</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">PROVEN: the game never saves on the controller</div>
+        <div class="tg-detail">Eric&#x27;s hardest requirement, tested end to end rather than read. Baselined both sides, ran a remote game, ended it FROM THE CONTROLLER, and re-counted: controller game_history 0 → 0, camera 33 → 34, with &#x27;Game saved locally&#x27; logged on the camera and nothing on the controller. The guard is in autoSaveGameToHistory</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">RISK: a dormant &#x27;controller-owns&#x27; mode would break that rule if ever switched on</div>
+        <div class="tg-detail">The save guard is conditional on ConnectionManager.gameOwner. With gameOwner=CAMERA (the default) the controller skips saving — correct. But there is a whole controller-owns branch, referenced in ~8 places in MainActivity, where the CAMERA skips and the CONTROLLER saves instead. Nothing in the app ever assigns GameOwner.CONTROLLER today, so it is unreachable dead weight — but it contradicts &#x27;never ever saved on the controller&#x27; and is one line away from being live. Worth Eric deciding: delete the mode, or keep it and accept the rule is conditional</div>
+        <div class="tg-ev">MainActivity.autoSaveGameToHistory ~8896</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">UX: allowing Bluetooth discoverability throws the user OUT of the app</div>
+        <div class="tg-detail">Entering camera mode prompts &#x27;ScoreFrame wants to make your phone discoverable&#x27;. Tapping Allow lands on the Android home screen with ScoreFrame gone — no crash in logcat, the system dialog simply takes the activity with it. Tapping DENY keeps the app and the camera server still starts and still accepts a controller over Wi-Fi. So the prompt that ejects you is also the one you do not need</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">UX: the discovery list mixes transports and the wrong one fails hard</div>
+        <div class="tg-detail">&#x27;Nearby Devices&#x27; lists the ScoreFrame camera (Wi-Fi, with its IP and port) alongside raw Wi-Fi Direct peers (&#x27;Android_FlPO&#x27;). Tapping the Wi-Fi Direct row retries an &#x27;Internal error&#x27; connect and fires an &#x27;Invitation to connect&#x27; dialog on the OTHER phone, which has nothing to do with scoring. A user cannot tell which row is the right one — they are the same size, in the same list, and the wrong one is often listed first</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">UX: &#x27;Connection lost.&#x27; is shown for a connection that never existed</div>
+        <div class="tg-detail">A failed FIRST connect reports &#x27;Connection lost.&#x27; — which tells the user something broke rather than that it never connected, and gives them nothing to act on. Distinguishing &#x27;couldn&#x27;t reach that phone&#x27; from &#x27;lost the phone we had&#x27; is a one-line change that materially changes what a user does next</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">UX: the manual IP field pre-fills and then APPENDS what you type</div>
+        <div class="tg-detail">The field arrives pre-filled with a previously seen address. Typing does not replace it — the result was &#x27;10.0.2.1610.0.2.16&#x27; and a connect that silently failed. Either the field should be empty, or focusing it should select the existing value</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">NSD discovery goes flaky after repeated app restarts</div>
+        <div class="tg-detail">First pairing found the camera immediately. After several restart cycles the controller reported &#x27;Scan failed: Framework busy&#x27; and stopped listing the camera at all, while the camera&#x27;s TCP server was still bound to 9876 and healthy. Manual IP still connected fine. May be an emulator constraint rather than a device one, but a discovery path that degrades with retries is worth watching on hardware</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">SERIOUS: the controller&#x27;s Home screen goes dead after a remote game</div>
+        <div class="tg-detail">After ending a remote game from the controller and returning to Home, the screen stops responding to taps entirely. Verified on THREE separate controls — Disconnect on the connection banner, the Record button and the Remote button — each tapped at its exact reported centre, each clickable=true and enabled=true, none producing any log line, dialog or navigation. dumpsys confirms HomeActivity holds window focus and there is no ANR, though Choreographer reports skipped frames. Earlier in the same session those same taps worked, so it is a state the screen enters rather than a layout problem. The user&#x27;s phone is stuck on a Home screen that ignores them, still claiming &#x27;Connected to Camera Phone&#x27;, with no way to disconnect short of force-stopping the app</div>
+        <div class="tg-ev">emulator-5556 after remote end-game</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Good behaviour worth keeping: the controller parks its own local game</div>
+        <div class="tg-detail">While connected, the controller shows &#x27;🏐 Your local Volleyball game is paused. Disconnect to resume it.&#x27; — it does not silently discard the scorekeeper&#x27;s own in-progress game, and it explains exactly how to get back to it. That is the right instinct; the problem is only that Disconnect is currently unreachable</div>
         
       </div><div class="tg-plat">Android</div></div>
   </div>
