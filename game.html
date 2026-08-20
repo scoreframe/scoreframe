@@ -72,6 +72,12 @@ body[data-palette="floodlight"] {
 body[data-theme="light"][data-palette="floodlight"] {
     --accent: #1C5FA8 !important; --accent-dim: rgba(28,95,168,0.15) !important;
 }
+body[data-palette="redline"] {
+    --accent: #E5484D !important; --accent-dim: rgba(229,72,77,0.15) !important;
+}
+body[data-theme="light"][data-palette="redline"] {
+    --accent: #B3261E !important; --accent-dim: rgba(179,38,30,0.15) !important;
+}
 @media (prefers-color-scheme: light) {
     :root {
         --bg-deepest: #F5F5F2; --bg-deep: #FFFFFF; --bg-surface: #FFFFFF;
@@ -725,7 +731,7 @@ html, body {
 (function() {
     try {
         var p = new URLSearchParams(location.search).get('palette');
-        if (p === 'trailhead' || p === 'floodlight') {
+        if (p === 'trailhead' || p === 'floodlight' || p === 'redline') {
             document.documentElement.setAttribute('data-palette', p);
             if (document.body) {
                 document.body.setAttribute('data-palette', p);
@@ -956,7 +962,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v43</span>
+    <span class="page-version">game.html v44</span>
 </div>
 
 <script type="module">
