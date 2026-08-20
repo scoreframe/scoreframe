@@ -573,14 +573,14 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>302 cases</strong> across 58 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>304 cases</strong> across 58 areas.</p>
   <div class="tkey">
     <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>183</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>48</em></span>
-    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>14</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>57</em></span>
+    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>15</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>58</em></span>
   </div>
-  <div class="tgrid"><div class="tg-head tg-span">&#10060; 14 items waiting on you <span class="tg-tally">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working · Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for · BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</span></div></div>
+  <div class="tgrid"><div class="tg-head tg-span">&#10060; 15 items waiting on you <span class="tg-tally">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working · Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for · BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</span></div></div>
   <div class="tgrid">
     <div class="tg-head tg-span">Harness <span class="tg-tally">&#9989;5 &#10067;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
@@ -2248,7 +2248,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">Android</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Web scoring (2026-08-20) <span class="tg-tally">&#9989;1 &#10060;1 &#10067;1</span></div>
+    <div class="tg-head tg-span">Web scoring (2026-08-20) <span class="tg-tally">&#9989;1 &#10060;2 &#10067;2</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">Web scorer connects from a desktop browser — the path works end to end</div>
         <div class="tg-detail">Eric asked whether I could drive the web controller myself; I can, with headless Chromium on this Mac, and nothing is needed from him. Camera → Remote → Host Game Online generates a 6-character code (EHWNVD) and a share link. score.html accepts the code, and BOTH sides confirm: the browser shows &#x27;Connected to camera phone ✓&#x27; and the phone shows &#x27;Connected to Web Scorer · code EHWNVD&#x27;. The camera auto-approves the join and starts a command listener on /sessions/&lt;code&gt;/commands</div>
@@ -2262,6 +2262,16 @@ onAuthStateChanged(auth, async (user) => {
     <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
         <div class="tg-name">NOT YET ISOLATED: does a fresh game started after the join publish?</div>
         <div class="tg-detail">The distinction matters for the fix — &#x27;resume never publishes&#x27; is a much smaller bug than &#x27;web scoring never publishes&#x27;. My attempt to start a clean game while the web session was live did not take (the camera stayed on Home), so this is untested rather than failing. Next session: join from the browser FIRST, then start a brand new game on the phone, and watch whether the browser picks it up</div>
+        
+      </div><div class="tg-plat">Web/Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">ISOLATED: web scoring never receives the game, on ANY path</div>
+        <div class="tg-detail">The open question was whether only RESUMED games failed to publish. Answered: no. With the browser connected and confirmed on both sides, I started a BRAND NEW basketball game on the camera — &#x27;HOME 0 — 0 AWAY&#x27;, scoring panel live on the phone — and the browser still read &#x27;Waiting for game to start…&#x27;. Same for a resumed game earlier. So the camera never publishes state to the relay in either case, and the web scorer has no scoring controls to offer because it believes no game exists. The feature connects and then does nothing: a scorekeeper following the share link gets a permanently dead screen. Bigger than the smaller possibility I was hoping for, and it makes web scoring effectively non-functional beyond the handshake</div>
+        <div class="tg-ev">verified fresh-start and resume, both stuck</div>
+      </div><div class="tg-plat">Web/Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">Commands can&#x27;t be sent either — there is no UI to send them from</div>
+        <div class="tg-detail">The camera DOES start a command listener on /sessions/&lt;code&gt;/commands, so the receive side is wired. But the web page only renders scoring controls once it believes a game is active, and it never does. So the untested direction (web → phone commands) cannot be exercised through the UI at all until the state publishing is fixed. Worth noting for sequencing: fixing publish unblocks testing the entire web command path</div>
         
       </div><div class="tg-plat">Web/Android</div></div>
   </div>
