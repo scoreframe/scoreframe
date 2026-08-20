@@ -573,9 +573,9 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>258 cases</strong> across 53 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>259 cases</strong> across 54 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>162</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>163</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>43</em></span>
     <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>5</em></span>
     <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>48</em></span>
@@ -2028,6 +2028,14 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-name">Emulator relaunch recipe, for next time</div>
         <div class="tg-detail">`adb emu kill`, remove the stale ~/.android/avd/&lt;AVD&gt;.avd/multiinstance.lock (the kill leaves it behind and the next launch dies with &#x27;Running multiple emulators with the same AVD&#x27;), then `emulator -avd SF_Samsung_S26_Ultra -gpu host -no-snapshot-load -no-boot-anim`. Confirm with `adb shell dumpsys SurfaceFlinger | grep GLES:` — you want &#x27;Apple M4 / Metal&#x27;, not SwiftShader. Landscape is required before the app will record: `settings put system accelerometer_rotation 0` then `user_rotation 1`</div>
         
+      </div><div class="tg-plat">Android</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Device bugs (Eric, 2026-08-20) <span class="tg-tally">&#9989;1</span></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Schedule no longer carries the Your Stats footer</div>
+        <div class="tg-detail">Eric: &quot;the your stats section in the schedule at the bottom probably doesn&#x27;t need to be there.&quot; Removed from the Schedule tab only — the code comment there admitted it existed to match All Games, which keeps it. Schedule answers what&#x27;s next; a lifetime total is a different question. Android-only surface: iOS&#x27;s ScheduleScreen has no equivalent, so removing it closes a parity gap rather than opening one</div>
+        <div class="tg-ev">GameHistoryActivity ~1131</div>
       </div><div class="tg-plat">Android</div></div>
   </div>
 
