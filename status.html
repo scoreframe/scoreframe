@@ -573,14 +573,14 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>308 cases</strong> across 58 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>315 cases</strong> across 59 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>183</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>185</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>48</em></span>
-    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>17</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>60</em></span>
+    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>21</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>61</em></span>
   </div>
-  <div class="tgrid"><div class="tg-head tg-span">&#10060; 17 items waiting on you <span class="tg-tally">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working · Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for · BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</span></div></div>
+  <div class="tgrid"><div class="tg-head tg-span">&#10060; 21 items waiting on you <span class="tg-tally">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working · Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for · BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</span></div></div>
   <div class="tgrid">
     <div class="tg-head tg-span">Harness <span class="tg-tally">&#9989;5 &#10067;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
@@ -2294,6 +2294,44 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">The instrumentation makes the pattern clear: &#x27;relay wiring reached&#x27; fires from MainActivity.onCreate, so the web is only ever updated when the game screen is CREATED — a resume from Home, a cold start. It did not fire when a game was started from an already-running MainActivity, and it cannot fire at all when a game ENDS, because the activity is not recreated. That single placement explains every symptom seen today: works on resume, hangs on start, and never clears on end. The fix is to publish on game lifecycle transitions rather than on activity creation</div>
         <div class="tg-ev">MainActivity onCreate ~1958</div>
       </div><div class="tg-plat">Web/Android</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">iOS↔iOS remote (2026-08-20) <span class="tg-tally">&#9989;2 &#10060;4 &#10067;1</span></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">UX: the App Store rating prompt lands ON TOP of the end-game dialog</div>
+        <div class="tg-detail">Ending a game on iOS stacks two modals: the &#x27;ENDING GAME / Saving game summary&#x27; progress sheet, and Apple&#x27;s &#x27;Enjoying ScoreFrame? Tap a star to rate it&#x27; prompt layered over it. So the rating ask interrupts the save flow, covers the progress the user is watching, and arrives before they have even seen their final score. Asking for a review at the emotional high point of a finished game is right; asking for it over the top of the save is not. It should wait until the end-game run completes and the result is on screen</div>
+        <div class="tg-ev">/tmp/ios_max.png</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">HARNESS TRAP: the StoreKit rating prompt makes iOS undriveable</div>
+        <div class="tg-detail">While &#x27;Enjoying ScoreFrame?&#x27; is on screen, `idb ui describe-all` returns exactly ONE node — the app element — and idb taps do not reach the dialog, because StoreKit renders it in a system process outside the app&#x27;s accessibility tree. So automation goes blind and deaf at exactly the moment the app is blocked. Workaround is to terminate and relaunch the app. Combined with the Android lesson (a dump showing the screen BEHIND a modal), the rule generalises: when the tree looks impossible, screenshot — the truth is in pixels, not the tree</div>
+        <div class="tg-ev">README lesson</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">iOS↔iOS pairs and connects — second platform pair now testable</div>
+        <div class="tg-detail">Two iOS simulators (iPhone SE as camera, iPhone 17 Pro Max as controller) pair over Bonjour with no bridging: the controller lists the camera BOTH ways — &#x27;ScoreFrame, Wi-Fi · 192.168.86.40:9876&#x27; and via Multipeer — and connecting gives &#x27;Connected to Camera&#x27; on one side and &#x27;Controller connected! Waiting for game start…&#x27; on the other. Eric was right that cross-platform is where the bugs will be; this is the second of the four combinations standing up</div>
+        <div class="tg-ev">simulators 2E4B15F5 (camera) / 9BFA5B98 (controller)</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">UI: the port number is rendered as &#x27;9,876&#x27;</div>
+        <div class="tg-detail">Both the camera screen (&#x27;Port 9,876&#x27;) and the discovery list (&#x27;192.168.86.40:9,876&#x27;) format the port with a thousands separator. It is being passed through a number formatter instead of printed as an identifier. Cosmetic, but it appears exactly where a user might be reading an address to type into the other phone — and a comma in a port is the kind of thing that makes someone mistype it</div>
+        
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">BUG: iOS controller keeps the OLD sport&#x27;s panel after starting a new game</div>
+        <div class="tg-detail">The exact class of bug Eric predicted cross-platform testing would find. From the iOS controller I started a VOLLEYBALL game on the iOS camera. The camera obeyed correctly — &#x27;🏐 Volleyball / Set 1 (to 25) / Best of 3&#x27;. The controller then rendered a BASKETBALL panel for that same game: header &#x27;🏀 Basketball&#x27;, PERIOD with Quarters/Halves and Q1–Q4, FOULS with HOME/AWAY Foul buttons, TIMEOUTS. Basketball is what that phone had open BEFORE it became a controller. So the two phones disagree about the sport: a scorekeeper is tapping fouls and quarters at a volleyball match, and the volleyball controls (kills, aces, set scoring) are nowhere on the device doing the scoring</div>
+        <div class="tg-ev">controller 9BFA5B98 vs camera 2E4B15F5</div>
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">iOS↔iOS command flow itself works</div>
+        <div class="tg-detail">Despite the panel bug, the transport and lifecycle are sound: sport choice and game start crossed from controller to camera (the camera left &#x27;Waiting for game start…&#x27; and opened the volleyball scoreboard, prompting for camera access on the way), and HEARTBEAT frames keep incrementing on the controller. So this is a controller-side UI/state bug, not a protocol failure</div>
+        
+      </div><div class="tg-plat">iOS</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">iOS simulators cannot test recording — no camera hardware</div>
+        <div class="tg-detail">The iOS camera phone reports &#x27;ScoreFrame doesn&#x27;t have camera access&#x27; and &#x27;Camera is off&#x27; because simulators have no camera. So the iOS pair covers protocol, scoring and UI only. This is a real asymmetry with the Android rig, where recording now works end to end — anything about iOS recording still needs Eric&#x27;s phone</div>
+        
+      </div><div class="tg-plat">iOS</div></div>
   </div>
 
   <h2>Test automation — where it actually stands</h2>
