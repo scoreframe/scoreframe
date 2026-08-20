@@ -573,14 +573,14 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>304 cases</strong> across 58 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>308 cases</strong> across 58 areas.</p>
   <div class="tkey">
     <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>183</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>48</em></span>
-    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>15</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>58</em></span>
+    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>17</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>60</em></span>
   </div>
-  <div class="tgrid"><div class="tg-head tg-span">&#10060; 15 items waiting on you <span class="tg-tally">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working · Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for · BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</span></div></div>
+  <div class="tgrid"><div class="tg-head tg-span">&#10060; 17 items waiting on you <span class="tg-tally">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working · Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for · BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</span></div></div>
   <div class="tgrid">
     <div class="tg-head tg-span">Harness <span class="tg-tally">&#9989;5 &#10067;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
@@ -2248,7 +2248,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">Android</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Web scoring (2026-08-20) <span class="tg-tally">&#9989;1 &#10060;2 &#10067;2</span></div>
+    <div class="tg-head tg-span">Web scoring (2026-08-20) <span class="tg-tally">&#9989;1 &#10060;4 &#10067;4</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">Web scorer connects from a desktop browser — the path works end to end</div>
         <div class="tg-detail">Eric asked whether I could drive the web controller myself; I can, with headless Chromium on this Mac, and nothing is needed from him. Camera → Remote → Host Game Online generates a 6-character code (EHWNVD) and a share link. score.html accepts the code, and BOTH sides confirm: the browser shows &#x27;Connected to camera phone ✓&#x27; and the phone shows &#x27;Connected to Web Scorer · code EHWNVD&#x27;. The camera auto-approves the join and starts a command listener on /sessions/&lt;code&gt;/commands</div>
@@ -2273,6 +2273,26 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-name">Commands can&#x27;t be sent either — there is no UI to send them from</div>
         <div class="tg-detail">The camera DOES start a command listener on /sessions/&lt;code&gt;/commands, so the receive side is wired. But the web page only renders scoring controls once it believes a game is active, and it never does. So the untested direction (web → phone commands) cannot be exercised through the UI at all until the state publishing is fixed. Worth noting for sequencing: fixing publish unblocks testing the entire web command path</div>
         
+      </div><div class="tg-plat">Web/Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">CORRECTION: web scoring DOES publish — on the resume path</div>
+        <div class="tg-detail">My previous finding said the camera never publishes on ANY path. Too strong, and the correction matters. With instrumentation at the wiring point I got: &#x27;relay wiring reached: relay=true code=YEUL35 role=SERVER gameState=IDLE&#x27; — the block runs, the relay is present — and the browser then rendered the live game: Generic, HOME 0, PERIOD 1, AWAY 0, matching the phone EXACTLY (the phone&#x27;s own panel reads &#x27;🎯 Generic&#x27;). So the mirror works and the sport is right. What differed: this game was RESUMED via Home&#x27;s &#x27;Game In Progress → Resume Game&#x27;, which routes through MainActivity.onCreate where the wiring lives. The earlier stuck cases were games started through Record → sport → Game Setup</div>
+        <div class="tg-ev">SFWEB instrumentation</div>
+      </div><div class="tg-plat">Web/Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">NARROWED: the failure is specific to the game-start path, not web scoring itself</div>
+        <div class="tg-detail">So the bug is real but much smaller than I reported: a scorer sees the game when it is RESUMED, and hangs on &#x27;Waiting for game to start…&#x27; when the game is started fresh through Record → sport → setup. That still breaks the normal case — most games are started, not resumed — but it is a missing publish on one path rather than a dead feature. Next: confirm the fresh-start path with the same instrumentation and find which branch skips the broadcast</div>
+        
+      </div><div class="tg-plat">Web/Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">BUG: the web scorer keeps showing a game that has ENDED</div>
+        <div class="tg-detail">Ended the Generic game on the phone — it saved, and the phone moved to the game-detail page. The browser still displays that game as live: &#x27;Generic / HOME 0 / PERIOD 1 / AWAY 0 / SCORE&#x27;, with its scoring controls available. So a web scorekeeper can sit there scoring a match that finished, sending commands for a game the phone no longer has open. The end of a game is never published to the relay — the same missing-publish shape as the start, at the other end of the lifecycle</div>
+        
+      </div><div class="tg-plat">Web/Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">The publish happens on ACTIVITY CREATE, which is why it is so patchy</div>
+        <div class="tg-detail">The instrumentation makes the pattern clear: &#x27;relay wiring reached&#x27; fires from MainActivity.onCreate, so the web is only ever updated when the game screen is CREATED — a resume from Home, a cold start. It did not fire when a game was started from an already-running MainActivity, and it cannot fire at all when a game ENDS, because the activity is not recreated. That single placement explains every symptom seen today: works on resume, hangs on start, and never clears on end. The fix is to publish on game lifecycle transitions rather than on activity creation</div>
+        <div class="tg-ev">MainActivity onCreate ~1958</div>
       </div><div class="tg-plat">Web/Android</div></div>
   </div>
 
