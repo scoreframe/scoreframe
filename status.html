@@ -573,14 +573,14 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>299 cases</strong> across 57 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>302 cases</strong> across 58 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>182</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>183</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>48</em></span>
-    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>13</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>56</em></span>
+    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>14</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>57</em></span>
   </div>
-  <div class="tgrid"><div class="tg-head tg-span">&#10060; 13 items waiting on you <span class="tg-tally">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working · Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for · BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</span></div></div>
+  <div class="tgrid"><div class="tg-head tg-span">&#10060; 14 items waiting on you <span class="tg-tally">BUG: &#x27;Camera unavailable&#x27; shown while the camera is demonstrably working · Controller gets a &#x27;Viewing full screen&#x27; coach mark it has no use for · BUG (Eric predicted this): controller gates Pro on ITS OWN tier, not the recorder&#x27;s</span></div></div>
   <div class="tgrid">
     <div class="tg-head tg-span">Harness <span class="tg-tally">&#9989;5 &#10067;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
@@ -2246,6 +2246,24 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">Eric&#x27;s rule was &#x27;only the controller can end a game, unless it disconnects&#x27;. First half verified earlier: while connected, the camera has zero End Game controls and the controller has one. Second half verified by killing the controller: the camera immediately regains End Game, shows &#x27;Controller disconnected&#x27; with a Reconnect option, and keeps the score. The rule is implemented as stated, in both directions</div>
         
       </div><div class="tg-plat">Android</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Web scoring (2026-08-20) <span class="tg-tally">&#9989;1 &#10060;1 &#10067;1</span></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Web scorer connects from a desktop browser — the path works end to end</div>
+        <div class="tg-detail">Eric asked whether I could drive the web controller myself; I can, with headless Chromium on this Mac, and nothing is needed from him. Camera → Remote → Host Game Online generates a 6-character code (EHWNVD) and a share link. score.html accepts the code, and BOTH sides confirm: the browser shows &#x27;Connected to camera phone ✓&#x27; and the phone shows &#x27;Connected to Web Scorer · code EHWNVD&#x27;. The camera auto-approves the join and starts a command listener on /sessions/&lt;code&gt;/commands</div>
+        <div class="tg-ev">tools/e2e/web/webscore.js</div>
+      </div><div class="tg-plat">Web/Android</div></div>
+    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+        <div class="tg-name">BUG: the web scorer never receives an in-progress game</div>
+        <div class="tg-detail">With a LIVE game on the camera — soccer resumed, HOME 2 / AWAY 0, visible on the phone&#x27;s own scoreboard — the browser sat at &#x27;Waiting for game to start…&#x27; indefinitely. Verified across two separate joins, several minutes apart, and it never updated. So a scorekeeper who opens the link after the game has begun, or who reloads the page mid-match, gets a dead screen with no way forward. Both relay broadcast call sites in MainActivity are gated on ConnectionManager.firebaseRelayServer being non-null AND joinCode non-blank; the relay object is created in HomeActivity, so the wiring across into the game screen is the first place to look</div>
+        <div class="tg-ev">MainActivity ~1213 and ~1959, FirebaseRelayServer.broadcastState</div>
+      </div><div class="tg-plat">Web/Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">NOT YET ISOLATED: does a fresh game started after the join publish?</div>
+        <div class="tg-detail">The distinction matters for the fix — &#x27;resume never publishes&#x27; is a much smaller bug than &#x27;web scoring never publishes&#x27;. My attempt to start a clean game while the web session was live did not take (the camera stayed on Home), so this is untested rather than failing. Next session: join from the browser FIRST, then start a brand new game on the phone, and watch whether the browser picks it up</div>
+        
+      </div><div class="tg-plat">Web/Android</div></div>
   </div>
 
   <h2>Test automation — where it actually stands</h2>
