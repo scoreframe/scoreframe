@@ -573,9 +573,9 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>295 cases</strong> across 57 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>299 cases</strong> across 57 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>178</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>182</em></span>
     <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>48</em></span>
     <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>13</em></span>
     <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>56</em></span>
@@ -2075,7 +2075,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">Android</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Remote scoring rig (2026-08-20) <span class="tg-tally">&#9989;12 &#10060;13 &#10067;5</span></div>
+    <div class="tg-head tg-span">Remote scoring rig (2026-08-20) <span class="tg-tally">&#9989;16 &#10060;13 &#10067;5</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">TWO EMULATORS NOW PAIR — no hack was needed</div>
         <div class="tg-detail">Created a second AVD (SF_Controller, port 5556) from the same system image and booted both on -gpu host. Eric offered a hack to make them see each other; none was required. NSD discovery works ACROSS emulators — the controller found &#x27;📷 ScoreFrame · Wi-Fi · 10.0.2.16:9876&#x27; by itself and connected. Camera reads &#x27;Connected to Controller&#x27;, controller reads &#x27;Connected to Camera Phone&#x27;. adb forward/reverse bridges were set up as a fallback and turned out to be unnecessary. Combined with recording now working, the full controller↔camera matrix is testable here for the first time</div>
@@ -2224,6 +2224,26 @@ onAuthStateChanged(auth, async (user) => {
     <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
         <div class="tg-name">The guard was right for a month and nobody could act on it</div>
         <div class="tg-detail">Worth drawing out: RemoteRoleGuard was added 2026-07-30 precisely because these bugs &#x27;all FAILED SILENTLY&#x27;, and it correctly identified this one every time it happened. But it was deliberately non-fatal and purely informational, so the bad write proceeded anyway and the only detector remained Eric in a gym. A guard that can name a violation that precisely can usually PREVENT it — worth revisiting the other checkLocalGameWrite call sites on the same principle</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">NEGATIVE TEST PASS: controller dies mid-game</div>
+        <div class="tg-detail">Force-stopped the controller app with a game in progress — the scorekeeper&#x27;s phone dying mid-match. The camera handled it cleanly and completes Eric&#x27;s End Game rule: it had ZERO End Game controls while connected and ONE immediately after the drop, so ownership returns to the camera exactly when the controller can no longer act. It also detected the loss properly (&#x27;Client disconnected (EOF)&#x27;), told the user &#x27;Controller disconnected&#x27;, offered Reconnect, and kept the game intact — HOME 2 / AWAY 0, the score set remotely before the kill. Nothing was lost and the game remains finishable on the camera</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">NEGATIVE TEST PASS: camera dies mid-game</div>
+        <div class="tg-detail">Force-stopped the camera app with a game live — the recording phone dying, the worse direction. The controller detects it, tells the user plainly (&#x27;Camera phone disconnected&#x27;), and retries sensibly: it alternates the address it actually connected on (10.0.2.16, refused because the app is gone) with the Wi-Fi Direct fallback (192.168.49.1), backing off between attempts, and requests fallback discovery after 10s of failure. I nearly filed &#x27;reconnects to the wrong IP&#x27; off the first log line — it tries BOTH, and checking the full log before claiming it was the difference between a real finding and a wasted fix</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Controller exits the game cleanly when the camera dies — nothing stranded</div>
+        <div class="tg-detail">After the camera app was killed, the controller&#x27;s scoring screen tore down (isFinishing=true) and returned to Home showing &#x27;Nothing on the board yet&#x27;. Crucially it left NOTHING behind: game_history 0, active_game_session 0. That is the ghost-game fix holding through the harshest path — an abrupt death of the other phone mid-game is exactly the case that used to strand state on the scorekeeper&#x27;s phone. It also means the controller cannot sit there scoring into a dead connection, which would silently diverge from the camera&#x27;s record</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">End Game ownership rule: BOTH halves now verified</div>
+        <div class="tg-detail">Eric&#x27;s rule was &#x27;only the controller can end a game, unless it disconnects&#x27;. First half verified earlier: while connected, the camera has zero End Game controls and the controller has one. Second half verified by killing the controller: the camera immediately regains End Game, shows &#x27;Controller disconnected&#x27; with a Reconnect option, and keeps the score. The rule is implemented as stated, in both directions</div>
         
       </div><div class="tg-plat">Android</div></div>
   </div>
