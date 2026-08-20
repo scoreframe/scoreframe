@@ -573,14 +573,14 @@ onAuthStateChanged(auth, async (user) => {
   </div>
 
   <h2 id="testing">Test results</h2>
-  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>261 cases</strong> across 55 areas.</p>
+  <p class="lede">Every case from the 19 Aug run and the work that followed. <strong>265 cases</strong> across 56 areas.</p>
   <div class="tkey">
-    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>164</em></span>
-    <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>47</em></span>
-    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>1</em></span>
-    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>49</em></span>
+    <span class="tk tk-ok"><b>&#9989;</b> Verified working <em>166</em></span>
+    <span class="tk"><b>&#128736;</b> Was broken — fixed and verified <em>48</em></span>
+    <span class="tk tk-bad"><b>&#10060;</b> Still needs addressing <em>0</em></span>
+    <span class="tk"><b>&#10067;</b> Not verified / needs a decision <em>51</em></span>
   </div>
-  <div class="tgrid"><div class="tg-head tg-span">&#10060; 1 item waiting on you <span class="tg-tally">Emulator recording: real progress, still blocked — but now on ONE line</span></div></div>
+  <div class="tgrid"><div class="tg-head tg-span">&#9989; Nothing is waiting on you right now <span class="tg-tally">every open item is closed</span></div></div>
   <div class="tgrid">
     <div class="tg-head tg-span">Harness <span class="tg-tally">&#9989;5 &#10067;1</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
@@ -1978,7 +1978,7 @@ onAuthStateChanged(auth, async (user) => {
       </div><div class="tg-plat">iOS</div></div>
   </div>
   <div class="tgrid">
-    <div class="tg-head tg-span">Overnight gap-closing (2026-08-19) <span class="tg-tally">&#9989;5 &#10060;1 &#10067;4</span></div>
+    <div class="tg-head tg-span">Overnight gap-closing (2026-08-19) <span class="tg-tally">&#9989;5 &#128736;1 &#10067;4</span></div>
     <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
         <div class="tg-name">ScoreboardGrowthTests wired up — and it had never compiled</div>
         <div class="tg-detail">Added the orphaned file to the Xcode test target and it failed to build: ScoreboardTextureCache gained a `device` argument some time after the test was written, and with the file outside the project nothing ever caught it. Fixed and run: all four cases pass — soccer/football/baseball boards grow for long names, short names still produce the original widths, and the already-adaptive boards are unchanged. The iOS half of ticket SF-G5DLHS is now genuinely verified rather than asserted</div>
@@ -2019,7 +2019,7 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-detail">The first run failed on my expected value (I said 5 hits for a sequence containing 4), not on the app. Worth recording because it is the failure mode of writing an expectation and a subject together: the test was right to fail and the product was never wrong</div>
         
       </div><div class="tg-plat">Android</div></div>
-    <div class="tg-row tg-bad"><div class="tg-ic">&#10060;</div><div>
+    <div class="tg-row"><div class="tg-ic">&#128736;</div><div>
         <div class="tg-name">Emulator recording: real progress, still blocked — but now on ONE line</div>
         <div class="tg-detail">The AVD was running ANGLE-over-SwiftShader (software Vulkan). Relaunched with `-gpu host` and it now reports &#x27;Google (Apple), Apple M4, 4.1 Metal&#x27;. The camera stack initialises where it previously did nothing — cameraserver and GCH_CameraDeviceSession come up. The failure moved to a single specific call: eglCreateWindowSurface fails in CameraEngine&#x27;s render thread. NOTE eglChooseConfig SUCCEEDS first, so a config is returned and then rejected for a window surface. Prime suspect: EGLManager.chooseEglConfig asks for EGL_SURFACE_TYPE = WINDOW_BIT|PBUFFER_BIT in a single config — fine on real hardware, scarce on ANGLE. NOT changed: the EGL config governs recording on every real phone, and loosening it to please an emulator is not a change to make unattended</div>
         <div class="tg-ev">EGLManager.kt:48-66</div>
@@ -2049,6 +2049,29 @@ onAuthStateChanged(auth, async (user) => {
         <div class="tg-name">CLOSED: the hypothetical divergence I flagged cannot happen</div>
         <div class="tg-detail">Last night I flagged that an at-bat with a batterIndex outside the displayed lineup would count toward team H but show on no line, and asked Eric to confirm whether substitutes could cause it. Answered by reading the code rather than asking again: substitutes reuse the starter&#x27;s battingPosition and the lineup never grows past nine, so the index is always in range and the totals always reconcile. That question is closed — but chasing it is what surfaced the attribution bug above</div>
         <div class="tg-ev">BaseballFullGame.substituteBatter</div>
+      </div><div class="tg-plat">Android</div></div>
+  </div>
+  <div class="tgrid">
+    <div class="tg-head tg-span">Emulator recording BREAKTHROUGH (2026-08-20) <span class="tg-tally">&#9989;2 &#10067;2</span></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">Recording works on the emulator — the never-exercised branch is now testable</div>
+        <div class="tg-detail">Root cause was not the emulator: EGLManager asked for EGL_SURFACE_TYPE = WINDOW_BIT|PBUFFER_BIT, but the class only ever calls eglCreateWindowSurface and NOTHING in the app calls eglCreatePbufferSurface. It was requiring a capability the app never uses. On phones such configs are plentiful so it never showed; on the emulator&#x27;s ANGLE driver they are scarce — eglChooseConfig returned one that could not back a window, and every recording died at eglCreateWindowSurface. Asking only for WINDOW fixes it. Eric offered a debug-only variant; not needed, because this was a wrong requirement rather than a workaround</div>
+        <div class="tg-ev">EGLManager.chooseEglConfig</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row tg-ok"><div class="tg-ic">&#9989;</div><div>
+        <div class="tg-name">END-TO-END: recorded 2m38s, ended the game, outro burned in</div>
+        <div class="tg-detail">The full record → save → outro path, run for the first time anywhere but a real phone. Camera engine opened (AF, EIS, white balance all configured), CameraRenderer logged &#x27;Recorded 360 frames&#x27;, the UI showed the live timer and remaining capacity. Ended the game while recording. Result: SF_BK_373b30d6_20260820_0838_001.mp4, 10,562,694 bytes, 158.3s, video + audio tracks, saved to the game record with its manifest. Extracted the final frame via AVFoundation: the FINAL card is there — eyebrow, team names, score, line score, date and the ScoreFrame.app lockup. A mid-recording frame shows the live scoreboard composited correctly</div>
+        <div class="tg-ev">/tmp/frame-last.png, /tmp/frame-mid.png</div>
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">Portrait recordings letterbox the outro over the live camera</div>
+        <div class="tg-detail">Recorded in portrait (720x1280) because the emulator wouldn&#x27;t honour a forced rotation, so the 16:9 outro card sits centred in a 9:16 frame with the camera feed still visible above and below it, rather than a clean full-frame card. Aspect-correct, but it reads as a small card floating over video. Landscape — the normal path — would fill the frame. Worth Eric deciding whether portrait should scale the card to fill or letterbox to black</div>
+        
+      </div><div class="tg-plat">Android</div></div>
+    <div class="tg-row"><div class="tg-ic">&#10067;</div><div>
+        <div class="tg-name">NEEDS ERIC: one real recording on 1.1.1292</div>
+        <div class="tg-detail">The EGL change is reasoned and safe — same pixel format, same GL version, fewer requirements — and it is a no-op on hardware where both config types exist. But it IS the recording path on every phone, so it deserves one real capture before it goes anywhere near production</div>
+        
       </div><div class="tg-plat">Android</div></div>
   </div>
 
