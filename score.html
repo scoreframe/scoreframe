@@ -722,6 +722,9 @@ const auth = getAuth(app);
 // ── Global State ──────────────────────────────────────────────────────
 let currentCode = null;
 let currentSport = null;
+// Set once the camera's live state has told us the sport. From then on
+// meta.sport is ignored — see the meta listener.
+let sportSeenFromState = false;
 let currentState = null;
 let lastSeq = 0;
 let uid = null;
@@ -1021,7 +1024,15 @@ function listenForState(code) {
             return;
         }
         const data = snap.val();
-        if (data.sport) currentSport = data.sport;
+        if (data.sport) {
+            // A real sport change: drop the pinned stat-attribution player,
+            // which the meta listener used to be responsible for.
+            if (currentSport && data.sport !== currentSport) {
+                vbActivePlayer.home = null; vbActivePlayer.away = null;
+            }
+            currentSport = data.sport;
+            sportSeenFromState = true;
+        }
 
         // Parse recordingAllowed from connectionAck or state
         if (data.recordingAllowed !== undefined) {
@@ -1096,7 +1107,15 @@ function listenForState(code) {
             recordingAllowed = meta.recordingAllowed === true;
             updateRecordingBar();
         }
-        if (meta.sport && meta.sport !== currentSport) {
+        // meta.sport is only a FALLBACK, for before any live state has
+        // arrived. It is written once when the session is created and is
+        // refreshed by the camera on a sport change — but a camera on an older
+        // build never refreshes it, and then this block would drop the live
+        // scoreboard (currentState = null) on every meta update and strand the
+        // scorer on "Waiting for game to start…". The state we are receiving
+        // is always fresher than the session's record of it, so once it has
+        // spoken it wins. 2026-08-21.
+        if (meta.sport && meta.sport !== currentSport && !sportSeenFromState) {
             currentSport = meta.sport;
             currentState = null; // Will be set by state listener
             // New sport = new roster; drop any pinned stat-attribution player.
@@ -1317,7 +1336,7 @@ window.cancelJoin = function() {
     if (stateListener) off(ref(db, `sessions/${currentCode}/state`));
     if (metaListener) off(ref(db, `sessions/${currentCode}/meta`));
     if (scorerListener) off(ref(db, `sessions/${currentCode}/scorerRequest/status`));
-    currentCode = null; currentSport = null; currentState = null;
+    currentCode = null; currentSport = null; currentState = null; sportSeenFromState = false;
     vbActivePlayer.home = null; vbActivePlayer.away = null;
     showScreen('joinScreen');
     $('joinBtn').disabled = false;
@@ -2840,6 +2859,6 @@ init();
 </script>
 <!-- Web version footer — bumped on every Pages push so we can see at a
      glance whether a phone's cached page is stale. -->
-<div style="position:fixed;bottom:4px;right:8px;font-size:9px;color:var(--text-muted);opacity:0.55;pointer-events:none;font-family:-apple-system,monospace;letter-spacing:0.5px;z-index:9999;">score v5</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:9px;color:var(--text-muted);opacity:0.55;pointer-events:none;font-family:-apple-system,monospace;letter-spacing:0.5px;z-index:9999;">score v6</div>
 </body>
 </html>
