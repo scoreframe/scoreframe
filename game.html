@@ -962,7 +962,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v45</span>
+    <span class="page-version">game.html v46</span>
 </div>
 
 <script type="module">
@@ -3883,15 +3883,21 @@ window.shareGameCard = function() {
         const fname = `ScoreFrame_${sport}_${Date.now()}.png`;
         const file = new File([blob], fname, { type: 'image/png' });
         const shareText = `${homeName}${twoTeam ? ' vs ' + awayName : ''} — ${hs}-${as}. scoreframe.app`;
-        // v45 (2026-08-22) — Hand the PNG to the NATIVE app first when we are
-        // running inside its web view. Eric: "the game card link doesn't work
-        // in app". Neither branch below can work there: `navigator.canShare`
-        // is undefined in an Android WebView, and the `<a download>` blob
-        // fallback is silently dropped by both web views. That left the button
-        // a no-op — and for a game whose team isn't shared it is the ONLY
-        // share affordance on the page, because Copy Link / Share / View Team
-        // Page are all hidden when there is no public link.
+        // v46 (2026-08-22) — Eric: "we already have a share game card button
+        // under manage game ... why can't the button on the page just invoke
+        // that flow in app". So in-app we now open the app's OWN card dialog
+        // (preview + Light/Dark + Share + Save to Photos) rather than pushing
+        // this canvas PNG at a bare share sheet, which duplicated something
+        // the app already did better.
+        if (__sfShowCardNative()) return;
+        // v45 fallback for app builds that have the image bridge but not the
+        // dialog one. Both beat the web paths below, which cannot work in a
+        // web view at all: navigator.canShare is undefined there and the
+        // <a download> blob fallback is silently dropped.
         if (__sfShareImageNative(cv, fname, shareText)) return;
+        // Browser: same shape of dialog as the app — preview the card, then
+        // choose. Eric asked for this on the web too.
+        if (__sfCardDialog(cv, fname, shareText)) return;
         try {
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({ files: [file], title: 'ScoreFrame', text: shareText });
@@ -3963,6 +3969,88 @@ function __sfShareImageNative(canvas, filename, text) {
         return false;
     }
 }
+function __sfShowCardNative() {
+    try {
+        if (window.ScoreFrameApp && typeof window.ScoreFrameApp.showGameCard === 'function') {
+            window.ScoreFrameApp.showGameCard();
+            return true;
+        }
+        const h = window.webkit && window.webkit.messageHandlers
+                  && window.webkit.messageHandlers.scoreFrameShowGameCard;
+        if (h) { h.postMessage({}); return true; }
+        return false;
+    } catch (e) {
+        console.warn('[game.html] native card dialog failed, falling back:', e);
+        return false;
+    }
+}
+
+// Browser-side twin of the app's card dialog: show the card, then choose what
+// to do with it. Previously the button went straight to a share sheet (or a
+// silent download), which gave no chance to see what was being sent.
+function __sfCardDialog(canvas, filename, shareText) {
+    try {
+        if (document.getElementById('sfCardModal')) return true;
+        const dataUrl = canvas.toDataURL('image/png');
+        const wrap = document.createElement('div');
+        wrap.id = 'sfCardModal';
+        wrap.setAttribute('role', 'dialog');
+        wrap.setAttribute('aria-modal', 'true');
+        wrap.setAttribute('aria-label', 'Game card');
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.78);' +
+            'display:flex;align-items:center;justify-content:center;padding:18px;';
+        const card = document.createElement('div');
+        card.style.cssText = 'max-width:min(92vw,420px);width:100%;max-height:92vh;overflow:auto;' +
+            'background:#16181c;border:1px solid #2a2f37;border-radius:14px;padding:14px;' +
+            'display:flex;flex-direction:column;gap:12px;';
+        const img = document.createElement('img');
+        img.src = dataUrl; img.alt = 'Game card preview';
+        img.style.cssText = 'width:100%;border-radius:10px;display:block;';
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+        const mkBtn = (label, fn) => {
+            const b = document.createElement('button');
+            b.textContent = label;
+            b.style.cssText = 'flex:1 1 120px;min-height:42px;border-radius:9px;cursor:pointer;' +
+                'border:1px solid #2a2f37;background:#20242b;color:#eceef2;font-size:14px;font-weight:600;';
+            b.onclick = fn;
+            return b;
+        };
+        const close = () => wrap.remove();
+        if (navigator.canShare) {
+            row.appendChild(mkBtn('\uD83D\uDCE4 Share', async () => {
+                try {
+                    const blob = await (await fetch(dataUrl)).blob();
+                    const file = new File([blob], filename, { type: 'image/png' });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: 'ScoreFrame', text: shareText });
+                        close();
+                        return;
+                    }
+                } catch (e) { if (e && e.name === 'AbortError') return; }
+                alert('Sharing isn\u2019t available here — use Download instead.');
+            }));
+        }
+        row.appendChild(mkBtn('\u2B07\uFE0F Download', () => {
+            const a = document.createElement('a');
+            a.href = dataUrl; a.download = filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            close();
+        }));
+        row.appendChild(mkBtn('Close', close));
+        wrap.appendChild(card); card.appendChild(img); card.appendChild(row);
+        wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
+        document.addEventListener('keydown', function esc(e) {
+            if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+        });
+        document.body.appendChild(wrap);
+        return true;
+    } catch (e) {
+        console.warn('[game.html] card dialog failed, falling back:', e);
+        return false;
+    }
+}
+
 function __sfShareTextNative(text) {
     try {
         const android = window.ScoreFrameApp && typeof window.ScoreFrameApp.shareText === 'function';
