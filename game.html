@@ -851,7 +851,7 @@ html, body {
              no shareable link + nudges toward creating a team. -->
         <div id="localBanner" class="local-banner" style="display:none;">
             <div class="local-banner-title">📱 This game is only on your device</div>
-            <div class="local-banner-sub">It isn’t shared, so there’s no link others can open. Add it to a team you’ve shared to give it a live link anyone can watch — or use <b>📸 Game Card</b> below to share an image.</div>
+            <div class="local-banner-sub">It isn’t shared, so there’s no link others can open. To give it a live link anyone can watch, add it to a team you’ve shared. You can still send <b>📸 Game Card</b> below — that shares a picture of the result, not a link to the game.</div>
         </div>
         <!-- Final score / scoreline -->
         <div class="card" id="scoreCard" style="display:none;">
@@ -962,7 +962,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v44</span>
+    <span class="page-version">game.html v45</span>
 </div>
 
 <script type="module">
@@ -3883,6 +3883,15 @@ window.shareGameCard = function() {
         const fname = `ScoreFrame_${sport}_${Date.now()}.png`;
         const file = new File([blob], fname, { type: 'image/png' });
         const shareText = `${homeName}${twoTeam ? ' vs ' + awayName : ''} — ${hs}-${as}. scoreframe.app`;
+        // v45 (2026-08-22) — Hand the PNG to the NATIVE app first when we are
+        // running inside its web view. Eric: "the game card link doesn't work
+        // in app". Neither branch below can work there: `navigator.canShare`
+        // is undefined in an Android WebView, and the `<a download>` blob
+        // fallback is silently dropped by both web views. That left the button
+        // a no-op — and for a game whose team isn't shared it is the ONLY
+        // share affordance on the page, because Copy Link / Share / View Team
+        // Page are all hidden when there is no public link.
+        if (__sfShareImageNative(cv, fname, shareText)) return;
         try {
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({ files: [file], title: 'ScoreFrame', text: shareText });
@@ -3934,9 +3943,46 @@ window.copyLink = function(btn) {
     }
 };
 
+// v45 (2026-08-22) — Native share bridges. The page runs inside the Android
+// and iOS web views (they load it with `app=1`), and NEITHER supports the Web
+// Share API for files. Both apps expose a handler instead; when one is present
+// it is strictly better than anything the web can do here, so it wins.
+function __sfShareImageNative(canvas, filename, text) {
+    try {
+        const android = window.ScoreFrameApp && typeof window.ScoreFrameApp.shareImage === 'function';
+        const ios = window.webkit && window.webkit.messageHandlers
+                    && window.webkit.messageHandlers.scoreFrameShareImage;
+        if (!android && !ios) return false;
+        const dataUrl = canvas.toDataURL('image/png');
+        if (android) window.ScoreFrameApp.shareImage(dataUrl, filename, text);
+        else window.webkit.messageHandlers.scoreFrameShareImage.postMessage(
+            { dataUrl: dataUrl, filename: filename, text: text });
+        return true;
+    } catch (e) {
+        console.warn('[game.html] native image share failed, falling back:', e);
+        return false;
+    }
+}
+function __sfShareTextNative(text) {
+    try {
+        const android = window.ScoreFrameApp && typeof window.ScoreFrameApp.shareText === 'function';
+        const ios = window.webkit && window.webkit.messageHandlers
+                    && window.webkit.messageHandlers.scoreFrameShareText;
+        if (!android && !ios) return false;
+        if (android) window.ScoreFrameApp.shareText(text);
+        else window.webkit.messageHandlers.scoreFrameShareText.postMessage({ text: text });
+        return true;
+    } catch (e) {
+        console.warn('[game.html] native text share failed, falling back:', e);
+        return false;
+    }
+}
+
 window.shareNative = function() {
     const title = document.title;
     const url = window.shareableUrl();
+    // In-app: a real share sheet beats the clipboard-and-alert fallback.
+    if (__sfShareTextNative(`${title}\n${url}`)) return;
     if (navigator.share) {
         navigator.share({ title, url }).catch(() => {});
     } else {
