@@ -962,7 +962,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v46</span>
+    <span class="page-version">game.html v47</span>
 </div>
 
 <script type="module">
@@ -2348,6 +2348,39 @@ function applyLiveUpdate(hub, game, sport) {
     renderAiRecap(game);
 }
 
+// v47 — Hide auto-generated placeholder people from the PUBLIC page.
+// An opponent with no roster used to publish nine rows of "Batter 1." …
+// "Batter 9.", most of them all zeros, to anyone with the link.
+//
+// Android already drops these at save time (isPlaceholderParticipant), but that
+// cannot help the games ALREADY saved, and it does not cover anything iOS wrote.
+// Filtering at render time fixes those too and touches no stored data, so it is
+// reversible — Eric's call, 2026-08-22.
+//
+// Same rule as Android, deliberately: a placeholder that actually accumulated a
+// stat is KEPT. If someone scored against "Batter 3." those numbers are real,
+// and losing them would be worse than showing a generated name.
+const SF_PLACEHOLDER_RE = /^(batter|player|bowler)\s*#?\d+\.?$/i;
+function sfVisibleParticipants(game) {
+    const parts = Array.isArray(game && game.participants) ? game.participants : [];
+    return parts.filter((p) => {
+        if (!p) return false;
+        const name = String(p.name == null ? '' : p.name).trim();
+        if (!name) return false;                                   // unnamed slot
+        if (p.playerId || p.savedPlayerId) return true;            // a real tracked player
+        if (!SF_PLACEHOLDER_RE.test(name)) return true;            // a real typed name
+        return Object.values(p.stats || {}).some((v) => {
+            if (v == null) return false;
+            if (typeof v === 'number') return v !== 0;
+            if (typeof v === 'string') return v.trim() !== '' && v !== '0';
+            if (Array.isArray(v)) return v.length > 0;
+            if (typeof v === 'object') return Object.keys(v).length > 0;
+            return true;
+        });
+    });
+}
+
+
 // v20 (2026-07-21) — "Cast" roster rail. Renders team-colored initial
 // avatars for every participant, HOME group then AWAY. Purely visual (no
 // stats) — the Box Score below carries the numbers. Hidden for bowling and
@@ -2355,7 +2388,7 @@ function applyLiveUpdate(hub, game, sport) {
 function renderRoster(hub, game, isBowling) {
     const card = $('rosterCard');
     if (!card) return;
-    const parts = Array.isArray(game.participants) ? game.participants : [];
+    const parts = sfVisibleParticipants(game);
     if (isBowling || parts.length === 0) { card.style.display = 'none'; return; }
 
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g,
@@ -2567,7 +2600,7 @@ function renderBowlingScore(game) {
     // End Game). When no matching participant exists (legacy games saved
     // before the stats map was populated) the stats line just hides.
     const partByName = new Map();
-    for (const p of (game.participants || [])) {
+    for (const p of sfVisibleParticipants(game)) {
         const key = (p.name || '').trim().toLowerCase();
         if (key) partByName.set(key, p);
     }
@@ -3396,7 +3429,7 @@ function renderPkShootout(hub, game, sport) {
 function renderBoxScore(hub, game, sport) {
     const card = $('boxScoreCard');
     const content = $('boxScoreContent');
-    const parts = Array.isArray(game.participants) ? game.participants : [];
+    const parts = sfVisibleParticipants(game);
     const s = String(sport || '').toUpperCase();
     console.log('[box-score] sport=', s, 'participants=', parts.length,
         'first=', parts[0]);
@@ -3797,7 +3830,7 @@ function __sfPerformers(game) {
     const primary = primaryBySport[String(game.sport || '').toUpperCase()];
     const num = v => (typeof v === 'number' ? v : (parseFloat(v) || 0));
     const out = [];
-    for (const p of (game.participants || [])) {
+    for (const p of sfVisibleParticipants(game)) {
         if (!p || !p.name) continue;
         const stats = p.stats || {}; let value = 0, label = '';
         if (primary && num(stats[primary]) > 0) { value = num(stats[primary]); label = __sfStatLabel(primary); }
