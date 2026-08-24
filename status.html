@@ -297,166 +297,96 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">17 Aug 2026 · logo editor, follower-access fix</span>
+    <span class="stamp">23 Aug 2026 · roster crash + dual-camera bug fixed · production unblocked</span>
   </div>
   <p class="lede">
-    What's moving right now, and what's waiting on you. Two days of work on how
-    player data is stored and who can see it, plus family links end to end.
-    Feature-by-feature detail lives on the parity page; history lives in the
-    session logs.
+    What's moving right now, and what's waiting on you. An overnight automated run
+    took Android from 1.1.1316 to 1.1.1334 and iOS to build 707, and two bugs you
+    reported from the field were root-caused from your own crash report. Test
+    results below are generated from that run, not written by hand.
   </p>
-
-  <div class="items" style="margin-bottom:8px;">
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">If this page looked out of date earlier, that was GitHub</span>
-        <span class="chip">17 Aug outage</span>
-      </div>
-      <p class="item-body">
-        Two Pages deployments failed with a 503 from GitHub's own deployment API
-        during a partial GitHub outage — API and Actions in major outage, Pages
-        degraded. The commit built fine and sat undeployed. Nothing was lost and
-        nothing needed redoing; it only needed another run once GitHub recovered.
-        The functional pushes that day (dashboard invitations, the coaches list)
-        went out before it started.
-      </p>
-    </div>
-  </div>
 
   <h2>Where the code is</h2>
   <div class="channels">
     <div class="ch live">
       <span class="ch-name">Play production</span>
       <span class="ch-ver">1.1.1200</span>
-      <span class="ch-note">live · 34 tester builds behind · production push is your call</span>
+      <span class="ch-note">live · 134 tester builds behind · your call, and now unblocked</span>
     </div>
     <div class="ch live">
       <span class="ch-name">App Store</span>
       <span class="ch-ver">1.2.185 (621)</span>
-      <span class="ch-note">READY_FOR_SALE · nothing new submitted for review</span>
+      <span class="ch-note">last known — not re-checked this run (App Store Connect is blocked from this session)</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1234</span>
-      <span class="ch-note">logo editor · follower-access fix · edited clips reach player pages</span>
+      <span class="ch-ver">1.1.1334</span>
+      <span class="ch-note">roster-back crash · dual-camera "Camera unavailable" · scoreboard name overlap · tickets send from in-game</span>
+    </div>
+    <div class="ch">
+      <span class="ch-name">iOS (direct install)</span>
+      <span class="ch-ver">build 707</span>
+      <span class="ch-note">on the SE · Event Name Pro gate opens the upgrade screen · scoreboard name parity</span>
     </div>
     <div class="ch">
       <span class="ch-name">TestFlight</span>
       <span class="ch-ver">1.2.215 (652)</span>
-      <span class="ch-note">on TestFlight · 7 fixes incl. the logo editor · What to Test set</span>
+      <span class="ch-note">last known — nothing uploaded this run; 707 went on by direct install</span>
     </div>
     <div class="ch">
       <span class="ch-name">Web (Pages)</span>
-      <span class="ch-ver">deployed</span>
-      <span class="ch-note">outage cleared · logo, dialog contrast, followers, get-the-app bar all live</span>
+      <span class="ch-ver">game.html v47</span>
+      <span class="ch-note">placeholder people hidden from public box scores · this page now generated</span>
     </div>
   </div>
 
   <h2>Read this first</h2>
   <div class="items">
-    <div class="item b-blocked">
-      <div class="item-head">
-        <span class="item-title">Anyone could add themselves to a private team</span>
-        <span class="chip">Found + closed today</span>
-      </div>
-      <p class="item-body">
-        The rule that let a person create their own follower record put no
-        constraint on <em>status</em>. So any signed-in user could write
-        <code>{status:"approved"}</code> onto any private team and immediately read its
-        roster — and, because surname access trusts "approved follower", the players'
-        full names.
-        <br><br>
-        Verified against a throwaway private team: the read was refused, the
-        self-approve succeeded, the read then worked. Now refused, and re-verified
-        after the fix — while a genuine request-to-follow and public auto-follow both
-        still work. Accepting an invite moved to the server, which checks the invite
-        really was sent to your address. <strong>iOS 1.2.214 is required</strong> for
-        invite acceptance; older builds will fail at it.
-      </p>
-    </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Surnames are out of the public data</span>
-        <span class="chip">Yes — informational</span>
+        <span class="item-title">Both bugs you reported were real — and your crash report is what found them</span>
+        <span class="chip">23 Aug</span>
       </div>
       <p class="item-body">
-        You asked what this meant: a shared team's records used to be readable by
-        anyone, so a child's full name was one fetch away even though the page only
-        drew "Hayden H." Surnames now live in a separate place only staff and approved
-        followers of a private team can read, and a server rule enforces it on every
-        write. So — done, and it matches what you want.
+        The <strong>roster-back crash</strong> came down to six buttons being
+        re-added while two of them were still attached to their old rows, so the
+        second rebuild threw. It only happens in <strong>portrait</strong>, which
+        is why the automated sweep — which forces landscape — reported "cannot
+        reproduce" three runs in a row. Fixed in 1.1.1331.
       </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">An approved family link now grants authority</span>
-        <span class="chip">Your call, built</span>
-      </div>
       <p class="item-body">
-        Approving a link now records a <em>verified</em> guardian relationship the
-        permission system can act on, instead of only flipping a status nothing read.
-        <br><br>
-        Mapped conservatively: <strong>parent and guardian</strong> become custodial;
-        <strong>grandparent and other family</strong> stop at "can see this player".
-        That reads "parent or guardian" literally — custodial authority following the
-        custodial relationship. Easy to widen when you decide what those people should
-        be able to do; much harder to walk back.
+        The <strong>"Camera unavailable" message over a working camera</strong>
+        was two camera engines registered on one video surface. A surface can
+        only be owned by one of them, so the winner drew your live picture and
+        the loser reported failure — and the app was reading the loser. The same
+        bug explains the extra <em>device warming up</em> warnings: the phone was
+        doing all the camera and GPU work twice. Fixed in 1.1.1334.
+      </p>
+      <p class="item-body">
+        Worth saying plainly: an earlier attempt at the camera message (1.1.1332)
+        was wrong — it treated a symptom. It took your log to find the real cause.
       </p>
     </div>
   </div>
 
   <h2>Needs you</h2>
   <div class="items">
-    <div class="item b-active">
-      <div class="item-head">
-        <span class="item-title">Test iOS 1.2.215 and Android 1.1.1234</span>
-        <span class="chip">Over to you</span>
-      </div>
-      <p class="item-body">
-        Both are out — TestFlight build 652 processed and "What to Test" is set.
-        The two worth a real device: open a team you set to <strong>Invite Only</strong>
-        and confirm it reads Invite Only, and <strong>set a roster order</strong> then
-        check the team's web page matches.
-        <br><br>
-        Least proven thing shipped today: the iOS logo editor's gestures. The logic is a
-        direct port and it compiles, but no finger has touched it — crop handles vs.
-        panning the image is the part a compiler can't check.
-      </p>
-    </div>
-
-    <div class="item b-done">
-      <div class="item-head">
-        <span class="item-title">Your follower account has been repaired</span>
-        <span class="chip">Done — no action</span>
-      </div>
-      <p class="item-body">
-        The team you only follow, and 11 of its players, had been copied into that
-        account&rsquo;s cloud lists. Both removed; the follow itself is untouched. The
-        team was never at risk — its owner and managers were intact throughout and the
-        server refused every write. What you saw was a convincing but powerless local
-        copy.
-      </p>
-    </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Husk teams — emailed, awaiting your call</span>
+        <span class="item-title">Confirm 1.1.1334, then the production push is yours to trigger</span>
+        <span class="chip">over to you</span>
       </div>
       <p class="item-body">
-        11 husk teams, 34 leftover documents, 15 game records — all listed in the email
-        with dates, sports, teams and scores. Three look like yours (bowling on 9 May,
-        "Tre" on 12 Aug). Nothing deleted. They can also be re-parented to a live team
-        instead of purged, if you want any of it back.
+        Two things to check on the phone: resume a game in portrait and confirm
+        the <em>Camera unavailable</em> message stays away, and open Edit Roster
+        then come back and confirm it no longer crashes. If the thermal warnings
+        also settle down, that confirms the double-camera theory end to end.
       </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Two questions I owe you an answer on, not the reverse</span>
-      </div>
       <p class="item-body">
-        Cross-team player identity — who owns a shared player's name and number when
-        two accounts manage the same child — and how a possible match gets surfaced.
-        My position is in the reply rather than here, because it changes the data model
-        and I would rather you disagree with it before I build it.
+        After that, <strong>production is unblocked</strong> — the roster crash
+        was the only thing holding it. Play production is still on 1.1.1200, now
+        134 tester builds behind. I have the access and will run it; your standing
+        rule is that it needs an explicit go-ahead per build.
       </p>
     </div>
   </div>
