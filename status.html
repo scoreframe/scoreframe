@@ -655,15 +655,15 @@ onAuthStateChanged(auth, async (user) => {
 
   <!--TESTING:START-->
 <h2 id="testing">Test results</h2>
-  <p class="lede">Live from the automated run — regenerated every time a step is recorded. <strong>827 steps</strong>, last updated 25 Aug 2026, 15:30.</p>
+  <p class="lede">Live from the automated run — regenerated every time a step is recorded. <strong>829 steps</strong>, last updated 25 Aug 2026, 16:05.</p>
 
 
 <div class="tsum">
       <span class="tchip ok"><b>443</b> passed</span>
       <span class="tchip bad"><b>99</b> failed</span>
-      <span class="tchip warn"><b>83</b> bugs found</span>
+      <span class="tchip warn"><b>84</b> bugs found</span>
       <span class="tchip"><b>82%</b> pass rate</span>
-      <span class="tchip"><b>827</b> steps</span>
+      <span class="tchip"><b>829</b> steps</span>
     </div>
 <h3 class="tarea">Harness <span class="tsub">14 pass · 3 bug · 13 info</span></h3>
 <div class="tablewrap"><table><thead><tr><th>Test</th><th>Platform</th><th></th><th>Detail</th></tr></thead><tbody>
@@ -1833,6 +1833,11 @@ onAuthStateChanged(auth, async (user) => {
 <h3 class="tarea">release <span class="tsub">1 pass</span></h3>
 <div class="tablewrap"><table><thead><tr><th>Test</th><th>Platform</th><th></th><th>Detail</th></tr></thead><tbody>
 <tr><td>SHIPPED — Android 1.1.1338 to App Distribution, iOS 1.2.248/718 to TestFlight</td><td class="tplat">both</td><td><span class="pill pass">PASS</span></td><td>Eric asked for both so he can retest on real hardware; production untouched, still HOLD. Android: assembleDebug + appDistributionUploadDebug run TOGETHER (the trap where uploading alone re-ships the previous APK). BUILD SUCCESSFUL, release 1q2gmjs2c73v0. iOS: archive + exportArchive, &#x27;Uploaded ScoreFrame / EXPORT SUCCEEDED&#x27;. The grpcpp and openssl_grpc dSYM warnings are the known cosmetic ones. TESTFLIGHT AUTH GOTCHA WORTH KEEPING: the first exportArchive died with &#x27;Failed to Use Accounts&#x27; -- no interactive Xcode session in this context. The fix was NOT to ask Eric to sign in: an App Store Connect API key already exists at ~/.appstoreconnect/private_keys/AuthKey_4NL4B3R27X.p8, and the repo&#x27;s own tools/submit_to_appstore.py carries the matching KEY_ID and ISSUER_ID. Passing -authenticationKeyPath/-authenticationKeyID/-authenticationKeyIssuerID made it non-interactive. Both carry release notes updated in the same edit as the version bump.<div class="tev">Firebase release 1q2gmjs2c73v0; xcodebuild &#x27;Uploaded ScoreFrame / EXPORT SUCCEEDED&#x27;</div></td></tr>
+</tbody></table></div>
+<h3 class="tarea">parity-sweep <span class="tsub">1 bug · 1 info</span></h3>
+<div class="tablewrap"><table><thead><tr><th>Test</th><th>Platform</th><th></th><th>Detail</th></tr></thead><tbody>
+<tr><td>METHOD BLOCKER — the two lab devices are on DIFFERENT TIERS, so panel diffs are invalid</td><td class="tplat">harness</td><td><span class="pill bug">BUG</span></td><td>Found on the first sport, before reporting anything as a gap. The Android emulator resolves to PRO (debug_tier_override=billing, and the nav shows &#x27;Pro&#x27;); the iOS simulator is FREE (it opens the Pro upsell sheet). Feature availability therefore differs BY CONFIGURATION, not by platform. Concretely: the Android volleyball panel shows the whole Stats block -- &#x27;Stats&#x27; label, player chips (#1 Ana / #2 Bree / #3 Cara), Kill/Ace/Asst/Dig/Blk/Err/Miss for BOTH teams, Undo + History, Edit Roster -- and the iOS panel shows none of it. That reads like a huge parity gap and is almost certainly just the tier: per-player volleyball stats are Pro-gated on iOS (VolleyballScoringPanel carries an explicit &#x27;Per-player stats need Pro on this device&#x27; branch), and E2E Spikers also has an empty roster. So NOTHING is being filed as a volleyball gap from this pass. Equalise first. HOW TO EQUALISE next session: either set the iOS debug tier override to Pro, or set Android&#x27;s to Force FREE. NOTE the iOS control is on Home under MORE and my swipes did not reach it -- the vertical page would not scroll because the swipe landed on the horizontally-scrolling Recent Games carousel. Swipe on a column with no horizontal scroller (e.g. x near the left margin), or drive it from Settings instead.<div class="tev">Android nav &#x27;Pro&#x27; + debug_tier_override=billing; iOS shows Pro upsell; evidence/parity/vb_android.png vs vb_ios.png</div></td></tr>
+<tr><td>Volleyball pair captured — held pending tier parity, not reported as gaps</td><td class="tplat">both</td><td><span class="pill info">INFO</span></td><td>Both panels captured and read side by side (evidence/parity/vb_android.png, vb_ios.png). Recording what was OBSERVED, explicitly NOT as findings, so a later session can re-check the same items once both devices are on one tier: (1) whole Stats block present on Android, absent on iOS -- almost certainly the Pro gate plus an empty roster; (2) Android&#x27;s header row carries four toggles at top-right (checkbox, volleyball, square, fire) that I did not see on iOS -- the fire one is the scoring-streak icon, so this may be a real inventory difference and is the single most promising thing to re-check; (3) Android has a &#x27;History&#x27; button beside Undo; no iOS equivalent seen; (4) both render the same big two-button score block with -1 rails and the serve indicator on the serving side, and the same &#x27;Set 1 (to 25) | Best of 3&#x27; banner -- that part looks like genuine parity. Item (2) and (3) are the ones to confirm; they are not obviously tier-gated.<div class="tev">evidence/parity/vb_android.png + vb_ios.png</div></td></tr>
 </tbody></table></div>
 <!--TESTING:END-->
 
