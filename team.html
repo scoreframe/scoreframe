@@ -789,7 +789,27 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
                 var isAndroid = /Android/i.test(ua);
                 var isIOS = /iPhone|iPad|iPod/i.test(ua) ||
                             (/Mac/.test(ua) && navigator.maxTouchPoints > 1);
-                var PLAY = 'https://play.google.com/store/apps/details?id=com.scoreframe.android';
+                // INSTALL ATTRIBUTION (2026-08-26).
+                //
+                // Every hub page is shared with a whole team's worth of parents,
+                // and until now the installs it produced were anonymous. Play
+                // passes ?referrer= through to the installed app AND — because
+                // this is formatted as UTM params — surfaces it in Play Console
+                // under Acquisition → Traffic source with no app code at all.
+                //
+                // utm_campaign carries the hub code, so "which teams actually
+                // bring people in" becomes answerable. Anything the app wants to
+                // do with it later (crediting a referrer, rewarding a hub) reads
+                // the same string via the Play Install Referrer API.
+                var _hub = (q.get('code') || q.get('hub') ||
+                            location.pathname.split('/').pop() || '').slice(0, 32);
+                var _ref = 'utm_source=team_hub&utm_medium=share' +
+                           (_hub ? '&utm_campaign=hub_' + encodeURIComponent(_hub) : '');
+                var PLAY = 'https://play.google.com/store/apps/details?id=com.scoreframe.android' +
+                           '&referrer=' + encodeURIComponent(_ref);
+                // Apple has no equivalent install-referrer channel; a campaign
+                // token would need an Apple Ads campaign behind it, so the App
+                // Store link stays plain rather than pretending to be tracked.
                 var APPSTORE = 'https://apps.apple.com/us/app/scoreframe/id6762281454';
                 var href = null, label = 'Open in app';
                 if (isAndroid) {

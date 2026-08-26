@@ -704,6 +704,29 @@ html, body {
     margin-right: auto;
   }
 }
+
+/* Get-the-app bar (2026-08-26). game.html is the most-shared page in the whole
+   product — every game link a coach sends lands here — and it had no install
+   prompt at all. Same component as team.html so both pages behave alike. */
+#appCta { background: var(--bg-elevated); border-bottom: 1px solid var(--outline); }
+.app-cta-inner {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; max-width: 760px; margin: 0 auto;
+}
+.app-cta-text { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; flex: 1; }
+.app-cta-text strong { font-size: 13px; font-weight: 800; color: var(--text-primary); }
+.app-cta-text span { font-size: 11px; color: var(--muted); }
+.app-cta-btn {
+    flex-shrink: 0; text-decoration: none; white-space: nowrap;
+    background: var(--accent); color: #1A1A1A;
+    font-size: 12px; font-weight: 800; letter-spacing: 0.03em;
+    padding: 8px 14px; border-radius: 999px;
+}
+.app-cta-close {
+    flex-shrink: 0; background: transparent; border: 0; cursor: pointer;
+    color: var(--muted); font-size: 20px; line-height: 1; padding: 0 2px;
+    font-family: inherit;
+}
 </style>
 <script>
 // v14 — App-injected theme override. GamePageActivity (Android) and
@@ -746,6 +769,19 @@ html, body {
 </script>
 </head>
 <body>
+
+<!-- Get-the-app bar. Hidden inside the app's own WebView (?app=1) and
+     dismissible — a bar you cannot get rid of is worse than no bar. -->
+<div id="appCta" style="display:none;">
+  <div class="app-cta-inner">
+    <div class="app-cta-text">
+      <strong>Score your own games with ScoreFrame</strong>
+      <span>Live scoreboard burned into your video. Free.</span>
+    </div>
+    <a id="appCtaBtn" class="app-cta-btn" href="#">Get the app</a>
+    <button id="appCtaClose" class="app-cta-close" aria-label="Dismiss">&times;</button>
+  </div>
+</div>
 
 <div class="top-bar">
     <a class="brand" href="/">Score<span class="accent">Frame</span></a>
@@ -4152,6 +4188,46 @@ onAuthStateChanged(auth, (user) => {
         load();
     }
 });
+</script>
+
+<script>
+// ── Get-the-app bar + install attribution (2026-08-26) ──────────────────
+// The Play link carries a UTM referrer, so Play Console attributes the install
+// under Acquisition → Traffic source, and the app reads the same string via the
+// Install Referrer API (see InstallAttribution.kt). utm_campaign carries the hub
+// code, which makes "which teams actually bring people in" answerable.
+(function () {
+  try {
+    var q = new URLSearchParams(location.search);
+    if (q.get('app') === '1') return;                 // already inside the app
+    try { if (localStorage.getItem('sf_game_cta_dismissed') === '1') return; } catch (e) {}
+    var ua = navigator.userAgent || '';
+    var isAndroid = /Android/i.test(ua);
+    var isIOS = /iPhone|iPad|iPod/i.test(ua) ||
+                (/Mac/.test(ua) && navigator.maxTouchPoints > 1);
+    if (!isAndroid && !isIOS) return;                 // desktop: no app to get
+
+    var hub = (q.get('team') || q.get('hub') || '').trim().slice(0, 32);
+    var ref = 'utm_source=game_page&utm_medium=share' +
+              (hub ? '&utm_campaign=hub_' + encodeURIComponent(hub) : '');
+    var PLAY = 'https://play.google.com/store/apps/details?id=com.scoreframe.android' +
+               '&referrer=' + encodeURIComponent(ref);
+    var APPSTORE = 'https://apps.apple.com/us/app/scoreframe/id6762281454';
+
+    document.addEventListener('DOMContentLoaded', function () {
+      var bar = document.getElementById('appCta');
+      var btn = document.getElementById('appCtaBtn');
+      var close = document.getElementById('appCtaClose');
+      if (!bar || !btn) return;
+      btn.href = isAndroid ? PLAY : APPSTORE;
+      bar.style.display = 'block';
+      if (close) close.addEventListener('click', function () {
+        bar.style.display = 'none';
+        try { localStorage.setItem('sf_game_cta_dismissed', '1'); } catch (e) {}
+      });
+    });
+  } catch (e) {}
+})();
 </script>
 </body>
 </html>
