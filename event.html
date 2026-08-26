@@ -236,7 +236,7 @@ html, body {
 })();
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { initializeFirestore, getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -249,7 +249,19 @@ const firebaseConfig = {
     appId: "1:728886280072:android:0050478669b89fc76b043d"
 };
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// 2026-08-26 — initializeFirestore, not getFirestore.
+//
+// Eric hit "Loading team..." for a full two minutes on iOS, then it appeared.
+// That number is the tell: the Firestore SDK talks WebChannel (a streaming
+// transport) by default, and inside a WKWebView / Android WebView that stream
+// can stall silently until it times out and falls back. The page isn't broken
+// and the query isn't slow — the first read is just sitting on a dead socket.
+//
+// autoDetect spots the stalled stream and switches to long-polling in seconds
+// instead of minutes. Preferred over experimentalForceLongPolling because
+// these pages are also opened in ordinary desktop browsers, where WebChannel
+// works fine and is the more efficient transport.
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 const auth = getAuth(app);
 
 // 2026-06-19 — Mirror team.html's SSO + auth-state gating. event.html

@@ -452,7 +452,7 @@ import {
     GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import {
-    getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit
+    initializeFirestore, getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // 2026-06-02 — Must match team.html / game.html exactly. Same project +
@@ -473,7 +473,11 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+// 2026-08-26 — initializeFirestore, not getFirestore. Same fix as team.html:
+// the default WebChannel transport can stall inside a WKWebView until it times
+// out (Eric saw a two-minute "Loading team..."), and autodetect switches to
+// long-polling in seconds instead. See the fuller note in team.html.
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 
 console.log('[player.html] build 2026-06-02q loaded');
 
