@@ -655,15 +655,15 @@ onAuthStateChanged(auth, async (user) => {
 
   <!--TESTING:START-->
 <h2 id="testing">Test results</h2>
-  <p class="lede">Live from the automated run — regenerated every time a step is recorded. <strong>863 steps</strong>, last updated 25 Aug 2026, 21:37.</p>
+  <p class="lede">Live from the automated run — regenerated every time a step is recorded. <strong>867 steps</strong>, last updated 25 Aug 2026, 22:32.</p>
 
 
 <div class="tsum">
-      <span class="tchip ok"><b>460</b> passed</span>
+      <span class="tchip ok"><b>462</b> passed</span>
       <span class="tchip bad"><b>99</b> failed</span>
       <span class="tchip warn"><b>91</b> bugs found</span>
       <span class="tchip"><b>82%</b> pass rate</span>
-      <span class="tchip"><b>863</b> steps</span>
+      <span class="tchip"><b>867</b> steps</span>
     </div>
 <h3 class="tarea">Harness <span class="tsub">14 pass · 3 bug · 13 info</span></h3>
 <div class="tablewrap"><table><thead><tr><th>Test</th><th>Platform</th><th></th><th>Detail</th></tr></thead><tbody>
@@ -1884,6 +1884,13 @@ onAuthStateChanged(auth, async (user) => {
 <div class="tablewrap"><table><thead><tr><th>Test</th><th>Platform</th><th></th><th>Detail</th></tr></thead><tbody>
 <tr><td>Coach/Fan switch left Home stale until the app was killed</td><td class="tplat">android</td><td><span class="pill bug">BUG</span></td><td>Eric 2026-08-25. Switch mode in Settings and Home keeps the layout built for the previous role: returning to Coach never restores the hero card, and Fan mode keeps showing the Teams tab. Cause: initHomeScreen() opens with `if (layoutBuilt) return`, and the Settings picker relaunches Home with CLEAR_TOP|SINGLE_TOP — SINGLE_TOP REUSES the existing instance, so Home only gets onNewIntent + onResume and neither rebuilds. SINGLE_TOP is deliberate (added 1.1.1327 to stop Home being recreated on connect), so removing it would trade this bug for that one.<div class="tfix">fixed: HomeActivity records builtForRole at build time and rebuilds on resume when the saved role differs. Fixes every entry point — Settings picker, both fan-mode prompts, and any added later — rather than patching one caller. 1.1.1340.</div><div class="tev">Reproduced on emulator: Fan-&gt;Coach showed no hero; force-stop + relaunch restored it</div></td></tr>
 <tr><td>VERIFIED FIXED on device — role switch now rebuilds Home</td><td class="tplat">android</td><td><span class="pill pass">PASS</span></td><td>Cleared the paused game so the hero shows its default copy, i.e. Eric&#x27;s exact case. Coach with no paused game: &quot;Score your next game&quot; PRESENT. After Coach-&gt;Fan: MISSING (correct — Fan hides it). After Fan-&gt;Coach: PRESENT. Before the fix that last step was MISSING. Fan mode also now correctly drops the Teams tab from the bottom nav, which it previously kept.<div class="tev">/tmp/repro_role3.txt — 3/3 as expected</div></td></tr>
+</tbody></table></div>
+<h3 class="tarea">labs <span class="tsub">2 pass · 2 info</span></h3>
+<div class="tablewrap"><table><thead><tr><th>Test</th><th>Platform</th><th></th><th>Detail</th></tr></thead><tbody>
+<tr><td>Schedule Import — new Labs feature built (Android)</td><td class="tplat">android</td><td><span class="pill pass">PASS</span></td><td>Eric 2026-08-25: share a photo/screenshot/PDF/calendar link of a team schedule, AI extracts the GAMES, they land in an editable review list, then save into the team schedule. Built inside Manage Team → Schedule so the team name is available as matching context. Non-games (practices, parties, picture day, fundraisers) filtered on both routes.<div class="tev">New: functions/labs_schedule_import.js, LabsScheduleImport.kt, ScheduleImportReviewDialog.kt, ScheduleImportIcsTest.kt. Wired into TeamHubInline beside &quot;+ Add Game&quot;; registered in LabsManager as &quot;schedule_import&quot;. compileDebugKotlin BUILD SUCCESSFUL.</div></td></tr>
+<tr><td>No API key in the app — key lives only in the Cloud Function</td><td class="tplat">android</td><td><span class="pill info">INFO</span></td><td>Eric asked for no user-supplied key. The key sits in labsScheduleImport (functions/), never in the client. Labs scaffolding already anticipated this: LabsManager has a &quot;proxy&quot; endpoint mode and LabsAiSummary a callProxy() stub that was never wired. Two routes on purpose — .ics links parse fully on-device (structured data already; a model could only be slower, costlier and less accurate), while images/PDFs go to the CF and are sent to Claude as IMAGES rather than OCR text, because a season schedule is a month GRID and the grid carries the date.</td></tr>
+<tr><td>.ics route — 9 JVM tests green</td><td class="tplat">android</td><td><span class="pill pass">PASS</span></td><td>The keyless half is deterministic so it can be pinned down properly: noise filtering (practice/party/picture day), our own team name never returned as opponent, vs/@ → home/away, RFC 5545 folded-line unfolding, all-day events, and a malformed date dropped rather than defaulting to now. Verified the report XML shows tests=9 skipped=0 failures=0 rather than trusting BUILD SUCCESSFUL.<div class="tev">app/build/test-results/.../TEST-com.scoreframe.android.ScheduleImportIcsTest.xml</div></td></tr>
+<tr><td>Image/PDF route BLOCKED on one manual step</td><td class="tplat">android</td><td><span class="pill info">INFO</span></td><td>Compiles but is untested end-to-end and cannot run until ANTHROPIC_API_KEY is added to functions/.env and labsScheduleImport is deployed. Deliberately NOT claiming this path works. The CF returns a failed-precondition error naming the missing key, so calling it before setup explains itself instead of failing generically.<div class="tfix">fixed: Waiting on Eric: paste the key, then I deploy and test against a real schedule.</div></td></tr>
 </tbody></table></div>
 <!--TESTING:END-->
 
