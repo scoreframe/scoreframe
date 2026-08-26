@@ -1281,6 +1281,22 @@ const sportName = s => ({
     TENNIS:'Tennis', PICKLEBALL:'Pickleball', HOCKEY:'Hockey', LACROSSE:'Lacrosse'
 }[s] || 'Sport');
 
+// Which side we are for a fixture, mirroring the apps' TeamHubManager helpers.
+// matchup()    — in-app style: an unknown side renders the bare opponent rather
+//                than asserting one we were never told.
+// matchupOut() — outward copy (page titles, calendar summaries): unknown falls
+//                back to "vs", because a bare name reads like a typo in a title.
+function matchup(opponent, homeAway) {
+  if (!opponent) return '';
+  const side = String(homeAway || '').toLowerCase();
+  if (side === 'away') return '@ ' + opponent;
+  if (side === 'home') return 'vs ' + opponent;
+  return opponent;
+}
+function matchupOut(opponent, homeAway) {
+  return (String(homeAway || '').toLowerCase() === 'away' ? '@ ' : 'vs ') + opponent;
+}
+
 function formatDate(ts) {
     if (!ts) return '';
     const d = new Date(ts);
@@ -3049,7 +3065,7 @@ async function loadSchedule() {
             const childDate = (typeof c.date === 'number')
                 ? new Date(c.date).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
                 : 'TBD';
-            const childTitle = c.opponent ? `vs ${c.opponent}` : (c.eventName || 'Game');
+            const childTitle = c.opponent ? matchup(c.opponent, c.homeAway) : (c.eventName || 'Game');
             const childHref = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(c.id)}`;
             const pill = isLiveChild
                 ? '<span class="event-type-badge" style="background:rgba(204,34,34,0.15);color:#CC2222;">● LIVE</span>'
@@ -3109,7 +3125,7 @@ async function loadSchedule() {
             // Tournament cards lead with the event name (no opponent).
             const headlineText = isTournament
                 ? (g.eventName || 'Tournament')
-                : (g.opponent ? `vs ${g.opponent}` : (g.eventName || 'TBD'));
+                : (g.opponent ? matchup(g.opponent, g.homeAway) : (g.eventName || 'TBD'));
             const eventLine = (!isTournament && g.opponent && g.eventName)
                 ? `<div class="game-notes">🏷️ ${g.eventName}</div>`
                 : '';

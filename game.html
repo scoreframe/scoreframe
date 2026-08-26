@@ -998,7 +998,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v47</span>
+    <span class="page-version">game.html v48</span>
 </div>
 
 <script type="module">
@@ -1213,6 +1213,22 @@ const sportName = s => ({
     SOCCER:'Soccer', FOOTBALL:'Football', BASEBALL:'Baseball', SOFTBALL:'Softball',
     TENNIS:'Tennis', PICKLEBALL:'Pickleball', HOCKEY:'Hockey', LACROSSE:'Lacrosse'
 }[s] || 'Sport');
+
+// Which side we are for a fixture, mirroring the apps' TeamHubManager helpers.
+// matchup()    — in-app style: an unknown side renders the bare opponent rather
+//                than asserting one we were never told.
+// matchupOut() — outward copy (page titles, calendar summaries): unknown falls
+//                back to "vs", because a bare name reads like a typo in a title.
+function matchup(opponent, homeAway) {
+  if (!opponent) return '';
+  const side = String(homeAway || '').toLowerCase();
+  if (side === 'away') return '@ ' + opponent;
+  if (side === 'home') return 'vs ' + opponent;
+  return opponent;
+}
+function matchupOut(opponent, homeAway) {
+  return (String(homeAway || '').toLowerCase() === 'away' ? '@ ' : 'vs ') + opponent;
+}
 
 function formatDate(ts) {
     if (!ts) return '';
@@ -1508,7 +1524,7 @@ function renderUpcomingGame(hub, game) {
     const isCancelled = status === 'cancelled';
     const isPostponed = status === 'postponed';
     const title = opponent
-        ? `${hub.teamName} vs ${opponent}`
+        ? `${hub.teamName} ${matchupOut(opponent, game.homeAway)}`
         : (eventName || `${hub.teamName} — Upcoming`);
     document.title = `${title} · ${isCancelled ? 'Cancelled' : (isPostponed ? 'Postponed' : 'Upcoming')} · ScoreFrame`;
     // 2026-06-16 — Top pill swaps based on status. Postponed + cancelled
@@ -1700,7 +1716,7 @@ function buildAddToCalendarPayload(hub, game) {
     const eventTitle = game.eventName || game.eventLabel || '';
     const teamName = hub.teamName || 'ScoreFrame';
     const title = opponent
-        ? `${teamName} vs ${opponent}`
+        ? `${teamName} ${matchupOut(opponent, game.homeAway)}`
         : (eventTitle ? `${teamName} — ${eventTitle}` : `${teamName} game`);
     const location = game.location || '';
     const gameUrl = `${window.location.origin}/game.html?team=${encodeURIComponent(hub.hubCode || '')}&id=${encodeURIComponent(game.id || '')}`;
@@ -1744,7 +1760,7 @@ function buildScheduledGameIcs(hub, game) {
     const eventTitle = game.eventName || game.eventLabel || '';
     const teamName = hub.teamName || 'ScoreFrame';
     const summary = opponent
-        ? `${teamName} vs ${opponent}`
+        ? `${teamName} ${matchupOut(opponent, game.homeAway)}`
         : (eventTitle ? `${teamName} — ${eventTitle}` : `${teamName} game`);
     const location = game.location || '';
     const gameUrl = `${window.location.origin}/game.html?team=${encodeURIComponent(hub.hubCode || '')}&id=${encodeURIComponent(game.id || '')}`;
@@ -2285,7 +2301,7 @@ function moreCardHtml(hub, g) {
     return `<a class="more-card" href="${href}">
         <div class="more-bar" style="background:${bar}"></div>
         <div class="more-body">
-            <div class="more-opp">${sportEmoji((g.sport || '').toUpperCase())} vs ${escapeHtml(oppName)}</div>
+            <div class="more-opp">${sportEmoji((g.sport || '').toUpperCase())} ${escapeHtml(matchupOut(oppName, g.homeAway))}</div>
             <div class="more-score" style="color:${scoreColor}">${teamScore}–${oppScore}</div>
             <div class="more-meta" style="color:${metaColor}">${rl} · ${dstr}</div>
         </div>
