@@ -2553,10 +2553,16 @@ async function loadPendingRequests() {
             if (f.status === 'pending' && invited && (isOwner || isManager)) {
                 // Nothing to approve — the ball is in THEIR court. All the
                 // owner can usefully do is take the invitation back.
-                const waiting = document.createElement('div');
-                waiting.textContent = 'Waiting for them';
-                waiting.style.cssText = 'font-size:12px; color:#8b8b8b; font-style:italic; margin-right:8px;';
-                head.appendChild(waiting);
+                // 2026-08-26 — an "Accept for them" action, not just a wait.
+                // Dropping Approve here was semantically right and practically
+                // wrong: it left a lost invite email with no recovery path at
+                // all. The owner already has the authority; the label says
+                // plainly that they're completing it on the invitee's behalf.
+                const accept = document.createElement('button');
+                accept.textContent = 'Accept for them';
+                accept.style.cssText = 'padding:8px 14px; background:#FF9640; color:#1A1A1A; border:0; border-radius:6px; font-weight:700; cursor:pointer; margin-right:6px;';
+                accept.onclick = () => approvePendingRequest(f.id, f.name || 'Follower', card);
+                head.appendChild(accept);
                 const cancel = document.createElement('button');
                 cancel.textContent = 'Cancel invite';
                 cancel.style.cssText = 'padding:8px 14px; background:transparent; color:#888; border:1px solid #555; border-radius:6px; font-weight:700; cursor:pointer;';
