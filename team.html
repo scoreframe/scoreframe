@@ -2492,8 +2492,14 @@ async function loadPendingRequests() {
 
             const sub = [];
             if (f.email) sub.push(f.email);
-            if (f.status === 'pending') sub.push('wants to follow');
-            else if (f.status === 'approved') sub.push('following');
+            // 2026-08-26 — a pending row is one of TWO opposite things, and
+            // this page called both of them a request. `source` says which:
+            // owner_invite / hub_invite mean WE asked THEM. Eric: "If I invite
+            // somebody I would rather see that there's an outstanding
+            // invitation and that they have logged in and accepted."
+            const invited = ['owner_invite', 'hub_invite'].includes(String(f.source || ''));
+            if (f.status === 'pending') sub.push(invited ? 'invited — not accepted yet' : 'wants to follow');
+            else if (f.status === 'approved') sub.push(invited ? 'accepted your invitation' : 'following');
             const meta = document.createElement('div');
             meta.textContent = sub.join('  ·  ');
             meta.style.cssText = 'font-size:12px; color:#8b8b8b; overflow:hidden; text-overflow:ellipsis;';
@@ -2502,7 +2508,9 @@ async function loadPendingRequests() {
             const when = f.requestedAt || f.since;
             if (when) {
                 const w = document.createElement('div');
-                w.textContent = (f.status === 'pending' ? 'Requested ' : 'Since ') +
+                w.textContent = (f.status === 'pending'
+                        ? (invited ? 'Invited ' : 'Requested ')
+                        : 'Since ') +
                     new Date(when).toLocaleDateString();
                 w.style.cssText = 'font-size:11px; color:#777; margin-top:2px;';
                 info.appendChild(w);
@@ -2530,7 +2538,22 @@ async function loadPendingRequests() {
                 rm.onclick = () => removeFollower(f.id, f.name || 'this follower', card);
                 head.appendChild(rm);
             }
-            if (f.status === 'pending' && (isOwner || isManager)) {
+            if (f.status === 'pending' && invited && (isOwner || isManager)) {
+                // Nothing to approve — the ball is in THEIR court. All the
+                // owner can usefully do is take the invitation back.
+                const waiting = document.createElement('div');
+                waiting.textContent = 'Waiting for them';
+                waiting.style.cssText = 'font-size:12px; color:#8b8b8b; font-style:italic; margin-right:8px;';
+                head.appendChild(waiting);
+                const cancel = document.createElement('button');
+                cancel.textContent = 'Cancel invite';
+                cancel.style.cssText = 'padding:8px 14px; background:transparent; color:#888; border:1px solid #555; border-radius:6px; font-weight:700; cursor:pointer;';
+                // removeFollower (delete), NOT blockPendingRequest. Withdrawing
+                // an invitation must not blocklist the person — they never did
+                // anything, and a block would stop them following later.
+                cancel.onclick = () => removeFollower(f.id, f.name || 'this invitation', card);
+                head.appendChild(cancel);
+            } else if (f.status === 'pending' && (isOwner || isManager)) {
                 const ok = document.createElement('button');
                 ok.textContent = 'Approve';
                 ok.style.cssText = 'padding:8px 14px; background:#FF9640; color:#1A1A1A; border:0; border-radius:6px; font-weight:700; cursor:pointer;';
