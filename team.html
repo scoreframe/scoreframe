@@ -1687,7 +1687,14 @@ async function loadTeam() {
     } catch (e) {
         console.error('Load error:', e);
         $('loadingScreen').style.display = 'none';
-        $('notFoundScreen').style.display = 'block';
+        // Only claim the team doesn't exist if we never managed to render it.
+        // showContent() throws for a stranger on a public team — it reads the
+        // roster, which they are not allowed to see — and this catch used to
+        // stamp "Team Not Found" over a page that had already loaded fine.
+        // A partial failure after render is not a missing team.
+        if ($('teamPage').style.display !== 'block') {
+            $('notFoundScreen').style.display = 'block';
+        }
     }
 }
 
