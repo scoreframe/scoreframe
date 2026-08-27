@@ -958,6 +958,9 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
         </div>
         <button class="access-btn" id="requestBtn" onclick="requestAccess()" style="display:none;">Request Access</button>
         <div class="access-status" id="accessStatus"></div>
+        <!-- Public shell schedule: the one thing a stranger may see. Filled
+             from publicTeams/{hubCode}; empty and hidden for private teams. -->
+        <div id="publicShellSchedule" style="display:none;margin-top:18px;text-align:left;"></div>
     </div>
 
     <!-- Content (visible to approved subscribers + managers for private, everyone for public) -->
@@ -1220,6 +1223,10 @@ getRedirectResult(auth).then((result) => {
 let hubCode = null;
 let teamId = null;  // Resolved from hubIndex/{hubCode}
 let hubProfile = null;
+// Server-maintained public projection (publicTeams/{hubCode}) for visitors who
+// cannot read the real team documents. Name, sport, colours and upcoming
+// date/opponent only — deliberately no location, notes, roster or results.
+let publicShell = null;
 let currentUser = null;  // null = not signed in, object = signed in with Google
 // v13 — Season state. teamSeasons holds the team's seasons sorted
 // active-first. selectedSeasonId filters Upcoming + Past Games rendering.
@@ -1588,6 +1595,18 @@ async function loadTeam() {
             // is reliably present (search.html uses r.hubCode for
             // the team.html link). Try both the doc-ID lookup AND
             // the hubCode query so we cover both schemas.
+            // 2026-08-27 — try the public shell FIRST. publicTeams/{hubCode}
+            // is a server-maintained projection carrying the team's name,
+            // sport, colours and UPCOMING date/opponent — and nothing else.
+            // It exists because "public" no longer grants read on the real
+            // team documents: those carry the roster, and every completed
+            // game embeds participant names. A stranger who finds a team in
+            // Find Teams gets this and only this.
+            try {
+                const shellSnap = await getDoc(doc(db, 'publicTeams', hubCode));
+                if (shellSnap.exists()) publicShell = shellSnap.data();
+            } catch (eShell) { console.warn('[team.html] publicTeams lookup failed:', eShell); }
+
             let indexInfo = null;
             try {
                 const idx = await getDoc(doc(db, 'teamSearchIndex', teamId));
@@ -1606,7 +1625,16 @@ async function loadTeam() {
                     if (!snap.empty) indexInfo = snap.docs[0].data();
                 } catch (e3) { console.warn('[team.html] teamSearchIndex by hubCode failed:', e3); }
             }
-            console.log('[team.html] gate-fallback indexInfo:', indexInfo);
+            console.log('[team.html] gate-fallback indexInfo:', indexInfo, 'shell:', !!publicShell);
+            if (!indexInfo && publicShell) {
+                indexInfo = {
+                    teamName: publicShell.name,
+                    sport: publicShell.sport,
+                    color: publicShell.color,
+                    color2: publicShell.color2,
+                    visibility: 'public',
+                };
+            }
             if (!indexInfo) {
                 $('loadingScreen').style.display = 'none';
                 $('notFoundScreen').style.display = 'block';
@@ -1814,6 +1842,10 @@ function showContent() {
         handleInviteAcceptance();
         $('teamContent').style.display = 'none';
         $('accessGate').style.display = 'block';
+        // Show the public shell's upcoming games alongside the gate, so a
+        // stranger who found this team sees a real page rather than a locked
+        // door. No-op when there is no shell (private / link_only teams).
+        renderPublicShellSchedule();
 
         if (!currentUser) {
             // Not signed in — show sign-in prompt
@@ -2352,6 +2384,44 @@ window.doUnfollow = async function() {
 };
 
 // ── Request Access (private hubs) ──
+
+/**
+ * Render the public shell's upcoming games on the access gate.
+ *
+ * This is deliberately the ONLY team content an unauthenticated stranger
+ * sees. It carries date, opponent and event name — no location (a date plus a
+ * venue is "where this child will be on Saturday"), no notes (free text a
+ * coach may have typed anything into), no roster and no results.
+ */
+function renderPublicShellSchedule() {
+    const host = document.getElementById('publicShellSchedule');
+    if (!host) return;
+    const games = (publicShell && Array.isArray(publicShell.upcoming)) ? publicShell.upcoming : [];
+    if (!games.length) { host.style.display = 'none'; return; }
+
+    const fmt = (ms) => {
+        if (!ms) return 'Date TBD';
+        const d = new Date(ms);
+        return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) +
+               ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    };
+    const rows = games.map((g) => {
+        const vs = g.opponent
+            ? ((g.homeAway || '').toLowerCase() === 'away' ? '@ ' : 'vs ') + g.opponent
+            : (g.eventName || 'Game');
+        return '<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;' +
+               'border-bottom:1px solid rgba(128,128,128,0.18);">' +
+               '<span style="font-weight:600;">' + vs.replace(/[<>]/g, '') + '</span>' +
+               '<span style="opacity:0.75;white-space:nowrap;">' + fmt(g.date) + '</span></div>';
+    }).join('');
+
+    host.innerHTML =
+        '<div style="font-weight:700;letter-spacing:0.04em;text-transform:uppercase;' +
+        'font-size:12px;opacity:0.75;margin-bottom:6px;">Upcoming</div>' + rows +
+        '<div style="opacity:0.7;font-size:12px;margin-top:10px;">' +
+        'Roster and results are visible to team members. Sign in and ask the coach for access.</div>';
+    host.style.display = 'block';
+}
 
 window.requestAccess = async function() {
     if (!currentUser) { doSignIn(); return; }
