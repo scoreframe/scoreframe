@@ -1233,6 +1233,7 @@ let isManager = false;
 let isCoach = false;
 let isSubscriber = false;
 let subStatus = null;  // null, 'pending', 'approved', 'blocked'
+let subSource = '';    // 'owner_invite' | 'hub_invite' => THEY invited US
 
 const $ = id => document.getElementById(id);
 
@@ -1723,9 +1724,45 @@ async function checkAccess() {
         }
         const subDoc = await getDoc(doc(db, 'teams', teamId, 'subscribers', uid));
         subStatus = subDoc.exists() ? subDoc.data().status : null;
+        // `pending` alone can't tell an invitation from a request, and the two
+        // need opposite words: an invitation is waiting on YOU, a request is
+        // waiting on the team. Without source, an invited person was told
+        // "waiting for team owner approval" for the thing they were supposed
+        // to do themselves. Eric, 2026-08-26: "that's the confusing part."
+        subSource = subDoc.exists()
+            ? String(subDoc.data().source || '').toLowerCase() : '';
         isSubscriber = subStatus === 'approved';
     } catch (e) {
         console.error('Access check error:', e);
+    }
+}
+
+/**
+ * Accept an invitation to follow this team.
+ *
+ * Goes through the acceptFollowInvite Cloud Function rather than writing
+ * status directly: firestore.rules deliberately forbids a subscriber setting
+ * their own status to "approved" (otherwise anyone could self-approve onto a
+ * private team). The function proves the invitation is real by reading
+ * `source` server-side, where a client can't forge it.
+ */
+async function acceptInvite() {
+    const btn = $('requestBtn');
+    btn.disabled = true;
+    btn.textContent = 'Accepting…';
+    try {
+        const { getFunctions, httpsCallable } =
+            await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
+        await httpsCallable(getFunctions(app), 'acceptFollowInvite')({ teamId });
+        subStatus = 'approved';
+        isSubscriber = true;
+        location.reload();
+    } catch (e) {
+        console.error('[team.html] acceptFollowInvite failed:', e);
+        btn.disabled = false;
+        btn.textContent = 'Accept invitation';
+        $('accessStatus').textContent =
+            'Could not accept just now — please try again.';
     }
 }
 
@@ -1804,7 +1841,16 @@ function showContent() {
         } else {
             // Signed in but not approved
             $('gateAuthBtns').style.display = 'none';
-            if (subStatus === 'pending') {
+            if (subStatus === 'pending' && ['owner_invite','hub_invite'].includes(subSource)) {
+                // Invited, not accepted. The ball is in THEIR court, so give
+                // them the button rather than telling them to wait.
+                $('accessDesc').textContent =
+                    "You've been invited to follow this team.";
+                $('requestBtn').style.display = 'inline-block';
+                $('requestBtn').textContent = 'Accept invitation';
+                $('requestBtn').onclick = acceptInvite;
+                $('accessStatus').textContent = '';
+            } else if (subStatus === 'pending') {
                 $('accessDesc').textContent = '';
                 $('requestBtn').style.display = 'none';
                 $('accessStatus').textContent = '⏳ Access request pending — waiting for team owner approval';
