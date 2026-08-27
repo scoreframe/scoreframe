@@ -1767,7 +1767,14 @@ async function acceptInvite() {
 }
 
 function showContent() {
-    const isPublic = hubProfile.visibility === 'public';
+    // 2026-08-27 — "link_only" means anyone holding the link may READ, with no
+    // account and no approval, while the team stays out of teamSearchIndex.
+    // Anywhere this page asks "may this visitor see the content?", link_only
+    // answers yes alongside public. Mirrors teamIsLinkViewable() in
+    // firestore.rules and isLinkViewable() in functions/index.js.
+    function isLinkViewable(v) { return v === 'public' || v === 'link_only'; }
+
+    const isPublic = isLinkViewable(hubProfile.visibility);
 
     // Show manager badge if user is a manager
     const mb = $('managerBadge');
@@ -1872,7 +1879,7 @@ function showContent() {
 function updateUserBar() {
     const accountBar = $('accountBar');
     const followArea = $('followArea');
-    const isPublic = hubProfile && hubProfile.visibility === 'public';
+    const isPublic = hubProfile && isLinkViewable(hubProfile.visibility);
 
     const logo = `<a href="/" style="text-decoration:none;font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-right:auto;">Score<span style="color:var(--accent);">Frame</span></a>`;
 
@@ -2688,7 +2695,7 @@ async function loadPendingRequests() {
 
         // Public teams can't have family links at all (anyone can follow one),
         // so say that rather than leaving a manager wondering where it went.
-        if (hubProfile && hubProfile.visibility === 'public') {
+        if (hubProfile && isLinkViewable(hubProfile.visibility)) {
             const note = document.createElement('div');
             note.style.cssText = 'font-size:12px; color:#8b8b8b; margin-top:6px;';
             note.textContent = 'Family links are off while this team is public, because anyone can follow a public team. Switch to private or invite-only to let parents and guardians link themselves to a player.';
@@ -3545,7 +3552,11 @@ async function loadRoster() {
             // private/invite-only teams where the viewer is an approved
             // follower and therefore already sees full names; this just makes
             // it true by construction rather than by coincidence.
-            const claimsAllowed = hubProfile && hubProfile.visibility !== 'public';
+            // link_only counts as public here, not private. The comment above
+            // is only true while the audience is vetted — on a link_only team
+            // the "viewer" is anyone holding the link, so letting them claim a
+            // player would hand a stranger a child's identity on the roster.
+            const claimsAllowed = hubProfile && !isLinkViewable(hubProfile.visibility);
             // Staff can claim a player too (Eric, 2026-08-17: "I'm the owner and
             // I'm actually a parent of one of the players"). This used to be
             // hidden for managers, which assumed staff and family are different
