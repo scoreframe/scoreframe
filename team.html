@@ -1675,6 +1675,12 @@ async function loadTeam() {
         }
 
         $('loadingScreen').style.display = 'none';
+        // 2026-08-27 — clear notFound explicitly. An earlier branch can have
+        // shown it (a first resolve attempt, an auth retry) and the success
+        // path never hid it again, so a public team rendered "Team Not Found"
+        // as a banner ABOVE the team page it had just loaded. Caught in
+        // Safari; every Firestore-level probe had passed.
+        $('notFoundScreen').style.display = 'none';
         $('teamPage').style.display = 'block';
 
         showContent();
@@ -2393,6 +2399,25 @@ window.doUnfollow = async function() {
  * venue is "where this child will be on Saturday"), no notes (free text a
  * coach may have typed anything into), no roster and no results.
  */
+/** Rows for the public shell's upcoming games. Date + opponent only. */
+function renderShellGamesHtml(games) {
+    const fmt = (ms) => {
+        if (!ms) return 'Date TBD';
+        const d = new Date(ms);
+        return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) +
+               ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    };
+    return games.map((g) => {
+        const vs = g.opponent
+            ? ((g.homeAway || '').toLowerCase() === 'away' ? '@ ' : 'vs ') + g.opponent
+            : (g.eventName || 'Game');
+        return '<div class="game-card"><div style="display:flex;justify-content:space-between;' +
+               'gap:12px;align-items:baseline;"><span style="font-weight:700;">' +
+               vs.replace(/[<>]/g, '') + '</span><span style="opacity:0.75;white-space:nowrap;">' +
+               fmt(g.date) + '</span></div></div>';
+    }).join('');
+}
+
 function renderPublicShellSchedule() {
     const host = document.getElementById('publicShellSchedule');
     if (!host) return;
@@ -2405,15 +2430,7 @@ function renderPublicShellSchedule() {
         return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) +
                ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
     };
-    const rows = games.map((g) => {
-        const vs = g.opponent
-            ? ((g.homeAway || '').toLowerCase() === 'away' ? '@ ' : 'vs ') + g.opponent
-            : (g.eventName || 'Game');
-        return '<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;' +
-               'border-bottom:1px solid rgba(128,128,128,0.18);">' +
-               '<span style="font-weight:600;">' + vs.replace(/[<>]/g, '') + '</span>' +
-               '<span style="opacity:0.75;white-space:nowrap;">' + fmt(g.date) + '</span></div>';
-    }).join('');
+    const rows = renderShellGamesHtml(games);
 
     host.innerHTML =
         '<div style="font-weight:700;letter-spacing:0.04em;text-transform:uppercase;' +
@@ -3325,7 +3342,14 @@ async function loadSchedule() {
         }).join('');
     } catch (e) {
         console.error('Schedule error:', e);
-        $('upcomingGames').innerHTML = '<div class="empty">Unable to load schedule</div>';
+        // 2026-08-27 — a stranger on a PUBLIC team cannot read teams/{id}/games
+        // (completed games embed participant names), so this throws by design.
+        // Fall back to the public shell, which carries date + opponent only.
+        if (publicShell && Array.isArray(publicShell.upcoming) && publicShell.upcoming.length) {
+            $('upcomingGames').innerHTML = renderShellGamesHtml(publicShell.upcoming);
+        } else {
+            $('upcomingGames').innerHTML = '<div class="empty">Unable to load schedule</div>';
+        }
     }
 }
 
@@ -4229,7 +4253,11 @@ async function loadPastGames() {
         try { renderStage(); } catch (e) { console.error('stage render failed:', e); }
     } catch (e) {
         console.error('Past games error:', e);
-        $('pastGames').innerHTML = '<div class="empty">Unable to load past games</div>';
+        // Past games are never public: they carry the box score and every
+        // participant's name. Say so plainly instead of showing an error.
+        $('pastGames').innerHTML = publicShell
+            ? '<div class="empty">Results are visible to team members.</div>'
+            : '<div class="empty">Unable to load past games</div>';
     }
 }
 
