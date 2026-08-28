@@ -906,6 +906,32 @@ function sendCommand(updatedState) {
     push(ref(db, `sessions/${currentCode}/commands`), cmd);
 }
 
+// 2026-08-28 — The wire carries STATE, not INTENT. FULL_STATE_SYNC brings the
+// numbers across, but everything hanging off the EVENT — highlight-reel
+// markers, the per-play scoring rows on game.html — never fires for a web tap,
+// because the camera only ever saw a snapshot. That is the exact trap
+// documented in CLAUDE.md's remote-scoring section, and it is why a stat
+// scored from this page produced no highlight and no player row.
+//
+// This sends the intent alongside the snapshot. Shape matches
+// RemoteScoringProtocol's PLAYER_STAT so the camera parses it with the same
+// parseMessage() the TCP path uses and routes it to processPlayerStatCommand.
+// SIDE EFFECT ONLY — the numbers still ride in the state sync, which is
+// authoritative; applying them twice would double-count.
+function sendPlayerStatIntent(side, statName, playerId, clockLabel) {
+    if (!currentCode || !currentSport || !playerId) return;
+    push(ref(db, `sessions/${currentCode}/commands`), {
+        type: 'PLAYER_STAT',
+        sport: currentSport,
+        side: side,
+        statName: statName,
+        playerId: playerId,
+        gameClockLabel: clockLabel || '',
+        delta: 1,
+        sentAt: Date.now()
+    });
+}
+
 function updateAndSend(mutator) {
     if (!currentState) return;
     const prev = clone(currentState);
@@ -1641,6 +1667,10 @@ function bbApplyStat(side, statKey, playerId) {
             else s.awayFoulsByPeriod = byP;
         }
     });
+    // Intent, so a made basket scored from the web becomes a highlight marker
+    // and a player row — the snapshot alone never triggers either.
+    sendPlayerStatIntent(side, statKey, playerId,
+                         'Q' + ((currentState && currentState.currentPeriod) || 1));
 }
 
 function openBbPlayerPicker(side, statKey) {
@@ -2008,6 +2038,10 @@ function vbApplyStat(side, statName, playerId) {
         stack.push(action);
         s.statUndoStack = stack;
     });
+    // The event, not just the numbers. Without this a web-scored kill never
+    // becomes a highlight clip or a player row on the game page.
+    sendPlayerStatIntent(side, statName, playerId,
+                         'Set ' + ((currentState && currentState.currentSet) || 1));
 }
 
 // Modal roster picker — shown when scorer taps a stat without first
