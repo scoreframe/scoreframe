@@ -586,6 +586,7 @@ html, body {
     background: var(--bg-elevated); border: 1px solid var(--bg-elevated);
     color: var(--text-primary); cursor: pointer;
     text-align: left; font-size: 13px;
+    text-decoration: none;
     transition: border-color 120ms ease, transform 80ms ease;
 }
 .highlight-chip:hover { border-color: var(--accent); }
@@ -998,7 +999,7 @@ html, body {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v49</span>
+    <span class="page-version">game.html v50</span>
 </div>
 
 <script type="module">
@@ -3050,6 +3051,23 @@ function renderHighlights(highlights, primaryStream) {
         const score = h.scoreLabel ? escapeHtml(h.scoreLabel) : '';
         const t = formatTimestamp(h.videoTimeSec);
         const sec = Math.max(0, Math.floor(Number(h.videoTimeSec) || 0));
+        // v50 — the app uploaded the clip this chip was marked from. Same row,
+        // better destination: the clip itself instead of a seek into the
+        // broadcast. See the note in buildWatchHtml for why this is its own
+        // field and not an overwrite of the timestamp.
+        const clip = typeof h.videoUrl === 'string' && h.videoUrl.startsWith('http')
+            ? h.videoUrl : '';
+        if (clip) {
+            const score2 = score ? `<span class="score">${score}</span>` : '';
+            return `<a class="highlight-chip" href="${escapeHtml(clip)}" target="_blank" rel="noopener">
+            <span class="star">\u25b6\ufe0f</span>
+            <span class="body">
+                <span class="desc">${desc}</span>
+                ${score2}
+            </span>
+            <span class="time">Clip</span>
+        </a>`;
+        }
         return `<button class="highlight-chip" data-time="${sec}" data-idx="${i}">
             <span class="star">⭐</span>
             <span class="body">
@@ -3061,7 +3079,10 @@ function renderHighlights(highlights, primaryStream) {
     }).join('');
     // Wire up click → seek (or fall back to opening in a new tab with
     // `?t=` for non-IFrame-API embeds, e.g., Twitch or when YT API failed).
-    list.querySelectorAll('.highlight-chip').forEach(btn => {
+    // BUTTON chips only. v50 renders a chip whose clip has been uploaded as an
+    // <a> that navigates to the clip — wiring a seek onto it too would drive
+    // the inline player AND leave the page in the same click.
+    list.querySelectorAll('button.highlight-chip').forEach(btn => {
         btn.addEventListener('click', () => {
             const sec = parseInt(btn.dataset.time, 10) || 0;
             seekToHighlight(sec, platform, baseUrl);
@@ -3222,13 +3243,36 @@ function renderScoringSummary(hub, game, sport) {
         KILLS: 'Kill', ACES: 'Ace',
         FTM: 'Free throw', '2PM': '2PT', '3PM': '3PT',
     };
+    // v50 — non-scoring log entries. These carry a team and a clock and
+    // deliberately NO player: Eric, "we can mark penalties and cards on the web
+    // page but do not apply a player to them at all." Each gets its own glyph
+    // so the timeline reads at a glance instead of showing the sport emoji for
+    // a tripping call.
+    const LOG_EVENT = {
+        PENALTY:     { label: 'Penalty',     emoji: '\u26d4' },
+        YELLOW_CARD: { label: 'Yellow card', emoji: '\ud83d\udfe8' },
+        RED_CARD:    { label: 'Red card',    emoji: '\ud83d\udfe5' },
+    };
     const sportKey = String(sport || '').toUpperCase();
     const meta = SPORT_LABEL_MAP[sportKey] || { label: 'Scoring Summary', emoji: '🥅', verb: 'Score' };
-    $('scoringSummaryLabel').textContent = meta.label;
+    // v50 — once penalties and cards are in the list it is no longer a list of
+    // goals, so say so. Pure-scoring games keep their sport-specific heading.
+    const hasLogRows = events.some(e => LOG_EVENT[String(e.eventType || '').toUpperCase()]);
+    $('scoringSummaryLabel').textContent = hasLogRows ? 'Game Log' : meta.label;
 
-    // Stable sort by game clock (ascending). gameClockSeconds is the
-    // soccer match-clock position at the tap.
-    const sorted = events.slice().sort((a, b) => (a.gameClockSeconds || 0) - (b.gameClockSeconds || 0));
+    // v50 — order by WALL CLOCK when every row has one. The game clock can't
+    // do this job on its own: hockey counts DOWN, so "ascending by clock" put
+    // the third period first and the first period last. wallClockMs is stamped
+    // at tap time and is monotonic whatever the clock is doing.
+    //
+    // Older games predate the stamp, so fall back to the game clock and flip
+    // the direction for the countdown sports.
+    const COUNTDOWN_SPORTS = new Set(['HOCKEY', 'BASKETBALL', 'FOOTBALL']);
+    const allStamped = events.every(e => Number(e.wallClockMs) > 0);
+    const dir = COUNTDOWN_SPORTS.has(sportKey) ? -1 : 1;
+    const sorted = events.slice().sort((a, b) => allStamped
+        ? (Number(a.wallClockMs) || 0) - (Number(b.wallClockMs) || 0)
+        : dir * ((a.gameClockSeconds || 0) - (b.gameClockSeconds || 0)));
 
     const homeColor = hub?.color || '#FF9640';
     const awayColor = hub?.color2 || '#FFFFFF';
@@ -3239,12 +3283,18 @@ function renderScoringSummary(hub, game, sport) {
     // Volleyball and basketball events carry no clock position, so formatting
     // them printed a meaningless "0'" on every row — the set / quarter label
     // does the positional work for those instead.
-    const usesMatchClock = sportKey === 'SOCCER';
+    // v50 — hockey shows its period clock too. It counts DOWN and is stamped
+    // as clockRemainingSeconds, so "12:34" reads as time LEFT in the period,
+    // which is how a hockey scoresheet reads. Only when it's non-zero: the
+    // clock-less sports (volleyball, basketball as we stamp it today) leave
+    // gameClockSeconds at 0 and would otherwise print a spurious "0:00".
     const fmtClock = (sec) => {
-        if (!usesMatchClock) return '';
         const s = Math.max(0, Math.floor(sec || 0));
-        const m = Math.floor(s / 60);
-        return `${m}'`;  // soccer convention: minute marker, e.g. "23'"
+        if (sportKey === 'SOCCER') return `${Math.floor(s / 60)}'`;  // "23'"
+        if (sportKey === 'HOCKEY' && s > 0) {
+            return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+        }
+        return '';
     };
     // 2026-06-09 — Half label (1st / 2nd / ET / PK) stamped on the
     // ScoringEvent at tap time. Empty for legacy events.
@@ -3282,6 +3332,20 @@ function renderScoringSummary(hub, game, sport) {
     // player when ready and falls back to a new tab only when we
     // can't reach it (non-embed platform, late call, etc.).
     const buildWatchHtml = (ev) => {
+        // v50 — an uploaded clip OF this play beats a seek into the broadcast.
+        // It's trimmed, it carries the intro card, and it doesn't depend on the
+        // live VOD still existing and staying seekable. Written by the app when
+        // the upload finishes; the timestamp link below stays put so a deleted
+        // upload degrades back to it rather than leaving a dead row.
+        //
+        // It is deliberately NOT the same field: the seek path parses `t=Ns`
+        // and matches the URL against game.streams[]. A standalone clip URL
+        // matches nothing, falls back to streams[0], and produces a button that
+        // seeks the LIVE stream to 0:00.
+        const clipUrl = typeof ev.highlightVideoUrl === 'string' ? ev.highlightVideoUrl : '';
+        if (clipUrl.startsWith('http')) {
+            return `<a href="${escapeHtml(clipUrl)}" target="_blank" rel="noopener" style="font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;white-space:nowrap;">\u25b6 Watch clip</a>`;
+        }
         const url = typeof ev.highlightUrl === 'string' ? ev.highlightUrl : '';
         if (!url.startsWith('http')) return '';
         const tMatch = url.match(/[?&]t=(\d+)s?/);
@@ -3308,8 +3372,16 @@ function renderScoringSummary(hub, game, sport) {
         // the left edge and the away card hugs the right.
         // v49 — what the play WAS, next to who made it. Only rendered where it
         // adds information: a soccer row is always a goal.
-        const playLabel = EVENT_TYPE_LABEL[String(ev.eventType || '').toUpperCase()] || '';
-        const playerBits = [playerName, playLabel].filter(Boolean).map(escapeHtml).join(' · ');
+        const evType = String(ev.eventType || '').toUpperCase();
+        const logKind = LOG_EVENT[evType] || null;
+        // A log row never names a person, even if one was picked in the app —
+        // the card still counts against them in the box score, the public
+        // timeline just doesn't say who. `detail` is what the row IS ("2:00",
+        // "Second yellow").
+        const playLabel = logKind ? logKind.label : (EVENT_TYPE_LABEL[evType] || '');
+        const playerBits = logKind
+            ? [logKind.label, String(ev.detail || '').trim()].filter(Boolean).map(escapeHtml).join(' · ')
+            : [playerName, playLabel].filter(Boolean).map(escapeHtml).join(' · ');
         const playerLine = playerBits
             ? `<div style="font-size:13px;color:var(--text-secondary);margin-top:2px;text-align:${isHome ? 'left' : 'right'};">${playerBits}</div>`
             : '';
@@ -3328,7 +3400,7 @@ function renderScoringSummary(hub, game, sport) {
         const clockBlock = (clockLine || halfLine)
             ? `<div style="min-width:44px;text-align:${isHome ? 'right' : 'left'};">${clockLine}${halfLine}</div>`
             : '';
-        const emojiBlock = `<div style="font-size:18px;line-height:1;flex-shrink:0;">${meta.emoji}</div>`;
+        const emojiBlock = `<div style="font-size:18px;line-height:1;flex-shrink:0;">${logKind ? logKind.emoji : meta.emoji}</div>`;
         const infoBlock = `<div style="flex:1;min-width:0;">${teamLine}${playerLine}</div>`;
         const accentBar = `<div style="width:4px;align-self:stretch;background:${escapeHtml(accent)};border-radius:2px;"></div>`;
         // Card itself, with team-tinted background + leading border on
