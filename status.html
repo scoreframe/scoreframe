@@ -344,13 +344,16 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">23 Aug 2026 · roster crash + dual-camera bug fixed · production unblocked</span>
+    <span class="stamp">30 Aug 2026 · game log + clip claim shipped · two live-game bugs fixed</span>
   </div>
   <p class="lede">
-    What's moving right now, and what's waiting on you. An overnight automated run
-    took Android from 1.1.1316 to 1.1.1334 and iOS to build 707, and two bugs you
-    reported from the field were root-caused from your own crash report. Test
-    results below are generated from that run, not written by hand.
+    What's moving right now, and what's waiting on you. Android is on
+    <strong>1.1.1379</strong>, iOS on <strong>1.2.266 (736)</strong>, and
+    <strong>game.html v50</strong> is live. Both bugs from your hockey session
+    are fixed — the fullscreen trap after Share, and a thermal warning that was
+    silently swallowing the more serious one. The testing record further down is
+    from the 23–24 Aug automated run and has not been regenerated since; the
+    version table and this section are current.
   </p>
 
   <h2>Where the code is</h2>
@@ -367,8 +370,8 @@ onAuthStateChanged(auth, async (user) => {
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1334</span>
-      <span class="ch-note">roster-back crash · dual-camera "Camera unavailable" · scoreboard name overlap · tickets send from in-game</span>
+      <span class="ch-ver">1.1.1379</span>
+      <span class="ch-note">game log on the game page · uploaded clips claim their chip · fullscreen trap after Share fixed · card branding</span>
     </div>
     <div class="ch">
       <span class="ch-name">iOS (direct install)</span>
@@ -377,18 +380,82 @@ onAuthStateChanged(auth, async (user) => {
     </div>
     <div class="ch">
       <span class="ch-name">TestFlight</span>
-      <span class="ch-ver">1.2.215 (652)</span>
-      <span class="ch-note">last known — nothing uploaded this run; 707 went on by direct install</span>
+      <span class="ch-ver">1.2.266 (736)</span>
+      <span class="ch-note">buffer-mode stat highlights · game log · clip claim · card branding</span>
     </div>
     <div class="ch">
       <span class="ch-name">Web (Pages)</span>
-      <span class="ch-ver">game.html v47</span>
-      <span class="ch-note">placeholder people hidden from public box scores · this page now generated</span>
+      <span class="ch-ver">game.html v50</span>
+      <span class="ch-note">penalties + cards on the timeline · uploaded clip replaces its timestamp link · hockey sorted right</span>
     </div>
   </div>
 
   <h2>Read this first</h2>
   <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">The fullscreen trap was the same bug you reported on 19 Aug — fixed for one door only</span>
+        <span class="chip">30 Aug</span>
+      </div>
+      <p class="item-body">
+        Tapping <strong>Share</strong> on the YouTube stream link left you in a
+        full-bleed video with no scoring panel and no way out. Root cause:
+        <code>applyOrientationLayout</code> skips its rebuild when the
+        orientation hasn't changed — and coming back from another Activity it
+        hasn't — so the layout survives in whatever state it was left in. Since
+        v1.1.829 removed the exit-fullscreen X, the ⛶ tile on the quick action
+        bar is the <em>only</em> way out, so losing that bar loses the exit.
+        This was already diagnosed and fixed on <strong>19 Aug</strong> from an
+        almost word-identical report — but per-door, only on the Roster return.
+        Share is another door, and every future door would have shipped broken
+        too. Now fixed once, in <code>onResume</code>, for all of them.
+        <br><br>
+        Two of my own mistakes on the way, both caught by measuring rather than
+        reasoning: I first gated the rebuild on <code>onStop</code>, and a share
+        chooser is transparent so it only <em>pauses</em> — the gate never fired
+        for the exact case it was written for. And my first "it survived!" check
+        was worthless because <code>am start</code> was creating a new Activity
+        instead of resuming yours. Re-verified with a real chooser round trip.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">The thermal notice was fine — but it was silencing the warning that matters</span>
+        <span class="chip">30 Aug</span>
+      </div>
+      <p class="item-body">
+        "Device warming up" during stream + buffer is the OS's own PowerManager
+        status at MODERATE, warn-only and once per session, exactly as you
+        specified — stream plus buffer plus GL compositing genuinely is that
+        load. Nothing to undo. But it shared a single flag with the SEVERE arm,
+        so once the mild notice had fired, <strong>"phone is HOT — Android may
+        start killing apps"</strong> could never appear. Given you have
+        explicitly opted out of app-driven auto-stops and make the call
+        yourself, that is the one you need. Each severity now speaks once.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Game log, clip claim, and branding on the cards</span>
+        <span class="chip">30 Aug</span>
+      </div>
+      <p class="item-body">
+        Penalties and cards now appear on the public game page timeline beside
+        the goals — team, clock, what the call was, and <em>never</em> a player,
+        per your rule. Uploading a highlight to YouTube now makes its chip point
+        at the clip instead of seeking into the live broadcast; kept as a
+        separate field so a deleted upload degrades back to the timestamp rather
+        than leaving a dead row. And the cards carry subtle ScoreFrame corner
+        brackets, with a quieter wordmark on the intermission card — that one
+        sits on the broadcast for the whole break, where a title-card-weight
+        mark reads as an ad rather than a credit.
+        <br><br>
+        Four pre-existing bugs fell out along the way: buffer stat clips were
+        built with a blank intro card, a hockey reel's intro said "Volleyball"
+        and printed volleyball sets, the game page sorted hockey backwards
+        (its clock counts down), and iOS was silently dropping soccer cards.
+      </p>
+    </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">Both bugs you reported were real — and your crash report is what found them</span>
