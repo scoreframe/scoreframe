@@ -1220,6 +1220,24 @@ getRedirectResult(auth).then((result) => {
     if (e && e.code !== 'auth/no-auth-event') console.warn('[auth] Redirect result:', e);
 });
 
+// 2026-08-31 — TOP LEVEL ON PURPOSE. This lived inside showContent(), which
+// meant every caller outside that one function threw
+// "ReferenceError: isLinkViewable is not defined" — and the throw was silent,
+// because each of those callers sits inside a try/catch that only console.debug's.
+//
+// The worst of them was loadRoster(): the reference is evaluated once per
+// roster row, BEFORE the row is appended, so the very first player aborted the
+// loop and `container.innerHTML = html` never ran. The Roster heading appeared
+// with nothing under it, on every team, for every viewer. Eric found it on CT
+// Bulldogs — "has a player on the roster but it doesn't show on the team page".
+//
+// Mirrors teamIsLinkViewable() in firestore.rules and isLinkViewable() in
+// functions/index.js: "link_only" means anyone holding the link may READ, with
+// no account and no approval, while the team stays out of teamSearchIndex.
+// Anywhere this page asks "may this visitor see the content?", link_only
+// answers yes alongside public.
+function isLinkViewable(v) { return v === 'public' || v === 'link_only'; }
+
 let hubCode = null;
 let teamId = null;  // Resolved from hubIndex/{hubCode}
 let hubProfile = null;
@@ -1376,7 +1394,7 @@ async function tryAppAuthHandoff() {
 }
 
 // 2026-06-01b — Page build marker for cache-debug. Visible in console.
-console.log('[team.html] build 2026-06-02c loaded');
+console.log('[team.html] build 2026-08-31a loaded');
 
 if (!hubCode || hubCode.length < 4) {
     $('loadingScreen').style.display = 'none';
@@ -1808,13 +1826,6 @@ async function acceptInvite() {
 }
 
 function showContent() {
-    // 2026-08-27 — "link_only" means anyone holding the link may READ, with no
-    // account and no approval, while the team stays out of teamSearchIndex.
-    // Anywhere this page asks "may this visitor see the content?", link_only
-    // answers yes alongside public. Mirrors teamIsLinkViewable() in
-    // firestore.rules and isLinkViewable() in functions/index.js.
-    function isLinkViewable(v) { return v === 'public' || v === 'link_only'; }
-
     const isPublic = isLinkViewable(hubProfile.visibility);
 
     // Show manager badge if user is a manager
