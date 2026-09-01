@@ -301,18 +301,64 @@ html, body {
 .center-state .h { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
 .center-state .d { font-size: 12px; }
 
-/* Player video rows — reels + edited clips, newest first. */
-.pv-row { display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:8px;
-          background:var(--bg-surface,#1E1E1E); border:1px solid var(--outline,#333);
-          border-radius:10px; text-decoration:none; color:inherit; }
-.pv-row:hover { border-color:var(--sf-accent,#FF9640); }
-.pv-play { flex:0 0 auto; width:34px; height:34px; border-radius:50%;
-           background:var(--sf-accent,#FF9640); color:#1A1A1A; display:flex;
-           align-items:center; justify-content:center; font-size:14px; }
-.pv-meta { min-width:0; }
-.pv-title { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden;
-            text-overflow:ellipsis; }
-.pv-sub { font-size:11px; color:var(--text-muted,#999); margin-top:2px; }
+/* Player videos — reels + edited clips, newest first.
+   2026-08-31, Eric: "I want them to be in a watch window in that area just
+   like we have on a game page and we can scroll left and right on video
+   thumbnails and pick the one we want to watch."
+   Watching a clip OF this player should not throw you out to youtube.com and
+   lose the page. Stage on top, horizontal thumbnail rail underneath — the
+   same shape as game.html's stage + .more-rail, kept deliberately similar so
+   the two pages read as one product. */
+.pv-stage { position:relative; width:100%; padding-bottom:56.25%; /* 16:9 */
+            background:#000; border-radius:14px; overflow:hidden;
+            border:1px solid var(--bg-elevated,#272727);
+            box-shadow:0 6px 24px rgba(0,0,0,0.45); }
+.pv-stage iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+.pv-cap { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+          margin-top:8px; font-size:12px; color:var(--text-secondary,#999); }
+.pv-cap-title { font-size:14px; font-weight:700; color:var(--text-primary,#EEE); }
+
+/* The rail scrolls; the arrows are an affordance for pointer devices, where
+   there is no swipe. Hidden on touch via the hover media query below — a
+   button you cannot hover is a button that is always in the way. */
+.pv-rail-wrap { position:relative; margin-top:14px; }
+.pv-rail { display:flex; gap:10px; overflow-x:auto; scroll-behavior:smooth;
+           -webkit-overflow-scrolling:touch; padding:2px 2px 8px;
+           scroll-snap-type:x proximity; }
+.pv-rail::-webkit-scrollbar { height:6px; }
+.pv-rail::-webkit-scrollbar-thumb { background:var(--bg-elevated,#272727); border-radius:3px; }
+.pv-card { flex:0 0 auto; width:168px; scroll-snap-align:start; cursor:pointer;
+           background:var(--bg-surface,#1E1E1E); border:1px solid var(--outline,#333);
+           border-radius:10px; overflow:hidden; padding:0; text-align:left;
+           color:inherit; font:inherit; }
+.pv-card:hover { border-color:var(--sf-accent,#FF9640); }
+.pv-card.current { border-color:var(--sf-accent,#FF9640); background:var(--accent-dim,rgba(255,150,64,0.15)); }
+.pv-card-thumb { position:relative; width:100%; aspect-ratio:16/9;
+                 background:var(--bg-elevated,#272727); display:block; }
+.pv-card-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+.pv-card-thumb .pv-fallback { width:100%; height:100%; display:flex;
+                 align-items:center; justify-content:center; font-size:20px; }
+/* The label rides the thumbnail so the stat reads at a glance while
+   scrubbing the rail — "Ace", "Kill", "Highlight reel". */
+.pv-chip { position:absolute; left:6px; bottom:6px; max-width:calc(100% - 12px);
+           padding:2px 7px; border-radius:4px; font-size:10px; font-weight:800;
+           letter-spacing:0.04em; text-transform:uppercase;
+           background:var(--sf-accent,#FF9640); color:#1A1A1A;
+           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pv-card-body { padding:7px 9px 9px; }
+.pv-card-game { font-size:12px; font-weight:600; color:var(--text-primary,#EEE);
+                white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pv-card-when { font-size:10px; color:var(--text-muted,#999); margin-top:2px; }
+.pv-arrow { position:absolute; top:calc(50% - 26px); transform:translateY(-50%);
+            width:32px; height:32px; border-radius:50%; cursor:pointer;
+            background:var(--bg-surface,#1E1E1E); color:var(--text-primary,#EEE);
+            border:1px solid var(--outline,#333); font-size:14px; line-height:1;
+            display:none; align-items:center; justify-content:center; z-index:2; }
+.pv-arrow:hover { border-color:var(--sf-accent,#FF9640); color:var(--sf-accent,#FF9640); }
+.pv-arrow.left { left:-6px; } .pv-arrow.right { right:-6px; }
+@media (hover:hover) and (pointer:fine) {
+    .pv-rail-wrap:hover .pv-arrow { display:flex; }
+}
 
 /* ── DESKTOP LAYOUT (Eric, 2026-08-17) ────────────────────────────────────
    These pages were built mobile-first with no width ceiling, so on a laptop
@@ -431,6 +477,15 @@ html, body {
     <div id="videosSection" style="display:none;">
         <div class="section-label" style="padding: 14px 16px 4px;">Videos</div>
         <div id="videosList" style="padding: 0 16px;"></div>
+        <div id="videosStageWrap" style="padding: 0 16px; display:none;">
+            <div class="pv-stage" id="videosStage"></div>
+            <div class="pv-cap" id="videosCap"></div>
+            <div class="pv-rail-wrap">
+                <button class="pv-arrow left"  id="videosPrev" type="button" aria-label="Scroll left">&#10094;</button>
+                <div class="pv-rail" id="videosRail"></div>
+                <button class="pv-arrow right" id="videosNext" type="button" aria-label="Scroll right">&#10095;</button>
+            </div>
+        </div>
     </div>
 
     <div id="gamesSection">
@@ -479,7 +534,7 @@ const auth = getAuth(app);
 // long-polling in seconds instead. See the fuller note in team.html.
 const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 
-console.log('[player.html] build 2026-06-02q loaded');
+console.log('[player.html] build 2026-08-31a loaded');
 
 // 2026-06-02 — Google sign-in for when the visitor lands on this page
 // without an auth session. Safari/Chrome opened from an in-app link
@@ -1350,27 +1405,157 @@ async function loadPlayerVideos() {
     playerVideos.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 }
 
+// The YouTube id IS the document id (see PlayerVideoIndex.publish, which uses
+// it so re-publishing updates in place). Parsing the URL is the fallback for
+// anything written before that, or by a future non-YouTube source.
+function pvVideoId(v) {
+    if (v.id && /^[A-Za-z0-9_-]{6,}$/.test(v.id)) return v.id;
+    const m = String(v.url || '').match(/(?:v=|youtu\.be\/|\/embed\/)([A-Za-z0-9_-]{6,})/);
+    return m ? m[1] : null;
+}
+
+// Split the published title into a LABEL and a GAME description.
+//
+// VideoJobService composes it as "<what the user typed> · <game title>" when a
+// highlight carried a description, "<game title> — highlight" when it did not.
+// So the leading segment is the human label — "Ace", "Kill", whatever Eric
+// typed at the tap — and that is exactly what he wants on the thumbnail:
+// "if there's a stat that I do it like in Ace or anything like that, or a label."
+function pvParts(v) {
+    const raw = String(v.title || '').trim();
+    const dot = raw.indexOf(' · ');
+    let label = '', game = raw;
+    if (dot > 0) { label = raw.slice(0, dot).trim(); game = raw.slice(dot + 3).trim(); }
+    else if (/ — highlight$/.test(raw)) { game = raw.replace(/ — highlight$/, '').trim(); }
+    if (!label) label = v.kind === 'reel' ? 'Highlight reel' : 'Highlight';
+    // Prefer the real game document over the title's copy of it: the stored
+    // title is a snapshot from upload time, while the game doc is current and
+    // gives a consistent "Home 2 - 1 Away" instead of whatever was typed.
+    const g = v.gameId ? allGames.find(x => x.id === v.gameId) : null;
+    if (g) {
+        const home = g.homeTeam || '', away = g.awayTeam || '';
+        if (home || away) game = `${home} ${g.homeScore || 0}–${g.awayScore || 0} ${away}`.trim();
+    }
+    const when = (g && g.date) || v.createdAt;
+    return {
+        label,
+        game: game || 'Untitled video',
+        when: when ? new Date(when).toLocaleDateString(undefined,
+            { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+    };
+}
+
+let pvCurrent = -1;
+
+/** Show the rail arrows only when the rail actually overflows. */
+function pvUpdateArrows() {
+    const rail = $('videosRail'), prev = $('videosPrev'), next = $('videosNext');
+    if (!rail || !prev || !next) return;
+    // clientWidth 0 means "not laid out yet", which is not the same as "does
+    // not overflow" — leave the arrows alone until there is a real box.
+    if (!rail.clientWidth) return;
+    const over = rail.scrollWidth > rail.clientWidth + 4;
+    prev.style.visibility = over ? '' : 'hidden';
+    next.style.visibility = over ? '' : 'hidden';
+}
+
+function pvPlay(i) {
+    const v = playerVideos[i];
+    if (!v) return;
+    const id = pvVideoId(v);
+    const stage = $('videosStage');
+    const cap = $('videosCap');
+    if (!stage) return;
+    pvCurrent = i;
+    const parts = pvParts(v);
+    if (id) {
+        // enablejsapi + origin so the embed is addressable later if we ever
+        // want autoplay-next; playsinline keeps iOS from going fullscreen.
+        const src = `https://www.youtube.com/embed/${encodeURIComponent(id)}`
+            + `?modestbranding=1&rel=0&playsinline=1&color=white&iv_load_policy=3`
+            + `&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
+        stage.innerHTML = `<iframe src="${src}" title="${escapeHtml(parts.game)}"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen loading="lazy"></iframe>`;
+    } else {
+        // Not a YouTube URL we can embed — say so and offer the link rather
+        // than showing a dead black box.
+        stage.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;
+            justify-content:center;text-align:center;padding:20px;font-size:13px;">
+            <a href="${escapeHtml(v.url)}" target="_blank" rel="noopener"
+               style="color:var(--sf-accent,#FF9640);">Open this video &#8599;</a></div>`;
+    }
+    if (cap) {
+        cap.innerHTML = `<span class="pv-cap-title">${escapeHtml(parts.game)}</span>`
+            + (parts.label ? `<span>${escapeHtml(parts.label)}</span>` : '')
+            + (parts.when ? `<span>&#183; ${escapeHtml(parts.when)}</span>` : '');
+    }
+    const rail = $('videosRail');
+    if (rail) rail.querySelectorAll('.pv-card').forEach((c, n) =>
+        c.classList.toggle('current', n === i));
+}
+
 function renderPlayerVideos() {
     const section = $('videosSection');
     const list = $('videosList');
-    if (!section || !list) return;
+    const wrap = $('videosStageWrap');
+    const rail = $('videosRail');
+    if (!section || !wrap || !rail) return;
     if (!playerVideos.length) { section.style.display = 'none'; return; }
     section.style.display = 'block';
-    list.innerHTML = playerVideos.map(v => {
-        const when = v.createdAt
-            ? new Date(v.createdAt).toLocaleDateString(undefined,
-                { month: 'short', day: 'numeric', year: 'numeric' })
-            : '';
-        const kind = v.kind === 'reel' ? 'Highlight reel' : 'Clip';
-        const sub = [kind, when].filter(Boolean).join('  ·  ');
-        return `<a class="pv-row" href="${escapeHtml(v.url)}" target="_blank" rel="noopener">
-            <span class="pv-play">&#9654;</span>
-            <span class="pv-meta">
-                <div class="pv-title">${escapeHtml(v.title || 'Untitled video')}</div>
-                <div class="pv-sub">${escapeHtml(sub)}</div>
+    // The old link list is gone — the stage replaces it. Kept in the DOM so
+    // nothing else that queries #videosList breaks.
+    if (list) list.innerHTML = '';
+    wrap.style.display = 'block';
+
+    rail.innerHTML = playerVideos.map((v, i) => {
+        const id = pvVideoId(v);
+        const p = pvParts(v);
+        // YouTube serves a thumbnail for every video at a predictable URL, so
+        // no extra API call. onerror swaps in the play glyph rather than
+        // leaving a broken-image icon (private/removed videos do this).
+        const thumb = id
+            ? `<img loading="lazy" alt="" src="https://i.ytimg.com/vi/${encodeURIComponent(id)}/mqdefault.jpg"
+                 onerror="this.replaceWith(Object.assign(document.createElement('div'),
+                          {className:'pv-fallback',textContent:'▶'}))">`
+            : `<div class="pv-fallback">&#9654;</div>`;
+        return `<button class="pv-card" type="button" data-pv="${i}">
+            <span class="pv-card-thumb">${thumb}
+                <span class="pv-chip">${escapeHtml(p.label)}</span>
             </span>
-        </a>`;
+            <span class="pv-card-body">
+                <span class="pv-card-game">${escapeHtml(p.game)}</span>
+                <span class="pv-card-when">${escapeHtml(p.when)}</span>
+            </span>
+        </button>`;
     }).join('');
+
+    rail.querySelectorAll('[data-pv]').forEach(btn =>
+        btn.addEventListener('click', () => pvPlay(Number(btn.getAttribute('data-pv')))));
+
+    const scrollBy = (dir) => rail.scrollBy({ left: dir * (rail.clientWidth * 0.8), behavior: 'smooth' });
+    const prev = $('videosPrev'), next = $('videosNext');
+    if (prev) prev.onclick = () => scrollBy(-1);
+    if (next) next.onclick = () => scrollBy(1);
+    // Arrows only when there is somewhere to scroll — but the measurement has
+    // to happen AFTER layout. Measuring inline gave scrollWidth === clientWidth
+    // === 0, because this can run while the section is still hidden or before
+    // the thumbnails have loaded, which would have hidden the arrows for good
+    // on exactly the wide rails that need them. So re-measure on resize and
+    // whenever the rail's own box changes.
+    pvUpdateArrows();
+    if (!rail.__pvObserved) {
+        rail.__pvObserved = true;
+        window.addEventListener('resize', pvUpdateArrows);
+        if (window.ResizeObserver) new ResizeObserver(pvUpdateArrows).observe(rail);
+    }
+
+    // Load the newest into the stage, but never re-load it on a re-render —
+    // that would restart playback under someone who is watching. renderEverything
+    // calls this again when the async fetch lands.
+    if (pvCurrent < 0 || pvCurrent >= playerVideos.length) pvPlay(0);
+    else rail.querySelectorAll('.pv-card').forEach((c, n) =>
+        c.classList.toggle('current', n === pvCurrent));
 }
 
 function renderEverything() {
