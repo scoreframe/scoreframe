@@ -534,7 +534,7 @@ const auth = getAuth(app);
 // long-polling in seconds instead. See the fuller note in team.html.
 const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 
-console.log('[player.html] build 2026-08-31a loaded');
+console.log('[player.html] build 2026-09-01a loaded');
 
 // 2026-06-02 — Google sign-in for when the visitor lands on this page
 // without an auth session. Safari/Chrome opened from an in-app link
@@ -566,12 +566,11 @@ window.__doGoogleSignIn = async function() {
 getRedirectResult(auth).catch((e) => console.warn('[player.html] redirect-result:', e));
 
 // ── URL params ──
-// Only `player=` is required. `team=` is an optional default scope
-// — pick the team to show first when the viewer can see this player
-// on multiple teams. The Team picker always discovers every team
-// the signed-in viewer is allowed to read that has this player on
-// its roster, regardless of what `team=` says. If `team=` is
-// missing entirely, the first discovered team is selected.
+// Only `player=` is required. `team=` is the view scope: a hub code
+// pins the page to that one team, `__all` (or an ABSENT param) spans
+// every team. The Team picker always discovers every team the
+// signed-in viewer is allowed to read that has this player on its
+// roster, regardless of what `team=` says.
 const params = new URLSearchParams(location.search);
 // 2026-06-09 — `team=__all` means "show this player across every team
 // they're on" — the original behavior. Anything else means "single
@@ -585,7 +584,15 @@ const params = new URLSearchParams(location.search);
 // whether we ALSO pull other teams' games.
 const TEAM_ALL = '__all';
 const urlTeamParam = params.get('team') || '';
-const viewAllTeams = urlTeamParam === TEAM_ALL;
+// 2026-09-01 — An ABSENT `team=` now means all teams too, not "pin to
+// whichever team discovery happens to find first". Eric: opening a
+// player FROM a team page should show that team (team.html + game.html
+// + the apps' team surfaces all pass `team=<hubCode>`); opening the
+// same player from anywhere not sourced from a team — Home, My
+// Players, game history — should default to every team. The old
+// bare-URL seed silently pinned an arbitrary team, which reads as the
+// picker having chosen the wrong one.
+const viewAllTeams = urlTeamParam === TEAM_ALL || urlTeamParam === '';
 let hubCode = viewAllTeams ? '' : urlTeamParam;
 const playerIdParam = params.get('player') || '';
 const teamHubCodes = []; // populated by discoverTeamsForPlayer()
