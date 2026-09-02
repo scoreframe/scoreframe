@@ -885,8 +885,8 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
 
 <div id="notFoundScreen" style="display:none;" class="access-section">
     <div style="font-size:48px;margin-bottom:16px;">🏟️</div>
-    <div class="access-title">Team Not Found</div>
-    <div class="access-desc">This team page doesn't exist or has been removed.</div>
+    <div class="access-title" id="notFoundTitle">Team Not Found</div>
+    <div class="access-desc" id="notFoundDesc">This team page doesn't exist or has been removed.</div>
     <a href="https://scoreframe.app" style="color:var(--accent);">Go to ScoreFrame</a>
 </div>
 
@@ -1354,6 +1354,11 @@ function formatDateRange(startMs, endMs) {
 // Accept ?code= (canonical) or ?hub= (older email links)
 const _params = new URLSearchParams(location.search);
 hubCode = _params.get('code') || _params.get('hub') || location.pathname.split('/').pop();
+// 2026-09-02 — Arrived from a shared GAME link that the viewer can't read yet.
+// game.html hands off here rather than telling them the game doesn't exist,
+// so the copy on this page should explain why they're looking at it.
+const cameFromGame = _params.get('from') === 'game';
+const cameFromGameId = _params.get('game') || '';
 // v13 — Android WebView wrapper appends ?app=1. body.app hides only the
 // SITE chrome the app already draws: the ScoreFrame account bar and the
 // Glavin Labs footer. The team's own header — name, colours, logo, record,
@@ -1394,7 +1399,22 @@ async function tryAppAuthHandoff() {
 }
 
 // 2026-06-01b — Page build marker for cache-debug. Visible in console.
-console.log('[team.html] build 2026-08-31a loaded');
+console.log('[team.html] build 2026-09-02a loaded');
+
+// 2026-09-02 — When we got here from a shared game link, reaching the
+// not-found screen means something specific: the team is real (game.html only
+// redirects after hubIndex resolved) but it's private, so it publishes no
+// public shell and a stranger can't even ask. Say that, instead of "this team
+// doesn't exist", which is both untrue and a dead end. Set once up front so
+// every not-found path picks it up — there are five and they're all inline.
+if (cameFromGame) {
+    const t = $('notFoundTitle'), d = $('notFoundDesc');
+    if (t) t.textContent = '🔒 This team is private';
+    if (d) d.textContent =
+        "Someone shared a game from this team, but the team keeps its page " +
+        "private — there's no public page and no way to request access from " +
+        "here. Ask whoever sent you the link to invite you from the app.";
+}
 
 if (!hubCode || hubCode.length < 4) {
     $('loadingScreen').style.display = 'none';
@@ -1701,6 +1721,22 @@ async function loadTeam() {
         $('notFoundScreen').style.display = 'none';
         $('teamPage').style.display = 'block';
 
+        // 2026-09-02 — They came here from a game link and now they CAN read
+        // the team, so finish the journey they actually started. Without this
+        // the reward for getting access is landing on a page they didn't ask
+        // for, with no route back to the game they were sent.
+        if (cameFromGameId) {
+            const back = document.createElement('a');
+            back.href = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(cameFromGameId)}`;
+            back.textContent = '▶  Go to the game you were sent';
+            back.style.cssText =
+                'display:block;margin:12px 16px;padding:12px 16px;border-radius:10px;' +
+                'background:var(--accent);color:#1A1A1A;font-weight:700;text-align:center;' +
+                'text-decoration:none;';
+            const page = $('teamPage');
+            page.insertBefore(back, page.firstChild);
+        }
+
         showContent();
     } catch (e) {
         console.error('Load error:', e);
@@ -1894,7 +1930,9 @@ function showContent() {
                     'Sign in from the Account tab at the bottom of the app, then come back here to request access.';
                 $('gateAuthBtns').style.display = 'none';
             } else {
-                $('accessDesc').textContent = 'Sign in, or create a free account, to request access.';
+                $('accessDesc').textContent = cameFromGame
+                    ? 'That game belongs to this team. Sign in, or create a free account, to request access.'
+                    : 'Sign in, or create a free account, to request access.';
                 // Toggle the PAIR — hiding only the Sign In button would leave
                 // a lone Sign Up button on screen for someone already signed in.
                 $('gateAuthBtns').style.display = 'flex';
@@ -1922,7 +1960,9 @@ function showContent() {
                 $('requestBtn').style.display = 'none';
                 $('accessStatus').textContent = 'Access denied by team owner';
             } else {
-                $('accessDesc').textContent = 'Request access to see the schedule, live streams, and game history.';
+                $('accessDesc').textContent = cameFromGame
+                    ? "You're not following this team yet, so that game isn't visible to you. Request access to see it, along with the schedule, live streams and game history."
+                    : 'Request access to see the schedule, live streams, and game history.';
                 $('requestBtn').style.display = 'inline-block';
                 $('accessStatus').textContent = '';
             }
