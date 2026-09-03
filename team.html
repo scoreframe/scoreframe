@@ -1002,20 +1002,23 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
             <div id="seasonSwitcher" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;"></div>
         </div>
 
-        <!-- v14 — Recent Games (last 7 days). Mirrors the in-app Team
-             Viewer's "RECENT GAMES" section: anything played in the last
-             week pinned above the schedule so fans see the latest results
-             at the top. Hidden by default; populated by loadPastGames. -->
-        <div class="section" id="recentGamesSection" style="display:none;">
-            <div class="section-title">📊 Recent Games</div>
-            <div id="recentGames"></div>
-        </div>
+        <!-- 2026-09-02 — "📊 Recent Games" (last 7 days) lived here and was
+             removed for the same reason as the upcoming list. It was built
+             from the SAME cards as Past Games below, filtered to the last week
+             and given a "-recent" id suffix — the old code comment about
+             de-duping the id collision "across the two strips" is the tell.
+             So anything played in the last seven days rendered twice on one
+             page. Past Games already contains them and loses nothing. -->
 
-        <!-- Upcoming Schedule -->
-        <div class="section">
-            <div class="section-title">📅 Upcoming Games</div>
-            <div id="upcomingGames"></div>
-        </div>
+        <!-- 2026-09-02 — The vertical "📅 Upcoming Games" list lived here and
+             was removed. It rendered the SAME scheduleUpcoming array as the
+             horizontal rail above, so every fixture appeared twice. Eric:
+             "on team pages we have two different sections for upcoming games",
+             and he chose to keep the rail — it already carries date, time,
+             venue, the NEXT badge and LIVE/postponed pills, so nothing was
+             lost. Writers to #upcomingGames are now null-guarded rather than
+             deleted, because the same functions also feed the rail and the
+             public-shell fallback. -->
 
         <!-- Who runs this team. Names only, never contact details. -->
         <div class="section" id="staffSection" style="display:none;">
@@ -1399,7 +1402,7 @@ async function tryAppAuthHandoff() {
 }
 
 // 2026-06-01b — Page build marker for cache-debug. Visible in console.
-console.log('[team.html] build 2026-09-02a loaded');
+console.log('[team.html] build 2026-09-02b loaded');
 
 // 2026-09-02 — When someone follows a shared GAME link to a team they can't
 // read, and even the public shell is missing, the honest answer is "this team
@@ -3298,9 +3301,12 @@ async function loadSchedule() {
         try { renderScheduleRail(); renderStage(); }
         catch (e) { console.error('stage/rail render failed:', e); }
 
+        // The vertical list was removed 2026-09-02 — the rail above owns this
+        // now. Guarded rather than ripped out: this same function feeds the
+        // rail and the stage, and an early `return` here used to skip both.
         const container = $('upcomingGames');
         if (upcoming.length === 0) {
-            container.innerHTML = '<div class="empty">No upcoming games scheduled</div>';
+            if (container) container.innerHTML = '<div class="empty">No upcoming games scheduled</div>';
             return;
         }
 
@@ -3410,10 +3416,19 @@ async function loadSchedule() {
         // 2026-08-27 — a stranger on a PUBLIC team cannot read teams/{id}/games
         // (completed games embed participant names), so this throws by design.
         // Fall back to the public shell, which carries date + opponent only.
-        if (publicShell && Array.isArray(publicShell.upcoming) && publicShell.upcoming.length) {
-            $('upcomingGames').innerHTML = renderShellGamesHtml(publicShell.upcoming);
-        } else {
-            $('upcomingGames').innerHTML = '<div class="empty">Unable to load schedule</div>';
+        const shellTarget = $('upcomingGames');
+        if (shellTarget) {
+            if (publicShell && Array.isArray(publicShell.upcoming) && publicShell.upcoming.length) {
+                shellTarget.innerHTML = renderShellGamesHtml(publicShell.upcoming);
+            } else {
+                shellTarget.innerHTML = '<div class="empty">Unable to load schedule</div>';
+            }
+        }
+        // The public shell still drives the rail, which is the surviving
+        // upcoming surface for a stranger on a public team.
+        if (publicShell && Array.isArray(publicShell.upcoming)) {
+            scheduleUpcoming = publicShell.upcoming;
+            try { renderScheduleRail(); } catch (e) { console.error('rail render failed:', e); }
         }
     }
 }
@@ -4210,6 +4225,10 @@ async function loadPastGames() {
         });
         // Write recent strip first so it renders before the user has scrolled
         // past the section header.
+        // Recent Games was removed 2026-09-02 (duplicate of Past Games). Both
+        // lookups now return null and this whole block no-ops; recentHtml is
+        // still built above and simply goes unused, which costs nothing and
+        // keeps the card-building loop in one piece.
         const recentSection = $('recentGamesSection');
         const recentContainer = $('recentGames');
         if (recentContainer) {
