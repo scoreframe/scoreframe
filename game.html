@@ -3059,7 +3059,68 @@ async function loadHighlights(teamId, gameId, primaryStream) {
         return;
     }
     if (docs.length === 0) return;
-    renderHighlights(docs, primaryStream);
+    renderHighlights(mergeDuplicateHighlights(docs), primaryStream);
+}
+
+/**
+ * 2026-09-02 — ONE MOMENT, ONE CHIP.
+ *
+ * Marking a highlight while the camera is BOTH streaming and recording writes
+ * the moment twice: once down the stream path, once down the recording path.
+ * They land a few hundred milliseconds apart, and later only ONE of the pair
+ * gets claimed by the uploaded clip. The page then drew both — a row of clip
+ * links and a row of timestamp buttons for the same four plays, which is what
+ * Eric saw as "two sections for highlights" on CT Bulldogs vs FT.
+ *
+ * Real numbers from that game: 8 documents, 4 plays, gaps of 0.38s to 0.50s,
+ * and the claimed copy was a different document each time.
+ *
+ * So collapse anything inside a two-second window into a single chip. Two
+ * seconds is far wider than the observed drift and far narrower than two plays
+ * a person would deliberately mark; nothing legitimate merges. The clip wins
+ * when there is one — Eric: "that's the one I want to keep, or merge with" —
+ * and the label survives from whichever copy carries it, since the two halves
+ * do not always agree on which fields were filled in.
+ *
+ * This is a display-side repair, so it fixes games ALREADY recorded. The
+ * double write itself still happens in the apps and is worth stopping at the
+ * source too.
+ */
+function mergeDuplicateHighlights(highlights) {
+    const SAME_MOMENT_SEC = 2.0;
+    const withClip = h => typeof h.videoUrl === 'string' && h.videoUrl.startsWith('http');
+    const sorted = [...highlights].sort(
+        (a, b) => (Number(a.videoTimeSec) || 0) - (Number(b.videoTimeSec) || 0));
+
+    const groups = [];
+    for (const h of sorted) {
+        const t = Number(h.videoTimeSec) || 0;
+        const last = groups[groups.length - 1];
+        if (last && Math.abs(t - last.t) <= SAME_MOMENT_SEC) {
+            last.items.push(h);
+        } else {
+            groups.push({ t, items: [h] });
+        }
+    }
+
+    const merged = groups.map(g => {
+        // Prefer the copy the uploaded clip claimed; fall back to the earliest.
+        const base = g.items.find(withClip) || g.items[0];
+        // A label typed on either copy is THE label for this moment.
+        const label = g.items
+            .map(h => (h.description || '').trim())
+            .find(d => d.length > 0) || '';
+        const score = g.items
+            .map(h => (h.scoreLabel || '').trim())
+            .find(d => d.length > 0) || '';
+        return { ...base, description: label, scoreLabel: score };
+    });
+
+    if (merged.length !== highlights.length) {
+        console.log(`[game.html] highlights: merged ${highlights.length} rows into ` +
+            `${merged.length} (same-moment duplicates from stream + recording)`);
+    }
+    return merged;
 }
 
 function renderHighlights(highlights, primaryStream) {
