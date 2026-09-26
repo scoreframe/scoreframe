@@ -3700,7 +3700,7 @@ function renderBoxScore(hub, game, sport) {
     // should not put the box score on the game page for a game that
     // has scored from a free user." Skip the card unless at least
     // one participant has a non-zero stat tracked.
-    if (s === 'SOCCER') {
+    if (s === 'SOCCER' || s === 'HOCKEY') {
         const everyone = home.concat(away);
         const anyStats = everyone.some(p => {
             const st = (p && p.stats && typeof p.stats === 'object') ? p.stats : {};
@@ -3850,8 +3850,20 @@ function boxScoreColumnsForSport(s) {
             { key: 'corners',      label: 'CK',  fmt: (st) => num(st.corners),      sum: true },
         ];
     }
-    // Hockey/Lacrosse: only team-level stats are tracked today,
-    // so per-player rows would all be zeros — skip the section.
+    if (s === 'HOCKEY') {
+        // 2026-09-26 — both apps now save hockey per-player stats at End Game
+        // (goals / assists / shots on goal / penalty minutes). Older games
+        // saved the roster only — the anyStats guard in renderBoxScore hides
+        // those rather than showing a card of zeros.
+        return [
+            { key: 'goals',          label: 'G',   fmt: (st) => num(st.goals),          sum: true },
+            { key: 'assists',        label: 'A',   fmt: (st) => num(st.assists),        sum: true },
+            { key: 'shotsOnGoal',    label: 'SOG', fmt: (st) => num(st.shotsOnGoal),    sum: true },
+            { key: 'penaltyMinutes', label: 'PIM', fmt: (st) => num(st.penaltyMinutes), sum: true },
+        ];
+    }
+    // Lacrosse: only team-level stats are tracked today, so per-player rows
+    // would all be zeros — skip the section.
     return null;
 }
 
