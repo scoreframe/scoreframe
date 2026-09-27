@@ -4100,6 +4100,19 @@ async function loadPastGames() {
         const weekAgoMs = Date.now() - 7 * 24 * 3600 * 1000;
         let recentHtml = '';
         let recentCount = 0;
+        // Tournament containers in this window that will render as an event
+        // card. A child game is hidden only when ITS card is on the page. One
+        // whose container was deleted (or is still live/scheduled) shows as a
+        // normal game instead of vanishing — ISU Club VB Team A lost all 8
+        // of last season's games that way (2026-09-27).
+        const renderedEventIds = new Set();
+        snap.forEach(d => {
+            const x = { id: d.id, ...d.data() };
+            const n = Array.isArray(x.gameIds) ? x.gameIds.length : 0;
+            if ((x.multiGame === true || n > 1)
+                && !['scheduled', 'live', 'cancelled', 'postponed'].includes(x.status)
+                && matchesSelectedSeason(x)) renderedEventIds.add(d.id);
+        });
         snap.forEach(d => {
             if (renderedCount >= 20) return;
             const g = { id: d.id, ...d.data() };
@@ -4113,7 +4126,7 @@ async function loadPastGames() {
             // is under a tournament then the game shouldn't show on the
             // team page, just the tournament that takes them to the event
             // page."
-            if (g.parentEventId) return;
+            if (g.parentEventId && renderedEventIds.has(g.parentEventId)) return;
             // v13 — Season switcher filter.
             if (!matchesSelectedSeason(g)) return;
             // Completed tournament container → render an event card that opens
