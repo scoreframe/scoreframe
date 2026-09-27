@@ -28,6 +28,7 @@
     --recording-red: #CC2222;
     --blue-default: #1565C0;
     --red-default: #C62828;
+    --score-digit: #FFFFFF;
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -51,6 +52,7 @@ body.theme-light {
     --warning: #E08000;
     --error: #C62828;
     --recording-red: #C62828;
+    --score-digit: #1A1A1A;
 }
 html, body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -278,7 +280,7 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
     content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
 }
 .team-name { font-size: 13px; font-weight: 600; text-transform: uppercase; opacity: 0.9; margin-bottom: 2px; }
-.team-score { font-size: 48px; font-weight: 800; line-height: 1; }
+.team-score { font-size: 48px; font-weight: 800; line-height: 1; color: var(--score-digit); }
 .team-detail { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
 .score-divider {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -337,6 +339,7 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
 .stat-section .stat-section-title .team-dot {
     display: inline-block; width: 10px; height: 10px; border-radius: 50%;
     margin-right: 4px; vertical-align: middle;
+    box-shadow: 0 0 0 1px rgba(128, 128, 128, 0.6);
 }
 .player-chip-row {
     display: flex; gap: 4px; flex-wrap: wrap;
@@ -771,8 +774,26 @@ function showToast(msg) {
     t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2000);
 }
 
-function vibrate(ms = 15) {
-    try { navigator.vibrate && navigator.vibrate(ms); } catch(e) {}
+function vibrate(ms = 40) {
+    try {
+        if (navigator.vibrate) { navigator.vibrate(ms); return; }
+        iosHaptic();
+    } catch(e) {}
+}
+
+// iPhone Safari has no Vibration API. Toggling a switch-style checkbox
+// fires the system haptic (iOS 18+); it must run inside the tap.
+function iosHaptic() {
+    const label = document.createElement('label');
+    label.setAttribute('aria-hidden', 'true');
+    label.style.display = 'none';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.setAttribute('switch', '');
+    label.appendChild(input);
+    document.head.appendChild(label);
+    label.click();
+    document.head.removeChild(label);
 }
 
 function sportEmoji(sport) {
@@ -958,7 +979,7 @@ window.performUndo = function() {
     currentState = undoStack.pop();
     sendCommand(currentState);
     renderScoring();
-    vibrate(30);
+    vibrate(80);
     if (undoStack.length === 0) $('undoBtn').classList.remove('visible');
 };
 
@@ -1401,6 +1422,36 @@ function renderScoring() {
         case 'HOCKEY': renderHockey(); break;
         case 'LACROSSE': renderLacrosse(); break;
     }
+    fixTeamColorContrast();
+}
+
+// Team colours come from the camera and can be anything. A black team used
+// to get black text on the dark page. Fills keep the team colour; text on
+// or in a team colour switches to whichever reads.
+function parseRgb(str) {
+    const m = String(str).match(/\d+(\.\d+)?/g);
+    return m && m.length >= 3 ? m.slice(0, 3).map(Number) : null;
+}
+function relLuminance(rgb) {
+    const f = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]);
+}
+function fixTeamColorContrast() {
+    const light = document.body.classList.contains('theme-light');
+    document.querySelectorAll('#scoringPanel .score-btn').forEach(b => {
+        const rgb = parseRgb(b.style.backgroundColor);
+        if (!rgb) return;
+        // White vs #1A1A1A: the two contrasts cross at luminance ~0.2.
+        b.style.color = relLuminance(rgb) > 0.2 ? '#1A1A1A' : '#FFFFFF';
+    });
+    document.querySelectorAll('#scoreDisplay [style], #scoringPanel [style]').forEach(el => {
+        if (el.classList.contains('score-btn')) return;
+        const rgb = parseRgb(el.style.color);
+        if (!rgb) return;
+        const L = relLuminance(rgb);
+        // 3:1 against the page: dark theme needs L >= 0.12, light L <= 0.30.
+        if (light ? L > 0.30 : L < 0.12) el.style.color = 'var(--text-primary)';
+    });
 }
 
 // ── Helper: Team Score Display ────────────────────────────────────────
@@ -1412,7 +1463,7 @@ function renderTeamScoreDisplay(s, periodLabel, periodValue, homeDetail, awayDet
             <div class="team-score-block" style="background:${hc}15;">
                 <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${hc};"></div>
                 <div class="team-name">${esc(s.homeName || 'HOME')}</div>
-                <div class="team-score" style="color:${hc}">${s.homeScore}</div>
+                <div class="team-score">${s.homeScore}</div>
                 ${homeDetail ? `<div class="team-detail">${homeDetail}</div>` : ''}
             </div>
             <div class="score-divider">
@@ -1422,7 +1473,7 @@ function renderTeamScoreDisplay(s, periodLabel, periodValue, homeDetail, awayDet
             <div class="team-score-block" style="background:${ac}15;">
                 <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${ac};"></div>
                 <div class="team-name">${esc(s.awayName || 'AWAY')}</div>
-                <div class="team-score" style="color:${ac}">${s.awayScore}</div>
+                <div class="team-score">${s.awayScore}</div>
                 ${awayDetail ? `<div class="team-detail">${awayDetail}</div>` : ''}
             </div>
         </div>`;
@@ -2639,7 +2690,7 @@ function renderPickleball() {
             <div class="team-score-block" style="background:${t1c}15;">
                 <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${t1c};"></div>
                 <div class="team-name">${esc(s.team1Name||'TEAM 1')}</div>
-                <div class="team-score" style="color:${t1c}">${s.team1Score}</div>
+                <div class="team-score">${s.team1Score}</div>
                 ${serving1 ? `<div class="serve-indicator">\u{1F3D3} Serving${serverLabel}</div>` : ''}
             </div>
             <div class="score-divider">
@@ -2650,7 +2701,7 @@ function renderPickleball() {
             <div class="team-score-block" style="background:${t2c}15;">
                 <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${t2c};"></div>
                 <div class="team-name">${esc(s.team2Name||'TEAM 2')}</div>
-                <div class="team-score" style="color:${t2c}">${s.team2Score}</div>
+                <div class="team-score">${s.team2Score}</div>
                 ${!serving1 ? `<div class="serve-indicator">\u{1F3D3} Serving${serverLabel}</div>` : ''}
             </div>
         </div>`;
@@ -2894,6 +2945,6 @@ init();
 </script>
 <!-- Web version footer — bumped on every Pages push so we can see at a
      glance whether a phone's cached page is stale. -->
-<div style="position:fixed;bottom:4px;right:8px;font-size:9px;color:var(--text-muted);opacity:0.55;pointer-events:none;font-family:-apple-system,monospace;letter-spacing:0.5px;z-index:9999;">score v6</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:9px;color:var(--text-muted);opacity:0.55;pointer-events:none;font-family:-apple-system,monospace;letter-spacing:0.5px;z-index:9999;">score v7</div>
 </body>
 </html>
