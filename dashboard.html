@@ -647,13 +647,13 @@ async function loadDashboard() {
                         orderBy('date', 'desc'), fbLimit(50)
                     ));
                     gameRows = pastGames.docs.map(d => d.data());
-                    record = calcRecord(data.sport || data.hub?.sport || '', gameRows);
+                    record = calcRecord(data.sport || data.hub?.sport || '', gameRows, teamId);
                 } catch (e) {
                     // Games query may fail without index — show team without record
                     try {
                         const pastGames = await getDocs(collection(db, 'teams', teamId, 'games'));
                         gameRows = pastGames.docs.map(d => d.data());
-                        record = calcRecord(data.sport || data.hub?.sport || '', gameRows);
+                        record = calcRecord(data.sport || data.hub?.sport || '', gameRows, teamId);
                     } catch (_) {}
                 }
                 // Fetch next upcoming game — post-cutover from games/ with
@@ -732,12 +732,12 @@ async function loadDashboard() {
                         orderBy('date', 'desc'), fbLimit(50)
                     ));
                     gameRows = pastGames.docs.map(d => d.data());
-                    record = calcRecord(data.sport || data.hub?.sport || '', gameRows);
+                    record = calcRecord(data.sport || data.hub?.sport || '', gameRows, teamId);
                 } catch (e) {
                     try {
                         const pastGames = await getDocs(collection(db, 'teams', teamId, 'games'));
                         gameRows = pastGames.docs.map(d => d.data());
-                        record = calcRecord(data.sport || data.hub?.sport || '', gameRows);
+                        record = calcRecord(data.sport || data.hub?.sport || '', gameRows, teamId);
                     } catch (_) {}
                 }
 
@@ -957,7 +957,15 @@ async function loadDashboard() {
     }
 }
 
-function calcRecord(sport, games) {
+/** [ours, theirs] for THIS team. A game where the team is the AWAY side
+ *  (awayTeamId) was read from the home side, so a loss counted as a win
+ *  (CT Bulldogs at CST Wildcats, 2026-09-28). */
+function ourTheir(g, tid) {
+    const away = !!tid && g.awayTeamId === tid && g.homeTeamId !== tid;
+    const h = g.homeScore || 0, a = g.awayScore || 0;
+    return away ? [a, h] : [h, a];
+}
+function calcRecord(sport, games, tid) {
     if (!games || games.length === 0) return '';
     // Post-cutover, the games/ collection holds both scheduled and completed
     // entries. Drop scheduled/live/cancelled before computing the record.
@@ -988,7 +996,8 @@ function calcRecord(sport, games) {
     } else {
         let w = 0, l = 0, t = 0;
         for (const g of games) {
-            const hs = g.homeScore || 0, as_ = g.awayScore || 0;
+            if (g.countTowardStats === false) continue;   // "Don't count toward stats"
+            const [hs, as_] = ourTheir(g, tid);
             if (hs > as_) w++; else if (as_ > hs) l++; else if (hs > 0) t++;
         }
         let rec = `${w}W-${l}L`;

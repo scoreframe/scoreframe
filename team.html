@@ -1239,6 +1239,14 @@ getRedirectResult(auth).then((result) => {
 // no account and no approval, while the team stays out of teamSearchIndex.
 // Anywhere this page asks "may this visitor see the content?", link_only
 // answers yes alongside public.
+/** [ours, theirs] for THIS team. A game where the team is the AWAY side
+ *  (awayTeamId) was read from the home side, so a loss counted as a win
+ *  (CT Bulldogs at CST Wildcats, 2026-09-28). */
+function ourTheir(g, tid) {
+    const away = !!tid && g.awayTeamId === tid && g.homeTeamId !== tid;
+    const h = g.homeScore || 0, a = g.awayScore || 0;
+    return away ? [a, h] : [h, a];
+}
 function isLinkViewable(v) { return v === 'public' || v === 'link_only'; }
 
 let hubCode = null;
@@ -3141,7 +3149,7 @@ function renderStage() {
         const g = stageLastCompleted;
         const d = (typeof g.date === 'number') ? new Date(g.date) : null;
         const when = d ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-        const hs = g.homeScore ?? 0, as_ = g.awayScore ?? 0;
+        const [hs, as_] = ourTheir(g, teamId);
         const outcome = hs > as_ ? 'W' : as_ > hs ? 'L' : 'T';
         const href = stageHref(g);
         const isBowling = (hubProfile?.sport || '').toUpperCase() === 'BOWLING';
@@ -4215,9 +4223,11 @@ async function loadPastGames() {
                 // v13 — Color score green/red/grey for W/L/T, matching the
                 // in-app event page. Inline override since the .score class
                 // defaults to var(--accent).
-                const _h = g.homeScore || 0, _a = g.awayScore || 0;
-                const _wl = _h > _a ? 'var(--win-green)' : _h < _a ? 'var(--loss-red)' : 'var(--tie-grey)';
-                scoreLine = `<span style="color:${_wl};">${_h} - ${_a}</span>`;
+                // Colour from THIS team's side; the numbers stay in home–away
+                // order to match the "Home vs Away" title above them.
+                const [_o, _t] = ourTheir(g, teamId);
+                const _wl = _o > _t ? 'var(--win-green)' : _o < _t ? 'var(--loss-red)' : 'var(--tie-grey)';
+                scoreLine = `<span style="color:${_wl};">${g.homeScore || 0} - ${g.awayScore || 0}</span>`;
             }
 
             // 2026-06-16 — Web is now view-only for the schedule. Edit,
@@ -4351,7 +4361,8 @@ async function loadPastGames() {
         } else {
             let w = 0, l = 0, t = 0;
             for (const g of recordGames) {
-                const hs = g.homeScore || 0, as_ = g.awayScore || 0;
+                if (g.countTowardStats === false) continue;   // "Don't count toward stats"
+                const [hs, as_] = ourTheir(g, teamId);
                 if (hs > as_) w++; else if (as_ > hs) l++; else if (hs > 0) t++;
             }
             let rec = `${w}W-${l}L`;
