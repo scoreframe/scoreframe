@@ -1892,8 +1892,9 @@ function showContent() {
         loadPendingRequests();
         loadStaff();
         handleInviteAcceptance();
-    } else if (isManager || isSubscriber) {
-        // Private hub but user has access
+    } else if (isManager || isCoach || isSubscriber) {
+        // Private hub but user has access. Coaches added 2026-09-28: the
+        // rules already let them read (canReadTeam), the page shut them out.
         $('accessGate').style.display = 'none';
         $('teamContent').style.display = 'block';
         loadSeasons();
@@ -2027,7 +2028,7 @@ function updateUserBar() {
     } else if (subStatus === 'blocked') {
         // Don't show anything
     } else if (isPublic) {
-        followBtn = `<button class="follow-btn" onclick="doFollow()">Follow Team</button>`;
+        followBtn = `<button class="follow-btn" onclick="doFollow()">${(hubProfile && hubProfile.visibility) === 'link_only' ? 'Follow Team' : 'Request to Follow'}</button>`;
     }
 
     if (followArea) followArea.innerHTML = followBtn;
@@ -2376,13 +2377,36 @@ window.doSignOut = async function() {
 
 window.doFollow = async function() {
     if (!currentUser) { doSignIn(); return; }
+    // 2026-09-28 — instant follow only on link_only teams (the link is the
+    // credential). A PUBLIC team is a directory listing since 08-27: the
+    // rules refuse an approved self-follow there, so it's a request the
+    // staff approve (notifyOwnerOfFollowRequest tells them).
+    const instant = (hubProfile && hubProfile.visibility) === 'link_only';
+    if (!instant) {
+        try {
+            await setDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid), {
+                uid: currentUser.uid,
+                name: currentUser.displayName || 'User',
+                email: currentUser.email || '',
+                status: 'pending',
+                requestedAt: Date.now(),
+                approvedAt: 0
+            });
+            subStatus = 'pending';
+            updateUserBar();
+        } catch (e) {
+            console.error('Follow request error:', e);
+            $('followStatus').textContent = 'Could not send the request. Try again.';
+        }
+        return;
+    }
     try {
         // Add to hub's subscriber list
         await setDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid), {
             uid: currentUser.uid,
             name: currentUser.displayName || 'User',
             email: currentUser.email || '',
-            status: 'approved',  // Public hubs: auto-approve
+            status: 'approved',  // link_only: the link is the credential
             requestedAt: Date.now(),
             approvedAt: Date.now()
         });

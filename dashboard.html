@@ -400,24 +400,24 @@ window._signOut = async () => {
     currentUser = null;
 };
 
-window._acceptInvite = async (invId, teamId, hubCode) => {
+window._acceptInvite = async (invId, teamId, hubCode, role) => {
     if (!currentUser) return;
     try {
-        const uid = currentUser.uid;
-        const name = currentUser.displayName || 'User';
-        const email = currentUser.email || '';
-        // Add as manager
-        await setDoc(doc(db, 'teams', teamId, 'managers', uid), {
-            name, email, role: 'manager', addedAt: Date.now()
-        });
-        // Add to subscribedHubs
-        if (hubCode) {
-            await setDoc(doc(db, 'users', uid), { subscribedHubs: arrayUnion(hubCode) }, { merge: true });
+        // 2026-09-28 — accepted on the server. The page used to write the
+        // invitee onto teams/{id}/managers itself, which the rules only allow
+        // the owner to do, so every accept failed (and a coach or follower
+        // invite would have been written as a MANAGER).
+        const r = String(role || '').toLowerCase();
+        if (r === 'manager' || r === 'coach') {
+            await httpsCallable(functions, 'acceptStaffInvite')({ invitationId: invId });
+        } else {
+            await httpsCallable(functions, 'acceptHubInvite')({ teamId });
         }
-        // Mark invitation accepted
-        await updateDoc(doc(db, 'invitations', invId), { status: 'accepted' });
         loadDashboard();
-    } catch (e) { console.error('Accept error:', e); alert('Failed to accept invitation'); }
+    } catch (e) {
+        console.error('Accept error:', e);
+        alert('Could not accept this invitation. ' + (e && e.message ? e.message : ''));
+    }
 };
 
 window._declineInvite = async (invId) => {
@@ -885,10 +885,10 @@ async function loadDashboard() {
                 <div class="team-card" style="border-color:var(--accent);">
                     <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.08em;text-transform:uppercase;">INVITATION</div>
                     <div style="font-size:15px;font-weight:700;margin:6px 0 4px;">
-                        ${emoji} ${inv.inviterName || 'Someone'} invited you to manage <strong>${inv.teamName || 'a team'}</strong>
+                        ${emoji} ${inv.inviterName || 'Someone'} invited you to ${({ manager: 'manage', coach: 'coach' })[String(inv.role || '').toLowerCase()] || 'follow'} <strong>${inv.teamName || 'a team'}</strong>
                     </div>
                     <div style="display:flex;gap:10px;margin-top:10px;">
-                        <button onclick="window._acceptInvite('${inv.id}','${inv.teamId}','${inv.hubCode}')" style="padding:8px 20px;background:var(--accent);color:#1A1A1A;border:none;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;">Accept</button>
+                        <button onclick="window._acceptInvite('${inv.id}','${inv.teamId}','${inv.hubCode}','${inv.role || ''}')" style="padding:8px 20px;background:var(--accent);color:#1A1A1A;border:none;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;">Accept</button>
                         <button onclick="window._declineInvite('${inv.id}')" style="padding:8px 16px;background:transparent;color:var(--text-muted);border:1px solid var(--text-muted);border-radius:6px;font-size:14px;cursor:pointer;">Decline</button>
                     </div>
                 </div>`;
