@@ -178,6 +178,37 @@ html, body {
     margin-right: auto;
   }
 }
+
+/* ── Tournament v2 (docs/TOURNAMENT_SPEC.md, 2026-09-28) ── */
+.v2-wrap { padding: 0 16px 24px; display: flex; flex-direction: column; gap: 14px; max-width: 720px; margin: 0 auto; }
+.v2-card { background: var(--bg-surface); border: 1px solid var(--bg-elevated); border-radius: 14px; padding: 12px 14px; }
+.v2-live { border-color: var(--recording-red); display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.v2-play { width: 52px; height: 52px; border-radius: 26px; background: var(--accent); color: #1A1208; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+.v2-lbl { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; }
+.v2-big { font-size: 20px; font-weight: 800; }
+.v2-tiles { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.v2-tile { background: var(--bg-surface); border: 1px solid var(--bg-elevated); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.v2-tile .v { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.v2-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--bg-elevated); text-decoration: none; color: inherit; }
+.v2-row:last-child { border-bottom: none; }
+.v2-bar { width: 4px; align-self: stretch; border-radius: 2px; background: var(--bg-elevated); }
+.v2-sub { font-size: 12.5px; color: var(--text-secondary); }
+.v2-res { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.v2-win { color: #FFC800; } .v2-loss { color: var(--loss-red); }
+.v2-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.v2-tab { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--bg-elevated); background: var(--bg-surface); color: var(--text-primary); font: inherit; font-size: 13px; cursor: pointer; }
+.v2-tab.on { background: var(--accent); color: #1A1208; border-color: var(--accent); font-weight: 700; }
+.v2-table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.v2-table td, .v2-table th { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--bg-elevated); }
+.v2-table th { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .06em; }
+.v2-table .r { text-align: right; }
+.v2-table tr.us td { color: var(--accent); font-weight: 700; }
+.v2-slot { display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 8px; background: var(--bg-elevated); font-size: 13px; margin: 4px 0; }
+.v2-slot.us { outline: 1.5px solid var(--accent); color: var(--accent); font-weight: 700; }
+.v2-link { color: var(--accent); background: none; border: none; font: inherit; font-size: 13px; cursor: pointer; padding: 0; }
+.v2-score { display: grid; grid-template-columns: 1fr 56px 56px 56px; gap: 6px; align-items: center; margin-top: 8px; }
+.v2-score input { width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--bg-elevated); background: var(--bg-deep); color: var(--text-primary); text-align: center; font: inherit; font-size: 16px; }
+.v2-btn { height: 42px; border: none; border-radius: 10px; background: var(--accent); color: #1A1208; font: inherit; font-weight: 800; cursor: pointer; padding: 0 16px; }
 </style>
 <script>
 /* Palette param — mirrors the theme block above. Applied to <html> before
@@ -220,10 +251,11 @@ html, body {
     <div id="livePill" class="live-pill" style="display:none;">● LIVE NOW</div>
 </div>
 
-<div class="section">
+<div class="section" id="legacySection">
     <div class="section-title">Games in this event</div>
     <div id="gamesList"></div>
 </div>
+<div id="v2" class="v2-wrap" style="display:none;"></div>
 
 <script type="module">
 // Theme override from URL param (matches game.html).
@@ -236,7 +268,7 @@ html, body {
 })();
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { initializeFirestore, getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { initializeFirestore, getFirestore, doc, getDoc, collection, getDocs, onSnapshot, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -389,6 +421,13 @@ async function loadEvent() {
     const teamName = team?.profile?.name || team?.name || 'Team';
     $('heroTeam').textContent = `${SPORT_EMOJI[sport] || '🏆'} ${teamName}`;
 
+    // v2 tournaments live in teams/{t}/events/{id} (TOURNAMENT_SPEC). Old
+    // ones (a games/ doc with gameIds) keep the page below unchanged.
+    try {
+        const ev2 = await getDoc(doc(db, 'teams', teamId, 'events', eventId));
+        if (ev2.exists()) { startV2(teamId, team, ev2); return; }
+    } catch (e) { console.warn('events lookup failed, legacy view', e); }
+
     // Load event doc.
     let ev = null;
     try {
@@ -521,6 +560,193 @@ async function loadEvent() {
             </div>
         </a>`;
     }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Tournament v2 — live fan page (mockup "Fans · Event page")
+// ══════════════════════════════════════════════════════════════════════
+const escH = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const tms = v => v == null ? 0 : (typeof v === 'number' ? v : (v.toMillis ? v.toMillis() : Date.parse(v) || 0));
+const hhmm = m => m ? new Date(m).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+let V = { teamId: null, team: null, ev: null, nodes: [], games: new Map(), legacy: new Map(), tab: 'ours', unsub: [] };
+
+function startV2(teamId, team, evSnap) {
+    V.teamId = teamId; V.team = team;
+    $('legacySection').style.display = 'none';
+    $('v2').style.display = '';
+    const evRef = doc(db, 'teams', teamId, 'events', eventId);
+    V.unsub.push(onSnapshot(evRef, s => { V.ev = s.exists() ? s.data() : null; renderV2(); }));
+    V.unsub.push(onSnapshot(collection(evRef, 'matches'), s => { V.nodes = s.docs.map(d => ({ id: d.id, ...d.data() })); renderV2(); }));
+    const games = collection(db, 'teams', teamId, 'games');
+    V.unsub.push(onSnapshot(query(games, where('eventId', '==', eventId)), s => { V.games = new Map(s.docs.map(d => [d.id, { id: d.id, ...d.data() }])); renderV2(); }));
+    V.unsub.push(onSnapshot(query(games, where('parentEventId', '==', eventId)), s => { V.legacy = new Map(s.docs.map(d => [d.id, { id: d.id, ...d.data() }])); renderV2(); }, () => {}));
+}
+
+function v2TeamName(id) {
+    for (const p of (V.ev?.pools || [])) for (const t of (p.teams || [])) if (t.id === id) return t.name;
+    return null;
+}
+function v2Us() {
+    for (const p of (V.ev?.pools || [])) for (const t of (p.teams || [])) if (t.us) return t.id;
+    return V.teamId;
+}
+function v2Resolved(id) { return ((V.ev?.computed || {}).resolved || []).find(r => r.id === id) || {}; }
+function v2Sets(g) {
+    const st = g.sportSpecificStats || {};
+    const h = st.homeScoreBySet || [], a = st.awayScoreBySet || [];
+    const weHome = !g.homeTeamId || g.homeTeamId === V.teamId;
+    return h.map((x, i) => weHome ? [x, a[i] || 0] : [a[i] || 0, x]).filter(([x, y]) => x || y);
+}
+function v2Result(g) {
+    const sets = v2Sets(g);
+    let w, l;
+    if (sets.length) { w = sets.filter(s => s[0] > s[1]).length; l = sets.filter(s => s[1] > s[0]).length; }
+    else { const weHome = !g.homeTeamId || g.homeTeamId === V.teamId; w = weHome ? g.homeScore || 0 : g.awayScore || 0; l = weHome ? g.awayScore || 0 : g.homeScore || 0; }
+    return { w, l, sets };
+}
+function v2OurGames() {
+    const nodeByGame = new Map(V.nodes.filter(n => n.gameId).map(n => [n.gameId, n]));
+    return [...new Map([...V.legacy, ...V.games]).values()].map(g => {
+        const n = nodeByGame.get(g.id);
+        return { g, n, time: tms(n?.time) || tms(g.date) };
+    }).sort((a, b) => a.time - b.time);
+}
+function v2Watch(g) {
+    const streams = Array.isArray(g.streams) ? g.streams : [];
+    const url = (streams.find(s => s && s.url) || {}).url || g.streamUrl || g.youtubeVideoUrl || '';
+    return /^https:\/\//.test(url) ? url : '';
+}
+
+function renderV2() {
+    const ev = V.ev; if (!ev) return;
+    document.title = `${ev.name || 'Tournament'} — ScoreFrame`;
+    $('heroTitle').textContent = ev.name || 'Tournament';
+    const start = tms(ev.startDate), end = tms(ev.endDate);
+    $('heroDate').textContent = end && end > start ? formatDateRange(start, end) : formatDate(start);
+    if (ev.venue) { $('heroLocation').textContent = `📍 ${ev.venue}`; $('heroLocation').style.display = ''; }
+
+    const ours = v2OurGames();
+    const live = ours.find(o => o.g.status === 'live');
+    const next = ours.find(o => o.g.status === 'scheduled');
+    const done = ours.filter(o => o.g.status === 'completed');
+    let mw = 0, ml = 0, ms = 0, sw = 0, sl = 0;
+    for (const o of done) { const r = v2Result(o.g); sw += r.w; sl += r.l; if (r.w > r.l) mw++; else if (r.l > r.w) ml++; else ms++; }
+    $('livePill').style.display = live ? '' : 'none';
+    const us = v2Us();
+    const standings = (ev.computed || {}).standings || [];
+    const myPool = standings.find(s => (s.rows || []).some(r => r.teamId === us));
+    const myRow = myPool && myPool.rows.find(r => r.teamId === us);
+    const poolName = myPool ? ((ev.pools || []).find(p => p.id === myPool.poolId) || {}).name || myPool.poolId : null;
+
+    let h = '';
+    if (live) {
+        const url = v2Watch(live.g);
+        const href = url || `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(live.g.id)}`;
+        const r = v2Result(live.g);
+        h += `<a class="v2-card v2-live" href="${escH(href)}" ${url ? 'target="_blank" rel="noopener"' : ''}>
+            <div class="v2-play">▶</div>
+            <div style="flex:1;min-width:0"><div class="v2-lbl" style="color:var(--recording-red)">Live now</div>
+            <div class="v2-big">vs ${escH(live.g.opponent || 'TBD')}</div>
+            <div class="v2-sub">${escH([live.n?.label, live.g.court ? 'Court ' + live.g.court : ''].filter(Boolean).join(' · '))}</div></div>
+            <div class="v2-res" style="font-size:22px">${r.sets.length ? escH(r.sets[r.sets.length - 1].join('–')) : ''}</div></a>`;
+    }
+    if (next) {
+        const mins = Math.round((next.time - Date.now()) / 60000);
+        const when = next.time ? (mins > 0 && mins < 600 ? `in ${mins >= 60 ? Math.floor(mins / 60) + 'h ' : ''}${mins % 60}m` : hhmm(next.time)) : 'time TBD';
+        h += `<div class="v2-card" style="display:flex;align-items:center;gap:12px">
+            <div style="flex:1"><div class="v2-lbl" style="color:var(--accent)">Next match</div>
+            <div style="font-weight:700">${escH([next.n?.label, 'vs ' + (next.g.opponent || 'TBD')].filter(Boolean).join(' · '))}</div>
+            <div class="v2-sub">${escH([next.time ? hhmm(next.time) : '', next.g.court ? 'Court ' + next.g.court : ''].filter(Boolean).join(' · '))}</div></div>
+            <div class="v2-res" style="color:var(--accent)">${escH(when)}</div></div>`;
+    }
+    if (done.length || myRow) {
+        h += `<div class="v2-tiles">
+            <div class="v2-tile"><span class="v2-lbl">Matches</span><span class="v">${mw}-${ml}${ms ? '-' + ms : ''}</span></div>
+            <div class="v2-tile"><span class="v2-lbl">Sets</span><span class="v">${sw}-${sl}</span></div>
+            <div class="v2-tile"><span class="v2-lbl">${escH(poolName || 'Pool')}</span><span class="v" style="color:#FFC800">${myRow ? ordinal(myRow.place) : '—'}</span></div></div>`;
+    }
+    const hasDraw = (ev.pools || []).length > 0;
+    h += `<div class="v2-tabs">${[['ours', 'Our matches'], ...(hasDraw ? [['pools', 'Pools'], ['bracket', 'Bracket']] : [])]
+        .map(([k, l]) => `<button class="v2-tab ${V.tab === k ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>`;
+
+    if (V.tab === 'pools') h += v2Pools(standings, us);
+    else if (V.tab === 'bracket') h += v2Bracket(us);
+    else {
+        h += `<div class="v2-card" style="padding:0 14px">` + (ours.length ? ours.map(o => {
+            const g = o.g, r = v2Result(g);
+            const cls = g.status !== 'completed' ? '' : r.w > r.l ? 'v2-win' : r.l > r.w ? 'v2-loss' : '';
+            const bar = g.status === 'live' ? 'var(--recording-red)' : g.status !== 'completed' ? 'var(--bg-elevated)' : r.w > r.l ? '#FFC800' : r.l > r.w ? 'var(--loss-red)' : 'var(--tie-grey)';
+            const res = g.status === 'completed' ? (r.w > r.l ? `W ${r.w}-${r.l}` : r.l > r.w ? `L ${r.w}-${r.l}` : `${r.w}-${r.l}`) : g.status === 'live' ? 'LIVE' : '';
+            const watch = v2Watch(g);
+            const sub = [o.time ? hhmm(o.time) : '', o.n?.label || g.phaseLabel, g.court ? 'Court ' + g.court : '', r.sets.map(s => s.join('-')).join(', ')].filter(Boolean).join(' · ');
+            return `<a class="v2-row" href="/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}">
+                <div class="v2-bar" style="background:${bar}"></div>
+                <div style="flex:1;min-width:0"><div style="font-weight:700">vs ${escH(g.opponent || 'TBD')}</div><div class="v2-sub">${escH(sub)}${watch ? ' · Watch' : ''}</div></div>
+                <div class="v2-res ${cls}">${escH(res)}</div></a>`;
+        }).join('') : `<div class="empty" style="padding:16px 0">No matches yet. They'll appear here as the day is set up.</div>`) + `</div>`;
+        const open = V.nodes.filter(n => !n.ours && n.phase === 'pool' && myPool && n.poolId === myPool.poolId && !(n.sets || []).length);
+        if (open.length) {
+            h += `<div class="v2-card"><div class="v2-lbl">Know a score from another court?</div>` + open.map(n =>
+                `<div class="v2-row" style="border:none;padding:8px 0"><div style="flex:1">${escH((v2TeamName(n.a?.teamId) || '?') + ' vs ' + (v2TeamName(n.b?.teamId) || '?'))}<div class="v2-sub">${escH([n.label, n.court ? 'Court ' + n.court : ''].filter(Boolean).join(' · '))}</div></div>
+                 <button class="v2-link" data-score="${escH(n.id)}">Add score</button></div><div id="sf-${escH(n.id)}"></div>`).join('') + `</div>`;
+        }
+    }
+    $('v2').innerHTML = h;
+    $('v2').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { V.tab = b.dataset.tab; renderV2(); });
+    $('v2').querySelectorAll('[data-score]').forEach(b => b.onclick = () => v2ScoreForm(b.dataset.score));
+}
+
+function ordinal(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+
+function v2Pools(standings, us) {
+    if (!standings.length) return `<div class="v2-card v2-sub">Standings appear once scores come in.</div>`;
+    return standings.map(s => {
+        const name = ((V.ev.pools || []).find(p => p.id === s.poolId) || {}).name || s.poolId;
+        return `<div class="v2-card"><div class="v2-lbl">${escH(name)}${s.complete ? ' · final' : ''}</div>
+          <table class="v2-table"><tr><th>#</th><th>Team</th><th class="r">Sets</th><th class="r">Pts</th></tr>` +
+          s.rows.map(r => `<tr class="${r.teamId === us ? 'us' : ''}"><td>${r.place}</td><td>${escH(r.name)}</td><td class="r">${r.setsWon}-${r.setsLost}</td><td class="r">${r.pointDiff > 0 ? '+' : ''}${r.pointDiff}</td></tr>`).join('') +
+          `</table></div>`;
+    }).join('') + `<div class="v2-sub">Ranked by match wins, set %, point difference, head-to-head.</div>`;
+}
+
+function v2Bracket(us) {
+    let h = '';
+    for (const phase of ['gold', 'silver']) {
+        const list = V.nodes.filter(n => n.phase === phase).sort((a, b) => (a.round - b.round) || a.id.localeCompare(b.id));
+        if (!list.length) continue;
+        h += `<div class="v2-card"><div class="v2-lbl">${phase === 'gold' ? 'Gold' : 'Silver'} bracket</div>`;
+        for (const n of list) {
+            const r = v2Resolved(n.id);
+            const nm = (a, p) => a ? (v2TeamName(a) || '?') : p ? `${v2TeamName(p) || '?'}?` : 'TBD';
+            const mine = [r.a, r.b, r.projectedA, r.projectedB].includes(us);
+            const sets = (n.sets || []).map(x => `${x.a}-${x.b}`).join(', ');
+            h += `<div class="v2-slot ${mine ? 'us' : ''}"><span>${escH(n.label || '')}: ${escH(nm(r.a, r.projectedA))} vs ${escH(nm(r.b, r.projectedB))}</span><span>${escH(sets)}</span></div>`;
+        }
+        h += `</div>`;
+    }
+    return (h || `<div class="v2-card v2-sub">No bracket yet.</div>`) + `<div class="v2-sub">? = projected from the standings so far.</div>`;
+}
+
+function v2ScoreForm(nodeId) {
+    const n = V.nodes.find(x => x.id === nodeId); const box = $('sf-' + nodeId);
+    if (!n || !box) return;
+    if (!auth.currentUser || auth.currentUser.isAnonymous) { box.innerHTML = `<div class="v2-sub">Sign in as a follower of this team to add scores.</div>`; return; }
+    const sets = n.phase === 'pool' ? 2 : 3;
+    const A = v2TeamName(n.a?.teamId) || 'Team A', B = v2TeamName(n.b?.teamId) || 'Team B';
+    const cells = side => Array.from({ length: 3 }, (_, i) => i < sets ? `<input inputmode="numeric" data-s="${i}" data-side="${side}" aria-label="${escH((side === 'a' ? A : B) + ' set ' + (i + 1))}">` : '<span></span>').join('');
+    box.innerHTML = `<div class="v2-score"><span>${escH(A)}</span>${cells('a')}<span>${escH(B)}</span>${cells('b')}</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="v2-btn" id="sv-${escH(nodeId)}">Save result</button><span class="v2-sub" id="sm-${escH(nodeId)}"></span></div>`;
+    $('sv-' + nodeId).onclick = async () => {
+        const val = (side, i) => parseInt((box.querySelector(`input[data-side="${side}"][data-s="${i}"]`) || {}).value || '', 10);
+        const out = [];
+        for (let i = 0; i < sets; i++) { const x = val('a', i), y = val('b', i); if (Number.isFinite(x) && Number.isFinite(y) && (x || y)) out.push({ a: x, b: y }); }
+        if (!out.length) { $('sm-' + nodeId).textContent = 'Enter at least one set.'; return; }
+        try {
+            await updateDoc(doc(db, 'teams', V.teamId, 'events', eventId, 'matches', nodeId), {
+                sets: out, status: 'completed',
+                updatedBy: { uid: auth.currentUser.uid, name: auth.currentUser.displayName || '' }, updatedAt: Date.now() });
+        } catch (e) { $('sm-' + nodeId).textContent = 'Only approved followers of this team can add scores.'; }
+    };
 }
 
 (async () => {
