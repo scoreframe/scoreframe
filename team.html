@@ -4367,7 +4367,8 @@ async function loadPastGames() {
             }
             let rec = `${w}W-${l}L`;
             if (t > 0) rec += `-${t}T`;
-            $('teamRecord').textContent = `${rec} · ${recordGames.length} game${recordGames.length !== 1 ? 's' : ''}`;
+            const counted = recordGames.filter(g => g.countTowardStats !== false).length;
+            $('teamRecord').textContent = `${rec} · ${counted} game${counted !== 1 ? 's' : ''}`;
             // Win % counts a tie as half, the usual sports convention. Decided
             // games only — an unplayed 0-0 shell isn't in recordGames anyway.
             const decided = w + l + t;

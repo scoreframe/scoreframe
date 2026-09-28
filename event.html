@@ -528,7 +528,8 @@ function ourTheir(g, tid) {
                 if (hs > as_) w++; else if (as_ > hs) l++; else if (hs > 0) t++;
             }
             const rec = `${w}W-${l}L` + (t > 0 ? `-${t}T` : '');
-            $('heroRecord').textContent = `${rec} · ${completed.length} game${completed.length !== 1 ? 's' : ''}`;
+            const counted = completed.filter(g => g.countTowardStats !== false).length;
+            $('heroRecord').textContent = `${rec} · ${counted} game${counted !== 1 ? 's' : ''}`;
             $('heroRecord').style.display = '';
         }
     }

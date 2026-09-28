@@ -1002,7 +1002,8 @@ function calcRecord(sport, games, tid) {
         }
         let rec = `${w}W-${l}L`;
         if (t > 0) rec += `-${t}T`;
-        return `${rec} \u00B7 ${games.length} game${games.length !== 1 ? 's' : ''}`;
+        const counted = games.filter(g => g.countTowardStats !== false).length;
+        return `${rec} \u00B7 ${counted} game${counted !== 1 ? 's' : ''}`;
     }
 }
 
