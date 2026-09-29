@@ -234,7 +234,7 @@ function renderAuth() {
             </div>
             <label style="display:flex;gap:8px;align-items:flex-start;justify-content:center;margin-top:10px;font-size:13px;color:var(--text-secondary);cursor:pointer;">
                 <input type="checkbox" id="noSpoilToggle" onchange="window._setNoSpoil(this.checked)" style="margin-top:2px;">
-                <span><strong style="color:var(--text-primary);">No spoilers</strong> — hide scores in game emails and on game pages until I tap the eye</span>
+                <span><strong style="color:var(--text-primary);">No spoilers</strong> — hide scores in game emails and on game pages until I tap the eye (for 7 days after each game)</span>
             </label>`;
         loadNoSpoil();
     } else {
@@ -256,7 +256,7 @@ function renderAuth() {
                 <input type="password" id="passInput" placeholder="Password"><br>
                 <label id="signUpNoSpoilRow" style="display:none;gap:6px;align-items:flex-start;font-size:12px;color:var(--text-secondary);margin:6px 0 4px;cursor:pointer;text-align:left;">
                     <input type="checkbox" id="signUpNoSpoil" style="margin-top:2px;">
-                    <span>No spoilers — hide scores in my emails and on game pages until I choose to see them</span>
+                    <span>No spoilers — hide scores in my emails and on game pages until I choose to see them (for 7 days after each game)</span>
                 </label>
                 <button id="emailSubmitBtn" onclick="window._signInEmail()">Sign In</button>
                 <div id="forgotPassLink" style="font-size:12px;color:var(--accent);margin-top:6px;cursor:pointer;" onclick="window._forgotPassword()">Forgot password?</div>

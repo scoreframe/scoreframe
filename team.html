@@ -1122,7 +1122,7 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
             <input class="auth-input" type="text" id="authName" placeholder="Display name" style="display:none;" autocomplete="name">
             <label id="authNoSpoilRow" style="display:none;gap:6px;align-items:flex-start;font-size:12px;color:var(--text-secondary);margin:4px 0 8px;cursor:pointer;">
                 <input type="checkbox" id="authNoSpoil" style="margin-top:2px;">
-                <span>No spoilers — hide scores in my emails and on game pages until I choose to see them</span>
+                <span>No spoilers — hide scores in my emails and on game pages until I choose to see them (for 7 days after each game)</span>
             </label>
             <button class="auth-submit" id="authSubmit" onclick="doEmailSignIn()">Sign In</button>
             <!-- Passwordless (2026-08-17). The follower this page is built for
@@ -2454,7 +2454,7 @@ function emailFollowBoxHtml() {
         </div>
         <label style="display:flex;gap:6px;align-items:flex-start;font-size:12px;color:var(--text-secondary);margin-top:8px;cursor:pointer;">
           <input id="emailFollowNoSpoil" type="checkbox" style="margin-top:2px;">
-          <span>No spoilers — hide scores in my emails and on game pages until I choose to see them</span>
+          <span>No spoilers — hide scores in my emails and on game pages until I choose to see them (for 7 days after each game)</span>
         </label>
         <div id="emailFollowMsg" style="font-size:12px;margin-top:6px;"></div>
       </div>`;

@@ -909,7 +909,7 @@ body.sf-nospoil #moreFromTeamCard { display: none !important; }
     <div class="body">
         <div id="spoilerBanner" class="spoiler-banner" style="display:none;">
             <span class="sb-text">🙈 Scores and results are hidden
-                <span class="sb-sub">No spoilers is on for your account. Watch first, then reveal.</span></span>
+                <span class="sb-sub">No spoilers is on for your account (for 7 days after each game). Watch first, then reveal.</span></span>
             <button type="button" id="spoilerRevealBtn" onclick="revealSpoilers()">👁 Show results</button>
         </div>
         <div id="spoilerRehide" class="spoiler-rehide" style="display:none;"><a href="#" onclick="hideSpoilersAgain(); return false;">🙈 Hide results again</a></div>
@@ -1281,20 +1281,36 @@ try { if (localStorage.getItem(NOSPOIL_CACHE) === '1') noSpoilOn = true; } catch
 function spoilersRevealedHere() {
     try { return localStorage.getItem('sf_reveal_' + gameId) === '1'; } catch (_) { return false; }
 }
+// Only for 7 days (Eric 2026-09-29): an older result is history, and hiding
+// it just gets in the way of looking something up. Unknown date (page still
+// loading) counts as recent so the score never flashes before we know.
+const NOSPOIL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+function gameIsRecent() {
+    const g = window.__cardGame;
+    const d = g && Number(g.date);
+    return !d || (Date.now() - d) < NOSPOIL_WINDOW_MS;
+}
 function applyNoSpoil() {
-    const hide = noSpoilOn && !spoilersRevealedHere();
+    const hide = noSpoilOn && gameIsRecent() && !spoilersRevealedHere();
     document.body.classList.toggle('sf-nospoil', hide);
     const b = document.getElementById('spoilerBanner');
     if (b) b.style.display = hide ? '' : 'none';
     const r = document.getElementById('spoilerRehide');
     if (r) r.style.display = (noSpoilOn && !hide) ? '' : 'none';
 }
+// Tell the app too, so its Home card for this game shows the score from now on.
+function tellAppSpoilers(revealed) {
+    try { if (window.ScoreFrameApp && typeof window.ScoreFrameApp.spoilersRevealed === 'function') window.ScoreFrameApp.spoilersRevealed(gameId, !!revealed); } catch (_) {}
+    try { const h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.scoreFrameSpoilers; if (h) h.postMessage({ gameId, revealed: !!revealed }); } catch (_) {}
+}
 window.revealSpoilers = () => {
     try { localStorage.setItem('sf_reveal_' + gameId, '1'); } catch (_) {}
+    tellAppSpoilers(true);
     applyNoSpoil();
 };
 window.hideSpoilersAgain = () => {
     try { localStorage.removeItem('sf_reveal_' + gameId); } catch (_) {}
+    tellAppSpoilers(false);
     applyNoSpoil();
 };
 async function refreshNoSpoilFromAccount() {
@@ -2001,6 +2017,7 @@ function sfMatchupTitle(home, away, sport) {
 function renderGame(hub, game) {
     // Stash for the shareable game-card renderer (window.shareGameCard).
     window.__cardGame = game; window.__cardHub = hub;
+    applyNoSpoil();   // now that the date is known (7-day window)
     const sport = (game.sport || hub.sport || 'GENERIC').toUpperCase();
     const isBowling = sport === 'BOWLING';
 
