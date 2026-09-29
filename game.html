@@ -191,6 +191,25 @@ html, body {
     color: var(--text-secondary); cursor: pointer; user-select: none;
 }
 .playlist-autoplay input { accent-color: var(--accent); cursor: pointer; }
+/* No spoilers (2026-09-29): a follower who turned it on sees the page with
+   every result hidden until they tap the eye. One class on <body> does it. */
+body.sf-nospoil #heroResult, body.sf-nospoil #scoreCard, body.sf-nospoil #boxScoreCard,
+body.sf-nospoil #scoringSummaryCard, body.sf-nospoil #matchStatsCard, body.sf-nospoil #pkShootoutCard,
+body.sf-nospoil #aiRecapCard, body.sf-nospoil #coachNotesCard, body.sf-nospoil #highlightsCard,
+body.sf-nospoil #moreFromTeamCard { display: none !important; }
+.spoiler-banner {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 14px 16px; margin-bottom: 14px; border-radius: 14px;
+    background: var(--bg-surface); border: 1px dashed var(--text-secondary);
+}
+.spoiler-banner .sb-text { flex: 1 1 200px; min-width: 0; font-size: 14px; color: var(--text-primary); }
+.spoiler-banner .sb-sub { display: block; font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.spoiler-banner button {
+    background: var(--accent); color: #1A1A1A; border: 0; border-radius: 999px;
+    padding: 9px 16px; font-size: 14px; font-weight: 800; cursor: pointer;
+}
+.spoiler-rehide { display: block; margin: -6px 0 12px; font-size: 12px; color: var(--text-secondary); text-align: right; }
+.spoiler-rehide a { color: var(--text-secondary); }
 .no-stream-card {
     width: 100%; padding: 48px 24px; text-align: center;
     background: var(--bg-surface); border-radius: 14px;
@@ -888,6 +907,12 @@ html, body {
 
     <!-- Body -->
     <div class="body">
+        <div id="spoilerBanner" class="spoiler-banner" style="display:none;">
+            <span class="sb-text">🙈 Scores and results are hidden
+                <span class="sb-sub">No spoilers is on for your account. Watch first, then reveal.</span></span>
+            <button type="button" id="spoilerRevealBtn" onclick="revealSpoilers()">👁 Show results</button>
+        </div>
+        <div id="spoilerRehide" class="spoiler-rehide" style="display:none;"><a href="#" onclick="hideSpoilersAgain(); return false;">🙈 Hide results again</a></div>
         <!-- v39 — Local-only indicator. Shown only for app-injected pickup /
              not-shared games (renderLocalGame reveals it). Explains why there's
              no shareable link + nudges toward creating a team. -->
@@ -1241,6 +1266,48 @@ const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const hubCode = (params.get('team') || params.get('hub') || '').trim().toUpperCase();
 const gameId = (params.get('game') || params.get('id') || '').trim();
+
+// ── No spoilers (2026-09-29) ─────────────────────────────────────────────
+// Eric: followers can turn on "No spoilers"; the game page then hides every
+// result until they tap the eye. The setting lives on users/{uid}.noSpoilers;
+// emails to followers who turned it on (including email-only followers, who
+// have no account here) add ?nospoil=1 to their game links. The last known
+// value is cached so the page can hide BEFORE the account read returns —
+// otherwise the score flashes on screen first.
+const NOSPOIL_CACHE = 'sf_nospoil';
+const linkSaysNoSpoil = params.get('nospoil') === '1';
+let noSpoilOn = linkSaysNoSpoil;
+try { if (localStorage.getItem(NOSPOIL_CACHE) === '1') noSpoilOn = true; } catch (_) {}
+function spoilersRevealedHere() {
+    try { return localStorage.getItem('sf_reveal_' + gameId) === '1'; } catch (_) { return false; }
+}
+function applyNoSpoil() {
+    const hide = noSpoilOn && !spoilersRevealedHere();
+    document.body.classList.toggle('sf-nospoil', hide);
+    const b = document.getElementById('spoilerBanner');
+    if (b) b.style.display = hide ? '' : 'none';
+    const r = document.getElementById('spoilerRehide');
+    if (r) r.style.display = (noSpoilOn && !hide) ? '' : 'none';
+}
+window.revealSpoilers = () => {
+    try { localStorage.setItem('sf_reveal_' + gameId, '1'); } catch (_) {}
+    applyNoSpoil();
+};
+window.hideSpoilersAgain = () => {
+    try { localStorage.removeItem('sf_reveal_' + gameId); } catch (_) {}
+    applyNoSpoil();
+};
+async function refreshNoSpoilFromAccount() {
+    if (!currentUser) { applyNoSpoil(); return; }
+    try {
+        const u = await getDoc(doc(db, 'users', currentUser.uid));
+        const on = !!(u.exists() && u.data().noSpoilers === true);
+        noSpoilOn = on || linkSaysNoSpoil;
+        try { localStorage.setItem(NOSPOIL_CACHE, on ? '1' : '0'); } catch (_) {}
+    } catch (_) { /* keep the cached value */ }
+    applyNoSpoil();
+}
+applyNoSpoil();
 // v13 — Android WebView wrapper appends ?app=1; hide the in-page top-bar
 // since the app already shows its own chrome.
 if (params.get('app') === '1') document.body.classList.add('app');
@@ -4527,6 +4594,7 @@ let _handoffSettled = !_hadAuthToken;
 })();
 onAuthStateChanged(auth, (user) => {
     currentUser = user && !user.isAnonymous ? user : null;
+    refreshNoSpoilFromAccount();
     // Suppress the anonymous fire while we're still waiting on the SSO
     // handoff — otherwise the page flashes signInState before the
     // in-app session lands. The IIFE above fires load() once settled.

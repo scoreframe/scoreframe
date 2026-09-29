@@ -1120,6 +1120,10 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
                 </button>
             </div>
             <input class="auth-input" type="text" id="authName" placeholder="Display name" style="display:none;" autocomplete="name">
+            <label id="authNoSpoilRow" style="display:none;gap:6px;align-items:flex-start;font-size:12px;color:var(--text-secondary);margin:4px 0 8px;cursor:pointer;">
+                <input type="checkbox" id="authNoSpoil" style="margin-top:2px;">
+                <span>No spoilers — hide scores in my emails and on game pages until I choose to see them</span>
+            </label>
             <button class="auth-submit" id="authSubmit" onclick="doEmailSignIn()">Sign In</button>
             <!-- Passwordless (2026-08-17). The follower this page is built for
                  is a parent or grandparent who arrives from one invite email,
@@ -2160,6 +2164,7 @@ window.setAuthMode = function(createMode) {
         : 'Follow teams, get live notifications, and more';
     $('authSubmit').textContent = isCreateMode ? 'Create Account' : 'Sign In';
     $('authName').style.display = isCreateMode ? 'block' : 'none';
+    if ($('authNoSpoilRow')) $('authNoSpoilRow').style.display = isCreateMode ? 'flex' : 'none';
     $('authPassword').setAttribute('autocomplete',
         isCreateMode ? 'new-password' : 'current-password');
     // Re-mask on every open / tab switch — a revealed password left showing
@@ -2344,6 +2349,11 @@ window.doEmailSignIn = async function() {
         if (isCreateMode) {
             result = await createUserWithEmailAndPassword(auth, email, password);
             if (name) await updateProfile(result.user, { displayName: name });
+            // No spoilers ticked at sign-up (2026-09-29) — users/{uid}.noSpoilers.
+            if ($('authNoSpoil')?.checked) {
+                try { await setDoc(doc(db, 'users', result.user.uid), { noSpoilers: true }, { merge: true }); } catch (_) {}
+                try { localStorage.setItem('sf_nospoil', '1'); } catch (_) {}
+            }
         } else {
             result = await signInWithEmailAndPassword(auth, email, password);
         }
@@ -2442,6 +2452,10 @@ function emailFollowBoxHtml() {
           <input id="emailFollowInput" type="email" placeholder="you@email.com" style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--text-secondary);border-radius:8px;background:#262626;color:var(--text-primary);font-size:14px;">
           <button class="follow-btn" onclick="window.doEmailFollow()">Follow</button>
         </div>
+        <label style="display:flex;gap:6px;align-items:flex-start;font-size:12px;color:var(--text-secondary);margin-top:8px;cursor:pointer;">
+          <input id="emailFollowNoSpoil" type="checkbox" style="margin-top:2px;">
+          <span>No spoilers — hide scores in my emails and on game pages until I choose to see them</span>
+        </label>
         <div id="emailFollowMsg" style="font-size:12px;margin-top:6px;"></div>
       </div>`;
 }
@@ -2453,7 +2467,8 @@ window.doEmailFollow = async function() {
     msg.style.color = 'var(--text-secondary)'; msg.textContent = 'Signing you up…';
     try {
         const res = await fetch('https://us-central1-scoreframe-deploy.cloudfunctions.net/followTeamByEmail?email=' +
-            encodeURIComponent(email) + '&hub=' + encodeURIComponent(hubCode), { method: 'POST' });
+            encodeURIComponent(email) + '&hub=' + encodeURIComponent(hubCode) +
+            (document.getElementById('emailFollowNoSpoil')?.checked ? '&noSpoilers=1' : ''), { method: 'POST' });
         const data = await res.json();
         if (data.ok) {
             document.getElementById('emailFollowWrap').innerHTML =

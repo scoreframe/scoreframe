@@ -51,6 +51,14 @@
                 </div>
             </div>
 
+            <div id="spoilerBlock">
+                <div class="section-title">No spoilers</div>
+                <div class="row">
+                    <input type="checkbox" id="noSpoilChk">
+                    <label for="noSpoilChk">Hide scores and results<div class="hint">Game emails won't show the score, and game pages keep results hidden until you tap the eye. Watch first, then reveal.</div></label>
+                </div>
+            </div>
+
             <div id="teamsBlock">
                 <div class="section-title">Teams you follow</div>
                 <div id="teamsList"></div>
@@ -112,6 +120,7 @@
                 document.getElementById("marketingBlock").classList.remove("hidden");
                 document.getElementById("marketingChk").checked = !!state.marketingOptedIn;
             }
+            document.getElementById("noSpoilChk").checked = !!state.noSpoilers;
             const list = document.getElementById("teamsList");
             list.innerHTML = "";
             if (!state.teams || state.teams.length === 0) {
@@ -145,6 +154,7 @@
                 .filter(function (c) { return !c.checked; }).map(function (c) { return c.getAttribute("data-id"); });
             const body = { action: "update", unfollow: unfollow };
             if (state.kind === "account") body.marketingOptedIn = document.getElementById("marketingChk").checked;
+            body.noSpoilers = document.getElementById("noSpoilChk").checked;
             try { await post(body); show("doneMsg"); }
             catch (e) { btn.disabled = false; btn.textContent = "Save changes"; show("errorMsg"); }
         }
