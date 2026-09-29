@@ -157,6 +157,11 @@ html, body {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
     margin-top: 8px; padding: 0 4px; font-size: 12px; color: var(--text-secondary);
 }
+/* Name of the video that's playing ("Set 3"), left of the platform pill. */
+#streamCaption {
+    order: -1; flex: 1 1 auto; min-width: 0;
+    font-size: 14px; font-weight: 700; color: var(--text-primary);
+}
 .platform-pill {
     padding: 2px 8px; border-radius: 4px; font-size: 10px;
     background: var(--bg-elevated); color: var(--text-secondary); font-weight: 700;
@@ -1960,6 +1965,7 @@ function renderGame(hub, game) {
         baseStreams.push({ url: game.youtubeHighlightsUrl, platform: 'youtube' });
     }
     const streams = baseStreams;
+    annotateStreamNames(streams);
 
     // Build the embeddable playlist. Order: YouTube first, then Twitch, then
     // any other embeddable streams. Non-embeddable links don't go in the
@@ -2044,7 +2050,17 @@ function renderGame(hub, game) {
         // ("Volleyball — Spikers vs AWAY — 2026-08-03 — Audrey Highlights").
         // A live stream or a hand-added link has no such title and falls back
         // to the platform name, exactly as before.
+        // 2026-09-28 — the TITLE is the video's name (`name`, set in the app's
+        // Manage streams, e.g. "Set 3"; else a default like "Full game 2"),
+        // computed once in annotateStreamNames. The grouping below still
+        // comes from kind; when the user named it, the sub-line says what
+        // kind of video it is.
         const classifyStream = (s) => {
+            const c = classifyStreamKind(s);
+            const named = !!(s.name || '').trim();
+            return { kind: c.kind, title: s._display || c.title, sub: named ? c.type : c.sub };
+        };
+        const classifyStreamKind = (s) => {
             const label = (s.label || '').trim();
             // Prefer the EXPLICIT fields the app writes (v1.1.1123+). Parsing
             // the title was the first attempt and it can't work for anything
@@ -2053,21 +2069,21 @@ function renderGame(hub, game) {
             const kind = (s.kind || '').toLowerCase();
             const player = (s.playerName || '').trim();
             if (kind === 'reel' || player) {
-                return { kind: 'reel', title: player || 'Player', sub: 'Player highlights' };
+                return { kind: 'reel', title: player || 'Player', sub: 'Player highlights', type: 'Player highlights' };
             }
-            if (kind === 'highlight') return { kind: 'highlight', title: 'Highlights', sub: 'Best moments' };
-            if (kind === 'full') return { kind: 'full', title: 'Full game', sub: 'Full recording' };
+            if (kind === 'highlight') return { kind: 'highlight', title: 'Highlights', sub: 'Best moments', type: 'Highlights' };
+            if (kind === 'full') return { kind: 'full', title: 'Full game', sub: 'Full recording', type: 'Full game' };
 
             // Legacy fallback — titles written before the app sent structure.
             const m = label.match(/—\s*([^—]+?)\s+Highlights\s*$/i);
-            if (m) return { kind: 'reel', title: m[1].trim(), sub: 'Player highlights' };
-            if (/—\s*Highlight\s*$/i.test(label)) {
-                return { kind: 'highlight', title: 'Highlights', sub: 'Best moments' };
+            if (m) return { kind: 'reel', title: m[1].trim(), sub: 'Player highlights', type: 'Player highlights' };
+            if (/—\s*Highlight( Reel)?\s*$/i.test(label)) {
+                return { kind: 'highlight', title: 'Highlights', sub: 'Best moments', type: 'Highlights' };
             }
             if (s.source === 'save_to_youtube' || label) {
-                return { kind: 'full', title: 'Full game', sub: 'Full recording' };
+                return { kind: 'full', title: 'Full game', sub: 'Full recording', type: 'Full game' };
             }
-            return { kind: 'full', title: platformLabel(s.platform || detectPlatform(s.url)), sub: 'Live stream / replay' };
+            return { kind: 'full', title: platformLabel(s.platform || detectPlatform(s.url)), sub: 'Live stream / replay', type: 'Live stream' };
         };
 
         // YouTube hosts a thumbnail for every video at a predictable URL, so a
@@ -2245,10 +2261,54 @@ function mountEmbed(stream, autoplay) {
  *   scrolling the page on the initial automatic mount would yank the reader
  *   away from wherever they were.
  */
+/**
+ * What each video is called on this page — `_display` on every stream.
+ *
+ * Eric 2026-09-28: "the ability to put a label on each stream that shows
+ * underneath the stream as it's playing … I would want to call it set three."
+ * The user's own name (`name`, edited in the app's Manage streams) wins.
+ * Without one it's a default from what the app knows: Full game, Highlights,
+ * "<player> highlights", Live stream. Repeated defaults are numbered in list
+ * order ("Full game 1", "Full game 2") so no two rows read the same.
+ * `label` is the YouTube title and is deliberately NOT shown — it repeats the
+ * sport, teams and date that the page header already says.
+ */
+function streamDefaultName(s) {
+    const kind = String(s.kind || '').toLowerCase();
+    const player = String(s.playerName || '').trim();
+    const label = String(s.label || '').trim();
+    if (kind === 'reel' || player) return player ? `${player} highlights` : 'Player highlights';
+    if (kind === 'highlight') return 'Highlights';
+    if (kind === 'full') return 'Full game';
+    const m = label.match(/—\s*([^—]+?)\s+Highlights\s*$/i);
+    if (m) return `${m[1].trim()} highlights`;
+    if (/—\s*Highlight( Reel)?\s*$/i.test(label)) return 'Highlights';
+    if (s.source === 'save_to_youtube' || label) return 'Full game';
+    if (s.broadcastId || s.endedAt || s.gameId) return 'Live stream';
+    return 'Video';
+}
+function annotateStreamNames(streams) {
+    const list = (streams || []).filter(Boolean);
+    const unnamed = list.filter(s => !String(s.name || '').trim());
+    const counts = {};
+    unnamed.forEach(s => { const d = streamDefaultName(s); counts[d] = (counts[d] || 0) + 1; });
+    const seen = {};
+    list.forEach(s => {
+        const own = String(s.name || '').trim();
+        if (own) { s._display = own; return; }
+        const d = streamDefaultName(s);
+        if (counts[d] > 1) { seen[d] = (seen[d] || 0) + 1; s._display = `${d} ${seen[d]}`; }
+        else s._display = d;
+    });
+}
+
 function mountStreamAtIndex(idx, userInitiated) {
     if (playlistStreams.length === 0) return;
     playlistIndex = Math.max(0, Math.min(idx, playlistStreams.length - 1));
     mountEmbed(playlistStreams[playlistIndex], userInitiated === true);
+    // The playing video's name under the player (mountEmbed clears it).
+    const cap = document.getElementById('streamCaption');
+    if (cap) cap.textContent = playlistStreams[playlistIndex]._display || '';
     refreshPlaylistControls();
     if (userInitiated === true) {
         const slot = document.getElementById('playerSlot');
