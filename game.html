@@ -1009,7 +1009,7 @@ html, body {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { initializeFirestore, getFirestore, doc, getDoc, onSnapshot, collection, getDocs, query, orderBy, limit as fbLimit }
+import { initializeFirestore, getFirestore, doc, getDoc, onSnapshot, collection, getDocs, query, where, orderBy, limit as fbLimit }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 // v1.1.389 — Auth imports added so private-hub games (visibility !== 'public')
 // can be viewed by their owner / approved subscribers after signing in.
@@ -1119,12 +1119,34 @@ async function loadOpponentLogo(game) {
         const otherId =
             (game.homeTeamId && game.homeTeamId !== hubId) ? game.homeTeamId :
             (game.awayTeamId && game.awayTeamId !== hubId) ? game.awayTeamId : null;
-        if (!otherId) return;
-        const snap = await getDoc(doc(db, 'teams', otherId));
-        if (!snap.exists()) return;
-        const u = snap.data().logoUrl;
+        if (otherId) {
+            try {
+                const snap = await getDoc(doc(db, 'teams', otherId));
+                const u = snap.exists() ? snap.data().logoUrl : null;
+                if (typeof u === 'string' && u.startsWith('http')) { opponentLogoUrl = u; return; }
+            } catch (_) { /* private team — fall through to the saved opponent */ }
+        }
+        // 2026-09-28 — an opponent saved in the team's Opponents list (name,
+        // colour, logo; teams/{id}/opponents) isn't a team doc, so the read
+        // above never found its logo. Eric: "If an opponent has a logo can that
+        // be next to their team in the game page." Games carry opponentId; older
+        // ones only the name, so match on that as a fallback.
+        const opps = collection(db, 'teams', hubId, 'opponents');
+        let opp = null;
+        if (game.opponentId) {
+            const snap = await getDoc(doc(opps, String(game.opponentId)));
+            if (snap.exists()) opp = snap.data();
+        }
+        if (!opp) {
+            const oppName = String((game.homeTeamId === hubId ? game.awayTeam : (game.awayTeamId === hubId ? game.homeTeam : '')) || '').trim();
+            if (oppName) {
+                const qs = await getDocs(query(opps, where('name', '==', oppName)));
+                if (!qs.empty) opp = qs.docs[0].data();
+            }
+        }
+        const u = opp && (opp.logoCloudUrl || opp.logoUrl);
         if (typeof u === 'string' && u.startsWith('http')) opponentLogoUrl = u;
-    } catch (_) { /* private or missing opponent team — no logo, no error */ }
+    } catch (_) { /* private or missing opponent — no logo, no error */ }
 }
 
 async function loadFullNames(teamId) {
@@ -2656,11 +2678,18 @@ function renderTeamScore(hub, game) {
         }
     }
     const awayFirst = sfAwayFirst(game.sport || hub.sport);
+    // Whose sets get the accent: THIS page's team. It used to be the home
+    // team's, so an away team's page lit up the sets it LOST (Eric 2026-09-28:
+    // "the first set score is highlighted in the theme color but the next two
+    // are not" — set 1 went to the home side, sets 2-3 to his away team).
+    const hubIsAway = !!(game.awayTeamId && hub.teamId && game.awayTeamId === hub.teamId
+        && game.homeTeamId !== hub.teamId);
     let setLine = '';
     if (homeSets.length > 0 && homeSets.length === awaySets.length) {
         const parts = homeSets.map((h, i) => {
             const a = awaySets[i] ?? 0;
-            const winnerClass = h > a ? 'set-home' : (a > h ? 'set-away' : 'set-tie');
+            const ours = hubIsAway ? a : h, theirs = hubIsAway ? h : a;
+            const winnerClass = ours > theirs ? 'set-home' : (theirs > ours ? 'set-away' : 'set-tie');
             // Same order as the score blocks above it.
             return `<span class="set-pair ${winnerClass}">${awayFirst ? `${a}–${h}` : `${h}–${a}`}</span>`;
         });
