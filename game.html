@@ -1900,9 +1900,10 @@ function sfAwayFirst(sport) {
     const s = String(sport || '').toUpperCase();
     return !['SOCCER', 'TENNIS', 'PICKLEBALL', 'BOWLING'].includes(s);
 }
-/** "A vs B" in page order. */
+/** "Away @ Home" (Eric 2026-09-28: "It should be labeled ct bulldogs @ it
+ *  cougars"), or "Home vs Away" where home comes first. */
 function sfMatchupTitle(home, away, sport) {
-    return sfAwayFirst(sport) ? `${away} vs ${home}` : `${home} vs ${away}`;
+    return sfAwayFirst(sport) ? `${away} @ ${home}` : `${home} vs ${away}`;
 }
 
 function renderGame(hub, game) {
@@ -2702,7 +2703,7 @@ function renderTeamScore(hub, game) {
     $('scoreContent').innerHTML = `
         <div class="scoreline">
             ${awayFirst ? awayBlock(false) : homeBlock(false)}
-            <div class="vs">VS</div>
+            <div class="vs">${awayFirst ? '@' : 'VS'}</div>
             ${awayFirst ? homeBlock(true) : awayBlock(true)}
         </div>
         ${setLine}
