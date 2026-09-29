@@ -1888,6 +1888,23 @@ window.__renderLocalGame = function(json) {
     }
 };
 
+/**
+ * Away first, home second — the US convention ("Away @ Home"; box scores and
+ * score bugs list the visitor first). Eric 2026-09-28: "on our game pages I
+ * think we have the home team first like on the top left instead of being on
+ * the bottom right." Soccer is the usual exception (home first), and tennis,
+ * pickleball and bowling have no home side, so those keep their order.
+ * A per-sport audit is on the backlog; this is the one switch it would change.
+ */
+function sfAwayFirst(sport) {
+    const s = String(sport || '').toUpperCase();
+    return !['SOCCER', 'TENNIS', 'PICKLEBALL', 'BOWLING'].includes(s);
+}
+/** "A vs B" in page order. */
+function sfMatchupTitle(home, away, sport) {
+    return sfAwayFirst(sport) ? `${away} vs ${home}` : `${home} vs ${away}`;
+}
+
 function renderGame(hub, game) {
     // Stash for the shareable game-card renderer (window.shareGameCard).
     window.__cardGame = game; window.__cardHub = hub;
@@ -1901,7 +1918,7 @@ function renderGame(hub, game) {
     } else {
         const home = game.homeTeam || hub.teamName || 'Home';
         const away = game.awayTeam || 'Away';
-        title = `${home} vs ${away}`;
+        title = sfMatchupTitle(home, away, sport);
     }
     document.title = `${title} · ${hub.teamName} · ScoreFrame`;
     $('heroTitle').textContent = title;
@@ -2482,7 +2499,7 @@ function applyLiveUpdate(hub, game, sport) {
     // Hero text can change if the owner renamed the matchup / event.
     const home = game.homeTeam || hub.teamName || 'Home';
     const away = game.awayTeam || 'Away';
-    if (!isBowling) $('heroTitle').textContent = `${home} vs ${away}`;
+    if (!isBowling) $('heroTitle').textContent = sfMatchupTitle(home, away, sport);
     renderResultBadge(hub, game, isLive, isBowling);
     // Self-contained card re-renders (each writes only its own container).
     if (isBowling) renderBowlingScore(game); else renderTeamScore(hub, game);
@@ -2637,12 +2654,14 @@ function renderTeamScore(hub, game) {
                        : ss.homeScoreByPeriod ? 'By period' : 'By quarter';
         }
     }
+    const awayFirst = sfAwayFirst(game.sport || hub.sport);
     let setLine = '';
     if (homeSets.length > 0 && homeSets.length === awaySets.length) {
         const parts = homeSets.map((h, i) => {
             const a = awaySets[i] ?? 0;
             const winnerClass = h > a ? 'set-home' : (a > h ? 'set-away' : 'set-tie');
-            return `<span class="set-pair ${winnerClass}">${h}–${a}</span>`;
+            // Same order as the score blocks above it.
+            return `<span class="set-pair ${winnerClass}">${awayFirst ? `${a}–${h}` : `${h}–${a}`}</span>`;
         });
         // Sets need no label — a volleyball reader knows. Periods and quarters do,
         // otherwise "0–0 · 3–0 · 0–0 · 0–0" reads as a set score.
@@ -2668,21 +2687,23 @@ function renderTeamScore(hub, game) {
     const scoreLogo = (url, after) => url
         ? `<img src="${url}" alt="" style="height:34px;width:auto;max-width:56px;object-fit:contain;display:inline-block;vertical-align:middle;margin-${after ? 'left' : 'right'}:8px;" />`
         : '';
-    const homeLogoHtml = scoreLogo(hubIsAwaySide ? oppLogo : hubLogo, false);
-    const awayLogoHtml = scoreLogo(hubIsAwaySide ? hubLogo : oppLogo, true);
+    const homeLogoUrl = hubIsAwaySide ? oppLogo : hubLogo;
+    const awayLogoUrl = hubIsAwaySide ? hubLogo : oppLogo;
+    // One block per side; the left one carries its logo before the name, the
+    // right one after. Which side is left depends on sfAwayFirst.
+    const side = (name, logoUrl, score, win, lose, badge, right) => `
+            <div class="team-block"${right ? ' style="text-align:right;"' : ''}>
+                <div class="name">${right ? `${name}${scoreLogo(logoUrl, true)}` : `${scoreLogo(logoUrl, false)}${name}`}</div>
+                <div class="score ${win ? 'winner' : (lose ? 'loser' : '')}">${score}</div>
+                ${badge}
+            </div>`;
+    const homeBlock = (right) => side(home, homeLogoUrl, hs, homeWin, awayWin, homePkBadge, right);
+    const awayBlock = (right) => side(away, awayLogoUrl, as, awayWin, homeWin, awayPkBadge, right);
     $('scoreContent').innerHTML = `
         <div class="scoreline">
-            <div class="team-block">
-                <div class="name">${homeLogoHtml}${home}</div>
-                <div class="score ${homeWin ? 'winner' : (awayWin ? 'loser' : '')}">${hs}</div>
-                ${homePkBadge}
-            </div>
+            ${awayFirst ? awayBlock(false) : homeBlock(false)}
             <div class="vs">VS</div>
-            <div class="team-block" style="text-align:right;">
-                <div class="name">${away}${awayLogoHtml}</div>
-                <div class="score ${awayWin ? 'winner' : (homeWin ? 'loser' : '')}">${as}</div>
-                ${awayPkBadge}
-            </div>
+            ${awayFirst ? homeBlock(true) : awayBlock(true)}
         </div>
         ${setLine}
     `;
@@ -3777,8 +3798,10 @@ function renderBoxScore(hub, game, sport) {
     const homeColor = game.homeColor || hub.color || '#1565C0';
     const awayColor = game.awayColor || '#C62828';
     const sections = [];
-    if (home.length > 0) sections.push(renderBoxSide(homeName, homeColor, home, cols, s));
-    if (away.length > 0) sections.push(renderBoxSide(awayName, awayColor, away, cols, s));
+    const homeSec = home.length > 0 ? renderBoxSide(homeName, homeColor, home, cols, s) : null;
+    const awaySec = away.length > 0 ? renderBoxSide(awayName, awayColor, away, cols, s) : null;
+    // Same order as the score card.
+    (sfAwayFirst(s) ? [awaySec, homeSec] : [homeSec, awaySec]).forEach(x => { if (x) sections.push(x); });
     if (sections.length === 0) return;
     content.innerHTML = sections.join('');
     card.style.display = '';
