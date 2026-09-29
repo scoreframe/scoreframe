@@ -1111,10 +1111,13 @@ let opponentLogoUrl = '';
  * team the viewer can't see. Swallow it and leave the side logo-less rather than
  * logging noise or rendering a broken image.
  */
-async function loadOpponentLogo(game) {
+async function loadOpponentLogo(game, hub) {
     opponentLogoUrl = '';
     try {
-        const hubId = hubProfile && hubProfile.teamId;
+        // The hub is passed in: `hubProfile` is local to the loader function,
+        // so reading it here was always undefined and this returned before
+        // fetching anything — no opponent logo ever drew. 2026-09-28.
+        const hubId = hub && hub.teamId;
         if (!hubId || !game) return;
         const otherId =
             (game.homeTeamId && game.homeTeamId !== hubId) ? game.homeTeamId :
@@ -2044,7 +2047,7 @@ function renderGame(hub, game) {
         // then fill in the opponent's once its team doc resolves. Awaiting the
         // fetch here instead would hold the whole score card behind a network
         // round trip that is allowed to fail.
-        loadOpponentLogo(game).then(() => {
+        loadOpponentLogo(game, hub).then(() => {
             if (opponentLogoUrl) renderTeamScore(hub, game);
         });
     }
