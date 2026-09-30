@@ -370,17 +370,17 @@ onAuthStateChanged(auth, async (user) => {
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1534</span>
-      <span class="ch-note">same as production</span>
+      <span class="ch-ver">1.1.1535</span>
+      <span class="ch-note">overnight fixes (handoff, stream merge, away-first football/Simple)</span>
     </div>
     <div class="ch">
       <span class="ch-name">TestFlight</span>
-      <span class="ch-ver">1.2.350 (824)</span>
-      <span class="ch-note">landscape buffer-mode fix · Move scoreboard</span>
+      <span class="ch-ver">1.2.351 (825)</span>
+      <span class="ch-note">overnight fixes on top of 1.2.350</span>
     </div>
     <div class="ch">
       <span class="ch-name">Admin app</span>
-      <span class="ch-ver">0.0.29</span>
+      <span class="ch-ver">0.0.30</span>
       <span class="ch-note">broadcast composer removed · ticket pushes readable · Health loads</span>
     </div>
   </div>
@@ -502,6 +502,18 @@ onAuthStateChanged(auth, async (user) => {
 
   <h2>Fixed the last two days</h2>
   <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Overnight security pass — 30 Sep</span>
+        <span class="chip">Emulator + live probes</span>
+      </div>
+      <p class="item-body">
+        User and player lists are no longer readable by any signed-in or anonymous session. A follower
+        can't fake an invitation to get into a private team. Staff pushes can't carry links. Maintenance
+        endpoints need a super-user sign-in instead of keys. Hub codes are checked before emailing or
+        pushing a team's followers, and user-typed text is escaped in emails.
+      </p>
+    </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">Move the scoreboard (Pro) — 29 Sep</span>
