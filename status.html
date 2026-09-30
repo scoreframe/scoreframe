@@ -360,33 +360,28 @@ onAuthStateChanged(auth, async (user) => {
   <div class="channels">
     <div class="ch live">
       <span class="ch-name">Play production</span>
-      <span class="ch-ver">1.1.1200</span>
-      <span class="ch-note">live · 134 tester builds behind · your call, and now unblocked</span>
+      <span class="ch-ver">1.1.1532</span>
+      <span class="ch-note">staged 20% · What's New · hand off a game · no spoilers · Final → game page</span>
     </div>
     <div class="ch live">
       <span class="ch-name">App Store</span>
-      <span class="ch-ver">1.2.185 (621)</span>
-      <span class="ch-note">last known — not re-checked this run (App Store Connect is blocked from this session)</span>
+      <span class="ch-ver">1.2.347 (821)</span>
+      <span class="ch-note">in review · MANUAL release — you release it once approved</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1379</span>
-      <span class="ch-note">game log on the game page · uploaded clips claim their chip · fullscreen trap after Share fixed · card branding</span>
-    </div>
-    <div class="ch">
-      <span class="ch-name">iOS (direct install)</span>
-      <span class="ch-ver">build 707</span>
-      <span class="ch-note">on the SE · Event Name Pro gate opens the upgrade screen · scoreboard name parity</span>
+      <span class="ch-ver">1.1.1533</span>
+      <span class="ch-note">Move scoreboard (Pro)</span>
     </div>
     <div class="ch">
       <span class="ch-name">TestFlight</span>
-      <span class="ch-ver">1.2.266 (736)</span>
-      <span class="ch-note">buffer-mode stat highlights · game log · clip claim · card branding</span>
+      <span class="ch-ver">1.2.348 (822)</span>
+      <span class="ch-note">Move scoreboard (Pro)</span>
     </div>
     <div class="ch">
-      <span class="ch-name">Web (Pages)</span>
-      <span class="ch-ver">game.html v50</span>
-      <span class="ch-note">penalties + cards on the timeline · uploaded clip replaces its timestamp link · hockey sorted right</span>
+      <span class="ch-name">Admin app</span>
+      <span class="ch-ver">0.0.29</span>
+      <span class="ch-note">broadcast composer removed · ticket pushes readable · Health loads</span>
     </div>
   </div>
 
@@ -507,6 +502,29 @@ onAuthStateChanged(auth, async (user) => {
 
   <h2>Fixed the last two days</h2>
   <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Move the scoreboard (Pro) — 29 Sep</span>
+        <span class="chip">Emulator + simulator verified</span>
+      </div>
+      <p class="item-body">
+        Game ▾ → Move scoreboard. Drag it anywhere on the video; it snaps to the edges, the
+        centre, and just above YouTube's controls. Size 50–200%, saved per team and sport. Your
+        logo and the free watermark step out of its way. Football, baseball and bowling keep
+        their wide starting position and mostly slide up and down until shrunk.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Broadcasting to every user is off — 29 Sep</span>
+        <span class="chip">Verified: 403 as super user</span>
+      </div>
+      <p class="item-body">
+        The database refuses new broadcasts from anyone, admins included; the server function
+        refuses and expires anything written another way. The send form is gone from the web
+        admin and the admin app, and broadcast.py exits.
+      </p>
+    </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">Invitations you can act on without the email</span>
