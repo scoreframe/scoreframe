@@ -233,12 +233,11 @@ tr[data-attn="attn"] td:first-child strong::before {
         <div id="tab-broadcast" class="tab-panel">
             <div class="card">
                 <h2>Send App-Wide Announcement</h2>
-                <div class="hint">
-                    Drops a doc into <code>broadcasts/</code>. The Cloud Function fires immediately and
-                    pushes FCM to topic <code>all_users</code>. Anyone with the app installed and notifications
-                    enabled gets the system push within a few seconds. Everyone else (no perm, signed out, app closed)
-                    sees the announcement in the in-app bell on next launch.
+                <div class="hint" style="color:#FF9640;font-weight:700;">
+                    Broadcasting to every user is turned off (2026-09-29). The database refuses new broadcasts
+                    and the server function refuses them too.
                 </div>
+                <div style="display:none;">
 
                 <label for="bTitle">Title</label>
                 <input id="bTitle" type="text" placeholder='e.g. "v1.1.107 is out"' maxlength="80">
@@ -263,7 +262,7 @@ tr[data-attn="attn"] td:first-child strong::before {
                     </div>
                 </div>
 
-                <button class="primary" onclick="sendBroadcast()">Send to all users</button>
+                </div>
                 <div id="bStatus"></div>
             </div>
         </div>
@@ -468,6 +467,10 @@ document.querySelectorAll('.tab').forEach(t => {
 // ── Compose Broadcast ──
 
 async function sendBroadcast() {
+    // Disabled 2026-09-29 — see the notice on this tab. Kept as a stub so the
+    // window.sendBroadcast export still resolves.
+    alert('Broadcasting to every user is turned off.');
+    return;
     const title = $('bTitle').value.trim();
     const body = $('bBody').value.trim();
     const url = $('bUrl').value.trim();
