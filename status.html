@@ -369,13 +369,13 @@ onAuthStateChanged(auth, async (user) => {
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1539</span>
-      <span class="ch-note">same as production</span>
+      <span class="ch-ver">1.1.1540</span>
+      <span class="ch-note">tournament fixes from the end-to-end test</span>
     </div>
     <div class="ch">
       <span class="ch-name">TestFlight</span>
-      <span class="ch-ver">1.2.353 (827)</span>
-      <span class="ch-note">Manage Recordings · one-tap intermission · summary check · fire default</span>
+      <span class="ch-ver">1.2.354 (828)</span>
+      <span class="ch-note">tournament fixes · everything in 1.2.353</span>
     </div>
     <div class="ch">
       <span class="ch-name">Admin app</span>
@@ -410,11 +410,11 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Test the tournament flow before U of Iowa, 17 Oct</span>
+        <span class="item-title">Tournament: tested end to end, three questions for you</span>
         <span class="chip">over to you</span>
       </div>
       <p class="item-body">
-        The redesign is built: engine, Cloud Functions, the fan event page, Android TournamentActivity and iOS TournamentScreen. Opening one of your ISU tournaments upgrades it to the new model. It needs a real run-through on your phones.
+        I ran a full test tournament on 1 Oct: built the bracket in the app, played matches through recording, entered other courts, played into the Gold semifinal, and checked the fan page and iOS on real data. Fixed and shipped: the wrong &ldquo;next&rdquo; match, best-third teams meeting their own pool winner in the Gold quarterfinals, and match order. Questions: a match only shows live once recording starts; unplayed bracket matches show the event start time; the bracket doesn't name a champion.
       </p>
     </div>
     <div class="item">
