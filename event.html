@@ -619,7 +619,15 @@ function v2OurGames() {
     return [...new Map([...V.legacy, ...V.games]).values()].map(g => {
         const n = nodeByGame.get(g.id);
         return { g, n, time: tms(n?.time) || tms(g.date) };
-    }).sort((a, b) => a.time - b.time);
+    }).sort(v2Order);
+}
+// 2026-10-01: the bracket builder gives no match a time, so sorting by time
+// put played matches after unplayed ones. With no times in the draw, the draw
+// order is the order of play; matches added by hand follow, by date.
+function v2Order(a, b) {
+    if (V.nodes.some(n => tms(n.time) > 0)) return a.time - b.time;
+    const d = o => o.n ? (o.n.phase === 'pool' ? 0 : 1) * 10000 + (o.n.round || 0) * 100 + (o.n.slot || 0) : Infinity;
+    return (d(a) - d(b)) || (a.time - b.time);
 }
 function v2Watch(g) {
     const streams = Array.isArray(g.streams) ? g.streams : [];
@@ -637,7 +645,10 @@ function renderV2() {
 
     const ours = v2OurGames();
     const live = ours.find(o => o.g.status === 'live');
-    const next = ours.find(o => o.g.status === 'scheduled');
+    // The server's pick when it has one, so this page and the coach's screen agree.
+    const serverNext = ((ev.computed || {}).next || {}).matchId;
+    const next = (serverNext && ours.find(o => o.g.status === 'scheduled' && o.n && o.n.id === serverNext))
+        || ours.find(o => o.g.status === 'scheduled');
     const done = ours.filter(o => o.g.status === 'completed');
     let mw = 0, ml = 0, ms = 0, sw = 0, sl = 0;
     for (const o of done) { const r = v2Result(o.g); sw += r.w; sl += r.l; if (r.w > r.l) mw++; else if (r.l > r.w) ml++; else ms++; }
