@@ -344,44 +344,43 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">30 Aug 2026 · game log + clip claim shipped · two live-game bugs fixed</span>
+    <span class="stamp">1 Oct 2026 · Play security fix live · one-tap intermission</span></span>
   </div>
   <p class="lede">
-    What's moving right now, and what's waiting on you. Android is on
-    <strong>1.1.1379</strong>, iOS on <strong>1.2.266 (736)</strong>, and
-    <strong>game.html v50</strong> is live. Both bugs from your hockey session
-    are fixed — the fullscreen trap after Share, and a thermal warning that was
-    silently swallowing the more serious one. The testing record further down is
-    from the 23–24 Aug automated run and has not been regenerated since; the
-    version table and this section are current.
+    What's moving right now, and what's waiting on you. Android
+    <strong>1.1.1539</strong> is in production at 100%, in Google's review; it fixes
+    the Intent Redirection warning Play sent. iOS <strong>1.2.350</strong> is in App
+    Store review and <strong>1.2.353</strong> is on TestFlight. The testing record
+    further down is from the August automated runs and has not been regenerated
+    since; the version table and the sections above it are current.
   </p>
 
   <h2>Where the code is</h2>
   <div class="channels">
     <div class="ch live">
       <span class="ch-name">Play production</span>
-      <span class="ch-ver">1.1.1534</span>
-      <span class="ch-note">100% · Move scoreboard · What's New (5) · hand off · no spoilers</span>
+      <span class="ch-ver">1.1.1539</span>
+      <span class="ch-note">100% · in Google review · Intent Redirection fix · Manage Recordings · one-tap intermission</span>
     </div>
     <div class="ch live">
       <span class="ch-name">App Store</span>
       <span class="ch-ver">1.2.350 (824)</span>
-      <span class="ch-note">in review · MANUAL release — you release it once approved (1.2.347 pulled)</span>
+      <span class="ch-note">in review · MANUAL release, you release it once approved</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1535</span>
-      <span class="ch-note">overnight fixes (handoff, stream merge, away-first football/Simple)</span>
+      <span class="ch-ver">1.1.1539</span>
+      <span class="ch-note">same as production</span>
     </div>
     <div class="ch">
       <span class="ch-name">TestFlight</span>
-      <span class="ch-ver">1.2.351 (825)</span>
-      <span class="ch-note">overnight fixes on top of 1.2.350</span>
+      <span class="ch-ver">1.2.353 (827)</span>
+      <span class="ch-note">Manage Recordings · one-tap intermission · summary check · fire default</span>
     </div>
     <div class="ch">
       <span class="ch-name">Admin app</span>
       <span class="ch-ver">0.0.30</span>
-      <span class="ch-note">broadcast composer removed · ticket pushes readable · Health loads</span>
+      <span class="ch-note">unchanged</span>
     </div>
   </div>
 
@@ -389,91 +388,20 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">The fullscreen trap was the same bug you reported on 19 Aug — fixed for one door only</span>
-        <span class="chip">30 Aug</span>
+        <span class="item-title">Play flagged an Intent Redirection vulnerability. Fixed and live at 100%</span>
+        <span class="chip">1 Oct</span>
       </div>
       <p class="item-body">
-        Tapping <strong>Share</strong> on the YouTube stream link left you in a
-        full-bleed video with no scoring panel and no way out. Root cause:
-        <code>applyOrientationLayout</code> skips its rebuild when the
-        orientation hasn't changed — and coming back from another Activity it
-        hasn't — so the layout survives in whatever state it was left in. Since
-        v1.1.829 removed the exit-fullscreen X, the ⛶ tile on the quick action
-        bar is the <em>only</em> way out, so losing that bar loses the exit.
-        This was already diagnosed and fixed on <strong>19 Aug</strong> from an
-        almost word-identical report — but per-door, only on the Roster return.
-        Share is another door, and every future door would have shipped broken
-        too. Now fixed once, in <code>onResume</code>, for all of them.
-        <br><br>
-        Two of my own mistakes on the way, both caught by measuring rather than
-        reasoning: I first gated the rebuild on <code>onStop</code>, and a share
-        chooser is transparent so it only <em>pauses</em> — the gate never fired
-        for the exact case it was written for. And my first "it survived!" check
-        was worthless because <code>am start</code> was creating a new Activity
-        instead of resuming yours. Re-verified with a real chooser round trip.
+        The start-over-paused check I added on 28 Sep handed the Home screen a whole launch request, and Home re-launched it. Home can be opened by other apps, so another app could have used it to launch things as ScoreFrame. Home now receives only the game settings and always opens our own game screen itself. Nothing changes for users. Verified on the emulator; it was the only place in the app with that pattern. The warning should clear once Google approves 1.1.1539.
       </p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">The thermal notice was fine — but it was silencing the warning that matters</span>
-        <span class="chip">30 Aug</span>
+        <span class="item-title">The iOS crash in Crashlytics was Google's, not ours</span>
+        <span class="chip">1 Oct</span>
       </div>
       <p class="item-body">
-        "Device warming up" during stream + buffer is the OS's own PowerManager
-        status at MODERATE, warn-only and once per session, exactly as you
-        specified — stream plus buffer plus GL compositing genuinely is that
-        load. Nothing to undo. But it shared a single flag with the SEVERE arm,
-        so once the mild notice had fired, <strong>"phone is HOT — Android may
-        start killing apps"</strong> could never appear. Given you have
-        explicitly opted out of app-driven auto-stops and make the call
-        yourself, that is the one you need. Each severity now speaks once.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Game log, clip claim, and branding on the cards</span>
-        <span class="chip">30 Aug</span>
-      </div>
-      <p class="item-body">
-        Penalties and cards now appear on the public game page timeline beside
-        the goals — team, clock, what the call was, and <em>never</em> a player,
-        per your rule. Uploading a highlight to YouTube now makes its chip point
-        at the clip instead of seeking into the live broadcast; kept as a
-        separate field so a deleted upload degrades back to the timestamp rather
-        than leaving a dead row. And the cards carry subtle ScoreFrame corner
-        brackets, with a quieter wordmark on the intermission card — that one
-        sits on the broadcast for the whole break, where a title-card-weight
-        mark reads as an ad rather than a credit.
-        <br><br>
-        Four pre-existing bugs fell out along the way: buffer stat clips were
-        built with a blank intro card, a hockey reel's intro said "Volleyball"
-        and printed volleyball sets, the game page sorted hockey backwards
-        (its clock counts down), and iOS was silently dropping soccer cards.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Both bugs you reported were real — and your crash report is what found them</span>
-        <span class="chip">23 Aug</span>
-      </div>
-      <p class="item-body">
-        The <strong>roster-back crash</strong> came down to six buttons being
-        re-added while two of them were still attached to their old rows, so the
-        second rebuild threw. It only happens in <strong>portrait</strong>, which
-        is why the automated sweep — which forces landscape — reported "cannot
-        reproduce" three runs in a row. Fixed in 1.1.1331.
-      </p>
-      <p class="item-body">
-        The <strong>"Camera unavailable" message over a working camera</strong>
-        was two camera engines registered on one video surface. A surface can
-        only be owned by one of them, so the winner drew your live picture and
-        the loser reported failure — and the app was reading the loser. The same
-        bug explains the extra <em>device warming up</em> warnings: the phone was
-        doing all the camera and GPU work twice. Fixed in 1.1.1334.
-      </p>
-      <p class="item-body">
-        Worth saying plainly: an earlier attempt at the camera message (1.1.1332)
-        was wrong — it treated a symptom. It took your log to find the real cause.
+        Three crashes on 1.2.310 came from Firebase Analytics' experiment code. On 29 Sep Google served bad experiment data for a few hours and fixed it on their servers the same day (firebase-ios-sdk #16728). I updated GoogleUtilities to 8.1.4, Google's resilience release; it ships with the next iOS build.
       </p>
     </div>
   </div>
@@ -482,26 +410,53 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Confirm 1.1.1334, then the production push is yours to trigger</span>
+        <span class="item-title">Test the tournament flow before U of Iowa, 17 Oct</span>
         <span class="chip">over to you</span>
       </div>
       <p class="item-body">
-        Two things to check on the phone: resume a game in portrait and confirm
-        the <em>Camera unavailable</em> message stays away, and open Edit Roster
-        then come back and confirm it no longer crashes. If the thermal warnings
-        also settle down, that confirms the double-camera theory end to end.
+        The redesign is built: engine, Cloud Functions, the fan event page, Android TournamentActivity and iOS TournamentScreen. Opening one of your ISU tournaments upgrades it to the new model. It needs a real run-through on your phones.
       </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Try the new things on a real phone</span>
+        <span class="chip">over to you</span>
+      </div>
       <p class="item-body">
-        After that, <strong>production is unblocked</strong> — the roster crash
-        was the only thing holding it. Play production is still on 1.1.1200, now
-        134 tester builds behind. I have the access and will run it; your standing
-        rule is that it needs an explicit go-ahead per build.
+        Intermission while actually live: the &ldquo;⏸ Intermission&rdquo; pill, one chip tap to start, the ✕ to end. The green check in Wrap-up after sending the summary at End Game on a volleyball match. Manage Recordings: filters, long-press select, Save to Photos, Clean up uploaded. The volleyball fire icon on by default.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Decisions waiting on you</span>
+        <span class="chip">over to you</span>
+      </div>
+      <p class="item-body">
+        Home/away order for basketball, hockey, lacrosse and generic (docs/HOME_AWAY_AUDIT_2026-09-29.md). The remaining security items: verified-email checks, rate limits, moving email and push tokens to a private doc, closing team listing, the shirt promo trusting billing fields, team-delete leftovers, the anonymous Labs cap. Whether to pull iOS 1.2.350 from review for 1.2.353.
       </p>
     </div>
   </div>
 
   <h2>Fixed the last two days</h2>
   <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">One-tap intermission, summary check, fire default — 30 Sep</span>
+        <span class="chip">Simulator UI test + emulator</span>
+      </div>
+      <p class="item-body">
+        While live, an &ldquo;⏸ Intermission&rdquo; pill sits on the video; tapping a chip starts the break and closes the popup. The thumbnail keeps its size and gains a ✕ and a timer. Wrap-up now shows a green check with when the game summary was sent, plus Resend (which confirms). The volleyball fire icon is on for new games once enabled in Experimental. Both platforms.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Manage Recordings overhaul — 30 Sep</span>
+        <span class="chip">Emulator + simulator UI test</span>
+      </div>
+      <p class="item-body">
+        Each recording shows whether it's on YouTube (with the link) and where it lives. Filters, long-press to select many, Save to Photos, Clean up uploaded, and a notification offering to free space after an upload. Both platforms.
+      </p>
+    </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">Overnight security pass — 30 Sep</span>
