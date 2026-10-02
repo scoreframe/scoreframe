@@ -592,13 +592,18 @@ function startV2(teamId, team, evSnap) {
     V.unsub.push(onSnapshot(query(games, where('parentEventId', '==', eventId)), s => { V.legacy = new Map(s.docs.map(d => [d.id, { id: d.id, ...d.data() }])); renderV2(); }, () => {}));
 }
 
+// Pool teams, plus the event's own team list for a bracket-only tournament
+// (2026-10-02 — no pools, so the teams live on the event).
+function v2AllTeams() {
+    return (V.ev?.pools || []).flatMap(p => p.teams || []).concat(V.ev?.teams || []);
+}
 function v2TeamName(id) {
-    for (const p of (V.ev?.pools || [])) for (const t of (p.teams || [])) if (t.id === id) return t.name;
-    return null;
+    const t = v2AllTeams().find(t => t.id === id);
+    return t ? t.name : null;
 }
 function v2Us() {
-    for (const p of (V.ev?.pools || [])) for (const t of (p.teams || [])) if (t.us) return t.id;
-    return V.teamId;
+    const t = v2AllTeams().find(t => t.us);
+    return t ? t.id : V.teamId;
 }
 function v2Resolved(id) { return ((V.ev?.computed || {}).resolved || []).find(r => r.id === id) || {}; }
 function v2Sets(g) {
@@ -684,10 +689,11 @@ function renderV2() {
         h += `<div class="v2-tiles">
             <div class="v2-tile"><span class="v2-lbl">Matches</span><span class="v">${mw}-${ml}${ms ? '-' + ms : ''}</span></div>
             <div class="v2-tile"><span class="v2-lbl">Sets</span><span class="v">${sw}-${sl}</span></div>
-            <div class="v2-tile"><span class="v2-lbl">${escH(poolName || 'Pool')}</span><span class="v" style="color:#FFC800">${myRow ? ordinal(myRow.place) : '—'}</span></div></div>`;
+            ${ev.bracketOnly ? '' : `<div class="v2-tile"><span class="v2-lbl">${escH(poolName || 'Pool')}</span><span class="v" style="color:#FFC800">${myRow ? ordinal(myRow.place) : '—'}</span></div>`}</div>`;
     }
-    const hasDraw = (ev.pools || []).length > 0;
-    h += `<div class="v2-tabs">${[['ours', 'Our matches'], ...(hasDraw ? [['pools', 'Pools'], ['bracket', 'Bracket']] : [])]
+    const hasPools = (ev.pools || []).length > 0;
+    const hasDraw = hasPools || ev.bracketOnly === true;
+    h += `<div class="v2-tabs">${[['ours', 'Our matches'], ...(hasPools ? [['pools', 'Pools']] : []), ...(hasDraw ? [['bracket', 'Bracket']] : [])]
         .map(([k, l]) => `<button class="v2-tab ${V.tab === k ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>`;
 
     if (V.tab === 'pools') h += v2Pools(standings, us);
@@ -735,7 +741,7 @@ function v2Bracket(us) {
     for (const phase of ['gold', 'silver']) {
         const list = V.nodes.filter(n => n.phase === phase).sort((a, b) => (a.round - b.round) || a.id.localeCompare(b.id));
         if (!list.length) continue;
-        h += `<div class="v2-card"><div class="v2-lbl">${phase === 'gold' ? 'Gold' : 'Silver'} bracket</div>`;
+        h += `<div class="v2-card"><div class="v2-lbl">${V.ev.bracketOnly ? (phase === 'gold' ? 'Bracket' : 'Consolation') : (phase === 'gold' ? 'Gold bracket' : 'Silver bracket')}</div>`;
         for (const n of list) {
             const r = v2Resolved(n.id);
             const nm = (a, p) => a ? (v2TeamName(a) || '?') : p ? `${v2TeamName(p) || '?'}?` : 'TBD';
