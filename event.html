@@ -631,6 +631,17 @@ function v2Sets(g) {
     const weHome = !g.homeTeamId || g.homeTeamId === V.teamId;
     return h.map((x, i) => weHome ? [x, a[i] || 0] : [a[i] || 0, x]).filter(([x, y]) => x || y);
 }
+// "sets" (volleyball) or "score" (every other sport: one final score).
+function v2IsScore() {
+    const c = (V.ev && V.ev.computed || {}).scoring;
+    return (c || (String((V.ev && V.ev.sport) || 'VOLLEYBALL').toUpperCase() === 'VOLLEYBALL' ? 'sets' : 'score')) === 'score';
+}
+// A tied bracket game decided by overtime/shootout: +1 we won, -1 we lost.
+function v2Decided(n) {
+    if (!n || !n.winner) return 0;
+    const r = v2Resolved(n.id), side = n.winner === 'a' ? (r.a || (n.a || {}).teamId) : (r.b || (n.b || {}).teamId);
+    return side === v2Us() ? 1 : -1;
+}
 function v2Result(g) {
     const sets = v2Sets(g);
     let w, l;
@@ -675,7 +686,11 @@ function renderV2() {
         || ours.find(o => o.g.status === 'scheduled');
     const done = ours.filter(o => o.g.status === 'completed');
     let mw = 0, ml = 0, ms = 0, sw = 0, sl = 0;
-    for (const o of done) { const r = v2Result(o.g); sw += r.w; sl += r.l; if (r.w > r.l) mw++; else if (r.l > r.w) ml++; else ms++; }
+    for (const o of done) {
+        const r = v2Result(o.g); sw += r.w; sl += r.l;
+        const d = r.w === r.l ? v2Decided(o.n) : 0;   // tied bracket game decided by tiebreak
+        if (r.w > r.l || d > 0) mw++; else if (r.l > r.w || d < 0) ml++; else ms++;
+    }
     $('livePill').style.display = live ? '' : 'none';
     const us = v2Us();
     const standings = (ev.computed || {}).standings || [];
@@ -693,7 +708,7 @@ function renderV2() {
             <div style="flex:1;min-width:0"><div class="v2-lbl" style="color:var(--recording-red)">Live now</div>
             <div class="v2-big">vs ${escH(live.g.opponent || 'TBD')}</div>
             <div class="v2-sub">${escH([live.n?.label, live.g.court ? 'Court ' + live.g.court : ''].filter(Boolean).join(' · '))}</div></div>
-            <div class="v2-res" style="font-size:22px">${r.sets.length ? escH(r.sets[r.sets.length - 1].join('–')) : ''}</div></a>`;
+            <div class="v2-res" style="font-size:22px">${r.sets.length ? escH(r.sets[r.sets.length - 1].join('–')) : v2IsScore() ? escH(r.w + '–' + r.l) : ''}</div></a>`;
     }
     if (next) {
         const mins = Math.round((next.time - Date.now()) / 60000);
@@ -707,7 +722,7 @@ function renderV2() {
     if (done.length || myRow) {
         h += `<div class="v2-tiles">
             <div class="v2-tile"><span class="v2-lbl">Matches</span><span class="v">${mw}-${ml}${ms ? '-' + ms : ''}</span></div>
-            <div class="v2-tile"><span class="v2-lbl">Sets</span><span class="v">${sw}-${sl}</span></div>
+            <div class="v2-tile"><span class="v2-lbl">${v2IsScore() ? 'Points' : 'Sets'}</span><span class="v">${sw}-${sl}</span></div>
             ${ev.bracketOnly ? '' : `<div class="v2-tile"><span class="v2-lbl">${escH(poolName || 'Pool')}</span><span class="v" style="color:#FFC800">${myRow ? ordinal(myRow.place) : '—'}</span></div>`}</div>`;
     }
     const hasPools = (ev.pools || []).length > 0;
@@ -720,9 +735,12 @@ function renderV2() {
     else {
         h += `<div class="v2-card" style="padding:0 14px">` + (ours.length ? ours.map(o => {
             const g = o.g, r = v2Result(g);
+            const d = r.w === r.l && g.status === 'completed' ? v2Decided(o.n) : 0;
+            if (d) { r.w += d > 0 ? 0.0001 : 0; r.l += d < 0 ? 0.0001 : 0; }
             const cls = g.status !== 'completed' ? '' : r.w > r.l ? 'v2-win' : r.l > r.w ? 'v2-loss' : '';
             const bar = g.status === 'live' ? 'var(--recording-red)' : g.status !== 'completed' ? 'var(--bg-elevated)' : r.w > r.l ? '#FFC800' : r.l > r.w ? 'var(--loss-red)' : 'var(--tie-grey)';
-            const res = g.status === 'completed' ? (r.w > r.l ? `W ${r.w}-${r.l}` : r.l > r.w ? `L ${r.w}-${r.l}` : `${r.w}-${r.l}`) : g.status === 'live' ? 'LIVE' : '';
+            const sc = `${Math.floor(r.w)}-${Math.floor(r.l)}${d ? ' (tiebreak)' : ''}`;
+            const res = g.status === 'completed' ? (r.w > r.l ? `W ${sc}` : r.l > r.w ? `L ${sc}` : sc) : g.status === 'live' ? 'LIVE' : '';
             const watch = v2Watch(g);
             const sub = [o.time ? hhmm(o.time) : '', o.n?.label || g.phaseLabel, g.court ? 'Court ' + g.court : '', r.sets.map(s => s.join('-')).join(', ')].filter(Boolean).join(' · ');
             return `<a class="v2-row" href="/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}">
@@ -749,10 +767,10 @@ function v2Pools(standings, us) {
     return standings.map(s => {
         const name = ((V.ev.pools || []).find(p => p.id === s.poolId) || {}).name || s.poolId;
         return `<div class="v2-card"><div class="v2-lbl">${escH(name)}${s.complete ? ' · final' : ''}</div>
-          <table class="v2-table"><tr><th>#</th><th>Team</th><th class="r">Sets</th><th class="r">Pts</th></tr>` +
-          s.rows.map(r => `<tr class="${r.teamId === us ? 'us' : ''}"><td>${r.place}</td><td>${escH(r.name)}</td><td class="r">${r.setsWon}-${r.setsLost}</td><td class="r">${r.pointDiff > 0 ? '+' : ''}${r.pointDiff}</td></tr>`).join('') +
+          <table class="v2-table"><tr><th>#</th><th>Team</th><th class="r">${v2IsScore() ? 'W-L-T' : 'Sets'}</th><th class="r">${v2IsScore() ? '+/-' : 'Pts'}</th></tr>` +
+          s.rows.map(r => `<tr class="${r.teamId === us ? 'us' : ''}"><td>${r.place}</td><td>${escH(r.name)}</td><td class="r">${v2IsScore() ? `${r.wins}-${r.losses}${r.splits ? '-' + r.splits : ''}` : `${r.setsWon}-${r.setsLost}`}</td><td class="r">${r.pointDiff > 0 ? '+' : ''}${r.pointDiff}</td></tr>`).join('') +
           `</table></div>`;
-    }).join('') + `<div class="v2-sub">Ranked by match wins, set %, point difference, head-to-head.</div>`;
+    }).join('') + `<div class="v2-sub">${v2IsScore() ? 'Ranked by wins (a tie counts half), point difference, head-to-head, points scored.' : 'Ranked by match wins, set %, point difference, head-to-head.'}</div>`;
 }
 
 // Drawn bracket (2026-10-02, Eric: "a more graphic bracket style with lines
@@ -812,15 +830,23 @@ function v2DrawBracket(list, us, phase) {
                 if (!ref || !ref.matchId || ref.from === 'loser' || !y.has(ref.matchId)) continue;
                 const fx = colOf(ref.matchId) * (W + CG) + W, fy = y.get(ref.matchId) + H / 2, ty = top + H / 2, mx = fx + CG / 2;
                 const f = V.nodes.find(z => z.id === ref.matchId);
-                paths += `<path class="${f && (f.sets || []).length ? 'hot' : ''}" d="M${fx},${fy} H${mx} V${ty} H${x}"/>`;
+                paths += `<path class="${f && (f.sets || []).length && (!v2IsScore() || f.status === 'completed') ? 'hot' : ''}" d="M${fx},${fy} H${mx} V${ty} H${x}"/>`;
             }
             const sa = v2Side(n, true), sb = v2Side(n, false);
-            const sets = n.sets || [];
-            const wa = sets.filter(z => (z.a || 0) > (z.b || 0)).length, wb = sets.filter(z => (z.b || 0) > (z.a || 0)).length;
+            let sets = n.sets || [], wa, wb, win = null;
+            if (v2IsScore()) {
+                const f = sets[0];
+                if (!f || n.status === 'scheduled') sets = [];
+                wa = f ? f.a || 0 : 0; wb = f ? f.b || 0 : 0;
+                if (n.status === 'completed' && f) win = wa > wb ? 'a' : wb > wa ? 'b' : n.winner || null;
+            } else {
+                wa = sets.filter(z => (z.a || 0) > (z.b || 0)).length; wb = sets.filter(z => (z.b || 0) > (z.a || 0)).length;
+                if (sets.length) win = wa > wb ? 'a' : wb > wa ? 'b' : null;
+            }
             const tm = tms(n.time) ? hhmm(tms(n.time)) : '';
             const meta = [tm, n.court ? 'Ct ' + n.court : ''].filter(Boolean).join(' · ') || 'time TBD';
             const row = (sd, i) => {
-                const won = sets.length && (i === 0 ? wa > wb : wb > wa);
+                const won = win === (i === 0 ? 'a' : 'b');
                 const opp = sd.id ? (v2AllTeams().find(t => t.id === sd.id) || {}) : {};
                 const dot = sd.us ? 'var(--accent)' : null;
                 return `<div class="br-t ${sd.us ? 'us' : ''} ${won ? 'won' : ''}"><span class="br-seed">${escH(sd.seed || '–')}</span>`
@@ -839,16 +865,17 @@ function v2ScoreForm(nodeId) {
     const n = V.nodes.find(x => x.id === nodeId); const box = $('sf-' + nodeId);
     if (!n || !box) return;
     if (!auth.currentUser || auth.currentUser.isAnonymous) { box.innerHTML = `<div class="v2-sub">Sign in as a follower of this team to add scores.</div>`; return; }
-    const sets = n.phase === 'pool' ? 2 : 3;
+    const sets = v2IsScore() ? 1 : n.phase === 'pool' ? 2 : 3;
     const A = v2TeamName(n.a?.teamId) || 'Team A', B = v2TeamName(n.b?.teamId) || 'Team B';
-    const cells = side => Array.from({ length: 3 }, (_, i) => i < sets ? `<input inputmode="numeric" data-s="${i}" data-side="${side}" aria-label="${escH((side === 'a' ? A : B) + ' set ' + (i + 1))}">` : '<span></span>').join('');
+    const cells = side => Array.from({ length: 3 }, (_, i) => i < sets ? `<input inputmode="numeric" data-s="${i}" data-side="${side}" aria-label="${escH((side === 'a' ? A : B) + (v2IsScore() ? ' final score' : ' set ' + (i + 1)))}">` : '<span></span>').join('');
     box.innerHTML = `<div class="v2-score"><span>${escH(A)}</span>${cells('a')}<span>${escH(B)}</span>${cells('b')}</div>
         <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="v2-btn" id="sv-${escH(nodeId)}">Save result</button><span class="v2-sub" id="sm-${escH(nodeId)}"></span></div>`;
     $('sv-' + nodeId).onclick = async () => {
         const val = (side, i) => parseInt((box.querySelector(`input[data-side="${side}"][data-s="${i}"]`) || {}).value || '', 10);
         const out = [];
-        for (let i = 0; i < sets; i++) { const x = val('a', i), y = val('b', i); if (Number.isFinite(x) && Number.isFinite(y) && (x || y)) out.push({ a: x, b: y }); }
-        if (!out.length) { $('sm-' + nodeId).textContent = 'Enter at least one set.'; return; }
+        // A final score may be 0-0 (a scoreless draw); a set may not.
+        for (let i = 0; i < sets; i++) { const x = val('a', i), y = val('b', i); if (Number.isFinite(x) && Number.isFinite(y) && (x || y || v2IsScore())) out.push({ a: x, b: y }); }
+        if (!out.length) { $('sm-' + nodeId).textContent = v2IsScore() ? 'Enter the final score.' : 'Enter at least one set.'; return; }
         try {
             await updateDoc(doc(db, 'teams', V.teamId, 'events', eventId, 'matches', nodeId), {
                 sets: out, status: 'completed',
