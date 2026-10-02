@@ -205,6 +205,25 @@ html, body {
 .v2-table tr.us td { color: var(--accent); font-weight: 700; }
 .v2-slot { display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 8px; background: var(--bg-elevated); font-size: 13px; margin: 4px 0; }
 .v2-slot.us { outline: 1.5px solid var(--accent); color: var(--accent); font-weight: 700; }
+/* Drawn bracket (2026-10-02): cards by round, elbow connectors. */
+.br-scroll { overflow-x: auto; margin: 6px -4px 0; padding: 0 4px 6px; }
+.br { position: relative; }
+.br svg { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.br svg path { fill: none; stroke: var(--text-muted); stroke-width: 2; }
+.br svg path.hot { stroke: #FFC800; }
+.br-rt { position: absolute; top: 0; font-size: 10.5px; font-weight: 700; letter-spacing: 1px; color: var(--text-secondary); }
+.br-m { position: absolute; width: 196px; background: var(--bg-elevated); border: 1px solid var(--text-muted); border-radius: 9px; overflow: hidden; }
+.br-m.us { border-color: var(--accent); }
+.br-h { display: flex; justify-content: space-between; gap: 6px; padding: 4px 8px; font-size: 11px; color: var(--text-secondary); }
+.br-h b { color: var(--text-primary); font-size: 12px; }
+.br-t { display: flex; align-items: center; gap: 6px; padding: 5px 8px; font-size: 13px; border-top: 1px solid rgba(128,128,128,.25); }
+.br-seed { font-size: 10px; min-width: 18px; text-align: center; border: 1px solid var(--text-muted); border-radius: 4px; color: var(--text-secondary); }
+.br-dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+.br-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--text-primary); }
+.br-n.ph { font-weight: 400; font-style: italic; color: var(--text-secondary); }
+.br-t.us .br-n { color: var(--accent); }
+.br-t.won .br-n, .br-t.won .br-s { color: #FFC800; }
+.br-s { font-weight: 700; color: var(--text-secondary); }
 .v2-link { color: var(--accent); background: none; border: none; font: inherit; font-size: 13px; cursor: pointer; padding: 0; }
 .v2-score { display: grid; grid-template-columns: 1fr 56px 56px 56px; gap: 6px; align-items: center; margin-top: 8px; }
 .v2-score input { width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--bg-elevated); background: var(--bg-deep); color: var(--text-primary); text-align: center; font: inherit; font-size: 16px; }
@@ -681,7 +700,7 @@ function renderV2() {
         const when = next.time ? (mins > 0 && mins < 600 ? `in ${mins >= 60 ? Math.floor(mins / 60) + 'h ' : ''}${mins % 60}m` : hhmm(next.time)) : 'time TBD';
         h += `<div class="v2-card" style="display:flex;align-items:center;gap:12px">
             <div style="flex:1"><div class="v2-lbl" style="color:var(--accent)">Next match</div>
-            <div style="font-weight:700">${escH([next.n?.label, 'vs ' + (next.g.opponent || 'TBD')].filter(Boolean).join(' · '))}</div>
+            <div style="font-weight:700">${escH([next.n ? v2MatchTitle(next.n) : '', 'vs ' + (next.g.opponent || 'TBD')].filter(Boolean).join(' · '))}</div>
             <div class="v2-sub">${escH([next.time ? hhmm(next.time) : '', next.g.court ? 'Court ' + next.g.court : ''].filter(Boolean).join(' · '))}</div></div>
             <div class="v2-res" style="color:var(--accent)">${escH(when)}</div></div>`;
     }
@@ -736,22 +755,84 @@ function v2Pools(standings, us) {
     }).join('') + `<div class="v2-sub">Ranked by match wins, set %, point difference, head-to-head.</div>`;
 }
 
+// Drawn bracket (2026-10-02, Eric: "a more graphic bracket style with lines
+// shown on the fan page"). Same layout as the coach's screen in the app.
 function v2Bracket(us) {
     let h = '';
     for (const phase of ['gold', 'silver']) {
-        const list = V.nodes.filter(n => n.phase === phase).sort((a, b) => (a.round - b.round) || a.id.localeCompare(b.id));
+        const list = V.nodes.filter(n => n.phase === phase);
         if (!list.length) continue;
-        h += `<div class="v2-card"><div class="v2-lbl">${V.ev.bracketOnly ? (phase === 'gold' ? 'Bracket' : 'Consolation') : (phase === 'gold' ? 'Gold bracket' : 'Silver bracket')}</div>`;
-        for (const n of list) {
-            const r = v2Resolved(n.id);
-            const nm = (a, p) => a ? (v2TeamName(a) || '?') : p ? `${v2TeamName(p) || '?'}?` : 'TBD';
-            const mine = [r.a, r.b, r.projectedA, r.projectedB].includes(us);
-            const sets = (n.sets || []).map(x => `${x.a}-${x.b}`).join(', ');
-            h += `<div class="v2-slot ${mine ? 'us' : ''}"><span>${escH(n.label || '')}: ${escH(nm(r.a, r.projectedA))} vs ${escH(nm(r.b, r.projectedB))}</span><span>${escH(sets)}</span></div>`;
-        }
-        h += `</div>`;
+        h += `<div class="v2-card"><div class="v2-lbl">${V.ev.bracketOnly ? (phase === 'gold' ? 'Bracket' : 'Consolation') : (phase === 'gold' ? 'Gold bracket' : 'Silver bracket')}</div>`
+          + `<div class="br-scroll">${v2DrawBracket(list, us, phase)}</div></div>`;
     }
-    return (h || `<div class="v2-card v2-sub">No bracket yet.</div>`) + `<div class="v2-sub">? = projected from the standings so far.</div>`;
+    return (h || `<div class="v2-card v2-sub">No bracket yet.</div>`) + (V.ev.bracketOnly ? '' : `<div class="v2-sub">? = projected from the standings so far.</div>`);
+}
+
+function v2MatchTitle(n) { return n.name || n.label || ''; }
+
+function v2Side(n, isA) {
+    const r = v2Resolved(n.id), ref = (isA ? n.a : n.b) || {};
+    const actual = isA ? r.a : r.b, proj = isA ? r.projectedA : r.projectedB;
+    const id = actual || ((n.round === 1 || !ref.matchId) ? ref.teamId : null);
+    if (id && id !== 'BYE') {
+        const t = v2AllTeams().find(t => t.id === id) || {};
+        return { text: t.name || v2TeamName(id) || 'Team', seed: t.seed || '', id, us: !!t.us };
+    }
+    if (ref.bye || id === 'BYE') return { text: 'Bye', ph: true };
+    if (proj && proj !== 'BYE') return { text: `${v2TeamName(proj) || 'Team'}?`, ph: true };
+    if (ref.matchId) {
+        const f = V.nodes.find(x => x.id === ref.matchId);
+        return { text: `${ref.from === 'loser' ? 'Loser' : 'Winner'} ${f ? v2MatchTitle(f) : ''}`.trim(), ph: true };
+    }
+    return { text: 'TBD', ph: true };
+}
+
+function v2DrawBracket(list, us, phase) {
+    const W = 196, H = 92, CG = 34, RG = 12, TOP = 20;
+    const rounds = [...new Set(list.map(n => n.round))].sort((a, b) => a - b)
+        .map(r => list.filter(n => n.round === r).sort((a, b) => (a.slot || 0) - (b.slot || 0)));
+    const y = new Map();
+    rounds.forEach((col, ci) => col.forEach((n, i) => {
+        const fs = [n.a, n.b].filter(x => x && x.matchId && x.from !== 'loser' && y.has(x.matchId)).map(x => y.get(x.matchId));
+        y.set(n.id, ci > 0 && fs.length ? fs.reduce((s, v) => s + v, 0) / fs.length : TOP + i * (H + RG) * (1 << Math.min(ci, 4)));
+    }));
+    const width = rounds.length * W + (rounds.length - 1) * CG;
+    const height = Math.max(...y.values()) + H + 8;
+    const colOf = id => rounds.findIndex(c => c.some(n => n.id === id));
+    let paths = '', cards = '';
+    const total = rounds.length;
+    rounds.forEach((col, ci) => {
+        const k = total - ci - 1;
+        const base = k === 0 ? 'FINAL' : k === 1 ? 'SEMIFINALS' : k === 2 ? 'QUARTERFINALS' : `ROUND ${ci + 1}`;
+        const title = phase === 'silver' && V.ev.bracketOnly ? (k === 0 ? 'CONSOLATION FINAL' : 'CONSOLATION ' + base) : base;
+        cards += `<div class="br-rt" style="left:${ci * (W + CG)}px">${title}</div>`;
+        col.forEach(n => {
+            const x = ci * (W + CG), top = y.get(n.id);
+            for (const ref of [n.a, n.b]) {
+                if (!ref || !ref.matchId || ref.from === 'loser' || !y.has(ref.matchId)) continue;
+                const fx = colOf(ref.matchId) * (W + CG) + W, fy = y.get(ref.matchId) + H / 2, ty = top + H / 2, mx = fx + CG / 2;
+                const f = V.nodes.find(z => z.id === ref.matchId);
+                paths += `<path class="${f && (f.sets || []).length ? 'hot' : ''}" d="M${fx},${fy} H${mx} V${ty} H${x}"/>`;
+            }
+            const sa = v2Side(n, true), sb = v2Side(n, false);
+            const sets = n.sets || [];
+            const wa = sets.filter(z => (z.a || 0) > (z.b || 0)).length, wb = sets.filter(z => (z.b || 0) > (z.a || 0)).length;
+            const tm = tms(n.time) ? hhmm(tms(n.time)) : '';
+            const meta = [tm, n.court ? 'Ct ' + n.court : ''].filter(Boolean).join(' · ') || 'time TBD';
+            const row = (sd, i) => {
+                const won = sets.length && (i === 0 ? wa > wb : wb > wa);
+                const opp = sd.id ? (v2AllTeams().find(t => t.id === sd.id) || {}) : {};
+                const dot = sd.us ? 'var(--accent)' : null;
+                return `<div class="br-t ${sd.us ? 'us' : ''} ${won ? 'won' : ''}"><span class="br-seed">${escH(sd.seed || '–')}</span>`
+                    + (dot ? `<span class="br-dot" style="background:${dot}"></span>` : '')
+                    + `<span class="br-n ${sd.ph ? 'ph' : ''}">${escH(sd.text)}</span>`
+                    + (sets.length ? `<span class="br-s">${i === 0 ? wa : wb}</span>` : '') + `</div>`;
+            };
+            cards += `<div class="br-m ${sa.us || sb.us ? 'us' : ''}" style="left:${x}px;top:${top}px;height:${H}px">`
+                + `<div class="br-h"><b>${escH(v2MatchTitle(n))}</b><span>${escH(meta)}</span></div>` + row(sa, 0) + row(sb, 1) + `</div>`;
+        });
+    });
+    return `<div class="br" style="width:${width}px;height:${height}px"><svg width="${width}" height="${height}">${paths}</svg>${cards}</div>`;
 }
 
 function v2ScoreForm(nodeId) {
