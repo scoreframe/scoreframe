@@ -650,12 +650,22 @@ function v2Result(g) {
     else { const weHome = !g.homeTeamId || g.homeTeamId === V.teamId; w = weHome ? g.homeScore || 0 : g.awayScore || 0; l = weHome ? g.awayScore || 0 : g.homeScore || 0; }
     return { w, l, sets };
 }
+// "Court 3" for a bare number; an imported AES name ("HOMESTEAD HS Ct 2") as is.
+function v2Court(c, short) { return /^\d+$/.test(String(c)) ? (short ? 'Ct ' : 'Court ') + c : String(c); }
 function v2OurGames() {
     const nodeByGame = new Map(V.nodes.filter(n => n.gameId).map(n => [n.gameId, n]));
-    return [...new Map([...V.legacy, ...V.games]).values()].map(g => {
+    const games = [...new Map([...V.legacy, ...V.games]).values()].map(g => {
         const n = nodeByGame.get(g.id);
         return { g, n, time: tms(n?.time) || tms(g.date) };
-    }).sort(v2Order);
+    });
+    // A result with no recording (AES import of matches already played).
+    for (const n of V.nodes) {
+        if (!n.ours || n.gameId || n.status !== 'completed' || !(n.sets || []).length) continue;
+        games.push({ n, time: tms(n.time), g: { id: 'result:' + n.id, status: 'completed', opponent: (n.b || {}).name || '',
+            court: n.court || '', phaseLabel: n.label || '', homeTeamId: V.teamId,
+            sportSpecificStats: { homeScoreBySet: n.sets.map(x => x.a || 0), awayScoreBySet: n.sets.map(x => x.b || 0) } } });
+    }
+    return games.sort(v2Order);
 }
 // 2026-10-01: the bracket builder gives no match a time, so sorting by time
 // put played matches after unplayed ones. With no times in the draw, the draw
@@ -708,7 +718,7 @@ function renderV2() {
             <div class="v2-play">▶</div>
             <div style="flex:1;min-width:0"><div class="v2-lbl" style="color:var(--recording-red)">Live now</div>
             <div class="v2-big">vs ${escH(live.g.opponent || 'TBD')}</div>
-            <div class="v2-sub">${escH([live.n?.label, live.g.court ? 'Court ' + live.g.court : ''].filter(Boolean).join(' · '))}</div></div>
+            <div class="v2-sub">${escH([live.n?.label, live.g.court ? v2Court(live.g.court) : ''].filter(Boolean).join(' · '))}</div></div>
             <div class="v2-res" style="font-size:22px">${r.sets.length ? escH(r.sets[r.sets.length - 1].join('–')) : v2IsScore() ? escH(r.w + '–' + r.l) : ''}</div></a>`;
     }
     if (next) {
@@ -717,7 +727,7 @@ function renderV2() {
         h += `<div class="v2-card" style="display:flex;align-items:center;gap:12px">
             <div style="flex:1"><div class="v2-lbl" style="color:var(--accent)">Next match</div>
             <div style="font-weight:700">${escH([next.n ? v2MatchTitle(next.n) : '', 'vs ' + (next.g.opponent || 'TBD')].filter(Boolean).join(' · '))}</div>
-            <div class="v2-sub">${escH([next.time ? hhmm(next.time) : '', next.g.court ? 'Court ' + next.g.court : ''].filter(Boolean).join(' · '))}</div></div>
+            <div class="v2-sub">${escH([next.time ? hhmm(next.time) : '', next.g.court ? v2Court(next.g.court) : ''].filter(Boolean).join(' · '))}</div></div>
             <div class="v2-res" style="color:var(--accent)">${escH(when)}</div></div>`;
     }
     if (done.length || myRow) {
@@ -743,16 +753,19 @@ function renderV2() {
             const sc = `${Math.floor(r.w)}-${Math.floor(r.l)}${d ? ' (tiebreak)' : ''}`;
             const res = g.status === 'completed' ? (r.w > r.l ? `W ${sc}` : r.l > r.w ? `L ${sc}` : sc) : g.status === 'live' ? 'LIVE' : '';
             const watch = v2Watch(g);
-            const sub = [o.time ? hhmm(o.time) : '', o.n?.label || g.phaseLabel, g.court ? 'Court ' + g.court : '', r.sets.map(s => s.join('-')).join(', ')].filter(Boolean).join(' · ');
-            return `<a class="v2-row" href="/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}">
+            const sub = [o.time ? hhmm(o.time) : '', o.n?.label || g.phaseLabel, g.court ? v2Court(g.court) : '', r.sets.map(s => s.join('-')).join(', ')].filter(Boolean).join(' · ');
+            // A result with no recording has no game page to open.
+            const tag = String(g.id).startsWith('result:') ? 'div' : 'a';
+            const href = tag === 'a' ? ` href="/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}"` : '';
+            return `<${tag} class="v2-row"${href}>
                 <div class="v2-bar" style="background:${bar}"></div>
                 <div style="flex:1;min-width:0"><div style="font-weight:700">vs ${escH(g.opponent || 'TBD')}</div><div class="v2-sub">${escH(sub)}${watch ? ' · Watch' : ''}</div></div>
-                <div class="v2-res ${cls}">${escH(res)}</div></a>`;
+                <div class="v2-res ${cls}">${escH(res)}</div></${tag}>`;
         }).join('') : `<div class="empty" style="padding:16px 0">No matches yet. They'll appear here as the day is set up.</div>`) + `</div>`;
         const open = V.nodes.filter(n => !n.ours && n.phase === 'pool' && myPool && n.poolId === myPool.poolId && !(n.sets || []).length);
         if (open.length) {
             h += `<div class="v2-card"><div class="v2-lbl">Know a score from another court?</div>` + open.map(n =>
-                `<div class="v2-row" style="border:none;padding:8px 0"><div style="flex:1">${escH((v2TeamName(n.a?.teamId) || '?') + ' vs ' + (v2TeamName(n.b?.teamId) || '?'))}<div class="v2-sub">${escH([n.label, n.court ? 'Court ' + n.court : ''].filter(Boolean).join(' · '))}</div></div>
+                `<div class="v2-row" style="border:none;padding:8px 0"><div style="flex:1">${escH((v2TeamName(n.a?.teamId) || '?') + ' vs ' + (v2TeamName(n.b?.teamId) || '?'))}<div class="v2-sub">${escH([n.label, n.court ? v2Court(n.court) : ''].filter(Boolean).join(' · '))}</div></div>
                  <button class="v2-link" data-score="${escH(n.id)}">Add score</button></div><div id="sf-${escH(n.id)}"></div>`).join('') + `</div>`;
         }
     }
@@ -845,7 +858,7 @@ function v2DrawBracket(list, us, phase) {
                 if (sets.length) win = wa > wb ? 'a' : wb > wa ? 'b' : null;
             }
             const tm = tms(n.time) ? hhmm(tms(n.time)) : '';
-            const meta = [tm, n.court ? 'Ct ' + n.court : ''].filter(Boolean).join(' · ') || 'time TBD';
+            const meta = [tm, n.court ? v2Court(n.court, true) : ''].filter(Boolean).join(' · ') || 'time TBD';
             const row = (sd, i) => {
                 const won = win === (i === 0 ? 'a' : 'b');
                 const opp = sd.id ? (v2AllTeams().find(t => t.id === sd.id) || {}) : {};
