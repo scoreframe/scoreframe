@@ -214,6 +214,7 @@ html, body {
 .br-rt { position: absolute; top: 0; font-size: 10.5px; font-weight: 700; letter-spacing: 1px; color: var(--text-secondary); }
 .br-m { position: absolute; width: 196px; background: var(--bg-elevated); border: 1px solid var(--text-muted); border-radius: 9px; overflow: hidden; }
 .br-m.us { border-color: var(--accent); }
+.br-m.bye { border-style: dashed; opacity: .8; }
 .br-h { display: flex; justify-content: space-between; gap: 6px; padding: 4px 8px; font-size: 11px; color: var(--text-secondary); }
 .br-h b { color: var(--text-primary); font-size: 12px; }
 .br-t { display: flex; align-items: center; gap: 6px; padding: 5px 8px; font-size: 13px; border-top: 1px solid rgba(128,128,128,.25); }
@@ -854,8 +855,10 @@ function v2DrawBracket(list, us, phase) {
                     + `<span class="br-n ${sd.ph ? 'ph' : ''}">${escH(sd.text)}</span>`
                     + (sets.length ? `<span class="br-s">${i === 0 ? wa : wb}</span>` : '') + `</div>`;
             };
-            cards += `<div class="br-m ${sa.us || sb.us ? 'us' : ''}" style="left:${x}px;top:${top}px;height:${H}px">`
-                + `<div class="br-h"><b>${escH(v2MatchTitle(n))}</b><span>${escH(meta)}</span></div>` + row(sa, 0) + row(sb, 1) + `</div>`;
+            // A bye isn't a game: dashed, no number, no time (2026-10-03).
+            const bye = !!((n.a || {}).bye || (n.b || {}).bye);
+            cards += `<div class="br-m ${!bye && (sa.us || sb.us) ? 'us' : ''} ${bye ? 'bye' : ''}" style="left:${x}px;top:${top}px;height:${H}px">`
+                + `<div class="br-h"><b>${bye ? 'Bye — moves on' : escH(v2MatchTitle(n))}</b><span>${bye ? '' : escH(meta)}</span></div>` + row(sa, 0) + row(sb, 1) + `</div>`;
         });
     });
     return `<div class="br" style="width:${width}px;height:${height}px"><svg width="${width}" height="${height}">${paths}</svg>${cards}</div>`;
