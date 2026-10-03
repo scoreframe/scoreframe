@@ -734,7 +734,7 @@ function renderV2() {
         h += `<div class="v2-tiles">
             <div class="v2-tile"><span class="v2-lbl">Matches</span><span class="v">${mw}-${ml}${ms ? '-' + ms : ''}</span></div>
             <div class="v2-tile"><span class="v2-lbl">${v2IsScore() ? 'Points' : 'Sets'}</span><span class="v">${sw}-${sl}</span></div>
-            ${ev.bracketOnly ? '' : `<div class="v2-tile"><span class="v2-lbl">${escH(poolName || 'Pool')}</span><span class="v" style="color:#FFC800">${myRow ? ordinal(myRow.place) : '—'}</span></div>`}</div>`;
+            ${ev.bracketOnly || !(ev.pools || []).length ? '' : `<div class="v2-tile"><span class="v2-lbl">${escH(poolName || 'Pool')}</span><span class="v" style="color:#FFC800">${myRow ? ordinal(myRow.place) : '—'}</span></div>`}</div>`;
     }
     const hasPools = (ev.pools || []).length > 0;
     const hasDraw = hasPools || ev.bracketOnly === true;
