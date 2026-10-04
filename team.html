@@ -3378,7 +3378,9 @@ async function loadSchedule() {
             </a>`;
         };
 
-        container.innerHTML = topLevelUpcoming.map(g => {
+        // The old #upcomingGames list was removed in a redesign; writing to it
+        // threw and skipped the rest of loadSchedule (2026-10-03).
+        if (container) container.innerHTML = topLevelUpcoming.map(g => {
             const isLive = g.status === 'live';
             const isPostponed = g.status === 'postponed';
             const statusClass = isLive ? 'live' : isPostponed ? 'postponed' : g.status === 'completed' ? 'completed' : 'scheduled';
@@ -4153,11 +4155,20 @@ async function loadPastGames() {
         // normal game instead of vanishing — ISU Club VB Team A lost all 8
         // of last season's games that way (2026-09-27).
         const renderedEventIds = new Set();
+        // 2026-10-03 — a tournament stays "scheduled" in the event model, so
+        // one whose last day has passed counts as finished here; otherwise it
+        // vanished from the team page the day after.
+        const tournamentOver = x => {
+            const n = Array.isArray(x.gameIds) ? x.gameIds.length : 0;
+            if (!(x.multiGame === true || n > 1) || x.status === 'cancelled') return false;
+            const last = (typeof x.endDate === 'number' && x.endDate > (x.date || 0)) ? x.endDate : (x.date || 0);
+            return x.status === 'completed' || (last > 0 && last + 24 * 3600 * 1000 < Date.now());
+        };
         snap.forEach(d => {
             const x = { id: d.id, ...d.data() };
             const n = Array.isArray(x.gameIds) ? x.gameIds.length : 0;
             if ((x.multiGame === true || n > 1)
-                && !['scheduled', 'live', 'cancelled', 'postponed'].includes(x.status)
+                && (!['scheduled', 'live', 'cancelled', 'postponed'].includes(x.status) || tournamentOver(x))
                 && matchesSelectedSeason(x)) renderedEventIds.add(d.id);
         });
         snap.forEach(d => {
@@ -4166,7 +4177,7 @@ async function loadPastGames() {
             // Skip scheduled/live/cancelled — those belong to the upcoming
             // section. Legacy completed docs without a status field flow
             // through unchanged.
-            if (g.status === 'scheduled' || g.status === 'live' || g.status === 'cancelled' || g.status === 'postponed') return;
+            if ((g.status === 'scheduled' || g.status === 'live' || g.status === 'cancelled' || g.status === 'postponed') && !tournamentOver(g)) return;
             // 2026-06-20 — Hide tournament children from the team page. They
             // belong nested under the tournament event card on event.html.
             // Stamped via parentEventId at game-end time. Eric: "if a game
@@ -4174,6 +4185,8 @@ async function loadPastGames() {
             // team page, just the tournament that takes them to the event
             // page."
             if (g.parentEventId && renderedEventIds.has(g.parentEventId)) return;
+            // Event-model matches point at their tournament by eventId.
+            if (g.eventId && renderedEventIds.has(g.eventId)) return;
             // v13 — Season switcher filter.
             if (!matchesSelectedSeason(g)) return;
             // Completed tournament container → render an event card that opens
