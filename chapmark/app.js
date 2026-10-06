@@ -25,10 +25,15 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.2
   // ---------- Storage ----------
   const STORE_KEY = 'bookmarc.v1';
 
+  const DEFAULT_MODEL = 'claude-opus-5-5';
+  const MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-4-5'];
+  // A model saved from an older choice list falls back to the current default.
+  const currentModel = () => (MODELS.includes(state.model) ? state.model : DEFAULT_MODEL);
+
   const defaultState = () => ({
     apiKey: '',
     googleBooksKey: '',
-    model: 'claude-opus-4-7',
+    model: DEFAULT_MODEL,
     books: [],
     briefs: {},        // bookId -> full book brief (v0.1.0+)
     qaThreads: {},     // bookId -> [{ q, a, atChapter, timestamp }]
@@ -317,7 +322,7 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.2
       </div>
       <div class="brief-card">
         <h3>Mark hasn't read this one yet</h3>
-        <p class="muted">Have Mark put together a brief from what Claude knows + Wikipedia + Open Library. One Opus call (~30s, roughly $0.10). After that everything is instant and offline.</p>
+        <p class="muted">Mark searches the web for chapter-by-chapter guides to this book, then builds a spoiler-safe brief. Takes 1-3 minutes. After that everything is instant and offline.</p>
         <button class="primary" id="gen-brief-btn">Generate book brief</button>
         <div id="brief-status" class="muted small"></div>
         <p class="muted small" style="margin-top:18px;">Or build it as you read: paste each chapter's text from your own copy and Mark will summarize that chapter. The text is sent to Claude and not stored.</p>
@@ -427,14 +432,20 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.2
     if ((brief.sources || []).length) {
       const sources = document.createElement('div');
       sources.className = 'muted small brief-sources';
-      sources.textContent = 'Sources: ';
+      const chs = brief.chapters || [];
+      const sourcedCount = chs.filter(c => c.source === 'web').length;
+      sources.textContent = (brief.sources.some(s => s.kind === 'web')
+        ? `${sourcedCount} of ${chs.length} chapters from web sources (links cover the whole book — spoilers). `
+        : '') + 'Sources: ';
       brief.sources.forEach((s, i) => {
         if (i > 0) sources.appendChild(document.createTextNode(' · '));
         const a = document.createElement('a');
         a.href = s.url;
         a.target = '_blank';
         a.rel = 'noopener';
-        a.textContent = s.kind === 'wikipedia' ? `Wikipedia: ${s.title}` : 'Open Library';
+        a.textContent = s.kind === 'wikipedia' ? `Wikipedia: ${s.title}`
+          : s.kind === 'web' ? (s.title || hostOf(s.url))
+          : 'Open Library';
         sources.appendChild(a);
       });
       confEl.parentElement.appendChild(sources);
@@ -463,7 +474,7 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.2
         const opt = document.createElement('option');
         opt.value = '0';
         const title = prologue.title ? ` — ${prologue.title}` : '';
-        const marker = prologue.source === 'user-paste' ? ' · pasted' : ' · known';
+        const marker = chapterSourceMarker(prologue);
         opt.textContent = `Prologue${title}${marker}`;
         select.appendChild(opt);
       }
@@ -482,7 +493,7 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.2
         const opt = document.createElement('option');
         opt.value = String(ch.number);
         const title = ch.title ? ` — ${ch.title}` : '';
-        const marker = ch.source === 'user-paste' ? ' · pasted' : ' · known';
+        const marker = chapterSourceMarker(ch);
         opt.textContent = `Epilogue${title}${marker}`;
         select.appendChild(opt);
       });
@@ -494,7 +505,7 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.2
       opt.value = String(num);
       const title = ch && ch.title ? ` — ${ch.title}` : '';
       let marker = ' · no summary';
-      if (ch) marker = ch.source === 'user-paste' ? ' · pasted' : ' · known';
+      if (ch) marker = chapterSourceMarker(ch);
       opt.textContent = `Chapter ${num}${title}${marker}`;
       return opt;
     }
@@ -599,10 +610,11 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.2
       setStatus('<span class="spinner"></span> Looking up Wikipedia and Open Library for context…');
       const ctx = await fetchExternalContext(b);
       const sourceList = ctx.sources.map(s => s.kind).join(' + ') || 'no external sources';
-      setStatus(`<span class="spinner"></span> Asking Claude to read up on this book (using ${sourceList})… 30-90 seconds.`);
+      setStatus(`<span class="spinner"></span> Mark is researching this book on the web (plus ${sourceList})… 1-3 minutes.`);
       const brief = await generateBookBrief(b, ctx);
       brief.generatedAt = Date.now();
-      brief.sources = ctx.sources;
+      brief.sources = [...ctx.sources, ...brief.webSources];
+      delete brief.webSources;
       state.briefs[b.id] = brief;
       if ((brief.chapters || []).length) b.totalChapters = brief.chapters.length;
       saveState();
@@ -698,6 +710,19 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js?v=1.2
     }
   }
 
+  // ' · sourced' / ' · pasted' / ' · from memory'; briefs from before web
+  // research carry no per-chapter source and keep the old ' · known'.
+  function chapterSourceMarker(ch) {
+    if (ch.source === 'user-paste') return ' · pasted';
+    if (ch.source === 'web') return ' · sourced';
+    if (ch.source === 'training') return ' · from memory';
+    return ' · known';
+  }
+
+  function hostOf(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
@@ -721,16 +746,22 @@ Chapter numbering conventions (CRITICAL):
 - "totalChapters" is the count of NUMBERED chapters only (excluding prologue and epilogue).
 - ALWAYS provide totalChapters as an integer if you can determine it, even if you cannot enumerate per-chapter detail. This is critical so the reader's UI can render a chapter picker.
 
-You may be given EXTERNAL SOURCES (Wikipedia plot summaries, Open Library descriptions). Treat them as authoritative source material — they will typically contain the WHOLE PLOT including endings. Your job is to extract structure from them and tag firstChapter accurately so the client can hide spoilers downstream. Do NOT echo source material verbatim; transform it into chapter-by-chapter structure.
+Research first. You have a web_search tool. Before writing, search for chapter-by-chapter material on THIS book: study guides (LitCharts, SparkNotes, GradeSaver, CliffsNotes, Shmoop, BookRags, SuperSummary previews), fan wikis, the Wikipedia article, and a table of contents (publisher pages, Google Books, Open Library) to pin down the real chapter count and titles. Prefer sources that summarize each chapter separately. Confirm you have the right book (title AND author) — many books share titles. Stop searching once you have chapter-level coverage; don't burn searches re-confirming.
 
-For knowledgeLevel, self-report honestly about the FINAL brief (combining your training knowledge with any external sources provided):
-  1 = high fidelity — you have verbatim or near-verbatim recall (public domain classic, OR external sources gave detailed chapter-by-chapter plot)
+You may also be given EXTERNAL SOURCES (Wikipedia plot summaries, Open Library descriptions) in the message. Treat them and your search results as authoritative source material — they will typically contain the WHOLE PLOT including endings. Your job is to extract structure from them and tag firstChapter accurately so the client can hide spoilers downstream. Write every summary in your own words; never copy sentences from sources.
+
+Per chapter, set "source":
+  "web"      = the chapter's content came from a chapter-level source you found
+  "training" = you wrote it from your own knowledge or inferred its placement
+
+For knowledgeLevel, self-report honestly about the FINAL brief (combining your research, training knowledge, and any external sources provided):
+  1 = high fidelity — sources gave detailed chapter-by-chapter plot for most chapters (or verbatim recall of a public-domain text)
   2 = summary-level — you know the plot, characters, and broad structure (from training or external sources), but chapter divisions may be approximate
   3 = sparse — neither training data nor external sources gave you enough to produce a useful brief. Return mostly empty arrays.
 
 If knowledgeLevel is 3, return MOSTLY EMPTY arrays. Do not invent. The user is better served by a sparse honest brief than a confident hallucination.
 
-Respond with ONLY a single JSON object. No prose before or after.`;
+Your final message must be ONLY a single JSON object. No prose before or after it.`;
 
     const isbn = book.isbn ? `\nISBN: ${book.isbn}` : '';
     let externalContext = '';
@@ -759,7 +790,8 @@ Produce a complete book brief as JSON matching this schema:
       "number": 1,
       "title": "optional chapter title or section heading if you know it",
       "summary": "1-2 paragraph recap of ONLY this chapter's events. Past tense.",
-      "keyMoments": ["3-6 short bullet phrases — the most important beats of this chapter"]
+      "keyMoments": ["3-6 short bullet phrases — the most important beats of this chapter"],
+      "source": "web | training"
     }
     // ... one entry per chapter, ALL chapters
   ],
@@ -807,35 +839,89 @@ Produce a complete book brief as JSON matching this schema:
       "introducedChapter": <integer>,
       "resolvedChapter": <integer or null if unresolved by end of book>
     }
-  ]
+  ],
+  "sourcesUsed": [{ "title": "page title", "url": "https://..." }]
 }
+
+"sourcesUsed" lists only the pages you actually drew chapter content from.
 
 If knowledgeLevel is 3, prefer empty arrays over invented content. It is OK to return a brief with only knowledgeLevel + knowledgeNote + (sparse) chapters and nothing else.`;
 
-    const body = {
-      model: state.model || 'claude-opus-4-7',
-      max_tokens: 16000,
-      system,
-      messages: [{ role: 'user', content: userMsg }],
+    const model = currentModel();
+    const isHaiku = model.startsWith('claude-haiku');
+    const useFallback = model === 'claude-opus-5-5' || model === 'claude-sonnet-5-5';
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-api-key': state.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
     };
+    if (useFallback) headers['anthropic-beta'] = 'server-side-fallback-2026-07-01';
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': state.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Claude API error ${res.status}: ${errText.slice(0, 200)}`);
+    // Server-side web search runs inside one request; when the server's loop hits
+    // its iteration cap it returns pause_turn and we resend the partial assistant
+    // turn so it resumes where it stopped.
+    const blocks = [];
+    let data;
+    for (let continuation = 0; ; continuation++) {
+      const messages = [{ role: 'user', content: userMsg }];
+      if (blocks.length) messages.push({ role: 'assistant', content: blocks });
+      const body = {
+        model,
+        max_tokens: 32000,
+        system,
+        messages,
+        // Haiku 4.5 only has the basic search tool; newer models get dynamic filtering.
+        tools: [{ type: isHaiku ? 'web_search_20250305' : 'web_search_20260209', name: 'web_search', max_uses: 8 }],
+      };
+      if (!isHaiku) body.output_config = { effort: 'high' };
+      if (useFallback) body.fallbacks = 'default';
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Claude API error ${res.status}: ${errText.slice(0, 200)}`);
+      }
+      data = await res.json();
+      blocks.push(...(data.content || []));
+      if (data.stop_reason !== 'pause_turn' || continuation >= 4) break;
     }
-    const data = await res.json();
-    const text = (data.content || []).map(c => c.text || '').join('').trim();
-    return parseJsonResponse(text);
+
+    if (data.stop_reason === 'refusal') throw new Error('Mark declined to build a brief for this book.');
+    if (data.stop_reason === 'max_tokens') throw new Error('The brief was too long and got cut off. Try Regenerate.');
+    if (data.stop_reason === 'pause_turn') throw new Error('Research took too long. Try Regenerate.');
+
+    // Final answer = text blocks after the last server-tool result; text written
+    // before or between searches ("Let me look that up…") is dropped.
+    let lastTool = -1;
+    blocks.forEach((b, i) => { if (/_tool_result$/.test(b.type || '')) lastTool = i; });
+    const finalBlocks = blocks.slice(lastTool + 1).filter(b => b.type === 'text');
+    const text = finalBlocks.map(b => b.text || '').join('').trim();
+    if (!text) {
+      const searchErr = blocks
+        .filter(b => b.type === 'web_search_tool_result' && b.content && !Array.isArray(b.content))
+        .map(b => b.content.error_code)[0];
+      throw new Error(searchErr ? `Web search failed (${searchErr}).` : 'Mark returned no brief.');
+    }
+    const brief = parseJsonResponse(text);
+
+    // Web pages Mark used: citations on its text plus its own sourcesUsed list.
+    const seen = new Set();
+    const webSources = [];
+    const addSource = (title, url) => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      webSources.push({ kind: 'web', title: title || null, url });
+    };
+    blocks.filter(b => b.type === 'text').forEach(b => (b.citations || []).forEach(c => addSource(c.title, c.url)));
+    (brief.sourcesUsed || []).forEach(s => addSource(s.title, s.url));
+    delete brief.sourcesUsed;
+    brief.webSources = webSources;
+    return brief;
   }
 
   function escapeForPrompt(s) {
@@ -1001,8 +1087,8 @@ ${JSON.stringify({
 Reader's question: ${question}`;
 
     const body = {
-      model: state.model || 'claude-opus-4-7',
-      max_tokens: 1024,
+      model: currentModel(),
+      max_tokens: 4096,
       system,
       messages: [{ role: 'user', content: userMsg }],
     };
@@ -1408,7 +1494,7 @@ Reader's question: ${question}`;
   function openSettings() {
     const dlg = $('#settings-dialog');
     $('#api-key-input').value = state.apiKey || '';
-    $('#model-select').value = state.model || 'claude-opus-4-7';
+    $('#model-select').value = currentModel();
     $('#google-key-input').value = state.googleBooksKey || '';
     if (typeof dlg.showModal === 'function') dlg.showModal();
     else dlg.setAttribute('open', '');
@@ -1627,7 +1713,7 @@ Dedup rules (apply to every chapter):
 - All relationships must reference real character ids (existing or newly introduced in this same paste).
 - Be terse. The chapter text is the source of truth; do not invent or extrapolate.
 
-Respond with ONLY a single JSON object. No prose before or after.`;
+Your final message must be ONLY a single JSON object. No prose before or after it.`;
 
     const storySoFar = priorChapters.length
       ? priorChapters.map(c => {
@@ -1666,7 +1752,7 @@ ${text}
 === END PASTED TEXT ===`;
 
     const body = {
-      model: state.model || 'claude-opus-4-7',
+      model: currentModel(),
       max_tokens: 16000,
       system,
       messages: [{ role: 'user', content: userMsg }],
@@ -1963,7 +2049,7 @@ ${text}
     await setDoc(userRef, {
       apiKey: state.apiKey || '',
       googleBooksKey: state.googleBooksKey || '',
-      model: state.model || 'claude-opus-4-7',
+      model: currentModel(),
       bootstrapped: true,
       updatedAt: serverTimestamp(),
     }, { merge: true });
@@ -1986,7 +2072,7 @@ ${text}
     const p = profile.data() || {};
     state.apiKey = p.apiKey || '';
     state.googleBooksKey = p.googleBooksKey || '';
-    state.model = p.model || 'claude-opus-4-7';
+    state.model = p.model || DEFAULT_MODEL;
 
     const booksCol = collection(firebaseDb, 'users', user.uid, 'books');
     const booksSnap = await getDocs(booksCol);
@@ -2091,7 +2177,7 @@ ${text}
     await setDoc(userRef, {
       apiKey: state.apiKey || '',
       googleBooksKey: state.googleBooksKey || '',
-      model: state.model || 'claude-opus-4-7',
+      model: currentModel(),
       updatedAt: serverTimestamp(),
     }, { merge: true });
 
