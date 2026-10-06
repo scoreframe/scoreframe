@@ -746,7 +746,11 @@ Chapter numbering conventions (CRITICAL):
 - "totalChapters" is the count of NUMBERED chapters only (excluding prologue and epilogue).
 - ALWAYS provide totalChapters as an integer if you can determine it, even if you cannot enumerate per-chapter detail. This is critical so the reader's UI can render a chapter picker.
 
-Research first. You have a web_search tool. Before writing, search for chapter-by-chapter material on THIS book: study guides (LitCharts, SparkNotes, GradeSaver, CliffsNotes, Shmoop, BookRags, SuperSummary previews), fan wikis, the Wikipedia article, and a table of contents (publisher pages, Google Books, Open Library) to pin down the real chapter count and titles. Prefer sources that summarize each chapter separately. Confirm you have the right book (title AND author) — many books share titles. Stop searching once you have chapter-level coverage; don't burn searches re-confirming.
+Research first. You have a web_search tool. Before writing, search for chapter-by-chapter material on THIS book: study guides (LitCharts, SparkNotes, GradeSaver, CliffsNotes, Shmoop, BookRags, SuperSummary previews), the Wikipedia article, and a table of contents (publisher pages, Google Books, Open Library) to pin down the real chapter count and titles. Prefer sources that summarize each chapter separately.
+Also check two sources that are especially good for spoiler tagging:
+- A fan wiki for the book or series (search "<title> wiki"). Character pages often state the chapter where someone first appears — use that for firstChapter.
+- The publisher's reading group guide, which usually lists the main characters and groups discussion questions by section.
+Confirm you have the right book (title AND author) — many books share titles. Stop searching once you have chapter-level coverage; don't burn searches re-confirming.
 
 You may also be given EXTERNAL SOURCES (Wikipedia plot summaries, Open Library descriptions) in the message. Treat them and your search results as authoritative source material — they will typically contain the WHOLE PLOT including endings. Your job is to extract structure from them and tag firstChapter accurately so the client can hide spoilers downstream. Write every summary in your own words; never copy sentences from sources.
 
