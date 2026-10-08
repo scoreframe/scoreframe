@@ -3934,6 +3934,20 @@ function renderBoxScore(hub, game, sport) {
     if (rail) rail.style.display = 'none';
 }
 
+
+// The in-app view settings this page was opened with (light/dark, app chrome
+// hidden, colour palette), carried onto links to other ScoreFrame pages so
+// a player opened from the box score matches the app (2026-10-08).
+function carryViewParams() {
+    const q = new URLSearchParams(location.search);
+    let out = '';
+    for (const k of ['theme', 'app', 'palette']) {
+        const v = q.get(k);
+        if (v) out += `&${k}=${encodeURIComponent(v)}`;
+    }
+    return out;
+}
+
 function renderBoxSide(name, color, players, cols, sportKey) {
     const headerStyle = `background:${color};`;
     const headerCols = '<th class="bx-num">#</th><th class="bx-name">Player</th>' +
@@ -3952,7 +3966,7 @@ function renderBoxSide(name, color, players, cols, sportKey) {
         // becoming a link to an empty page.
         const pid = p.playerId || p.savedPlayerId || '';
         const nameCell = pid
-            ? `<a class="bx-player" href="/player.html?team=${encodeURIComponent(hubCode)}&player=${encodeURIComponent(pid)}">${label}</a>`
+            ? `<a class="bx-player" href="/player.html?team=${encodeURIComponent(hubCode)}&player=${encodeURIComponent(pid)}${carryViewParams()}">${label}</a>`
             : label;
         return `<tr><td class="bx-num">${escapeHtml(p.number || '–')}</td>` +
             `<td class="bx-name">${nameCell}</td>${cells}</tr>`;

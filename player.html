@@ -599,6 +599,13 @@ const teamHubCodes = []; // populated by discoverTeamsForPlayer()
 const themeParam = params.get('theme');
 if (themeParam === 'light' || themeParam === 'dark') {
     document.body.setAttribute('data-theme', themeParam);
+} else {
+    // No ?theme=: follow the device. The body ships data-theme="dark", which
+    // beats the light @media block, so a player opened from a game's box
+    // score inside the app came up dark on a light-mode phone (Eric
+    // 2026-10-08, Audrey's page).
+    const light = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    document.body.setAttribute('data-theme', light ? 'light' : 'dark');
 }
 if (params.get('app') === '1') document.body.classList.add('app');
 
