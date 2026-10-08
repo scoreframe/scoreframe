@@ -928,5 +928,28 @@ function v2ScoreForm(nodeId) {
 })();
 </script>
 
+<script>
+// Carry the in-app view settings (app chrome hidden, light/dark, palette) onto
+// every link to another ScoreFrame page. Without it, a game opened from a
+// player's page inside the app lost ?app=1 and showed "Get the app" to someone
+// already in the app (Eric 2026-10-08). Capture phase, so it runs before the
+// browser follows the link — covers links built later by page scripts too.
+(function () {
+    const q = new URLSearchParams(location.search);
+    const keep = {};
+    for (const k of ['app', 'theme', 'palette']) { const v = q.get(k); if (v) keep[k] = v; }
+    if (!Object.keys(keep).length) return;
+    document.addEventListener('click', function (e) {
+        const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (!a) return;
+        let u;
+        try { u = new URL(a.getAttribute('href'), location.href); } catch (_) { return; }
+        if (u.origin !== location.origin || !/\/(game|player|team|event)(\.html)?$/.test(u.pathname)) return;
+        let changed = false;
+        for (const k in keep) if (!u.searchParams.has(k)) { u.searchParams.set(k, keep[k]); changed = true; }
+        if (changed) a.href = u.toString();
+    }, true);
+})();
+</script>
 </body>
 </html>
