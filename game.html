@@ -4658,6 +4658,9 @@ onAuthStateChanged(auth, (user) => {
     var isIOS = /iPhone|iPad|iPod/i.test(ua) ||
                 (/Mac/.test(ua) && navigator.maxTouchPoints > 1);
     if (!isAndroid && !isIOS) return;                 // desktop: no app to get
+    // Inside an app's web view (ours, at least) even when ?app=1 got lost on
+    // the way: Android WebView says "; wv)", an iOS WKWebView has no "Safari".
+    if ((isAndroid && /; wv\)/.test(ua)) || (isIOS && !/Safari/.test(ua))) return;
 
     var hub = (q.get('team') || q.get('hub') || '').trim().slice(0, 32);
     var ref = 'utm_source=game_page&utm_medium=share' +
