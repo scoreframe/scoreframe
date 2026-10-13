@@ -344,38 +344,36 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">1 Oct 2026 · Play security fix live · one-tap intermission</span></span>
+    <span class="stamp">12 Oct 2026 · iOS 1.2.372 live · Delete tournament · deletes stay deleted</span>
   </div>
   <p class="lede">
-    What's moving right now, and what's waiting on you. Android
-    <strong>1.1.1539</strong> is in production at 100%, in Google's review; it fixes
-    the Intent Redirection warning Play sent. iOS <strong>1.2.350</strong> is in App
-    Store review and <strong>1.2.353</strong> is on TestFlight. The testing record
-    further down is from the August automated runs and has not been regenerated
-    since; the version table and the sections above it are current.
+    Android <strong>1.1.1571</strong> is in Google's production review and
+    <strong>1.1.1578</strong> is with testers. iOS <strong>1.2.372</strong> is live on the
+    App Store; the next iOS build carries the same fixes as Android 1573–1578 and has not
+    been built yet. The testing record further down is from the August automated runs.
   </p>
 
   <h2>Where the code is</h2>
   <div class="channels">
     <div class="ch live">
       <span class="ch-name">Play production</span>
-      <span class="ch-ver">1.1.1539</span>
-      <span class="ch-note">100% · in Google review · Intent Redirection fix · Manage Recordings · one-tap intermission</span>
+      <span class="ch-ver">1.1.1571</span>
+      <span class="ch-note">in Google review · one Pro across platforms · reels-only uploads · logos</span>
     </div>
     <div class="ch live">
       <span class="ch-name">App Store</span>
-      <span class="ch-ver">1.2.350 (824)</span>
-      <span class="ch-note">in review · MANUAL release, you release it once approved</span>
+      <span class="ch-ver">1.2.372 (847)</span>
+      <span class="ch-note">live · rejections (3.1.2c, ATT, 2.3.10) resolved</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1541</span>
-      <span class="ch-note">tournament Setup: edit · fix names · start over · uneven pools</span>
+      <span class="ch-ver">1.1.1578</span>
+      <span class="ch-note">Android 10+ · Delete tournament · widget fixes · deleted games stay deleted</span>
     </div>
     <div class="ch">
-      <span class="ch-name">TestFlight</span>
-      <span class="ch-ver">1.2.355 (829)</span>
-      <span class="ch-note">tournament Setup · tournament fixes · everything in 1.2.353</span>
+      <span class="ch-name">iOS next</span>
+      <span class="ch-ver">not built</span>
+      <span class="ch-note">committed: Delete tournament, widget filter, fan schedule, fake-tournament guard</span>
     </div>
     <div class="ch">
       <span class="ch-name">Admin app</span>
@@ -384,61 +382,84 @@ onAuthStateChanged(auth, async (user) => {
     </div>
   </div>
 
-  <h2>Read this first</h2>
-  <div class="items">
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Play flagged an Intent Redirection vulnerability. Fixed and live at 100%</span>
-        <span class="chip">1 Oct</span>
-      </div>
-      <p class="item-body">
-        The start-over-paused check I added on 28 Sep handed the Home screen a whole launch request, and Home re-launched it. Home can be opened by other apps, so another app could have used it to launch things as ScoreFrame. Home now receives only the game settings and always opens our own game screen itself. Nothing changes for users. Verified on the emulator; it was the only place in the app with that pattern. The warning should clear once Google approves 1.1.1539.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">The iOS crash in Crashlytics was Google's, not ours</span>
-        <span class="chip">1 Oct</span>
-      </div>
-      <p class="item-body">
-        Three crashes on 1.2.310 came from Firebase Analytics' experiment code. On 29 Sep Google served bad experiment data for a few hours and fixed it on their servers the same day (firebase-ios-sdk #16728). I updated GoogleUtilities to 8.1.4, Google's resilience release; it ships with the next iOS build.
-      </p>
-    </div>
-  </div>
-
   <h2>Needs you</h2>
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Tournament: tested end to end, three questions for you</span>
+        <span class="item-title">Push Android 1.1.1578 to production when ready</span>
         <span class="chip">over to you</span>
       </div>
       <p class="item-body">
-        I ran a full test tournament on 1 Oct: built the bracket in the app, played matches through recording, entered other courts, played into the Gold semifinal, and checked the fan page and iOS on real data. Fixed and shipped: the wrong &ldquo;next&rdquo; match, best-third teams meeting their own pool winner in the Gold quarterfinals, and match order. Questions: a match only shows live once recording starts; unplayed bracket matches show the event start time; the bracket doesn't name a champion.
+        1.1.1571 is still in Google review. 1578 adds the Android 10 minimum, Delete tournament, the widget fixes and the deleted-games fixes.
       </p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Try the new things on a real phone</span>
+        <span class="item-title">Daniel's 4K60 reply (SF-VEH26U)</span>
         <span class="chip">over to you</span>
       </div>
       <p class="item-body">
-        Intermission while actually live: the &ldquo;⏸ Intermission&rdquo; pill, one chip tap to start, the ✕ to end. The green check in Wrap-up after sending the summary at End Game on a volleyball match. Manage Recordings: filters, long-press select, Save to Photos, Clean up uploaded. The volleyball fire icon on by default.
+        iOS is approved, so it can go whenever you say send.
       </p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Decisions waiting on you</span>
+        <span class="item-title">Games stuck on LIVE</span>
+        <span class="chip">decision</span>
+      </div>
+      <p class="item-body">
+        Nine tournament entries (Lan's four Destiny Takeoff Classic, Pirates JV, ECVBA, AČI) have every game final but still show LIVE. The server now clears this when a tournament's last game finishes, going forward. Reset the existing nine? Four single games are also stuck (Flyers, TNT and two others): sweep them or leave them? Widgets already ignore all of them.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Empty and returning game records</span>
+        <span class="chip">decision</span>
+      </div>
+      <p class="item-body">
+        Safe fixes are in 1.1.1577. Still your call: stop iOS adding followed teams' games to your own history (changes career stats); skip saving a 0–0 game with no video or players at End Game; team-level delete records; clear the 484 empty records in the cloud after a list.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Other decisions</span>
         <span class="chip">over to you</span>
       </div>
       <p class="item-body">
-        Home/away order for basketball, hockey, lacrosse and generic (docs/HOME_AWAY_AUDIT_2026-09-29.md). The remaining security items: verified-email checks, rate limits, moving email and push tokens to a private doc, closing team listing, the shirt promo trusting billing fields, team-delete leftovers, the anonymous Labs cap. Whether to pull iOS 1.2.350 from review for 1.2.353.
+        Tournament: live only once recording starts, placeholder times, no champion callout. Home/away for basketball, hockey, lacrosse and generic. Security left: verified-email checks, email and push tokens readable by id. OAuth verification video. Trademark response due 26 Dec.
       </p>
     </div>
   </div>
 
   <h2>Fixed the last two days</h2>
   <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Delete tournament — 12 Oct</span>
+        <span class="chip">tested on the server</span>
+      </div>
+      <p class="item-body">
+        Tournament → ⚙ Setup → Delete tournament, or Delete on its Schedule entry. The bracket, its schedule entry and unplayed matches go; played matches stay as regular games. Deleting one match used to come straight back, because the server gives every match of ours a game. Both platforms; tested end to end on a throwaway tournament.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Deleted games stay deleted — 12 Oct</span>
+        <span class="chip">Android 380/380 · iOS 239/239</span>
+      </div>
+      <p class="item-body">
+        A third sync path and Restore ignored deletes and pulled games back after a refresh. Deletes are now remembered on the phone the moment you make them. Tournament entries are no longer imported as games. A tournament match no longer becomes a second, fake tournament.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Widget, Android 10, fan mode, security — 10–12 Oct</span>
+        <span class="chip">emulator + rules tests</span>
+      </div>
+      <p class="item-body">
+        Widget drops past games and games stuck live. Android 8/9 dropped (recording crashed there; one user). Fan-mode upcoming games open the game page. Shirt orders checked against the store; the shirt counter can't be forged; team delete removes everything; anonymous schedule imports blocked; daily email limits. Schedule import works again (the model was spending its budget thinking).
+      </p>
+    </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">One-tap intermission, summary check, fire default — 30 Sep</span>
