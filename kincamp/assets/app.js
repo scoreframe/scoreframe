@@ -6,7 +6,7 @@ import {
   auth, db, call, busy, esc, toast, store, ensureUserDoc, onAuthStateChanged, signOut, plainError,
 } from './fb.js';
 import {
-  doc, collection, onSnapshot, runTransaction, serverTimestamp, updateDoc, getDoc,
+  doc, collection, onSnapshot, runTransaction, serverTimestamp, updateDoc, getDoc, setDoc, deleteDoc,
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import * as T from './tree.js';
 
@@ -37,16 +37,16 @@ const S = {
   campId: null, camp: null, campDenied: false,
   members: new Map(), membersLoaded: false,
   people: [], peopleById: new Map(), rels: [], peopleLoaded: false,
-  lists: [], listsLoaded: false, items: new Map(), claims: new Map(),
+  lists: [], listsLoaded: false, items: new Map(), claims: new Map(), givers: new Map(),
+  familyGifts: [], familyGiftsLoaded: false, familyState: null, myClaims: [], myClaimsLoaded: false,
   graph: null, labelsKey: '', labels: new Map(),
   treeMode: store.get('kc.treeMode') || 'close', focusId: null, search: '', peopleSearch: '',
   whole: null, wholeView: null, lastRouteKey: '',
 };
-const subs = { user: null, camps: new Map(), camp: [], items: new Map(), claims: new Map() };
+const subs = { user: null, myClaims: null, camps: new Map(), camp: [], items: new Map(), claims: new Map(), givers: new Map() };
 
 const normRole = (r) => (r === 'leader' || r === 'camper' ? r : 'visitor');
 const myRole = () => normRole(S.members.get(S.user?.uid)?.role || S.myRoles.get(S.campId));
-const canClaim = () => myRole() !== 'visitor';
 const ROLE_LABEL = { leader: 'Leader', camper: 'Camper', visitor: 'Visitor' };
 const lowerFirst = (s) => (s ? s[0].toLowerCase() + s.slice(1) : s);
 const toDate = (v) => (v && typeof v.toDate === 'function' ? v.toDate() : v instanceof Date ? v : null);
@@ -81,6 +81,12 @@ onAuthStateChanged(auth, async (user) => {
   S.user = user;
   await ensureUserDoc(user);
   subs.user && subs.user();
+  subs.myClaims && subs.myClaims();
+  // "My gifts to give": every claim and gift card I've made, in any camp (server-written).
+  subs.myClaims = onSnapshot(collection(db, `users/${user.uid}/myClaims`), (snap) => {
+    S.myClaims = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    S.myClaimsLoaded = true; schedule();
+  }, (err) => { console.warn('myClaims', err); S.myClaimsLoaded = true; schedule(); });
   subs.user = onSnapshot(doc(db, 'users', user.uid), (snap) => {
     S.userDoc = snap.exists() ? snap.data() : {};
     S.userLoaded = true;
@@ -120,9 +126,11 @@ function setCamp(id) {
   subs.camp.forEach((off) => off()); subs.camp = [];
   for (const off of subs.items.values()) off(); subs.items.clear();
   for (const off of subs.claims.values()) off(); subs.claims.clear();
+  for (const off of subs.givers.values()) off(); subs.givers.clear();
   Object.assign(S, {
     campId: id, camp: null, campDenied: false, members: new Map(), membersLoaded: false, people: [], peopleById: new Map(), rels: [],
-    peopleLoaded: false, lists: [], listsLoaded: false, items: new Map(), claims: new Map(), graph: null, labelsKey: '', focusId: null, wholeView: null,
+    peopleLoaded: false, lists: [], listsLoaded: false, items: new Map(), claims: new Map(), givers: new Map(),
+    familyGifts: [], familyGiftsLoaded: false, familyState: null, graph: null, labelsKey: '', focusId: null, wholeView: null,
   });
   if (!id) return;
   store.set('kc.camp.' + S.user.uid, id);
@@ -151,6 +159,15 @@ function setCamp(id) {
       .sort((a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0));
     S.listsLoaded = true; syncGiftListeners(); schedule();
   }, denied('giftLists')));
+  // Lists family in other connected camps share with this camp (server-written mirrors).
+  subs.camp.push(onSnapshot(collection(db, `${c}/familyGifts`), (snap) => {
+    S.familyGifts = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => String(a.ownerFirstName || '').localeCompare(String(b.ownerFirstName || '')) || String(a.title || '').localeCompare(String(b.title || '')));
+    S.familyGiftsLoaded = true; schedule();
+  }, (e) => { console.warn('familyGifts', e); S.familyGiftsLoaded = true; schedule(); }));
+  subs.camp.push(onSnapshot(doc(db, `${c}/family/state`), (snap) => {
+    S.familyState = snap.exists() ? snap.data() : null; schedule();
+  }, () => { S.familyState = null; }));
 }
 
 function normPerson(id, d) {
@@ -161,7 +178,7 @@ function normPerson(id, d) {
     maidenName: d.maidenName || '', preferredName: d.preferredName || '', gender: d.gender || null,
     occupation: d.occupation || '', birthDate: toDate(d.birthDate), birthDateApprox: d.birthDateApprox || '',
     birthPlace: d.birthPlace || '', deathDate: toDate(d.deathDate), deathDateApprox: d.deathDateApprox || '',
-    deathPlace: d.deathPlace || '', deceased: !!d.deceased, photoUrl: safeUrl(d.photoUrl), stories: d.stories || '',
+    fpid: d.fpid || null, deathPlace: d.deathPlace || '', deceased: !!d.deceased, photoUrl: safeUrl(d.photoUrl), stories: d.stories || '',
     linkedMemberUid: d.linkedMemberUid || null, kind: d.kind === 'pet' ? 'pet' : 'person', ownerIds: d.ownerIds || [],
   };
 }
@@ -178,9 +195,12 @@ function invalidateTree() {
 
 function syncGiftListeners() {
   const c = `camps/${S.campId}`;
-  const listIds = new Set(S.lists.map((l) => l.id));
-  for (const [id, off] of subs.items) if (!listIds.has(id)) { off(); subs.items.delete(id); S.items.delete(id); }
-  for (const [id, off] of subs.claims) if (!listIds.has(id) || !canClaim()) { off(); subs.claims.delete(id); S.claims.delete(id); }
+  const byId = new Map(S.lists.map((l) => [l.id, l]));
+  // Claims and gift-card givers are hidden from a list's owner (rules), so don't ask for them there.
+  const hidden = (id) => !byId.has(id) || byId.get(id).ownerUserId === S.user.uid;
+  for (const [id, off] of subs.items) if (!byId.has(id)) { off(); subs.items.delete(id); S.items.delete(id); }
+  for (const [id, off] of subs.claims) if (hidden(id)) { off(); subs.claims.delete(id); S.claims.delete(id); }
+  for (const [id, off] of subs.givers) if (hidden(id)) { off(); subs.givers.delete(id); S.givers.delete(id); }
   for (const l of S.lists) {
     if (!subs.items.has(l.id)) {
       subs.items.set(l.id, onSnapshot(collection(db, `${c}/giftLists/${l.id}/items`), (snap) => {
@@ -189,12 +209,18 @@ function syncGiftListeners() {
         schedule();
       }, (e) => { console.warn('items', e); S.items.set(l.id, []); schedule(); }));
     }
-    // Claims are hidden from a list's owner and from visitors (rules); don't ask for them.
-    if (S.membersLoaded && canClaim() && l.ownerUserId !== S.user.uid && !subs.claims.has(l.id)) {
+    if (hidden(l.id)) continue;
+    if (!subs.claims.has(l.id)) {
       subs.claims.set(l.id, onSnapshot(collection(db, `${c}/giftLists/${l.id}/claims`), (snap) => {
         S.claims.set(l.id, new Map(snap.docs.map((d) => [d.id, d.data()])));
         schedule();
       }, () => { S.claims.set(l.id, new Map()); schedule(); }));
+    }
+    if (!subs.givers.has(l.id)) {
+      subs.givers.set(l.id, onSnapshot(collection(db, `${c}/giftLists/${l.id}/cardGivers`), (snap) => {
+        S.givers.set(l.id, snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        schedule();
+      }, () => { S.givers.set(l.id, []); schedule(); }));
     }
   }
 }
@@ -336,7 +362,7 @@ document.getElementById('campbtn').addEventListener('click', () => go('#camps'))
 function render() {
   if (S.deleting || S.deleted) return;
   const r = route();
-  const key = `${S.campId}|${r.view}|${r.view === 'tree' ? S.treeMode + '|' + focusIdSafe() : r.arg[0] || ''}`;
+  const key = `${S.campId}|${r.view}|${r.view === 'tree' ? S.treeMode + '|' + focusIdSafe() : r.arg.join('/')}`;
   const same = key === S.lastRouteKey;
   const y = window.scrollY;
   const active = document.activeElement && document.activeElement.id && $view.contains(document.activeElement) ? document.activeElement : null;
@@ -357,7 +383,7 @@ function render() {
   switch (r.view) {
     case 'tree': renderTree(r, same); break;
     case 'people': r.arg[0] ? renderMember(r.arg[0]) : renderPeople(); break;
-    case 'gifts': r.arg[0] ? renderList(r.arg[0]) : renderGifts(); break;
+    case 'gifts': r.arg[0] === 'f' ? renderFamilyList(r.arg[1]) : r.arg[0] ? renderList(r.arg[0]) : renderGifts(); break;
     case 'account': renderAccount(); break;
     default: renderHome();
   }
@@ -429,7 +455,7 @@ function renderHome() {
   const role = myRole();
   const nPeople = S.people.filter((p) => p.kind !== 'pet').length;
   const bdays = S.membersLoaded && S.peopleLoaded ? upcomingBirthdays(4) : [];
-  const nLists = S.lists.length;
+  const nLists = S.lists.length + S.familyGifts.length;
   $view.innerHTML = `
     <h1 class="page-title">${esc(hello)}${first ? `, ${esc(first)}` : ''}.</h1>
     <p class="page-sub">${role === 'visitor' ? `You're visiting <b>${esc(S.camp?.name || 'your family')}</b>. Here's everyone.` : `Welcome to <b>${esc(S.camp?.name || 'camp')}</b> on the web.`}</p>
@@ -615,7 +641,7 @@ function openPerson(id) {
     addFam(g.children(id), 'Child');
     addFam(g.pets(id), 'Pet');
   }
-  const lists = member ? S.lists.filter((l) => l.ownerUserId === member.uid) : [];
+  const lists = S.lists.filter((l) => (member && l.ownerUserId === member.uid) || (!l.ownerUserId && l.ownerPersonId === id));
   const first = T.firstName(p);
   openSheet(`
     <div class="sheethead">
@@ -764,38 +790,183 @@ function renderMember(uid) {
 }
 
 // ---------------------------------------------------------------- gifts ---
-function ownerName(uid) {
+const PRI = { high: ['High', 'c'], medium: ['Medium', 's'], low: ['Low', ''] };
+const STATUS = { claimed: ['Claimed', 'g'], bought: ['Bought', 's'], wrapped: ['Wrapped', 'l'] };
+const NEXT_STATUS = { claimed: 'bought', bought: 'wrapped', wrapped: 'claimed' };
+const myFirst = () => String(S.members.get(S.user.uid)?.displayName || S.userDoc?.displayName || 'Family').trim().split(/\s+/)[0].slice(0, 40) || 'Family';
+function familyCampName(id) {
+  if (!id) return '';
+  const c = (S.familyState?.camps || []).find((x) => x.campId === id);
+  return c?.name || S.camps.get(id)?.name || '';
+}
+/** "Kim", or "Jeff · Rivera" for someone claiming from another family camp. */
+function claimerName(uid, name, campId) {
   if (uid === S.user.uid) return 'You';
-  return S.members.get(uid)?.displayName || 'Someone who left';
+  const m = S.members.get(uid);
+  if (m) return String(m.displayName || 'Someone').split(' ')[0];
+  const camp = campId && campId !== S.campId ? familyCampName(campId) : '';
+  return [String(name || 'Someone').split(' ')[0], camp].filter(Boolean).join(' · ');
+}
+function joinNames(names) {
+  if (names.length <= 1) return names[0] || '';
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+/** Who a list belongs to: a camp member, or (person-owned) someone in the tree who isn't on the app. */
+function listOwner(l) {
+  if (l.ownerUserId) {
+    const m = S.members.get(l.ownerUserId);
+    const person = S.people.find((p) => p.linkedMemberUid === l.ownerUserId);
+    return { key: 'u' + l.ownerUserId, mine: l.ownerUserId === S.user.uid, member: m, person,
+      name: l.ownerUserId === S.user.uid ? 'You' : m?.displayName || (person ? T.displayName(person) : 'Someone who left'),
+      first: m?.displayName ? String(m.displayName).split(' ')[0] : person ? T.firstName(person) : 'They' };
+  }
+  const person = l.ownerPersonId ? S.peopleById.get(l.ownerPersonId) : null;
+  return { key: 'p' + (l.ownerPersonId || l.id), mine: false, member: null, person, personOwned: true,
+    name: person ? T.displayName(person) : 'Someone in the family', first: person ? T.firstName(person) : 'They' };
+}
+function ownerAvatar(o) {
+  return o.person ? avatarHtml(o.person) : memberAvatar(o.member || { uid: o.key, displayName: o.name });
 }
 function listRow(l) {
   const items = S.items.get(l.id);
   const n = items ? items.length : null;
-  const owner = S.members.get(l.ownerUserId);
-  const person = S.people.find((p) => p.linkedMemberUid === l.ownerUserId);
+  const o = listOwner(l);
   const claims = S.claims.get(l.id);
   const claimed = claims && items ? items.filter((i) => claims.has(i.id)).length : 0;
-  const sub = [l.ownerUserId === S.user.uid ? 'Your list' : ownerName(l.ownerUserId), n == null ? '' : `${n} ${n === 1 ? 'wish' : 'wishes'}`, claimed ? `${claimed} claimed` : ''].filter(Boolean).join(' · ');
-  return `<a class="tap" href="#gifts/${encodeURIComponent(l.id)}">${person ? avatarHtml(person) : memberAvatar(owner || { uid: l.ownerUserId, displayName: ownerName(l.ownerUserId) })}
+  const cards = Array.isArray(l.giftCards) ? l.giftCards.length : 0;
+  const sub = [o.mine ? 'Your list' : o.name, n == null ? '' : `${n} ${n === 1 ? 'wish' : 'wishes'}`, cards ? `${cards} gift ${cards === 1 ? 'card' : 'cards'}` : '', claimed ? `${claimed} claimed` : ''].filter(Boolean).join(' · ');
+  return `<a class="tap" href="#gifts/${encodeURIComponent(l.id)}">${ownerAvatar(o)}
     <span class="grow"><span class="t">${esc(l.title || 'Gift list')}</span><br><span class="s">${esc(sub)}</span></span>${icon('chev', 'chev')}</a>`;
 }
+function familyRow(f) {
+  const items = Array.isArray(f.items) ? f.items : [];
+  const claimed = items.filter((i) => i.claimed).length;
+  const person = f.ownerFpid ? S.people.find((p) => p.fpid === f.ownerFpid) : null;
+  const cards = Array.isArray(f.giftCards) ? f.giftCards.length : 0;
+  const sub = [f.ownerFirstName || 'Family', f.originCampName, `${items.length} ${items.length === 1 ? 'wish' : 'wishes'}`, cards ? `${cards} gift ${cards === 1 ? 'card' : 'cards'}` : '', claimed ? `${claimed} claimed` : ''].filter(Boolean).join(' · ');
+  return `<a class="tap" href="#gifts/f/${encodeURIComponent(f.id)}">${person ? avatarHtml(person) : memberAvatar({ uid: f.id, displayName: f.ownerFirstName || '?' })}
+    <span class="grow"><span class="t">${esc(f.title || 'Gift list')}</span><br><span class="s">${esc(sub)}</span></span>${icon('chev', 'chev')}</a>`;
+}
+
+/** "My gifts to give": tap the pill to move Claimed → Bought → Wrapped. */
+function myGiftRow(c) {
+  const st = STATUS[c.status] ? c.status : 'claimed';
+  const isCard = c.kind === 'giftCard';
+  const title = isCard ? `${c.cardName || 'Gift'} gift card` : c.itemName || 'A gift';
+  const where = c.originCampId && c.originCampId !== S.campId ? c.originCampName || familyCampName(c.originCampId) : '';
+  const sub = [`For ${c.ownerName || 'family'}`, c.listTitle, where].filter(Boolean).join(' · ');
+  let href = '';
+  if (c.originCampId === S.campId && S.lists.some((l) => l.id === c.listId)) href = `#gifts/${encodeURIComponent(c.listId)}`;
+  else if (S.familyGifts.some((f) => f.id === `${c.originCampId}_${c.listId}`)) href = `#gifts/f/${encodeURIComponent(`${c.originCampId}_${c.listId}`)}`;
+  const img = safeUrl(c.image);
+  const lead = img ? `<img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer" class="mgimg">` : `<span class="mglogo" style="background:${T.colorFor(isCard ? c.cardKey || c.id : c.id)}" aria-hidden="true">${isCard ? esc(monogram(c.cardName)) : icon('gift')}</span>`;
+  const body = `${lead}<span class="grow"><span class="t">${esc(title)}</span><br><span class="s">${esc(sub)}</span></span>`;
+  return `<div class="card mygift">
+    ${href ? `<a class="mglink" href="${href}">${body}</a>` : `<div class="mglink">${body}</div>`}
+    <button class="stpill ${STATUS[st][1]}" type="button" data-status="${esc(c.id)}" aria-label="${esc(title)}: ${STATUS[st][0]}. Tap to mark ${STATUS[NEXT_STATUS[st]][0].toLowerCase()}.">${STATUS[st][0]} <span aria-hidden="true">›</span></button>
+    <div class="err" role="alert" hidden></div>
+  </div>`;
+}
+async function cycleStatus(c) {
+  const next = NEXT_STATUS[STATUS[c.status] ? c.status : 'claimed'];
+  const isCard = c.kind === 'giftCard';
+  if (S.campIds.includes(c.originCampId)) {
+    // In one of my camps: update my own claim or giver doc (the rules allow only my own).
+    const path = isCard
+      ? `camps/${c.originCampId}/giftLists/${c.listId}/cardGivers/${c.cardKey}_${S.user.uid}`
+      : `camps/${c.originCampId}/giftLists/${c.listId}/claims/${c.itemId}`;
+    await updateDoc(doc(db, path), { status: next });
+  } else {
+    await call('setFamilyGiftStatus', isCard
+      ? { originCampId: c.originCampId, listId: c.listId, key: c.cardKey, status: next }
+      : { originCampId: c.originCampId, listId: c.listId, itemId: c.itemId, status: next });
+  }
+}
+function wireMyGifts() {
+  $view.querySelectorAll('[data-status]').forEach((b) => b.onclick = () => {
+    const c = S.myClaims.find((x) => x.id === b.dataset.status);
+    if (c) busy(b, 'Saving…', () => cycleStatus(c), b.closest('.mygift').querySelector('.err'));
+  });
+}
+
 function renderGifts() {
   if (!S.listsLoaded || !S.membersLoaded) { $view.innerHTML = `<h1 class="page-title">Gift lists</h1>${loading('Loading gift lists…')}`; return; }
-  const mine = S.lists.filter((l) => l.ownerUserId === S.user.uid);
-  const others = S.lists.filter((l) => l.ownerUserId !== S.user.uid);
-  // Group the family's lists by person.
+  const mine = S.lists.filter((l) => listOwner(l).mine);
   const groups = new Map();
-  for (const l of others) { if (!groups.has(l.ownerUserId)) groups.set(l.ownerUserId, []); groups.get(l.ownerUserId).push(l); }
-  const ordered = [...groups.entries()].sort((a, b) => ownerName(a[0]).localeCompare(ownerName(b[0])));
-  const role = myRole();
+  for (const l of S.lists) {
+    const o = listOwner(l);
+    if (o.mine) continue;
+    if (!groups.has(o.key)) groups.set(o.key, { o, lists: [] });
+    groups.get(o.key).lists.push(l);
+  }
+  const ordered = [...groups.values()].sort((a, b) => a.o.name.localeCompare(b.o.name));
+  const others = ordered.reduce((n, g) => n + g.lists.length, 0);
+  const order = { claimed: 0, bought: 1, wrapped: 2 };
+  const toGive = S.myClaims.slice().sort((a, b) => (order[a.status] ?? 0) - (order[b.status] ?? 0) || (toDate(b.claimedAt)?.getTime() || 0) - (toDate(a.claimedAt)?.getTime() || 0));
   $view.innerHTML = `
     <h1 class="page-title">Gift lists</h1>
     <p class="page-sub">Christmas and birthday wish lists. No spoilers: nobody sees who's claimed what on their own list.</p>
-    ${role === 'visitor' ? '<div class="banner"><span class="grow">You can see every wish list. Claiming a gift is for campers, so if you want to make sure nobody else buys the same thing, ask someone in the camp to claim it for you.</span></div>' : ''}
+    ${toGive.length ? `<div class="sh"><h2>My gifts to give</h2><span class="c">${toGive.length}</span></div><div class="cards">${toGive.map(myGiftRow).join('')}</div><p class="hint">Tap Claimed, Bought or Wrapped to keep track. Only you see this.</p>` : ''}
     ${mine.length ? `<div class="sh"><h2>Your lists</h2></div><div class="cards">${mine.map(listRow).join('')}</div><p class="hint">You see your wishes but not who's claimed what.</p>` : ''}
-    <div class="sh"><h2>Family lists</h2><span class="c">${others.length || ''}</span></div>
-    ${ordered.length ? `<div class="cards">${ordered.map(([, ls]) => ls.map(listRow).join('')).join('')}</div>` : '<div class="empty"><span class="ic" aria-hidden="true">🎁</span><b>No gift lists yet</b><p>When someone in the family starts a wish list in the app, it shows up here.</p></div>'}
+    <div class="sh"><h2>Family lists</h2><span class="c">${others || ''}</span></div>
+    ${ordered.length ? `<div class="cards">${ordered.map((g) => g.lists.map(listRow).join('')).join('')}</div>` : (S.familyGifts.length ? '<div class="card mute">No lists in this camp yet.</div>' : '<div class="empty"><span class="ic" aria-hidden="true">🎁</span><b>No gift lists yet</b><p>When someone in the family starts a wish list in the app, it shows up here.</p></div>')}
+    ${S.familyGifts.length ? `<div class="sh"><h2>From family in other camps</h2><span class="c">${S.familyGifts.length}</span></div><div class="cards">${S.familyGifts.map(familyRow).join('')}</div><p class="hint">Shared by family in camps connected to yours. You can claim from these too.</p>` : ''}
   `;
+  wireMyGifts();
+}
+
+function itemCard(it, claimUi) {
+  const link = safeLink(it.url);
+  const pv = it.preview && typeof it.preview === 'object' ? it.preview : null;
+  const pvImg = pv ? safeUrl(pv.image) : null;
+  const pri = PRI[it.priority];
+  return `<div class="card gift">
+    <div class="row" style="align-items:flex-start"><span class="name grow">${esc(it.name || 'A wish')}</span>${pri ? `<span class="chip ${pri[1]}">${pri[0]}</span>` : ''}</div>
+    ${it.suggested ? `<div class="hint" style="color:var(--glow)">🗣️ Suggested at dinner${it.suggestedByName ? ` by ${esc(String(it.suggestedByName).split(' ')[0])}` : ''}</div>` : ''}
+    ${it.notes ? `<div class="notes">${esc(it.notes)}</div>` : ''}
+    ${link ? (pv && (pv.title || pvImg)
+      ? `<a class="preview" href="${esc(link)}" target="_blank" rel="noopener noreferrer">${pvImg ? `<img src="${esc(pvImg)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}<span class="grow"><span class="pt">${esc(pv.title || link)}</span><span class="ps">${esc(pv.siteName || hostOf(link))} · opens in a new tab</span></span></a>`
+      : `<a class="link" href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(hostOf(link))} · see it online</a>`) : ''}
+    ${claimUi}
+    <div class="err" role="alert" hidden></div>
+  </div>`;
+}
+function claimUiHtml(id, state) {
+  if (state.mine) return `<div class="row"><span class="chip g">✓ You claimed this</span><span class="grow"></span><button class="btn sm" type="button" data-release="${esc(id)}">Release</button></div>`;
+  if (state.by) return `<div class="row mute">${icon('lock', 'gicon')}<span>Claimed by ${esc(state.by)}</span></div>`;
+  return `<button class="btn p sm" type="button" data-claim="${esc(id)}">${icon('gift', 'gicon')}I'll get this</button>`;
+}
+function monogram(name) {
+  const w = String(name || '?').replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  return ((w[0]?.[0] || '?') + (w[1]?.[0] || w[0]?.[1] || '')).toUpperCase();
+}
+/** Gift card stores: cards [{key, name, note}], givers [{uid, name, campId}] per key (null = hidden from the owner). */
+function giftCardsHtml(cards, giversByKey, first, isOwner) {
+  if (!cards.length) return '';
+  const tiles = cards.map((c) => {
+    const givers = giversByKey ? giversByKey(c.key) : [];
+    const mine = givers.some((g) => g.uid === S.user.uid);
+    const others = givers.filter((g) => g.uid !== S.user.uid).map((g) => claimerName(g.uid, g.name, g.campId));
+    let who = '';
+    if (!isOwner) {
+      if (mine && others.length) who = `You and ${joinNames(others)} are getting one`;
+      else if (others.length) who = `${joinNames(others)} ${others.length === 1 ? 'is' : 'are'} getting one`;
+    }
+    const action = isOwner ? '' : mine
+      ? `<div class="row"><span class="chip g">✓ You're getting one</span><span class="grow"></span><button class="btn sm" type="button" data-ungive="${esc(c.key)}">Undo</button></div>`
+      : `<button class="btn sm" type="button" data-give="${esc(c.key)}">${icon('gift', 'gicon')}I'm getting one</button>`;
+    return `<div class="gc">
+      <div class="row"><span class="mglogo" style="background:${T.colorFor(c.key)}" aria-hidden="true">${esc(monogram(c.name))}</span><b class="grow">${esc(c.name || 'Gift card')}</b></div>
+      ${c.note ? `<div class="mute">${esc(c.note)}</div>` : ''}
+      ${who ? `<div class="hint" style="color:var(--ink);font-weight:700">${esc(who)}</div>` : ''}
+      ${action}
+      <div class="err" role="alert" hidden></div>
+    </div>`;
+  }).join('');
+  return `<div class="sh"><h2>${isOwner ? "Gift cards you'd love" : `Gift cards ${esc(first)} would love`}</h2></div>
+    <div class="gcgrid">${tiles}</div>
+    <p class="hint">${isOwner ? "You'll never see who's getting you what." : `${esc(first)} won't see who's getting what. More than one person can give the same store.`}</p>`;
 }
 
 function renderList(listId) {
@@ -803,44 +974,70 @@ function renderList(listId) {
   if (!S.listsLoaded) { $view.innerHTML = back + loading('Loading…'); return; }
   const l = S.lists.find((x) => x.id === listId);
   if (!l) { $view.innerHTML = `${back}<div class="empty"><b>This list is gone</b><p>It may have been deleted.</p></div>`; return; }
-  const isOwner = l.ownerUserId === S.user.uid;
-  const owner = S.members.get(l.ownerUserId);
+  const o = listOwner(l);
+  const isOwner = o.mine;
+  const owner = o.member;
   const items = S.items.get(l.id);
   const claims = S.claims.get(l.id) || new Map();
-  const role = myRole();
+  const givers = S.givers.get(l.id) || [];
+  const cards = Array.isArray(l.giftCards) ? l.giftCards.filter((c) => c && c.key) : [];
   const sizes = owner ? [['Shirt', owner.shirtSize], ['Pants', owner.pantSize], ['Shoes', owner.shoeSize]].filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(' · ') : '';
   const likes = owner ? [owner.favoriteFoods, owner.favoriteCandy, owner.favoriteActivities].filter((v) => v && String(v).trim()).join(' · ') : '';
-  const PRI = { high: ['High', 'c'], medium: ['Medium', 's'], low: ['Low', ''] };
+  const giversByKey = (k) => givers.filter((g) => g.key === k).map((g) => ({ uid: g.uid, name: g.name, campId: g.giverCamp }));
   $view.innerHTML = `${back}
     <h1 class="page-title">${esc(l.title || 'Gift list')}</h1>
-    <p class="page-sub">${isOwner ? 'Your list. You see your wishes but not who has claimed what.' : `${esc(ownerName(l.ownerUserId))}'s list`}</p>
+    <p class="page-sub">${isOwner ? 'Your list. You see your wishes but not who has claimed what.' : `${esc(o.name)}'s list${o.personOwned ? `. ${esc(o.first)} isn't on KinCamp, so everyone here can see what's claimed.` : ''}`}</p>
     ${!isOwner && (sizes || likes) ? `<div class="card" style="margin-bottom:12px">${sizes ? `<div><b>Sizes:</b> ${esc(sizes)}</div>` : ''}${likes ? `<div class="mute"><b style="color:var(--ink)">Likes:</b> ${esc(likes)}</div>` : ''}</div>` : ''}
-    ${!isOwner && role === 'visitor' ? '<div class="banner"><span class="grow">Visitors can look but not claim. Ask a camper to claim a gift for you, so nobody buys the same thing twice.</span></div>' : ''}
+    ${giftCardsHtml(cards, isOwner ? null : giversByKey, o.first, isOwner)}
+    ${cards.length ? `<div class="sh"><h2>Wish list</h2><span class="c">${items ? items.length : ''}</span></div>` : ''}
     ${items == null ? loading('Loading wishes…') : !items.length ? '<div class="empty"><span class="ic" aria-hidden="true">🎁</span><b>Nothing on this list yet</b></div>' : `<div class="cards">${items.map((it) => {
-      const link = safeLink(it.url);
-      const pv = it.preview && typeof it.preview === 'object' ? it.preview : null;
-      const pvImg = pv ? safeUrl(pv.image) : null;
-      const claim = claims.get(it.id);
-      let claimUi = '';
-      if (!isOwner && role !== 'visitor') {
-        if (claim && claim.claimedBy === S.user.uid) claimUi = `<div class="row"><span class="chip g">✓ You claimed this</span><span class="grow"></span><button class="btn sm" type="button" data-release="${esc(it.id)}">Release</button></div>`;
-        else if (claim) claimUi = `<div class="row mute">${icon('lock', 'gicon')}<span>Claimed by ${esc(S.members.get(claim.claimedBy)?.displayName || 'someone')}</span></div>`;
-        else claimUi = `<button class="btn p sm" type="button" data-claim="${esc(it.id)}">${icon('gift', 'gicon')}I'll get this</button>`;
-      }
-      const pri = PRI[it.priority];
-      return `<div class="card gift">
-        <div class="row" style="align-items:flex-start"><span class="name grow">${esc(it.name || 'A wish')}</span>${pri ? `<span class="chip ${pri[1]}">${pri[0]}</span>` : ''}</div>
-        ${it.suggested ? `<div class="hint" style="color:var(--glow)">🗣️ Suggested at dinner${it.suggestedByName ? ` by ${esc(String(it.suggestedByName).split(' ')[0])}` : ''}</div>` : ''}
-        ${it.notes ? `<div class="notes">${esc(it.notes)}</div>` : ''}
-        ${link ? (pv && (pv.title || pvImg)
-          ? `<a class="preview" href="${esc(link)}" target="_blank" rel="noopener noreferrer">${pvImg ? `<img src="${esc(pvImg)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}<span class="grow"><span class="pt">${esc(pv.title || link)}</span><span class="ps">${esc(pv.siteName || hostOf(link))} · opens in a new tab</span></span></a>`
-          : `<a class="link" href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(hostOf(link))} · see it online</a>`) : ''}
-        ${claimUi}
-        <div class="err" role="alert" hidden></div>
-      </div>`;
+      const cl = claims.get(it.id);
+      const ui = isOwner ? '' : claimUiHtml(it.id, { mine: cl && cl.claimedBy === S.user.uid, by: cl ? claimerName(cl.claimedBy, cl.claimedByName, cl.claimedCamp) : '' });
+      return itemCard(it, ui);
     }).join('')}</div>`}`;
-  $view.querySelectorAll('[data-claim]').forEach((b) => b.onclick = () => busy(b, 'Claiming…', () => claimGift(l.id, b.dataset.claim), b.closest('.gift').querySelector('.err')));
-  $view.querySelectorAll('[data-release]').forEach((b) => b.onclick = () => busy(b, 'Releasing…', () => releaseGift(l.id, b.dataset.release), b.closest('.gift').querySelector('.err')));
+  const errOf = (b) => (b.closest('.gift') || b.closest('.gc')).querySelector('.err');
+  $view.querySelectorAll('[data-claim]').forEach((b) => b.onclick = () => busy(b, 'Claiming…', () => claimGift(l.id, b.dataset.claim), errOf(b)));
+  $view.querySelectorAll('[data-release]').forEach((b) => b.onclick = () => busy(b, 'Releasing…', () => releaseGift(l.id, b.dataset.release), errOf(b)));
+  $view.querySelectorAll('[data-give]').forEach((b) => b.onclick = () => busy(b, 'Saving…', () => giveCard(l.id, b.dataset.give), errOf(b)));
+  $view.querySelectorAll('[data-ungive]').forEach((b) => b.onclick = () => busy(b, 'Saving…', () => ungiveCard(l.id, b.dataset.ungive), errOf(b)));
+}
+
+function renderFamilyList(id) {
+  const back = `<a class="back" href="#gifts">${icon('back')}All gift lists</a>`;
+  if (!S.familyGiftsLoaded) { $view.innerHTML = back + loading('Loading…'); return; }
+  const f = S.familyGifts.find((x) => x.id === id);
+  if (!f) { $view.innerHTML = `${back}<div class="empty"><b>This list isn't shared here anymore</b><p>It may have been deleted, or its owner stopped sharing it with this camp.</p></div>`; return; }
+  const first = f.ownerFirstName || 'They';
+  const items = Array.isArray(f.items) ? f.items : [];
+  const cards = Array.isArray(f.giftCards) ? f.giftCards.filter((c) => c && c.key) : [];
+  const giversByKey = (k) => (cards.find((c) => c.key === k)?.givers || []).map((g) => ({ uid: g.uid, name: g.campName ? `${g.name} · ${g.campName}` : g.name }));
+  $view.innerHTML = `${back}
+    <h1 class="page-title">${esc(f.title || 'Gift list')}</h1>
+    <p class="page-sub">${esc(first)}'s list, shared from ${esc(f.originCampName || 'another family camp')}.</p>
+    ${giftCardsHtml(cards, giversByKey, first, false)}
+    ${cards.length ? `<div class="sh"><h2>Wish list</h2><span class="c">${items.length}</span></div>` : ''}
+    ${!items.length ? '<div class="empty"><span class="ic" aria-hidden="true">🎁</span><b>Nothing on this list yet</b></div>' : `<div class="cards">${items.map((it) => {
+      const mine = it.claimed && it.claimedByUid === S.user.uid;
+      const by = it.claimed && !mine ? [String(it.claimedByName || 'Someone').split(' ')[0], it.claimedByCampName].filter(Boolean).join(' · ') : '';
+      return itemCard(it, claimUiHtml(it.id, { mine, by }));
+    }).join('')}</div>`}`;
+  const ref = { originCampId: f.originCampId, listId: f.listId };
+  const errOf = (b) => (b.closest('.gift') || b.closest('.gc')).querySelector('.err');
+  $view.querySelectorAll('[data-claim]').forEach((b) => b.onclick = () => busy(b, 'Claiming…', async () => {
+    await call('claimFamilyGift', { campId: S.campId, ...ref, itemId: b.dataset.claim });
+    toast(`Claimed. ${first} won't see who claimed it.`);
+  }, errOf(b)));
+  $view.querySelectorAll('[data-release]').forEach((b) => b.onclick = () => busy(b, 'Releasing…', async () => {
+    await call('releaseFamilyGift', { ...ref, itemId: b.dataset.release });
+    toast('Released. Someone else can claim it now.');
+  }, errOf(b)));
+  $view.querySelectorAll('[data-give]').forEach((b) => b.onclick = () => busy(b, 'Saving…', async () => {
+    await call('giveFamilyGiftCard', { campId: S.campId, ...ref, key: b.dataset.give });
+    toast(`Got it. ${first} won't see who's getting what.`);
+  }, errOf(b)));
+  $view.querySelectorAll('[data-ungive]').forEach((b) => b.onclick = () => busy(b, 'Saving…', async () => {
+    await call('ungiveFamilyGiftCard', { ...ref, key: b.dataset.ungive });
+  }, errOf(b)));
 }
 function hostOf(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return 'Link'; } }
 
@@ -851,7 +1048,7 @@ async function claimGift(listId, itemId) {
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(ref);
       if (snap.exists()) throw plainError(snap.data().claimedBy === S.user.uid ? 'You already claimed this.' : 'Someone else just claimed this one.');
-      tx.set(ref, { claimedBy: S.user.uid, claimedAt: serverTimestamp() });
+      tx.set(ref, { claimedBy: S.user.uid, claimedAt: serverTimestamp(), status: 'claimed' });
     });
   } catch (e) {
     // Another claim landing between our read and write is rejected by the rules.
@@ -869,6 +1066,15 @@ async function releaseGift(listId, itemId) {
     tx.delete(ref);
   });
   toast('Released. Someone else can claim it now.');
+}
+// "I'm getting one": my own giver doc per store (several givers per store are fine).
+async function giveCard(listId, key) {
+  await setDoc(doc(db, `camps/${S.campId}/giftLists/${listId}/cardGivers/${key}_${S.user.uid}`),
+    { key, uid: S.user.uid, name: myFirst(), at: serverTimestamp(), status: 'claimed' });
+  toast("Got it. The list's owner won't see who's getting what.");
+}
+async function ungiveCard(listId, key) {
+  await deleteDoc(doc(db, `camps/${S.campId}/giftLists/${listId}/cardGivers/${key}_${S.user.uid}`));
 }
 
 // -------------------------------------------------------------- account ---
@@ -966,7 +1172,7 @@ function openDelete() {
       S.deleting = true;  // hold the page still while the server removes us from each camp
       try { await call('deleteUserAccount', {}); } catch (e) { S.deleting = false; schedule(); throw e; }
       S.deleted = true;
-      subs.user && subs.user(); subs.camp.forEach((off) => off());
+      subs.user && subs.user(); subs.myClaims && subs.myClaims(); subs.camp.forEach((off) => off());
       for (const off of subs.camps.values()) off();
       try { await signOut(auth); } catch (e) { /* the account is already gone */ }
       closeSheet();

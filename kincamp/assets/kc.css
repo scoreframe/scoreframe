@@ -304,3 +304,21 @@ dialog.sheet .grab{width:40px;height:5px;border-radius:3px;background:var(--line
 .treehint{color:var(--mute);font-size:14.5px;margin:8px 2px 0}
 
 @media (prefers-reduced-motion: reduce){.ffwrap{display:none}.spin{animation-duration:2s}}
+
+/* gift cards + my gifts to give */
+.gcgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr))}
+.gc{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px;display:grid;gap:8px;align-content:start}
+.gc b{font-size:18px;line-height:1.25;overflow-wrap:anywhere}
+.mglogo{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:15px;flex:none}
+.mglogo svg{width:22px;height:22px}
+.mgimg{width:44px;height:44px;border-radius:13px;object-fit:cover;flex:none;background:var(--line)}
+.mygift{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:12px 14px}
+.mygift .err{grid-column:1/-1}
+.mglink{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink);min-width:0}
+.mglink .t{font-weight:800;font-size:17px;line-height:1.25}
+.mglink .s{color:var(--mute);font-size:14.5px;line-height:1.35}
+.stpill{border:0;border-radius:22px;min-height:44px;padding:8px 14px;font:800 15px var(--sans);cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.stpill.g{background:color-mix(in srgb,var(--glow) 20%,transparent);color:var(--glow)}
+.stpill.s{background:color-mix(in srgb,var(--sky) 18%,transparent);color:var(--sky)}
+.stpill.l{background:color-mix(in srgb,var(--lav) 20%,transparent);color:var(--lav)}
+.stpill[aria-busy="true"]{opacity:.8;cursor:progress}
