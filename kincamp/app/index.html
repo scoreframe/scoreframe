@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>KinCamp</title>
+<meta name="description" content="Your family on KinCamp: the family tree, birthdays, sizes and gift lists.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232F6B42'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle'%3E%E2%9B%BA%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap">
+<link rel="stylesheet" href="../assets/kc.css">
+<script>try{var t=localStorage.getItem('kc.theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<script src="../assets/site.js" defer></script>
+<script src="../assets/kinship.js" defer></script>
+<style>
+  .apphead .campname{border:0;background:none;padding:6px 4px;cursor:pointer;font:800 15px var(--sans);color:var(--mute);text-align:left;min-height:44px}
+  .apphead .campname:disabled{cursor:default}
+  @media (max-width:420px){.apphead .logo .word{display:none}}
+</style>
+</head>
+<body>
+<a class="sr" href="#view">Skip to content</a>
+<header class="apphead">
+  <a class="logo" href="#home" aria-label="KinCamp home"><span class="mark" aria-hidden="true">⛺</span><span class="word">KinCamp</span></a>
+  <button class="campname grow" type="button" id="campbtn"></button>
+  <button class="themebtn" type="button" aria-label="Switch look"></button>
+</header>
+<nav class="tabs" id="tabs" aria-label="Sections" hidden></nav>
+<main class="app" id="view" tabindex="-1">
+  <div class="loading" role="status"><span class="spin" aria-hidden="true"></span>Opening your family…</div>
+</main>
+<nav class="dock" id="dock" aria-label="Sections" hidden></nav>
+<dialog class="sheet" id="sheet" aria-labelledby="sheet-title"></dialog>
+<noscript><p style="padding:16px">KinCamp needs JavaScript turned on to show your family.</p></noscript>
+<script type="module" src="../assets/app.js"></script>
+</body>
+</html>

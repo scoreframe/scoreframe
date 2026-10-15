@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Join your family · KinCamp</title>
+<meta name="description" content="You've been invited to a family camp on KinCamp.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232F6B42'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle'%3E%E2%9B%BA%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap">
+<link rel="stylesheet" href="../assets/kc.css">
+<script>try{var t=localStorage.getItem('kc.theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <a class="logo" href="../"><span class="mark" aria-hidden="true">⛺</span>KinCamp</a>
+  <span class="sp"></span>
+  <button class="themebtn" type="button" aria-label="Switch look"></button>
+</nav>
+<main class="center">
+  <div class="ffwrap" aria-hidden="true"></div>
+  <section class="panel" id="panel" aria-live="polite">
+    <div class="loading"><span class="spin" aria-hidden="true"></span>Opening your invite…</div>
+  </section>
+</main>
+<script type="module">
+import { auth, db, onAuthStateChanged, signOut, ensureUserDoc, call, busy, esc, authReady } from '../assets/fb.js';
+import { mountSignIn, finishEmailLink, hasEmailLink } from '../assets/auth-ui.js';
+import { doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const panel = document.getElementById('panel');
+const STORES = `
+  <div class="stores" style="justify-content:center" aria-label="Get the app">
+    <span class="store" role="img" aria-label="App Store, coming soon"><span aria-hidden="true"></span><span><small>Coming soon to the</small>App Store</span></span>
+    <span class="store" role="img" aria-label="Google Play, coming soon"><span aria-hidden="true">▶</span><span><small>Coming soon to</small>Google Play</span></span>
+  </div>`;
+
+function readCode() {
+  const p = new URLSearchParams(location.search);
+  // Also accept /join/#CODE and /join/?CODE for hand-typed links.
+  const bare = [...p.entries()].find(([k, v]) => v === '' && /^[A-Za-z0-9]{6,7}$/.test(k));
+  let raw = p.get('code') || location.hash.replace(/^#/, '') || (bare ? bare[0] : '');
+  raw = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return raw.length >= 6 && raw.length <= 7 ? raw : '';
+}
+let code = readCode();
+let user = null;
+let profile = null;
+let stage = 'start';   // start | joining | confirm | done
+
+function steps(n) {
+  return `<div class="steps" aria-hidden="true">${[1, 2, 3].map((i) => `<i class="${i === n ? 'on' : ''}"></i>`).join('')}</div>`;
+}
+
+function renderNoCode(err) {
+  panel.innerHTML = `
+    <h1>Join your family</h1>
+    <p class="tc">Type the code from the invite your family sent you. It's 6 or 7 letters and numbers.</p>
+    <form class="cards" id="codeform" novalidate>
+      <div class="field">
+        <label for="codein">Invite code</label>
+        <input class="input code" id="codein" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="7" required>
+      </div>
+      <div class="err" id="codeerr" role="alert" ${err ? '' : 'hidden'}>${esc(err || '')}</div>
+      <button class="btn p block" type="submit">Continue</button>
+    </form>
+    <p class="fine">Already joined? <a href="../signin/">Sign in</a></p>`;
+  const f = panel.querySelector('#codeform');
+  const inp = f.querySelector('#codein');
+  inp.addEventListener('input', () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
+  inp.focus();
+  f.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = inp.value.trim();
+    if (v.length < 6 || v.length > 7) { const er = f.querySelector('#codeerr'); er.textContent = 'Invite codes are 6 or 7 letters and numbers. Check the code and try again.'; er.hidden = false; return; }
+    code = v;
+    history.replaceState(null, '', `?code=${encodeURIComponent(code)}`);
+    render();
+  });
+}
+
+function intro() {
+  return `
+    <div class="logo" style="justify-content:center"><span class="mark" aria-hidden="true">⛺</span>KinCamp</div>
+    <h1>You're invited to camp!</h1>
+    <p class="tc">Your family invited you to their private KinCamp. Once you're in, you can see the family tree, birthdays, the kids' sizes and favorites, and everyone's wish lists, right here on the website.</p>
+    <div class="codebox" aria-label="Invite code ${esc(code.split('').join(' '))}">${esc(code)}</div>`;
+}
+
+function renderSignIn(prefixErr) {
+  panel.innerHTML = `
+    ${steps(1)}
+    ${intro()}
+    <div class="divider">Step 1 · Sign in</div>
+    <div id="signin" class="cards"></div>
+    <p class="fine">By continuing you agree to our <a href="../terms/">Terms</a> and <a href="../privacy/">Privacy Policy</a>.</p>
+    <div class="divider">Rather use the app?</div>
+    ${STORES}
+    <p class="fine">Install the KinCamp app when it's out, then open your invite link again or enter code <b>${esc(code)}</b>.</p>`;
+  const box = panel.querySelector('#signin');
+  mountSignIn(box, { continueUrl: location.href });
+  if (prefixErr) box.insertAdjacentHTML('afterbegin', `<div class="err" role="alert">${esc(prefixErr)}</div>`);
+}
+
+function guessName() {
+  const n = (profile && profile.displayName) || (user && user.displayName) || '';
+  return n === 'New Camper' || n === 'Camper' ? '' : n;
+}
+
+function renderJoin() {
+  const who = user.email || user.phoneNumber || 'your account';
+  panel.innerHTML = `
+    ${steps(2)}
+    ${intro()}
+    <div class="divider">Step 2 · Say hello</div>
+    <form class="cards" id="joinform" novalidate>
+      <div class="field">
+        <label for="name">What should your family call you?</label>
+        <input class="input" id="name" autocomplete="name" maxlength="40" required value="${esc(guessName())}" placeholder="Grandma Jo">
+        <span class="hint">This is the name your family sees.</span>
+      </div>
+      <div class="err" id="joinerr" role="alert" hidden></div>
+      <button class="btn p block" type="submit">Join the family</button>
+    </form>
+    <p class="fine">Signed in as <b>${esc(who)}</b>. <a href="#" id="notme">Not you?</a></p>`;
+  panel.querySelector('#notme').onclick = async (e) => { e.preventDefault(); await signOut(auth); };
+  const f = panel.querySelector('#joinform');
+  const nameIn = f.querySelector('#name');
+  if (!nameIn.value) nameIn.focus();
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = f.querySelector('#joinerr');
+    const name = nameIn.value.trim().replace(/\s+/g, ' ');
+    if (!name) { err.textContent = 'Please tell us your name.'; err.hidden = false; nameIn.focus(); return; }
+    stage = 'joining';
+    const res = await busy(f.querySelector('button'), 'Joining…', async () => {
+      if (!profile) profile = await ensureUserDoc(user);
+      if (!profile || profile.displayName !== name) {
+        await updateDoc(doc(db, 'users', user.uid), { displayName: name });
+        if (profile) profile.displayName = name;
+      }
+      try {
+        return await call('acceptInvitation', { inviteCode: code });
+      } catch (x) {
+        if (x && x.code === 'functions/already-exists') return { already: true };
+        if (x && String(x.code || '').startsWith('functions/')) x.message = joinMessage(x);
+        throw x;
+      }
+    }, err);
+    if (!res) { stage = 'start'; return; }
+    if (res.already) { renderDone({ already: true }); return; }
+    if (res.personId) renderConfirm(res); else renderDone(res);
+  });
+}
+
+function joinMessage(x) {
+  const m = String((x && x.message) || '');
+  if (x && x.code === 'functions/not-found' && /invite/i.test(m)) return "We couldn't find an invite with that code. Check the code, or ask your family to send a new invite.";
+  if (/expired/i.test(m) && /invite/i.test(m)) return 'This invite has expired. Ask your family to send you a new one.';
+  if (/archived/i.test(m)) return 'This family camp has been closed, so it can’t be joined.';
+  return m;
+}
+
+function initials(name) {
+  return String(name || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+}
+
+function renderConfirm(res) {
+  stage = 'confirm';
+  panel.innerHTML = `
+    ${steps(3)}
+    <h1>Is this you?</h1>
+    <p class="tc">Your family already added you to the family tree.</p>
+    <div class="campcard" style="justify-content:center;flex-direction:column;text-align:center;padding:20px">
+      <div class="av lg" style="background:#2F6B42" aria-hidden="true">${esc(initials(res.personName))}</div>
+      <div><b style="font-size:22px">${esc(res.personName || 'Someone in the tree')}</b>${res.personBorn ? `<div class="mute">Born ${esc(res.personBorn)}</div>` : ''}</div>
+    </div>
+    <p class="tc">If it's you, we'll connect that spot in the tree to your account, so your name and birthday stay yours to change.</p>
+    <div class="err" id="cferr" role="alert" hidden></div>
+    <button class="btn p block" type="button" id="yes">Yes, that's me</button>
+    <button class="btn block" type="button" id="no">No, that's not me</button>`;
+  const err = panel.querySelector('#cferr');
+  const go = (btn, confirm, label) => busy(btn, label, async () => {
+    await call('confirmTreeLink', { campId: res.campId, personId: res.personId, confirm });
+    renderDone(res, confirm);
+  }, err);
+  panel.querySelector('#yes').onclick = (e) => go(e.currentTarget, true, 'Connecting…');
+  panel.querySelector('#no').onclick = (e) => go(e.currentTarget, false, 'Saving…');
+}
+
+function renderDone(res, linked) {
+  stage = 'done';
+  const target = res.campId ? `../app/?camp=${encodeURIComponent(res.campId)}` : '../app/';
+  panel.innerHTML = `
+    <div class="logo" style="justify-content:center"><span class="mark" aria-hidden="true">⛺</span>KinCamp</div>
+    <h1>${res.already ? "You're already in this family" : `Welcome to ${esc(res.campName || 'camp')}!`}</h1>
+    <p class="tc">${res.already ? 'Good news: you joined this camp before. Everything is waiting for you.' : `You're in${res.role === 'visitor' ? ' as a visitor' : ''}. ${linked ? "Your spot in the family tree is connected to you. " : ''}Come see the family tree, birthdays and wish lists.`}</p>
+    <a class="btn p block" href="${target}">See my family</a>
+    <div class="divider">Get the app</div>
+    ${STORES}
+    <p class="fine">The app is optional. Everything a visitor needs is here on the website.</p>`;
+  panel.querySelector('a.btn').focus();
+}
+
+function render(err) {
+  if (stage === 'joining' || stage === 'confirm' || stage === 'done') return;
+  if (!code) { renderNoCode(err); return; }
+  if (!user) { renderSignIn(err); return; }
+  renderJoin();
+}
+
+(async () => {
+  user = await authReady();
+  let linkErr = null;
+  if (!user && hasEmailLink()) {
+    panel.innerHTML = `${intro()}<div class="divider">Finishing sign-in</div><div id="finish" class="cards"><div class="loading"><span class="spin" aria-hidden="true"></span>Signing you in…</div></div>`;
+    const finished = await finishEmailLink(panel.querySelector('#finish'));
+    if (!finished) { const e = panel.querySelector('#finish .err'); linkErr = e ? e.textContent : null; }
+  }
+  if (!code) code = readCode();
+  onAuthStateChanged(auth, async (u) => {
+    user = u;
+    profile = null;
+    if (u) {
+      if (stage === 'start') panel.innerHTML = '<div class="loading"><span class="spin" aria-hidden="true"></span>Signing you in…</div>';
+      profile = await ensureUserDoc(u);
+    }
+    render(linkErr);
+    linkErr = null;
+  });
+})();
+</script>
+</body>
+</html>

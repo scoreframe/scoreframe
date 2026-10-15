@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Sign in · KinCamp</title>
+<meta name="description" content="Sign in to KinCamp to see your family's tree, birthdays and gift lists.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232F6B42'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle'%3E%E2%9B%BA%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap">
+<link rel="stylesheet" href="../assets/kc.css">
+<script>try{var t=localStorage.getItem('kc.theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <a class="logo" href="../"><span class="mark" aria-hidden="true">⛺</span>KinCamp</a>
+  <span class="sp"></span>
+  <button class="themebtn" type="button" aria-label="Switch look"></button>
+</nav>
+<main class="center">
+  <div class="ffwrap" aria-hidden="true"></div>
+  <section class="panel" aria-labelledby="h">
+    <h1 id="h">Welcome back</h1>
+    <p class="tc" id="sub">Sign in to see your family's tree, birthdays and gift lists.</p>
+    <div id="signin" class="cards"><div class="loading"><span class="spin" aria-hidden="true"></span>Getting ready…</div></div>
+    <p class="fine">New to KinCamp? You'll need an invite from your family. <a href="../join/">Have an invite code?</a></p>
+    <p class="fine">By continuing you agree to our <a href="../terms/">Terms</a> and <a href="../privacy/">Privacy Policy</a>.</p>
+  </section>
+</main>
+<script type="module">
+import { auth, onAuthStateChanged, ensureUserDoc, safeNext, authReady } from '../assets/fb.js';
+import { mountSignIn, finishEmailLink } from '../assets/auth-ui.js';
+
+const box = document.getElementById('signin');
+const next = safeNext(new URLSearchParams(location.search).get('next'), '../app/');
+let leaving = false;
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user || leaving) return;
+  leaving = true;
+  document.getElementById('h').textContent = "You're signed in";
+  document.getElementById('sub').textContent = 'Taking you to your family…';
+  box.innerHTML = '<div class="loading"><span class="spin" aria-hidden="true"></span>One moment…</div>';
+  await ensureUserDoc(user);
+  location.replace(next);
+});
+
+(async () => {
+  const already = await authReady();
+  if (already) return;
+  const finishing = await finishEmailLink(box);
+  if (!finishing && !auth.currentUser) {
+    const keep = box.querySelector('.err');
+    mountSignIn(box, { continueUrl: location.href });
+    if (keep) box.prepend(keep);
+  }
+})();
+</script>
+</body>
+</html>
