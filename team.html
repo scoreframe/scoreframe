@@ -13,17 +13,25 @@
      fetched, so the crawler never SEES this tag and Google may still index the
      bare URL from inbound links. Allow the crawl, refuse the index. -->
 <meta name="robots" content="noindex, nofollow">
+<!-- 2026-10-16 — the previous team page is kept at team-classic.html.
+     ?classic=1 opens it with the same query string, for comparing or as a
+     quick way back. Full rollback: copy team-classic.html over this file. -->
+<script>if(/[?&]classic=1/.test(location.search)){location.replace('team-classic.html'+location.search.replace(/[?&]classic=1/,'').replace(/^&/,'?')+location.hash);}</script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#1C1D21" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
 <title>ScoreFrame — Team</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-    --bg-deepest: #0D0D0D; --bg-deep: #141414; --bg-surface: #1E1E1E;
-    --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
-    --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
+    /* 2026-10-16 — lifted dark: charcoal instead of near-black (Eric: the
+       orange dark mode "has been too dark"). Same values as the redesign. */
+    --bg-deepest: #1C1D21; --bg-deep: #23252A; --bg-surface: #26282D;
+    --bg-elevated: #34373E; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
+    --text-primary: #F5F3EF; --text-secondary: #B4B8C0; --text-muted: #8D929B;
     --success: #4CAF50; --error: #F44336; --recording-red: #CC2222;
     --win-green: #2E7D32; --loss-red: #C62828; --tie-grey: #777777;
 
@@ -744,6 +752,146 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
     margin-right: auto;
   }
 }
+/* ══════════════════════════════════════════════════════════════════════
+   2026-10-16 — TEAM PAGE REDESIGN. Eric: "the design just doesn't flow
+   well ... a big mishmash of stuff". Mockups: claude.ai/artifact/
+   P8NAvd33YyJqwBQBujLQrK. Overrides only; every rule above still applies
+   underneath, and the old page is kept verbatim at team-classic.html.
+   ══════════════════════════════════════════════════════════════════════ */
+html, body { font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+/* Hero, on the team colour. Tokens are re-scoped inside it so everything the
+   scripts render there (follow button, email box, status) reads on a dark
+   tinted background in both light and dark mode. */
+.team-header {
+    --text-primary: #FFFFFF; --text-secondary: rgba(255,255,255,0.80);
+    --text-muted: rgba(255,255,255,0.62); --bg-surface: rgba(0,0,0,0.28);
+    --bg-elevated: rgba(255,255,255,0.18);
+    background: #3A1E1E;
+    background: linear-gradient(160deg,
+        color-mix(in srgb, var(--team-color, #C62828) 72%, #000) 0%,
+        color-mix(in srgb, var(--team-color, #C62828) 38%, #0C0D10) 100%);
+    border-bottom: none;
+    display: grid; grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 16px; align-items: center; text-align: left;
+    padding: 24px 18px 20px; color: #FFFFFF;
+}
+.team-header #colorBar { display: none; }
+.team-header #teamLogo, .team-header .team-emoji {
+    grid-column: 1; grid-row: 1 / span 4; align-self: center;
+}
+.team-header #teamLogo {
+    height: 76px !important; max-width: 110px !important; margin: 0 !important;
+    background: #FFFFFF; border-radius: 16px; padding: 6px;
+}
+.team-header .team-emoji {
+    width: 76px; height: 76px; border-radius: 16px; margin: 0;
+    background: rgba(255,255,255,0.14); font-size: 38px;
+    display: flex; align-items: center; justify-content: center;
+}
+.team-header .team-name, .team-header .team-sport, .team-header #teamSeason,
+.team-header #teamRecord, .team-header #liveBadge { grid-column: 2; }
+.team-header .team-name {
+    font-stretch: 72%; font-weight: 850; text-transform: uppercase;
+    font-size: clamp(26px, 6.5vw, 52px); line-height: 0.95; margin: 0 0 6px;
+}
+.team-header .team-sport { color: rgba(255,255,255,0.82); font-size: 14px; margin: 0; }
+.team-header #teamSeason { color: #FFFFFF !important; margin: 2px 0 0 !important; font-size: 13px !important; }
+.team-header #teamRecord:not(:empty) {
+    justify-self: start; margin: 8px 0 0 !important; padding: 4px 12px;
+    border-radius: 999px; background: rgba(0,0,0,0.35);
+    color: #FFFFFF !important; font-size: 13px !important;
+}
+.team-header #liveBadge { justify-self: start; }
+.team-header #followArea, .team-header #followStatus { grid-column: 1 / -1; }
+.team-header #followArea { margin-top: 18px !important; }
+.team-header #followArea .follow-btn {
+    min-height: 46px; padding: 0 22px; border-radius: 12px; font-size: 15px; font-weight: 850;
+}
+.team-header #followArea .follow-btn.following {
+    background: rgba(0,0,0,0.35); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.35);
+}
+.team-header #emailFollowWrap { max-width: 460px !important; padding: 12px; margin-top: 12px !important;
+    border-radius: 12px; background: rgba(0,0,0,0.28); }
+.team-header #emailFollowInput { background: rgba(0,0,0,0.35) !important;
+    border-color: rgba(255,255,255,0.35) !important; color: #FFFFFF !important; }
+
+/* Jump chips */
+.tp-chips {
+    display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px;
+    position: sticky; top: 0; z-index: 20; background: var(--bg-deepest);
+    border-bottom: 1px solid var(--bg-elevated); scrollbar-width: none;
+}
+.tp-chips::-webkit-scrollbar { display: none; }
+.tp-chips a {
+    flex: none; height: 32px; padding: 0 14px; border-radius: 16px;
+    display: inline-flex; align-items: center; text-decoration: none;
+    font-size: 13px; font-weight: 700; color: var(--text-primary);
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+}
+.tp-chips a:hover, .tp-chips a:focus-visible { border-color: var(--accent); color: var(--accent); }
+
+/* Layout: phones read one column in story order. */
+/* !important: the page scripts show this box with style.display="block". */
+#teamContent { display: flex !important; flex-direction: column; gap: 22px; padding: 18px 0 40px; }
+#teamContent[style*="display: none"], #teamContent[style*="display:none"] { display: none !important; }
+.tp-col { display: contents; }
+#tpNow { order: 1; } #seasonBlock { order: 2; } #scheduleRailSection { order: 3; }
+#resultsSection { order: 4; } #rosterSection { order: 5; } #staffSection { order: 6; }
+#pendingRequestsSection { order: 7; } #teamShareCard { order: 8; } #unfollowArea { order: 9; }
+.tp-block { display: flex; flex-direction: column; gap: 12px; }
+#tpNow .section { padding: 0 16px; }
+.tp-stage { padding: 0 16px; margin: 0; }
+
+/* Sections as labelled cards */
+#teamContent .section { padding: 0 16px; }
+.section-title, .tp-railhead .l, .team-share-label, .tp-share-code .k {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent);
+}
+.section-title { margin-bottom: 10px; }
+.tp-railhead { padding: 0 16px; margin: 0; }
+.tp-rail { padding: 12px 16px 6px; }
+#seasonSwitcherSection { padding-bottom: 0 !important; }
+.tp-season-card { margin-left: 16px !important; margin-right: 16px !important; }
+
+/* Scores in the scoreboard face */
+.tp-stage-card .matchup, .tp-count .num, .tp-season-cell .v, .game-card .score {
+    font-stretch: 68%; font-weight: 900;
+}
+.tp-stage-card .matchup { font-size: 24px; text-transform: uppercase; line-height: 1; }
+.tp-count .num { font-size: 36px; color: var(--text-primary); }
+.tp-stage-card { border-radius: 16px; }
+.game-card, .player-card, .tp-scard, .tp-stage-card { border-radius: 14px; }
+
+/* Share card, with the team code */
+.team-share-card { margin: 0 16px; padding: 16px; border-radius: 16px;
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated); }
+.tp-share-code { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 10px 0 12px; }
+.tp-share-code .team-code { font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 18px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-primary); }
+#unfollowArea { margin: 8px 16px 0 !important; }
+
+/* Desktop: a main column and a side column */
+@media (min-width: 1000px) {
+    .team-header { padding: 40px max(24px, calc((100% - 1180px) / 2)) 30px; }
+    .team-header .team-emoji, .team-header #teamLogo { width: auto; }
+    .team-header #teamLogo { height: 110px !important; max-width: 160px !important; }
+    .team-header .team-emoji { width: 110px; height: 110px; font-size: 52px; }
+    .tp-chips { padding: 10px max(24px, calc((100% - 1180px) / 2)); }
+    #teamContent, #accessGate, .team-header { max-width: none; }
+    #teamContent { flex-direction: row; align-items: flex-start; gap: 24px;
+        max-width: none !important; width: min(1180px, calc(100% - 48px));
+        margin: 0 auto; padding: 24px 0 60px; }
+    .tp-col { display: flex; flex-direction: column; gap: 22px; }
+    .tp-main { flex: 1 1 0; min-width: 0; }
+    .tp-side { flex: 0 0 360px; min-width: 0; position: sticky; top: 64px; }
+    #teamContent .section, #tpNow .section, .tp-stage, .tp-railhead { padding-left: 0; padding-right: 0; }
+    .tp-season-card, .team-share-card, #unfollowArea { margin-left: 0 !important; margin-right: 0 !important; }
+    .tp-side .tp-rail { flex-direction: column; overflow: visible; padding: 12px 0 0; }
+    .tp-side .tp-scard { width: auto; }
+}
 </style>
 <script>
 /* Palette param — mirrors the theme block above. Applied to <html> before
@@ -936,13 +1084,22 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
              disagree. Falls back to the plain #teamRecord text above when
              there's nothing to summarise. -->
         <div id="liveBadge" style="display:none;" class="live-badge">● LIVE NOW</div>
-        <div class="team-code" id="teamCode"></div>
 
         <!-- Follow button (under team info) -->
         <div id="followArea" style="margin-top:12px;"></div>
         <div class="follow-status" id="followStatus"></div>
     </div>
 
+    <!-- 2026-10-16 — Jump chips. One scrolling page still; these only jump.
+         A chip hides itself when its section is hidden (see tpSyncChips). -->
+    <nav class="tp-chips" id="tpChips" aria-label="Sections" style="display:none;">
+        <a href="#tpNow" data-target="tpNow">Now</a>
+        <a href="#seasonBlock" data-target="seasonBlock">Season</a>
+        <a href="#scheduleRailSection" data-target="scheduleRailSection">Schedule</a>
+        <a href="#resultsSection" data-target="resultsSection">Results</a>
+        <a href="#rosterSection" data-target="rosterSection">Roster</a>
+        <a href="#staffSection" data-target="staffSection">People</a>
+    </nav>
     <!-- Access Gate (private/invite-only hubs — requires sign-in) -->
     <div id="accessGate" style="display:none;" class="access-section">
         <div class="access-title">🔒 This team is private</div>
@@ -965,110 +1122,62 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
 
     <!-- Content (visible to approved subscribers + managers for private, everyone for public) -->
     <div id="teamContent" style="display:none;">
-        <!-- 2026-08-03 — the Won/Lost/Win% strip was removed: the season
-             summary box directly below says the same thing with more context
-             (played + still scheduled). Eric: "the top two areas are now
-             redundant." renderScoreline() no-ops when this element is absent. -->
-        <div id="seasonStatsCard" class="tp-season-card" style="display:none;"></div>
-
-        <!-- Live Now -->
+        <!-- 2026-10-16 — Redesign (Eric: "a big mishmash ... not very broken up").
+             Every block from the old page is still here, same ids, so the
+             scripts below are untouched. Two wrappers give desktop a main and
+             a side column; on phones they are display:contents and each block
+             carries an `order`, so a phone reads: now, season, schedule,
+             results, roster, people, followers, share, unfollow.
+             The previous page is kept verbatim at team-classic.html. -->
+        <div class="tp-col tp-main">
+        <div id="tpNow" class="tp-block">
         <div id="liveSection" style="display:none;" class="section">
-            <div class="section-title">🔴 Live Now</div>
+            <div class="section-title">Live now</div>
             <div id="liveGame"></div>
         </div>
-
-        <!-- 2026-08-02 — THE STAGE. One slot that is never blank: it holds the
-             next game's countdown, and when there's nothing scheduled it falls
-             back to the most recent completed game, then to a plain "no games
-             yet" line. A live game is handled by #liveSection directly above,
-             and renderStage() hides itself in that case rather than competing
-             with it for the same real estate. -->
         <div class="tp-stage" id="teamStage" style="display:none;"></div>
-
-        <!-- 2026-08-02 — Full upcoming schedule as a horizontal rail, next
-             game flagged. Fed by the same array loadSchedule() already builds
-             for the list below, so there is exactly one source of truth for
-             what's upcoming. -->
+        </div>
+        <div class="section" id="resultsSection">
+            <div class="section-title">Results <span id="managerBadge" style="display:none;" class="manager-badge">MANAGER</span></div>
+            <div id="pastGames"></div>
+        </div>
+        <div class="section" id="rosterSection" style="display:none;">
+            <div class="section-title">Roster</div>
+            <div id="rosterList"></div>
+        </div>
+        <div class="section" id="pendingRequestsSection" style="display:none;">
+            <div class="section-title">Followers</div>
+            <div id="pendingRequestsList"></div>
+        </div>
+        <div id="unfollowArea" style="display:none; text-align:center; margin-top:28px; padding-top:18px; border-top:1px solid var(--border, rgba(128,128,128,0.25));">
+            <button class="follow-btn unfollow-btn" onclick="confirmUnfollow()"
+                style="background:transparent; color:var(--text-secondary); border:1px solid var(--text-secondary); font-size:13px; padding:7px 18px;">Unfollow this team</button>
+        </div>
+        </div>
+        <div class="tp-col tp-side">
+        <div id="seasonBlock" class="tp-block">
+        <div class="section" id="seasonSwitcherSection" style="display:none; padding-bottom: 4px;">
+            <div class="section-title">Season</div>
+            <div id="seasonSwitcher" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;"></div>
+        </div>
+        <div id="seasonStatsCard" class="tp-season-card" style="display:none;"></div>
+        </div>
         <div id="scheduleRailSection" style="display:none;">
             <div class="tp-railhead"><span class="l" id="scheduleRailLabel">Schedule</span></div>
             <div class="tp-rail" id="scheduleRail"></div>
         </div>
-
-        <!-- v13 — Season switcher. Hidden when the team has 0 or 1 seasons.
-             Renders as a horizontal scroll of pills; tap to switch. The
-             selected season filters Upcoming + Past Games below. -->
-        <div class="section" id="seasonSwitcherSection" style="display:none; padding-bottom: 4px;">
-            <div class="section-title">🗓️ Season</div>
-            <div id="seasonSwitcher" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;"></div>
-        </div>
-
-        <!-- 2026-09-02 — "📊 Recent Games" (last 7 days) lived here and was
-             removed for the same reason as the upcoming list. It was built
-             from the SAME cards as Past Games below, filtered to the last week
-             and given a "-recent" id suffix — the old code comment about
-             de-duping the id collision "across the two strips" is the tell.
-             So anything played in the last seven days rendered twice on one
-             page. Past Games already contains them and loses nothing. -->
-
-        <!-- 2026-09-02 — The vertical "📅 Upcoming Games" list lived here and
-             was removed. It rendered the SAME scheduleUpcoming array as the
-             horizontal rail above, so every fixture appeared twice. Eric:
-             "on team pages we have two different sections for upcoming games",
-             and he chose to keep the rail — it already carries date, time,
-             venue, the NEXT badge and LIVE/postponed pills, so nothing was
-             lost. Writers to #upcomingGames are now null-guarded rather than
-             deleted, because the same functions also feed the rail and the
-             public-shell fallback. -->
-
-        <!-- Who runs this team. Names only, never contact details. -->
         <div class="section" id="staffSection" style="display:none;">
-            <div class="section-title">🧑‍🏫 Coaches &amp; managers</div>
+            <div class="section-title">Coaches &amp; managers</div>
             <div id="staffList"></div>
         </div>
-
-        <!-- Roster / Players -->
-        <div class="section" id="rosterSection" style="display:none;">
-            <div class="section-title">👥 Roster</div>
-            <div id="rosterList"></div>
-        </div>
-
-        <!-- Past Games -->
-        <div class="section">
-            <div class="section-title">📊 Past Games <span id="managerBadge" style="display:none;" class="manager-badge">MANAGER</span></div>
-            <div id="pastGames"></div>
-        </div>
-
-        <!-- 2026-06-08 — Pending follower requests + the follower list
-             (owner/managers only). Surfaced from the email notification's
-             "manage on the web" link so owners can approve/block without
-             opening the app.
-             2026-08-17 — Moved from the TOP of the page to down here. Eric:
-             "when I accepted, that needs to go away and followers should go all
-             the way at the bottom of the page for the owner." An owner opens
-             this page to look at the team, not at its administration, and the
-             requests card was the first thing above the schedule and roster. -->
-        <div class="section" id="pendingRequestsSection" style="display:none;">
-            <div class="section-title">👋 Followers</div>
-            <div id="pendingRequestsList"></div>
-        </div>
-
-        <!-- Share, at the bottom — parity with the game page. -->
         <div class="team-share-card" id="teamShareCard" style="display:none;">
             <div class="team-share-label">Share this team</div>
+            <div class="tp-share-code"><span class="k">Team code</span><span class="team-code" id="teamCode"></span></div>
             <div class="team-share-grid">
-                <button class="team-share-btn" type="button" id="teamCopyBtn">&#128279; Copy Link</button>
-                <button class="team-share-btn" type="button" id="teamShareBtn">&#128228; Share</button>
+                <button class="team-share-btn" type="button" id="teamCopyBtn">Copy link</button>
+                <button class="team-share-btn" type="button" id="teamShareBtn">Share</button>
             </div>
         </div>
-
-        <!-- 2026-08-17, Eric: Unfollow was removed from the app's fan card
-             entirely and moved to the very bottom here. It used to sit in the
-             header beside "✓ Following", which put a destructive action in the
-             busiest part of the page. Unfollowing is rare; it does not need to
-             be reachable in one tap, it needs to be findable when wanted. -->
-        <div id="unfollowArea" style="display:none; text-align:center; margin-top:28px; padding-top:18px; border-top:1px solid var(--border, rgba(128,128,128,0.25));">
-            <button class="follow-btn unfollow-btn" onclick="confirmUnfollow()"
-                style="background:transparent; color:var(--text-secondary); border:1px solid var(--text-secondary); font-size:13px; padding:7px 18px;">Unfollow this team</button>
         </div>
     </div>
 </div>
@@ -2050,6 +2159,8 @@ function updateUserBar() {
 function renderHeader() {
     const p = hubProfile;
     $('colorBar').style.background = `linear-gradient(90deg, ${p.color || '#1565C0'}, ${p.color2 || '#FFFFFF'})`;
+    // 2026-10-16 — the redesigned hero is painted in the team's colour.
+    document.documentElement.style.setProperty('--team-color', p.color || '#1565C0');
     // v1.1.643 — Team logo. `logoUrl` is the Firebase Storage public download
     // URL; only render when it actually starts with http(s) since pre-v643
     // docs may still carry phone-local paths.
@@ -4613,6 +4724,29 @@ function listenForLive() {
         if (changed) a.href = u.toString();
     }, true);
 })();
+</script>
+<script>
+/* 2026-10-16 — redesign: show the jump chips once the team content is up,
+   and hide each chip whose section the page scripts left hidden. */
+function tpSyncChips(){
+  var nav=document.getElementById('tpChips'), content=document.getElementById('teamContent');
+  if(!nav||!content) return;
+  var up=content.style.display!=='none';
+  nav.style.display=up?'':'none';
+  if(!up) return;
+  // A block whose every child is hidden is hidden too, so it adds no gap.
+  ['tpNow','seasonBlock'].forEach(function(id){
+    var b=document.getElementById(id); if(!b) return;
+    var any=[].some.call(b.children,function(c){return c.style.display!=='none';});
+    b.style.display=any?'':'none';
+  });
+  nav.querySelectorAll('a[data-target]').forEach(function(a){
+    var el=document.getElementById(a.getAttribute('data-target'));
+    var shown=!!el && el.style.display!=='none' && el.offsetParent!==null;
+    a.style.display=shown?'':'none';
+  });
+}
+setInterval(tpSyncChips,1200); document.addEventListener('DOMContentLoaded',tpSyncChips);
 </script>
 </body>
 </html>
