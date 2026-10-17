@@ -733,11 +733,17 @@ function renderV2() {
     if (next) {
         const mins = Math.round((next.time - Date.now()) / 60000);
         const when = next.time ? (mins > 0 && mins < 600 ? `in ${mins >= 60 ? Math.floor(mins / 60) + 'h ' : ''}${mins % 60}m` : hhmm(next.time)) : 'time TBD';
-        h += `<div class="v2-card" style="display:flex;align-items:center;gap:12px">
-            <div style="flex:1"><div class="v2-lbl" style="color:var(--accent)">Next match</div>
+        // The next match opens its game page: countdown, and the YouTube
+        // player when a stream was made ahead (2026-10-17, Eric: "if they
+        // click play on it it does the thing where it counts down").
+        const stream = /^https:\/\//.test(next.g.ytWatchUrl || '');
+        const href = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(next.g.id)}`;
+        h += `<a class="v2-card" href="${escH(href)}" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit">
+            ${stream ? '<div class="v2-play">▶</div>' : ''}
+            <div style="flex:1;min-width:0"><div class="v2-lbl" style="color:var(--accent)">Next match${stream ? ' · watch here' : ''}</div>
             <div style="font-weight:700">${escH([next.n ? v2MatchTitle(next.n) : '', 'vs ' + (next.g.opponent || 'TBD')].filter(Boolean).join(' · '))}</div>
             <div class="v2-sub">${escH([next.time ? hhmm(next.time) : '', next.g.court ? v2Court(next.g.court) : ''].filter(Boolean).join(' · '))}</div></div>
-            <div class="v2-res" style="color:var(--accent)">${escH(when)}</div></div>`;
+            <div class="v2-res" style="color:var(--accent)">${escH(when)}</div></a>`;
     }
     if (done.length || myRow) {
         h += `<div class="v2-tiles">
