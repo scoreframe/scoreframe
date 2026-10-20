@@ -881,6 +881,42 @@
     }
   };
 
+  // ---------- follow-up plans (AG.PLANS) ----------
+  /** The reminders a plan would add for this client, from today. */
+  AG.planSteps = (c, plan, now = Date.now()) => {
+    const nm = AG.firsts(c);
+    return plan.steps.filter((st) => !st.side || AG.has(c, st.side)).map((st) => {
+      let at = AG.at(AG.addDays(AG.day0(now), st.d), st.h || 10);
+      if (at < now) at = Math.min(AG.at(AG.addDays(AG.day0(now), st.d + 1), 9), now + 3600e3 * 2); // today's slot already passed
+      return { kind: st.kind, title: st.title.replace('{nm}', nm), at, allDay: false, tpl: st.tpl || '' };
+    });
+  };
+  /** Start a plan: adds its reminders (tagged with the run) and returns the run id. */
+  AG.startPlan = (c, planId, now = Date.now()) => {
+    const plan = AG.PLANS.find((p) => p.id === planId);
+    if (!plan) return null;
+    const run = AG.uid();
+    for (const st of AG.planSteps(c, plan, now)) AG.db.items.push({ id: AG.uid(), clientId: c.id, created: now, plan: planId, planRun: run, ...st });
+    (c.plans ||= []).push({ id: planId, run, at: now });
+    AG.log(c, 'note', `Started follow-up plan: ${plan.name}`);
+    AG.save();
+    return run;
+  };
+  /** Stop a plan: its not-done reminders go away; done ones stay in the history. */
+  AG.stopPlan = (c, run) => {
+    const before = AG.db.items.length;
+    AG.db.items = AG.db.items.filter((i) => !(i.planRun === run && !i.done));
+    c.plans = (c.plans || []).filter((p) => p.run !== run);
+    AG.save();
+    return before - AG.db.items.length;
+  };
+  /** Plans running on a client: [{plan, run, done, total, next}] */
+  AG.activePlans = (c) => (c.plans || []).map((p) => {
+    const items = AG.db.items.filter((i) => i.planRun === p.run);
+    const left = items.filter((i) => !i.done).sort((a, b) => a.at - b.at);
+    return { plan: AG.PLANS.find((x) => x.id === p.id) || { name: p.id }, run: p.run, done: items.length - left.length, total: items.length, next: left[0] };
+  }).filter((x) => x.total && x.done < x.total);
+
   // ---------- rules: what to suggest after a meeting ----------
   const CAD = { 'Every few days': 3, Weekly: 7, 'Every 2 weeks': 14, Monthly: 30, 'When something new comes up': 14, 'Twice a week': 3, 'After every showing': 7 };
   AG.cadenceDays = (c) => CAD[c.q.cadence] || CAD[c.q.sCadence] || ({ ASAP: 3, '1–3 months': 7, '3–6 months': 14 }[c.q.moveBy || c.q.sellBy] || 30);

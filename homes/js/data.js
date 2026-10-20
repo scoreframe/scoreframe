@@ -148,6 +148,40 @@
   ];
   AG.WS_LOANS = ['Conventional', 'FHA', 'VA', 'USDA', 'Jumbo', 'Cash'];
 
+  // Follow-up plans (ROADMAP #5 "drip sequences"): a series of reminders you start on a client in one tap.
+  // d = days from today, h = hour; {nm} = their first names. side limits a step to buyers / sellers.
+  AG.PLANS = [
+    { id: 'newlead', name: 'New lead — first 2 weeks', sub: 'Six touches while they’re hot', steps: [
+      { d: 0, h: 18, kind: 'text', title: 'Intro text to {nm}', tpl: 'intro' },
+      { d: 1, h: 10, kind: 'call', title: 'Call {nm}' },
+      { d: 3, h: 10, kind: 'email', title: 'Send {nm} a few homes', tpl: 'listings', side: 'buy' },
+      { d: 3, h: 10, kind: 'email', title: 'Send {nm} a home value snapshot', tpl: 'market', side: 'sell' },
+      { d: 7, h: 12, kind: 'text', title: 'Check in with {nm}', tpl: 'checkin' },
+      { d: 10, h: 17, kind: 'call', title: 'Call {nm} again' },
+      { d: 14, h: 10, kind: 'email', title: 'Market update for {nm}', tpl: 'market' },
+    ] },
+    { id: 'notready', name: 'Not ready yet — 6 months', sub: 'Stay in touch until they are', steps: [
+      { d: 7, h: 10, kind: 'email', title: 'Market update for {nm}', tpl: 'market' },
+      { d: 30, h: 12, kind: 'text', title: 'Check in with {nm}', tpl: 'checkin' },
+      { d: 60, h: 10, kind: 'email', title: 'Market update for {nm}', tpl: 'market' },
+      { d: 90, h: 17, kind: 'call', title: 'Call {nm} — how are plans?' },
+      { d: 120, h: 10, kind: 'email', title: 'Market update for {nm}', tpl: 'market' },
+      { d: 180, h: 12, kind: 'text', title: 'Ready to start, {nm}?', tpl: 'ready' },
+    ] },
+    { id: 'aftershow', name: 'After showings', sub: 'Feedback while it’s fresh', side: 'buy', steps: [
+      { d: 0, h: 19, kind: 'text', title: 'How did the homes feel, {nm}?', tpl: 'showfb' },
+      { d: 2, h: 10, kind: 'email', title: 'Send {nm} new homes like the favorite', tpl: 'listings' },
+      { d: 5, h: 17, kind: 'call', title: 'Call {nm} — next showings?' },
+    ] },
+    { id: 'listing', name: 'Listing — weekly seller updates', sub: 'Showings, feedback and the market, every week for 8 weeks', side: 'sell', steps: [7, 14, 21, 28, 35, 42, 49, 56].map((d) => ({ d, h: 10, kind: 'email', title: 'Weekly listing update for {nm}', tpl: 'market' })) },
+    { id: 'pastclient', name: 'Past client — year of touches', sub: 'Birthdays and anniversaries are already automatic', steps: [
+      { d: 90, h: 12, kind: 'text', title: 'Check in with {nm}', tpl: 'checkin' },
+      { d: 180, h: 10, kind: 'email', title: 'Home value update for {nm}', tpl: 'market' },
+      { d: 270, h: 12, kind: 'text', title: 'Check in with {nm}', tpl: 'checkin' },
+      { d: 365, h: 17, kind: 'call', title: 'Yearly call with {nm} — referrals?' },
+    ] },
+  ];
+
   // Top 10 Buyer Rules — how the buyer stays out of trouble between contract and closing
   // (from Eric's course workbook, 2026-10-20). `why` is the talking point under each rule.
   AG.BUYER_RULES = [
@@ -496,6 +530,10 @@
     { id: 'sellerForm', name: 'Seller questionnaire (link)', kind: 'text', subject: 'A few questions before we meet', body: 'Hi {first}! Before we meet, here are a few quick questions about your home — about 10 minutes, skip anything you’re not sure of: {link}\n\n{agent}' },
     { id: 'sellerQs', name: 'Seller questions (email)', kind: 'email', subject: 'A few questions before we meet', body: 'Hi {first},\n\nSo I can come prepared, would you reply with what you know? Skip anything you’re not sure of — we’ll fill in the rest together.\n\n{list}\n\nThank you!\n{agent}' },
     { id: 'contractNeeds', name: 'Listing paperwork needed', kind: 'email', subject: 'What we’ll need for your listing{forAddress}', body: 'Hi {first},\n\nTo get your listing agreement ready, here’s what I still need from you:\n\n{list}\n\nNo rush on anything you need to look up — send what you have and we’ll sort out the rest.\n\n{agent}' },
+    { id: 'intro', name: 'Nice to meet you', kind: 'text', body: 'Hi {first}, it’s {agent} — great to connect! What’s the best time for a quick call this week to talk about your plans?' },
+    { id: 'market', name: 'Market update', kind: 'email', subject: 'What the market’s doing right now', body: 'Hi {first},\n\nA quick look at the market near you: [new listings / what sold / price trend].\n\nWhenever you’re ready to talk next steps, I’m here — no pressure.\n\n{agent}\n{agentPhone}' },
+    { id: 'showfb', name: 'After the showings', kind: 'text', body: 'Hi {first}, thanks for touring today! Which one is still on your mind? Anything you’d change about what we’re looking for?' },
+    { id: 'ready', name: 'Ready to start?', kind: 'text', body: 'Hi {first}, it’s been a little while — are you still thinking about a move this year? Happy to put together an update for you.' },
     { id: 'checkin', name: 'Checking in', kind: 'text', body: 'Hi {first}, just checking in — how is everything going? Anything I can help with?' },
     { id: 'lender', name: 'Lender intro', kind: 'text', body: 'Hi {first}, here’s the lender I mentioned: {lender}. They’re great to work with and can get you pre-approved quickly.' },
     { id: 'showing', name: 'Showing confirmed', kind: 'text', body: 'Hi {first}, you’re all set to see {address} {date}. See you there!' },

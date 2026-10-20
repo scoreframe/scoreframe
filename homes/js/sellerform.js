@@ -7,6 +7,8 @@
   'use strict';
   const AG = G.AG, esc = AG.esc, ic = AG.ic, A = AG.acts;
   const SECS = () => AG.SELLER_FORM;
+  /** Where seller.html is published (Tools/publish_web.sh). Eric 2026-10-20: "put the web on ScoreFrame.app for now". */
+  AG.FORMS_URL = 'https://scoreframe.app/homes';
   const visible = (sec, q) => sec.qs.filter((x) => !x.show || x.show(q));
 
   /** One step of the questionnaire (i = SECS().length is the review). host: { q, i, by, standalone }. */
