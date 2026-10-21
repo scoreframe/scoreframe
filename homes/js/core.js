@@ -838,6 +838,7 @@
     email: { label: 'Email', icon: 'mail' },
     meet: { label: 'Meeting', icon: 'users' },
     showing: { label: 'Showing', icon: 'house' },
+    closing: { label: 'Closing', icon: 'key' },
     task: { label: 'To-do', icon: 'check' },
     deadline: { label: 'Deadline', icon: 'flag' },
     date: { label: 'Date', icon: 'gift' },
@@ -890,6 +891,10 @@
     for (const i of open) {
       if (!i.allDay && i.at > now && i.at < horizon)
         out.push({ id: 'i_' + i.id, at: i.at, title: i.title, body: [AG.KINDS[i.kind]?.label, who(i)].filter(Boolean).join(' · '), open: link(i) });
+      // All-day items get their own alert in the morning of their day (they used to be only a line in the digest).
+      const morning = i.allDay && AG.at(AG.day0(i.at), s.digestHour);
+      if (morning && morning > now && morning < horizon)
+        out.push({ id: 'i_' + i.id, at: morning, title: i.title, body: ['Today', AG.KINDS[i.kind]?.label, who(i)].filter(Boolean).join(' · '), open: link(i) });
       if (i.warn && i.at < horizon + i.warn * DAY) {
         const w = AG.at(AG.addDays(AG.day0(i.at), -i.warn), s.digestHour);
         if (w > now && w < horizon) out.push({ id: 'w_' + i.id, at: w, title: `${i.title} — ${AG.countdown(i.at, w)}`, body: [who(i), AG.fmtDay(i.at)].filter(Boolean).join(' · '), open: link(i) });
@@ -898,7 +903,7 @@
     for (let d = 0; d < 21; d++) {
       const day = AG.addDays(AG.day0(now), d), at = AG.at(day, s.digestHour);
       if (at <= now) continue;
-      const list = open.filter((i) => AG.day0(i.at) === day).sort((a, b) => a.at - b.at);
+      const list = open.filter((i) => AG.day0(i.at) === day && !i.allDay).sort((a, b) => a.at - b.at); // all-day ones alert on their own
       const late = open.filter((i) => AG.day0(i.at) < day).length;
       if (!list.length && !late) continue;
       const title = list.length ? `${list.length} on your schedule today` : `${late} follow-up${late > 1 ? 's' : ''} overdue`;
@@ -1043,7 +1048,7 @@
   AG.contractDates = (c, side, d) => {
     const base = AG.fromYmd(d.contract), close = AG.fromYmd(d.close), where = d.where || AG.cname(c);
     const made = [];
-    const put = (key, title, at, warn) => { if (at) made.push(AG.upsertAuto(c.id, `${side}_${key}`, { kind: 'deadline', title, at, allDay: true, warn, side })); };
+    const put = (key, title, at, warn, kind = 'deadline') => { if (at) made.push(AG.upsertAuto(c.id, `${side}_${key}`, { kind, title, at, allDay: true, warn, side })); };
     if (base) {
       if (d.emd) put('emd', `Earnest money due — ${where}`, AG.addDays(base, +d.emd), 1);
       if (d.insp) put('insp', `Inspection deadline — ${where}`, AG.addDays(base, +d.insp), 2);
@@ -1052,7 +1057,7 @@
     }
     if (close) {
       put('walk', `Final walkthrough — ${where}`, AG.addDays(close, -1), 2);
-      put('close', `🔑 Closing — ${where}`, close, 7);
+      put('close', `🔑 Closing — ${where}`, close, 7, 'closing');
     }
     AG.save();
     return made;
