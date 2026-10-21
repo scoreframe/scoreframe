@@ -1128,6 +1128,7 @@
     if (h.commute) add('Commute', 'Commute', h.commute <= 20 ? 1 : h.commute <= 35 ? 0.6 : 0.2, `${h.commute} min commute`);
     const gWant = { '1 car': 1, '2 car': 2, '3+ car': 3 }[q.garage];
     if (gWant && h.garage != null && h.garage !== '') add('Garage', 'Garage', +h.garage >= gWant ? 1 : +h.garage > 0 ? 0.4 : 0, `${h.garage || 'No'}-car garage`);
+    if (h.year && q.yearMin) add('Move-in ready', 'Year built', +h.year >= +q.yearMin ? 1 : +h.year >= +q.yearMin - 5 ? 0.6 : 0.2, `Built ${h.year} (wants ${q.yearMin} or newer)`);
     if (h.condition) add('Move-in ready', 'Condition', { 'Move-in ready': 1, 'Needs updates': 0.5, 'Fixer-upper': 0.1 }[h.condition] ?? 0.5, h.condition);
     if (h.features.length || h.flags.length) {
       const yard = ['Yard', 'Fenced yard', 'Big lot'].some((f) => has(h.features, f));
@@ -1157,6 +1158,7 @@
     if (q.beds) bits.push(`${q.beds.replace('+', '')}+ beds`);
     if (q.baths) bits.push(`${q.baths.replace('+', '')}+ baths`);
     if (q.sqft) bits.push(`${AG.num(q.sqft)}+ sq ft`);
+    if (q.yearMin) bits.push(`built ${q.yearMin} or newer`);
     if (q.garage && q.garage !== 'None ok') bits.push(`${q.garage} garage`);
     if (q.propType?.length) bits.push(q.propType.join(', '));
     if (q.searchArea || q.areas) bits.push(`Areas: ${[q.searchArea, q.areas].filter(Boolean).join('; ')}`);
@@ -1175,6 +1177,7 @@
     if (beds) fs.beds = { min: beds };
     if (baths) fs.baths = { min: baths };
     if (q.sqft) fs.sqft = { min: +q.sqft };
+    if (q.yearMin) fs.built = { min: +q.yearMin };
     const zs = { usersSearchTerm: area || '', filterState: fs, isListVisible: true, isMapVisible: true };
     const zillow = `https://www.zillow.com/homes/for_sale/${area ? encodeURI(area.replace(/,/g, '').replace(/\s+/g, '-')) + '_rb/' : ''}?searchQueryState=${encodeURIComponent(JSON.stringify(zs))}`;
     let loc = '';
@@ -1189,7 +1192,7 @@
     // Redfin's search pages need its own region ids, except ZIP codes; otherwise search Redfin through Google.
     const zip = (area || '').match(/\b\d{5}\b/);
     const k = (n) => Math.round(n / 1000) + 'k';
-    const rf = [lo && `min-price=${k(lo)}`, hi && `max-price=${k(hi)}`, beds && `min-beds=${beds}`, baths && `min-baths=${baths}`].filter(Boolean).join(',');
+    const rf = [lo && `min-price=${k(lo)}`, hi && `max-price=${k(hi)}`, beds && `min-beds=${beds}`, baths && `min-baths=${baths}`, q.yearMin && `min-year-built=${+q.yearMin}`].filter(Boolean).join(',');
     const redfin = zip ? `https://www.redfin.com/zipcode/${zip[0]}${rf ? '/filter/' + rf : ''}` : AG.webSearchUrl(`site:redfin.com ${area || ''} homes for sale${beds ? ' ' + beds + ' beds' : ''}`.trim());
     return { zillow, realtor, redfin, google };
   };

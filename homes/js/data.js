@@ -404,6 +404,7 @@
       { k: 'beds', t: 'one', label: 'Bedrooms (at least)', opts: ['1', '2', '3', '4', '5+'] },
       { k: 'baths', t: 'one', label: 'Bathrooms (at least)', opts: ['1', '1.5', '2', '2.5', '3+'] },
       { k: 'sqft', t: 'num', label: 'Sq ft (at least)', half: 1 },
+      { k: 'yearMin', t: 'num', label: 'Year built (min)', ph: 'e.g. 1990', half: 1 },
       { k: 'garage', t: 'one', label: 'Garage', opts: ['None ok', '1 car', '2 car', '3+ car'] },
       { k: 'must', t: 'many', label: 'Must-haves', opts: AG.FEATURES },
       { k: 'dealbreakers', t: 'many', label: 'Deal-breakers', opts: AG.FLAGS },
