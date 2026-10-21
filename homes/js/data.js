@@ -220,6 +220,7 @@
   // Agency relationships, as on the Missouri brokerage disclosure form (Eric, 2026-10-20).
   AG.AGENCY = ['Buyer’s Limited Agent', 'Seller’s Limited Agent', 'Tenant’s Limited Agent', 'Landlord’s Limited Agent', 'Sub-Agent', 'Disclosed Dual Agent', 'Designated Agent', 'Transaction Broker', 'Other agency relationship'];
   const BUY_AGENCY = ['Buyer’s Limited Agent', 'Transaction Broker', 'Designated Agent', 'Disclosed Dual Agent', 'Sub-Agent', 'Other agency relationship'];
+  const LA_TYPES = ['Exclusive right to sell', 'Exclusive agency', 'Open listing'];
   const SELL_AGENCY = ['Seller’s Limited Agent', 'Transaction Broker', 'Designated Agent', 'Disclosed Dual Agent', 'Sub-Agent', 'Other agency relationship'];
 
   // Meeting questionnaire. Eric 2026-10-20: drop the RESUMA framing and keep it short — "just make sure
@@ -319,6 +320,9 @@
       { k: 'otherAgents', t: 'one', label: 'Interviewing other agents?', opts: ['No', 'Yes', 'Not sure'] },
       { k: 'sAgency', t: 'one', label: 'Your relationship to them', opts: SELL_AGENCY, tip: 'From your brokerage relationship disclosure.' },
       { k: 'sAgencyDate', t: 'date', label: 'Disclosure signed', half: 1 },
+      // Eric 2026-10-20 asked for "exclusive" here — on the Missouri form that's the agreement type, not the relationship.
+      { k: 'laType', t: 'one', label: 'Listing agreement type', opts: LA_TYPES,
+        tip: 'Exclusive right to sell: you’re paid whoever finds the buyer (the KCRAR listing contract). Exclusive agency: you’re their only agent, but no fee if they find the buyer themselves. Open: any agent can sell it; only the one who does is paid.' },
       { k: 'sNegotiable', t: 'yn', label: 'Told them commissions are negotiable and not set by law?', tip: 'The listing agreement has to say so in plain, conspicuous language.' },
       { k: 'offerBuyerComp', t: 'one', label: 'Offer compensation to buyer’s agents?', opts: ['Yes', 'No', 'Decide per offer'], tip: 'Their choice — nothing requires it. Offers can’t go in the MLS, and buyers must be told about any offer early.' },
       { k: 'buyerCompPct', t: 'num', label: 'Offered %', half: 1, show: (q) => q.offerBuyerComp === 'Yes' },
@@ -651,7 +655,7 @@
       addr: '4512 Oak Ridge Dr', city: 'Springfield', zip: '65804', sType: 'Single family', sBeds: 4, sBaths: 3, sSqft: 2650, sYear: 1998, boughtYear: 2011,
       sellWhy: ['Relocating'], sellBy: '1–3 months', next: 'Buying elsewhere', sMotivation: 9,
       expect: 640000, minNet: 380000, payoff: 212000, allAgree: 'Yes', cond: 'Move-in ready', updates: ['Roof', 'Kitchen', 'HVAC'], updatesNote: 'Roof 2020, kitchen 2018, HVAC 2022',
-      occupancy: 'Owner', showings: '24 hours’ notice', lockbox: 'Yes', sAgency: 'Seller’s Limited Agent', sAgencyDate: ymd(-20), sNegotiable: 'Yes', offerBuyerComp: 'Yes', buyerCompPct: 2, buyerCompApproved: ymd(-20), la: 'Signed today', sNeeds: ['Top dollar', 'Close by a date'], soldBefore: 'Yes', sExpDisliked: 'Last agent never shared showing feedback', loveHome: 'Huge kitchen island, wooded backyard, finished basement theater', listPrice: 625000, listPct: 2.75, listDate: ymd(-12), listExpires: ymd(170), sCadence: 'Weekly',
+      occupancy: 'Owner', showings: '24 hours’ notice', lockbox: 'Yes', sAgency: 'Seller’s Limited Agent', sAgencyDate: ymd(-20), laType: 'Exclusive right to sell', sNegotiable: 'Yes', offerBuyerComp: 'Yes', buyerCompPct: 2, buyerCompApproved: ymd(-20), la: 'Signed today', sNeeds: ['Top dollar', 'Close by a date'], soldBefore: 'Yes', sExpDisliked: 'Last agent never shared showing feedback', loveHome: 'Huge kitchen island, wooded backyard, finished basement theater', listPrice: 625000, listPct: 2.75, listDate: ymd(-12), listExpires: ymd(170), sCadence: 'Weekly',
     });
     robert.sell.stage = 'active';
     robert.sell.deal = { price: 625000, pct: 2.75 };

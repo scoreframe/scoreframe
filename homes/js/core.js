@@ -560,6 +560,7 @@
     const terms = [
       ...need(b(q.legal), 'Legal description (or the Legal Description Addendum)'),
       ...need(b(q.propKind), 'Residential resale, new construction or land'),
+      ...need(b(q.laType), 'Listing agreement type (exclusive right to sell?)'),
       ...need(b(q.listPrice), 'List price'),
       ...need(b(q.listDate) || b(q.listExpires), 'Listing period (start and end)'),
       ...need(b(q.mlsStatus) || (q.mlsStatus === 'No showings until a date' && b(q.mlsActive)), 'MLS status / showing start date'),
@@ -587,7 +588,8 @@
     if (q.foreign === 'Yes') add('FIRPTA — advise an attorney or accountant', 'An owner is a foreign person for tax purposes');
     if (b(q.sAgencyDate)) add(disclosure, kansas ? 'At the first practical opportunity' : other ? 'Check your state’s timing' : 'Before the listing is signed or personal / financial info is gathered');
     const total = seller.length + terms.length;
-    return { seller, terms, forms, missing: total, kansas, other };
+    const notErts = !b(q.laType) && q.laType !== 'Exclusive right to sell';
+    return { seller, terms, forms, missing: total, kansas, other, notErts };
   };
   /** The listing details in the contract's order, for filling in the official form. */
   AG.contractText = (c) => {
@@ -600,7 +602,8 @@
     const L = [
       `LISTING CONTRACT DETAILS — ${addr || 'property'}`,
       `Seller(s): ${v(names)}${q.marital ? ` (${q.marital.toLowerCase()})` : ''}`,
-      `Broker: ${v(s.brokerage)} · Licensee: ${v(s.agent)}`,
+      `Broker: ${v(s.brokerage)} · Licensee: ${v(s.agent)}${q.sAgency ? ` · ${q.sAgency}` : ''}`,
+      `Listing agreement: ${v(q.laType)}`,
       `Property: ${v(addr)}`,
       `Legal description: ${v(q.legal)}`,
       `Listing period: ${d(q.listDate)} through ${d(q.listExpires)} (11:59 p.m.) · Price: ${q.listPrice ? AG.money(q.listPrice) : '—'}`,
