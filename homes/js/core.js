@@ -166,6 +166,7 @@
       c.q = c.q || {};
       c.sides = c.sides || ['buy'];
       c.done = c.done || {};
+      c.skip = c.skip || {};
       c.custom = c.custom || [];
       c.log = c.log || [];
       c.ready = c.ready || {};
@@ -709,7 +710,7 @@
     return { addr: q.mailAddr || '', home: null };
   };
   AG.newClient = (sides) => {
-    const c = { id: AG.uid(), sides: sides.slice(), q: {}, status: 'active', temp: '', created: Date.now(), updated: Date.now(), done: {}, custom: [], log: [], ready: {} };
+    const c = { id: AG.uid(), sides: sides.slice(), q: {}, status: 'active', temp: '', created: Date.now(), updated: Date.now(), done: {}, skip: {}, custom: [], log: [], ready: {} };
     for (const s of sides) c[s] = { stage: 'lead' };
     return c;
   };
@@ -737,12 +738,14 @@
     ...(AG.CHECK[side][stageId] || []).map(([id, text, o]) => ({ id, text, ...(o || {}) })),
     ...c.custom.filter((x) => x.side === side && x.stage === stageId),
   ];
+  /** A stage is complete when every step is checked or skipped (Eric: "some steps we can skip"). */
   AG.progress = (c, side, stageId) => {
-    const l = AG.checklist(c, side, stageId);
-    return { done: l.filter((x) => c.done[x.id]).length, total: l.length };
+    const l = AG.checklist(c, side, stageId), skip = c.skip || {};
+    const done = l.filter((x) => c.done[x.id]).length, skipped = l.filter((x) => !c.done[x.id] && skip[x.id]).length;
+    return { done, skipped, total: l.length, complete: l.length > 0 && done + skipped === l.length };
   };
   AG.nextStep = (c, side) => {
-    const it = AG.checklist(c, side, AG.stageOf(c, side).id).find((x) => !c.done[x.id]);
+    const it = AG.checklist(c, side, AG.stageOf(c, side).id).find((x) => !c.done[x.id] && !(c.skip || {})[x.id]);
     return it ? it.text : '';
   };
   AG.openItems = (clientId) => AG.db.items.filter((i) => !i.done && (!clientId || i.clientId === clientId)).sort((a, b) => a.at - b.at);

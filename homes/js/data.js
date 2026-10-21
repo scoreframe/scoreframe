@@ -120,7 +120,7 @@
         ['s_title', 'Title & payoff ordered'],
         ['s_hoa', 'HOA resale documents'],
         ['s_move', 'Move-out plan & utilities'],
-        ['s_walk', 'Final walkthrough'],
+        ['s_final', 'Final walkthrough'],
       ],
       closed: [
         ['s_closed', 'Closed — keys & remotes handed over'],

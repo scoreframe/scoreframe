@@ -32,6 +32,7 @@
     back: '<path d="M15 5l-7 7 7 7"/>',
     right: '<path d="m9 5 7 7-7 7"/>',
     down: '<path d="m5 9 7 7 7-7"/>',
+    minus: '<path d="M6 12h12"/>',
     more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
     x: '<path d="M6 6l12 12M18 6 6 18"/>',

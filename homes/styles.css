@@ -322,6 +322,23 @@ body.nonav #toast { bottom: calc(var(--sab) + 90px + var(--kb)); }
 .check .txt b { font-weight: 650; display: block; }
 .check.on .txt b { color: var(--mu); text-decoration: line-through; }
 .check .txt small { color: var(--mu); font-size: 12px; display: block; }
+.check.skipped .box { border-style: dashed; color: var(--mu); }
+.check.skipped .txt b { color: var(--mu); }
+.skipb { flex: none; align-self: center; font-size: 12px; font-weight: 800; color: var(--mu); padding: 6px 10px; border-radius: 999px; background: var(--s2); }
+.check.skipped .skipb { color: var(--act); }
+/* the stage's own "done" box: round, set apart from the square step boxes */
+.stepdone { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 4px; border: 1.5px dashed var(--ln); border-radius: 14px; cursor: pointer; }
+.stepdone .ring { width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid var(--ac); display: grid; place-items: center; color: transparent; flex: none; }
+.stepdone .ring .ic { width: 16px; height: 16px; stroke-width: 3.2; }
+.stepdone .txt b { display: block; font-weight: 800; }
+.stepdone .txt small { display: block; color: var(--mu); font-size: 12px; }
+.stepdone.on { border-style: solid; border-color: var(--ac); background: var(--acs); }
+.stepdone.on .ring { background: var(--ac); color: var(--on); }
+.stepdone.on .txt b { color: var(--act); }
+.stage-list .stepdone { margin-top: 4px; }
+.st.part::before { background: var(--ac); }
+.st.part i { border-color: var(--amber); }
+.callout.gold { background: var(--gold); color: #2A1E00; }
 .stage-list { margin-top: 6px; }
 .stage-list summary { list-style: none; display: flex; justify-content: space-between; padding: 10px 0; font-weight: 800; border-top: 1px solid var(--ln); cursor: pointer; }
 .stage-list summary::-webkit-details-marker { display: none; }
