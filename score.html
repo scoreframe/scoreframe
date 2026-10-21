@@ -412,6 +412,10 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
     font-size: 14px; font-weight: 700; color: var(--text-primary);
     margin-bottom: 10px; text-align: center;
 }
+.modal-subtitle {
+    font-size: 13px; color: var(--text-secondary);
+    margin: -4px 0 12px; text-align: center;
+}
 .modal-roster-row {
     display: flex; align-items: center; gap: 10px;
     padding: 10px 12px;
@@ -954,6 +958,47 @@ function sendPlayerStatIntent(side, statName, playerId, clockLabel) {
     });
 }
 
+// ── The camera's "Set complete?" question (2026-10-21) ───────────────
+// The camera publishes state/setPrompt while it is asking (Android
+// FirebaseRelayServer.setSetPrompt, iOS the same key). Answering here sends
+// SET_PROMPT and the camera applies it with its own rules: the next set, or the
+// set-ending point undone. Before this the question appeared only on the camera,
+// which nobody is holding when the set is scored from this page (Lan's report:
+// sets didn't end at 25).
+let setPromptKey = null;
+function renderSetPrompt(p) {
+    const existing = document.getElementById('setPromptScrim');
+    if (!p) {
+        if (existing) existing.remove();
+        setPromptKey = null;
+        return;
+    }
+    const key = `${p.set}-${p.home}-${p.away}`;
+    if (existing && key === setPromptKey) return;
+    if (existing) existing.remove();
+    setPromptKey = key;
+    const setNo = esc(String(p.set || ''));
+    const scrim = document.createElement('div');
+    scrim.id = 'setPromptScrim';
+    scrim.className = 'modal-scrim';
+    scrim.innerHTML = `
+        <div class="modal-card">
+            <div class="modal-title">Set ${setNo} complete?</div>
+            <div class="modal-subtitle">${esc(p.winner || '')} wins it, ${esc(String(p.home))}–${esc(String(p.away))}</div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="answerSetPrompt(false)">No, undo that point</button>
+                <button class="modal-btn primary" onclick="answerSetPrompt(true)">Confirm set ${setNo}</button>
+            </div>
+        </div>`;
+    document.body.appendChild(scrim);
+}
+window.answerSetPrompt = (confirm) => {
+    if (!currentCode) return;
+    push(ref(db, `sessions/${currentCode}/commands`), { type: 'SET_PROMPT', confirm: !!confirm, sentAt: Date.now() });
+    const card = document.querySelector('#setPromptScrim .modal-card');
+    if (card) card.innerHTML = '<div class="modal-title">Sending to the camera…</div>';
+};
+
 function updateAndSend(mutator) {
     if (!currentState) return;
     const prev = clone(currentState);
@@ -1114,6 +1159,9 @@ function listenForState(code) {
             currentState = st;
             if (data.seq) lastSeq = Math.max(lastSeq, data.seq);
         }
+
+        // The camera's "Set complete?" question, when it is asking.
+        renderSetPrompt(gs === 'ACTIVE' || gs === 'STARTING' ? (data.setPrompt || null) : null);
 
         // Determine which screen to show
         if (gs === 'IDLE' || gs === 'ENDED') {
