@@ -229,6 +229,17 @@
   // side uses), so the money picture can count what selling it frees up — and whether that money only
   // arrives after their sale closes (a sale-contingent purchase).
   const TITLE_HOW = ['In their names', 'A trust', 'An LLC / company', 'An estate'];
+  // Eric 2026-10-20: when the home is in a trust, the proceeds are paid to the trust — the seller may need a bank
+  // account in the trust's name to deposit them, and that's worth knowing at the listing, not at the closing table.
+  const inTrust = (q) => q.titleHow === 'A trust';
+  const TRUST_QS = [
+    { k: 'trustName', t: 'text', label: 'Trust’s exact name', ph: 'The Smith Family Trust dated 3/4/2015', cap: 1, show: inTrust, sellerLabel: 'The trust’s exact name' },
+    { k: 'trustee', t: 'text', label: 'Trustee(s) who will sign', cap: 1, show: inTrust, sellerLabel: 'Trustee(s) who will sign', tip: 'Title will ask for the trust papers (or a certificate of trust) showing who can sign.' },
+    { k: 'trustBank', t: 'one', label: 'Bank account in the trust’s name?', opts: ['Has one', 'Will open one', 'Not sure'], show: inTrust,
+      tip: 'The sale money is paid to the owner on the deed — the trust — so the check (or wire) is made out to the trust. They’ll likely need an account in the trust’s name to deposit it. Banks ask for the trust papers, so start early.',
+      sellerLabel: 'Do you have a bank account in the trust’s name?',
+      sellerTip: 'At closing, your sale money is paid to the trust (the owner on the deed), so the check or wire is made out to the trust. You’ll likely need an account in the trust’s name to deposit it. Banks ask for the trust papers, so it’s worth starting early.' },
+  ];
   const LOOKING = ['Just starting', 'A few weeks', '1–3 months', '3–6 months', '6+ months'];
   const owns = (q, c) => q.living === 'Own a home' || !!(c && c.sides.includes('sell'));
   const ownsNotListing = (q, c) => q.living === 'Own a home' && !(c && c.sides.includes('sell'));
@@ -290,7 +301,8 @@
       { k: 'liens', t: 'yn', label: 'Any liens, judgments or back taxes?' },
       { k: 'onTitle', t: 'text', label: 'Everyone on title', ph: 'Names exactly as on the deed', half: 1 },
       { k: 'allAgree', t: 'yn', label: 'All on board?', half: 1 },
-      { k: 'titleHow', t: 'one', label: 'Title is held', opts: TITLE_HOW },
+      { k: 'titleHow', t: 'one', label: 'Title is held — is it in a trust?', opts: TITLE_HOW },
+      ...TRUST_QS,
       { k: 'marital', t: 'one', label: 'Marital status', opts: ['Married', 'Single', 'Divorced', 'Widowed'], tip: 'Goes next to the seller names on the listing contract.' },
       { k: 'insurer', t: 'text', label: 'Homeowner’s insurance company', half: 1 },
       { k: 'foreign', t: 'yn', label: 'Any owner a foreign person (tax)?', half: 1, tip: 'FIRPTA — they should talk to an attorney or accountant before signing.' },
@@ -468,7 +480,8 @@
     ] },
     { id: 'own', title: 'Ownership & loans', qs: [
       { k: 'onTitle', t: 'text', label: 'Everyone on the deed', ph: 'Names exactly as on the deed', tip: 'Everyone on title has to sign.' },
-      { k: 'titleHow', t: 'one', label: 'The home is owned', opts: TITLE_HOW },
+      { k: 'titleHow', t: 'one', label: 'Is the home in your own names, or held in a trust?', opts: TITLE_HOW },
+      ...TRUST_QS.map((q) => ({ ...q, label: q.sellerLabel || q.label, tip: q.sellerTip || q.tip })),
       { k: 'payoff', t: 'money', label: 'Mortgage balance (about)', half: 1, ph: '$0 if paid off' },
       { k: 'lender1', t: 'text', label: 'Mortgage company', half: 1 },
       { k: 'payoff2', t: 'money', label: '2nd mortgage / HELOC (about)', half: 1, ph: '$0 if none' },

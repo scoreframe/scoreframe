@@ -547,6 +547,8 @@
       ...need(b(q.marital), 'Marital status'),
       ...need(b(q.onTitle), 'Everyone on the deed (exact names)'),
       ...need(b(q.titleHow), 'How title is held (names, trust, LLC, estate)'),
+      ...need(q.titleHow === 'A trust' && (b(q.trustName) || b(q.trustee)), 'Trust name and trustee(s)'),
+      ...need(q.titleHow === 'A trust' && q.trustBank !== 'Has one', 'Bank account in the trust’s name (the proceeds are paid to the trust)'),
       ...need(b(q.addr) || b(q.city) || b(q.zip), 'Property address'),
       ...need(b(q.sSt), 'State'),
       ...need(b(q.sYear), 'Year built'),
@@ -581,7 +583,7 @@
     if (q.cDual === 'Yes' && !kansas) add(other ? 'Dual agency consent (your state’s form)' : 'Disclosed Dual Agency Amendment', other ? 'If your state allows dual agency' : 'Signed if dual agency is used (Missouri only)');
     if (q.inetOptOut === 'Yes') add('Internet advertising Opt-Out form', 'They’re opting out of internet advertising');
     if (q.warranty === 'Buying one') add('Home warranty application', `${q.warrantyCo || 'Warranty company'}${q.warrantyMax ? ', up to ' + AG.money(q.warrantyMax) : ''}`);
-    if (/trust|LLC|estate/i.test(q.titleHow || '')) add('Trust / LLC / estate documents', 'Showing who can sign for the owner');
+    if (/trust|LLC|estate/i.test(q.titleHow || '')) add(q.titleHow === 'A trust' ? 'Trust papers or certificate of trust' : 'LLC / estate documents', 'Showing who can sign for the owner');
     if (q.foreign === 'Yes') add('FIRPTA — advise an attorney or accountant', 'An owner is a foreign person for tax purposes');
     if (b(q.sAgencyDate)) add(disclosure, kansas ? 'At the first practical opportunity' : other ? 'Check your state’s timing' : 'Before the listing is signed or personal / financial info is gathered');
     const total = seller.length + terms.length;
@@ -615,6 +617,7 @@
       `    Compensation is fully negotiable and not set by law.`,
       `10c. Protection period: ${+q.protection || 90} days`,
       `11. Title evidence through: ${v(q.titleCo)} · Vested in: ${v(q.onTitle)}${q.titleHow && q.titleHow !== 'In their names' ? ` (${q.titleHow.replace(/^An? /, '')})` : ''}`,
+      ...(q.titleHow === 'A trust' ? [`    Trust: ${v(q.trustName)} · Trustee(s): ${v(q.trustee)} · Account in the trust’s name: ${v(q.trustBank)}`] : []),
       `12. Home warranty: ${q.warranty === 'Buying one' ? `up to ${q.warrantyMax ? AG.money(q.warrantyMax) : '$—'} from ${q.warrantyCo || '—'}` : q.warranty === 'Not buying' ? 'declined' : '—'}`,
       `13. Foreign person (FIRPTA): ${yn(q.foreign)}`,
       `16. Additional terms: ${v(q.addlTerms)}`,
