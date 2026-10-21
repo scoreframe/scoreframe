@@ -241,6 +241,15 @@
     if (el.type === 'checkbox') return el.checked;
     if (t === 'money' || t === 'num') return AG.parseNum(el.value);
     if (t === 'dt') return el.value ? new Date(el.value).getTime() : null;
+    if (t === 'md') {
+      // Month + day selects → "MM-DD" once both are picked (Apr 31 → Apr 30).
+      const w = el.closest('.md'), ds = w.querySelector('[data-p=d]'), m = +w.querySelector('[data-p=m]').value;
+      let d = +ds.value;
+      if (!m || !d) return '';
+      d = Math.min(d, new Date(2000, m, 0).getDate());
+      if (+ds.value !== d) ds.value = d;
+      return `${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
     return el.value;
   }
   function onField(e) {
@@ -360,6 +369,17 @@
       case 'date':
         ctl = `<input ${common} type="date" value="${esc(v || '')}">`;
         break;
+      case 'md': {
+        const md = AG.mdOf(v) || [0, 0], opt = (n, l, on) => `<option value="${n}"${on ? ' selected' : ''}>${l}</option>`;
+        ctl = `<div class="md"><select data-f="${q.k}" data-t="md" data-p="m" aria-label="Month">${opt('', 'Month')}${AG.MON.map((m, i) => opt(i + 1, m, md[0] === i + 1)).join('')}</select>` +
+          `<select data-f="${q.k}" data-t="md" data-p="d" aria-label="Day">${opt('', 'Day')}${Array.from({ length: 31 }, (_, i) => opt(i + 1, i + 1, md[1] === i + 1)).join('')}</select></div>`;
+        break;
+      }
+      case 'sel':
+        ctl = `<select ${common}><option value="">${esc(q.ph || 'Choose')}</option>${q.opts.map((o) => `<option${v === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+        break;
+      case 'check':
+        return `<div class="fld ${q.half ? 'half' : ''}"><label class="toggle"><span>${esc(q.label)}</span><input type="checkbox" data-f="${q.k}"${v ? ' checked' : ''}></label>${tip}</div>`;
       case 'dt':
         ctl = `<input ${common} data-t="dt" type="datetime-local" value="${v ? AG.ymd(v) + 'T' + AG.hm(v) : ''}">`;
         break;
@@ -376,7 +396,9 @@
         break;
       }
       default:
-        ctl = `<input ${common}${attr('inputmode', q.im)} value="${esc(v || '')}">`;
+        ctl = q.ac // address lookup as you type (addr.js)
+          ? `<input ${common} data-ac="${esc(JSON.stringify(q.ac))}" autocomplete="off" value="${esc(v || '')}"><div class="acl"></div>`
+          : `<input ${common}${attr('inputmode', q.im)} value="${esc(v || '')}">`;
     }
     return `<div class="fld ${q.half ? 'half' : ''} ${q.third ? 'third' : ''}">${lab}${ctl}${tip}</div>`;
   };

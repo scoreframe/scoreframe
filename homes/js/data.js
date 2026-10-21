@@ -244,16 +244,17 @@
       { k: 'pref', t: 'one', label: 'Best way to reach them', opts: ['Text', 'Call', 'Email'] },
       { k: 'source', t: 'one', label: 'How did they find you?', opts: ['Referral', 'Past client', 'Friend / family', 'Open house', 'Online lead', 'Sign call', 'Social media', 'Other'] },
       { k: 'referredBy', t: 'text', label: 'Referred by', show: (q) => /Referral|Past client|Friend/.test(q.source || ''), tip: 'Remember to thank them.' },
-      { k: 'birthday', t: 'date', label: 'Birthday', half: 1, tip: 'Yearly reminder + card.' },
-      { k: 'mailAddr', t: 'text', label: 'Mailing address', half: 1, ph: 'For cards', cap: 1 },
+      { k: 'birthday', t: 'md', label: 'Birthday', half: 1, tip: 'Yearly reminder + card.' },
+      { k: 'mailAddr', t: 'text', label: 'Mailing address', half: 1, ph: 'For cards', cap: 1, ac: 'line' },
+      { k: 'mailNew', t: 'check', label: 'Switch cards to the home they buy', show: (q, c) => !!c && AG.has(c, 'buy'), tip: 'Once they buy, cards go to their new home instead.' },
     ] },
 
     // ----- selling -----
     { id: 'sreq', side: 'sell', title: 'Their property', icon: 'house', qs: [
-      { k: 'addr', t: 'text', label: 'Street address', cap: 1 },
+      { k: 'addr', t: 'text', label: 'Street address', cap: 1, ac: { city: 'city', zip: 'zip', st: 'sSt' } },
       { k: 'city', t: 'text', label: 'City', half: 1, cap: 1 },
       { k: 'zip', t: 'text', label: 'ZIP', half: 1, im: 'numeric' },
-      { k: 'sSt', t: 'one', label: 'State', opts: ['Missouri', 'Kansas'], tip: 'Sets the Missouri / Kansas rules (dual agency is Missouri-only).' },
+      { k: 'sSt', t: 'sel', label: 'State', opts: AG.STATES.map((x) => x[1]), tip: 'Any state. Kansas and Missouri contract rules are built in so far.' },
       { k: 'sType', t: 'one', label: 'Type', opts: ['Single family', 'Townhome', 'Condo', 'Multi-family', 'Land', 'Manufactured'] },
       { k: 'sBeds', t: 'num', label: 'Beds', third: 1 },
       { k: 'sBaths', t: 'num', label: 'Baths', third: 1 },
@@ -335,7 +336,7 @@
       { k: 'cSeller', t: 'yn', label: 'Consents to seller agency', half: 1 },
       { k: 'cTB', t: 'yn', label: 'Consents to a transaction broker', half: 1 },
       { k: 'cSub', t: 'yn', label: 'Consents to subagency', half: 1 },
-      { k: 'cDual', t: 'yn', label: 'Consents to disclosed dual agency', half: 1, show: (q) => q.sSt !== 'Kansas', tip: 'Missouri only.' },
+      { k: 'cDual', t: 'yn', label: 'Consents to disclosed dual agency', half: 1, show: (q) => q.sSt !== 'Kansas', tip: 'Missouri allows it with consent; Kansas doesn’t.' },
       { k: 'cDesSeller', t: 'yn', label: 'Designated agent for them', half: 1 },
       { k: 'cDesBuyer', t: 'yn', label: 'Designated agent for a buyer of their home', half: 1 },
       { k: 'listFlat', t: 'money', label: 'Or a flat fee instead of %', half: 1, tip: 'Your compensation % is on The listing step. No standard rates — fully negotiable and not set by law.' },
@@ -437,10 +438,10 @@
       { k: 'pref', t: 'one', label: 'Best way to reach you', opts: ['Text', 'Call', 'Email'] },
     ] },
     { id: 'home', title: 'Your home', qs: [
-      { k: 'addr', t: 'text', label: 'Street address', cap: 1 },
+      { k: 'addr', t: 'text', label: 'Street address', cap: 1, ac: { city: 'city', zip: 'zip', st: 'sSt' } },
       { k: 'city', t: 'text', label: 'City', half: 1, cap: 1 },
       { k: 'zip', t: 'text', label: 'ZIP', half: 1, im: 'numeric' },
-      { k: 'sSt', t: 'one', label: 'State', opts: ['Missouri', 'Kansas'] },
+      { k: 'sSt', t: 'sel', label: 'State', opts: AG.STATES.map((x) => x[1]) },
       { k: 'sType', t: 'one', label: 'Type of home', opts: ['Single family', 'Townhome', 'Condo', 'Multi-family', 'Land', 'Manufactured'] },
       { k: 'sBeds', t: 'num', label: 'Bedrooms', third: 1 },
       { k: 'sBaths', t: 'num', label: 'Bathrooms', third: 1 },
@@ -613,7 +614,7 @@
 
     const maya = C(['buy'], {
       first: 'Maya', last: 'Patel', partner: 'Jordan Patel', phone: '4175550142', email: 'maya.patel@example.com', pref: 'Text', bestTime: ['Evenings'],
-      source: 'Referral', referredBy: 'Marcus Lee (past client)', birthday: '1991-03-14', mailAddr: '620 W Monroe St Apt 4, Springfield, MO 65804',
+      source: 'Referral', referredBy: 'Marcus Lee (past client)', birthday: '03-14', mailAddr: '620 W Monroe St Apt 4, Springfield, MO 65804',
       living: 'Renting', leaseEnd: ymd(75), firstTime: 'Yes', why: ['More space', 'Schools'], whyNote: 'Baby on the way; want a yard and a real office.',
       moveBy: '1–3 months', motivation: 8, tourAvail: ['Weekday evenings', 'Saturdays'],
       payWith: 'Mortgage', preapproved: 'Yes', preAmount: 485000, preExpires: ymd(40), lender: 'Sarah Kim — Summit Home Loans', lenderId: lender.id, loanType: 'Conventional',
@@ -690,7 +691,7 @@
     elena.buy.deal = { price: 312000 };
     done(elena, [...AG.CHECK.buy.lead, ...AG.CHECK.buy.consult, ...AG.CHECK.buy.search].map((x) => x[0]).concat(['b_cma', 'b_strategy', 'b_letter', 'b_emd', 'b_submit']), -4);
 
-    const walsh = C(['buy'], { first: 'Grace', last: 'Walsh', partner: 'Henry Walsh', phone: '4175550122', email: 'gwalsh@example.com', birthday: AG.ymd(AG.addMonths(day(6), -12 * 41)), mailAddr: '45 Sunset Ter, Nixa, MO 65714' }, { status: 'closed' });
+    const walsh = C(['buy'], { first: 'Grace', last: 'Walsh', partner: 'Henry Walsh', phone: '4175550122', email: 'gwalsh@example.com', birthday: AG.ymd(day(6)).slice(5), mailAddr: '45 Sunset Ter, Nixa, MO 65714' }, { status: 'closed' });
     walsh.buy.stage = 'closed';
     walsh.buy.closedAt = at(-1015);
     walsh.buy.deal = { price: 264000, close: ymd(-1015) };

@@ -48,6 +48,25 @@
     const y = d.getFullYear() !== new Date(now).getFullYear() ? `, ${d.getFullYear()}` : '';
     return `${MON[d.getMonth()]} ${d.getDate()}${y}`;
   };
+  /** A birthday is month + day only ("MM-DD"; older answers may be a full YYYY-MM-DD). → [month 1-12, day] or null. */
+  AG.mdOf = (s) => {
+    const m = /^(?:\d{4}-)?(\d\d)-(\d\d)$/.exec(String(s || '').trim());
+    return m && +m[1] >= 1 && +m[1] <= 12 && +m[2] >= 1 && +m[2] <= 31 ? [+m[1], +m[2]] : null;
+  };
+  AG.fmtMd = (s) => { const md = AG.mdOf(s); return md ? `${MON[md[0] - 1]} ${md[1]}` : ''; };
+  /** The next time a month/day comes around, today or later. Feb 29 lands on Feb 28 in other years. */
+  AG.nextMd = (s, now = Date.now()) => {
+    const md = AG.mdOf(s);
+    if (!md) return null;
+    const on = (y) => new Date(y, md[0] - 1, Math.min(md[1], new Date(y, md[0], 0).getDate())).getTime();
+    const y = new Date(now).getFullYear();
+    return on(y) >= AG.day0(now) ? on(y) : on(y + 1);
+  };
+  /** US states + DC: [abbr, name]. Properties can be anywhere; Kansas / Missouri just have the most built-in rules. */
+  AG.STATES = [['AL', 'Alabama'], ['AK', 'Alaska'], ['AZ', 'Arizona'], ['AR', 'Arkansas'], ['CA', 'California'], ['CO', 'Colorado'], ['CT', 'Connecticut'], ['DE', 'Delaware'], ['DC', 'District of Columbia'], ['FL', 'Florida'], ['GA', 'Georgia'], ['HI', 'Hawaii'], ['ID', 'Idaho'], ['IL', 'Illinois'], ['IN', 'Indiana'], ['IA', 'Iowa'], ['KS', 'Kansas'], ['KY', 'Kentucky'], ['LA', 'Louisiana'], ['ME', 'Maine'], ['MD', 'Maryland'], ['MA', 'Massachusetts'], ['MI', 'Michigan'], ['MN', 'Minnesota'], ['MS', 'Mississippi'], ['MO', 'Missouri'], ['MT', 'Montana'], ['NE', 'Nebraska'], ['NV', 'Nevada'], ['NH', 'New Hampshire'], ['NJ', 'New Jersey'], ['NM', 'New Mexico'], ['NY', 'New York'], ['NC', 'North Carolina'], ['ND', 'North Dakota'], ['OH', 'Ohio'], ['OK', 'Oklahoma'], ['OR', 'Oregon'], ['PA', 'Pennsylvania'], ['RI', 'Rhode Island'], ['SC', 'South Carolina'], ['SD', 'South Dakota'], ['TN', 'Tennessee'], ['TX', 'Texas'], ['UT', 'Utah'], ['VT', 'Vermont'], ['VA', 'Virginia'], ['WA', 'Washington'], ['WV', 'West Virginia'], ['WI', 'Wisconsin'], ['WY', 'Wyoming']];
+  const stRow = (v) => { const t = String(v || '').trim().toLowerCase(); return t ? AG.STATES.find(([a, n]) => a.toLowerCase() === t || n.toLowerCase() === t) : null; };
+  AG.stName = (v) => (stRow(v) || [])[1] || '';
+  AG.stAbbr = (v) => (stRow(v) || [])[0] || '';
   AG.fmtDay = (t, now) => `${WD[new Date(t).getDay()]}, ${AG.fmtShort(t, now)}`;
   AG.fmtTime = (t) => {
     const d = new Date(t);
@@ -114,7 +133,7 @@
   // second one ("photos") so the frequent save stays small. Native shells
   // write files (with rolling daily backups); a plain browser uses localStorage.
   AG.defaultSettings = () => ({
-    agent: '', brokerage: '', agentPhone: '', agentEmail: '', license: '', reviewLink: '',
+    agent: '', brokerage: '', agentPhone: '', agentEmail: '', license: '', reviewLink: '', area: '',
     commissionPct: 2.5, splitPct: 70, goal: 100000,
     theme: 'system', palette: 'harbor',
     mlsName: 'MLS', mlsPortal: '', mlsUrl: '',
@@ -511,13 +530,17 @@
     if (Array.isArray(v)) return q.t === 'rank' ? v.map((x, i) => `${i + 1}. ${x}`).join('  ') : v.join(', ');
     if (q.t === 'money') return AG.money(v);
     if (q.t === 'date') return AG.fmtShort(AG.fromYmd(v));
+    if (q.t === 'md') return AG.fmtMd(v);
+    if (q.t === 'check') return v ? 'Yes' : '';
     if (q.t === 'scale') return `${v}/10`;
     if (q.t === 'tel') return AG.fmtPhone ? AG.fmtPhone(v) : String(v);
     return String(v);
   };
   /** What a seller's listing contract still needs, split by who supplies it, and the addenda / forms this deal needs. */
   AG.contractStatus = (c) => {
-    const q = c.q || {}, b = AG.blank, kansas = q.sSt === 'Kansas';
+    // Follows the KCRAR (Kansas City) form; another state gets the same checklist with generic form names.
+    const q = c.q || {}, b = AG.blank, kansas = q.sSt === 'Kansas', other = !b(q.sSt) && !kansas && q.sSt !== 'Missouri';
+    const disclosure = kansas ? 'Real Estate Brokerage Relationships Brochure' : other ? `${q.sSt} agency disclosure` : 'Broker Disclosure Form';
     const need = (cond, label) => (cond ? [label] : []);
     const seller = [
       ...need(b(q.first) || b(q.last), 'Seller names'),
@@ -525,7 +548,7 @@
       ...need(b(q.onTitle), 'Everyone on the deed (exact names)'),
       ...need(b(q.titleHow), 'How title is held (names, trust, LLC, estate)'),
       ...need(b(q.addr) || b(q.city) || b(q.zip), 'Property address'),
-      ...need(b(q.sSt), 'State (Missouri or Kansas)'),
+      ...need(b(q.sSt), 'State'),
       ...need(b(q.sYear), 'Year built'),
       ...need(+q.payoff > 0 && b(q.lender1), 'Mortgage company'),
       ...need(+q.payoff2 > 0 && b(q.lender2), '2nd mortgage / HELOC lender'),
@@ -545,7 +568,7 @@
       ...need(b(q.offerBuyerComp) || (q.offerBuyerComp === 'Yes' && b(q.compDisclose)), 'Buyer’s-agent compensation decision'),
       ...need(b(q.titleCo), 'Title company'),
       ...need(b(q.warranty), 'Home warranty decision'),
-      ...need(b(q.sAgencyDate), kansas ? 'Brokerage Relationships Brochure given (date)' : 'Broker Disclosure Form given (date)'),
+      ...need(b(q.sAgencyDate), `${disclosure.replace(/^Real Estate /, '')} given (date)`),
     ];
     const forms = [];
     const add = (name, why) => forms.push({ name, why });
@@ -555,21 +578,21 @@
     if (!b(q.sYear) && +q.sYear < 1978) add('Lead-Based Paint Disclosure Addendum', `Built ${q.sYear} (before 1978) — federally required`);
     if (b(q.sYear) && !land) add('Lead-Based Paint Disclosure Addendum — if built before 1978', 'Year built not entered yet');
     if (q.cTB === 'Yes') add('Transaction Broker Addendum', 'Signed if a transaction broker arrangement is used');
-    if (q.cDual === 'Yes' && !kansas) add('Disclosed Dual Agency Amendment', 'Signed if dual agency is used (Missouri only)');
+    if (q.cDual === 'Yes' && !kansas) add(other ? 'Dual agency consent (your state’s form)' : 'Disclosed Dual Agency Amendment', other ? 'If your state allows dual agency' : 'Signed if dual agency is used (Missouri only)');
     if (q.inetOptOut === 'Yes') add('Internet advertising Opt-Out form', 'They’re opting out of internet advertising');
     if (q.warranty === 'Buying one') add('Home warranty application', `${q.warrantyCo || 'Warranty company'}${q.warrantyMax ? ', up to ' + AG.money(q.warrantyMax) : ''}`);
     if (/trust|LLC|estate/i.test(q.titleHow || '')) add('Trust / LLC / estate documents', 'Showing who can sign for the owner');
     if (q.foreign === 'Yes') add('FIRPTA — advise an attorney or accountant', 'An owner is a foreign person for tax purposes');
-    if (b(q.sAgencyDate)) add(kansas ? 'Real Estate Brokerage Relationships Brochure' : 'Broker Disclosure Form', kansas ? 'At the first practical opportunity' : 'Before the listing is signed or personal / financial info is gathered');
+    if (b(q.sAgencyDate)) add(disclosure, kansas ? 'At the first practical opportunity' : other ? 'Check your state’s timing' : 'Before the listing is signed or personal / financial info is gathered');
     const total = seller.length + terms.length;
-    return { seller, terms, forms, missing: total, kansas };
+    return { seller, terms, forms, missing: total, kansas, other };
   };
   /** The listing details in the contract's order, for filling in the official form. */
   AG.contractText = (c) => {
     const q = c.q || {}, s = AG.db.settings, st = AG.contractStatus(c);
     const v = (x) => (AG.blank(x) ? '—' : x);
     const d = (ymd) => (ymd ? AG.fmtShort(AG.fromYmd(ymd)) : '—');
-    const addr = [q.addr, q.city, [q.sSt === 'Kansas' ? 'KS' : q.sSt === 'Missouri' ? 'MO' : '', q.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    const addr = [q.addr, q.city, [AG.stAbbr(q.sSt) || q.sSt, q.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
     const names = [[q.first, q.last].filter(Boolean).join(' '), q.partner].filter(Boolean).join(' & ');
     const yn = (x) => (x === 'Yes' ? 'Yes' : x === 'No' ? 'No' : '—');
     const L = [
@@ -659,6 +682,18 @@
   AG.item = (id) => AG.db.items.find((i) => i.id === id);
   AG.partner = (id) => AG.db.partners.find((p) => p.id === id);
   AG.has = (c, side) => c.sides.includes(side);
+  /** The home a buyer bought: the deal's home once they've closed, else one marked Bought. */
+  AG.boughtHome = (c) => {
+    if (!AG.has(c, 'buy')) return null;
+    const id = c.buy.stage === 'closed' && c.buy.deal && c.buy.deal.homeId;
+    return (id && AG.home(id)) || AG.db.homes.find((h) => !h.listing && h.clientIds.includes(c.id) && h.status === 'bought') || null;
+  };
+  /** Where cards go. "Switch cards to the home they buy" (q.mailNew) moves them to the new home once they've bought it. */
+  AG.mailTo = (c) => {
+    const q = c.q || {}, h = AG.boughtHome(c);
+    if (h && (q.mailNew || !q.mailAddr)) return { addr: AG.addrOf(h), home: h };
+    return { addr: q.mailAddr || '', home: null };
+  };
   AG.newClient = (sides) => {
     const c = { id: AG.uid(), sides: sides.slice(), q: {}, status: 'active', temp: '', created: Date.now(), updated: Date.now(), done: {}, custom: [], log: [], ready: {} };
     for (const s of sides) c[s] = { stage: 'lead' };
@@ -953,15 +988,8 @@
       if (q.tenantEnd) add('tenant', 'date', `Tenant lease ends — ${where}`, date(q.tenantEnd), true);
       if (q.sellDate) add('sellby', 'date', `${nm} needs to be out`, date(q.sellDate), true, { warn: 30 });
     }
-    if (q.birthday) {
-      const b = date(q.birthday);
-      if (b) {
-        const d = new Date(b);
-        let t = new Date(new Date(now).getFullYear(), d.getMonth(), d.getDate()).getTime();
-        if (t < AG.day0(now)) t = AG.addMonths(t, 12);
-        add('bday', 'date', `🎂 ${(q.first || nm)}’s birthday`, t, true, { repeat: 'year', tpl: 'birthday', card: 'card_bday' });
-      }
-    }
+    const bday = AG.nextMd(q.birthday, now);
+    if (bday) add('bday', 'date', `🎂 ${(q.first || nm)}’s birthday`, bday, true, { repeat: 'year', tpl: 'birthday', card: 'card_bday' });
     if (q.promised) add('promised', 'task', `Promised: ${String(q.promised).split('\n')[0].slice(0, 80)}`, AG.at(day(1), 9));
     const cd = AG.cadenceDays(c);
     add('touch', 'call', `Check in with ${nm}`, AG.at(day(cd), 10), false, { repeat: repeatFor(cd) });
