@@ -329,6 +329,33 @@ body.sf-nospoil #moreFromTeamCard { display: none !important; }
     font-size: 11px; font-weight: 700; color: var(--accent);
     text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px;
 }
+/* Scoring plays list (2026-10-21): one line per play, groups, player chips. */
+.sp-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+.sp-chips::-webkit-scrollbar { display: none; }
+.sp-chip { flex-shrink: 0; border: 1px solid var(--bg-elevated); background: transparent; color: var(--text-primary);
+    border-radius: 16px; padding: 6px 12px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap; }
+.sp-chip .n { color: var(--text-muted); font-weight: 700; margin-left: 6px; }
+.sp-chip.on { background: var(--accent); border-color: var(--accent); color: #1A1004; }
+.sp-chip.on .n { color: #1A1004; opacity: 0.65; }
+.sp-group { border-top: 1px solid var(--bg-elevated); }
+.sp-group:first-of-type { border-top: 0; }
+.sp-group summary { list-style: none; display: flex; align-items: center; gap: 8px; padding: 11px 2px;
+    cursor: pointer; font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.sp-group summary::-webkit-details-marker { display: none; }
+.sp-group summary::after { content: '\25BE'; color: var(--text-muted); transition: transform 0.15s; }
+.sp-group:not([open]) summary::after { transform: rotate(-90deg); }
+.sp-count { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.sp-list { display: flex; flex-direction: column; gap: 4px; padding-bottom: 10px; }
+.sp-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px 7px 0; border-radius: 8px;
+    width: 88%; font-size: 14px; }
+.sp-row.away { margin-left: auto; padding: 7px 0 7px 10px; text-align: right; }
+.sp-bar { width: 3px; align-self: stretch; border-radius: 2px; flex-shrink: 0; }
+.sp-emoji { font-size: 15px; flex-shrink: 0; }
+.sp-text { flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.3; color: var(--text-secondary); }
+.sp-text b { color: var(--text-primary); font-weight: 700; }
+.sp-clock { font-size: 12px; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
+.sp-more { margin-top: 8px; width: 100%; background: transparent; border: 1px solid var(--bg-elevated); color: var(--accent);
+    border-radius: 10px; padding: 9px 12px; font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer; }
 
 .scoreline { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .team-block { flex: 1; min-width: 140px; }
@@ -3502,6 +3529,9 @@ function renderAiRecap(game) {
 // the team + clock so the timeline stays complete. Sorted by clock asc
 // so the order matches the broadcast. Soccer-first; future sports will
 // re-label "Goals" → "Scoring" / "Tries" / etc. via SPORT_LABEL_MAP.
+// The plays list's view state: player filter, which groups are open, Show all.
+// Kept across the live refreshes so the list doesn't snap back on every point.
+let spState = { key: '', player: '', open: {}, showAll: false };
 function renderScoringSummary(hub, game, sport) {
     const card = $('scoringSummaryCard');
     if (!card) return;
@@ -3539,7 +3569,6 @@ function renderScoringSummary(hub, game, sport) {
     // v50 — once penalties and cards are in the list it is no longer a list of
     // goals, so say so. Pure-scoring games keep their sport-specific heading.
     const hasLogRows = events.some(e => LOG_EVENT[String(e.eventType || '').toUpperCase()]);
-    $('scoringSummaryLabel').textContent = hasLogRows ? 'Game Log' : meta.label;
 
     // v50 — order by WALL CLOCK when every row has one. The game clock can't
     // do this job on its own: hockey counts DOWN, so "ascending by clock" put
@@ -3638,63 +3667,104 @@ function renderScoringSummary(hub, game, sport) {
         return `<button type="button" class="scoring-watch-btn" data-seek-sec="${seconds}" data-stream-platform="${escapeHtml(platform)}" data-stream-url="${escapeHtml(baseUrl)}" style="font-size:12px;font-weight:700;color:var(--accent);background:transparent;border:0;cursor:pointer;white-space:nowrap;padding:0;">▶ Watch</button>`;
     };
 
-    const rows = sorted.map(ev => {
-        const side = (ev.side || 'HOME').toUpperCase();
-        const isHome = side === 'HOME';
+    // 2026-10-21 — Eric: "I could see the game page getting very long ... we
+    // might need to have something collapsible there or something better
+    // organized on the game page." A volleyball match with players picked runs
+    // 30-50 plays a team, and each used to be a full card. Now: one line per
+    // play; grouped by set / quarter / period with a count, one group open;
+    // player chips that show just that player's plays (a parent following one
+    // kid); and a short list (8 or fewer) stays a plain list. Home rows keep
+    // the left edge and away rows the right, in their team colours, as before.
+    const SHORT = 8;
+    const playerOf = (ev) => LOG_EVENT[String(ev.eventType || '').toUpperCase()]
+        ? '' : String(ev.playerName || '').trim();
+    const rowHtml = (ev) => {
+        const isHome = (ev.side || 'HOME').toUpperCase() === 'HOME';
         const accent = isHome ? homeColor : awayColor;
-        const tint = hexToRgba(accent, 0.16);
-        const teamName = ev.teamName || (isHome ? homeName : awayName);
-        const playerName = (ev.playerName || '').trim();
-        const clock = fmtClock(ev.gameClockSeconds);
-        const half = fmtHalf(ev.halfLabel);
-        const watchHtml = buildWatchHtml(ev);
-        // Card content. We build the same blocks for both sides; the
-        // outer wrapper flips the visual order so the home card hugs
-        // the left edge and the away card hugs the right.
-        // v49 — what the play WAS, next to who made it. Only rendered where it
-        // adds information: a soccer row is always a goal.
         const evType = String(ev.eventType || '').toUpperCase();
         const logKind = LOG_EVENT[evType] || null;
-        // A log row never names a person, even if one was picked in the app —
-        // the card still counts against them in the box score, the public
-        // timeline just doesn't say who. `detail` is what the row IS ("2:00",
-        // "Second yellow").
-        const playLabel = logKind ? logKind.label : (EVENT_TYPE_LABEL[evType] || '');
-        const playerBits = logKind
-            ? [logKind.label, String(ev.detail || '').trim()].filter(Boolean).map(escapeHtml).join(' · ')
-            : [playerName, playLabel].filter(Boolean).map(escapeHtml).join(' · ');
-        const playerLine = playerBits
-            ? `<div style="font-size:13px;color:var(--text-secondary);margin-top:2px;text-align:${isHome ? 'left' : 'right'};">${playerBits}</div>`
-            : '';
-        const teamLine = `<div style="font-size:14px;font-weight:700;color:var(--text-primary);text-align:${isHome ? 'left' : 'right'};">${escapeHtml(teamName)}</div>`;
-        // Clock block: minute + (when present) the half label as a
-        // small secondary line so the reader can see *when* the goal
-        // happened in the full game flow, not just the minute.
-        const halfLine = half
-            ? `<div style="font-size:10px;font-weight:700;color:var(--text-muted,#666);letter-spacing:0.04em;text-transform:uppercase;margin-top:2px;text-align:${isHome ? 'right' : 'left'};">${escapeHtml(half)}</div>`
-            : '';
-        const clockLine = clock
-            ? `<div style="font-size:13px;font-weight:700;color:var(--text-muted,#888);">${clock}</div>`
-            : '';
-        // Nothing to position by (no clock, no set/quarter) -> omit the column
-        // entirely rather than leaving an empty 44px gutter on every row.
-        const clockBlock = (clockLine || halfLine)
-            ? `<div style="min-width:44px;text-align:${isHome ? 'right' : 'left'};">${clockLine}${halfLine}</div>`
-            : '';
-        const emojiBlock = `<div style="font-size:18px;line-height:1;flex-shrink:0;">${logKind ? logKind.emoji : meta.emoji}</div>`;
-        const infoBlock = `<div style="flex:1;min-width:0;">${teamLine}${playerLine}</div>`;
-        const accentBar = `<div style="width:4px;align-self:stretch;background:${escapeHtml(accent)};border-radius:2px;"></div>`;
-        // Card itself, with team-tinted background + leading border on
-        // the scoring side.
-        const cardInner = isHome
-            ? `${accentBar}${emojiBlock}${infoBlock}${clockBlock}${watchHtml}`
-            : `${watchHtml}${clockBlock}${infoBlock}${emojiBlock}${accentBar}`;
-        const card = `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:${tint};max-width:88%;">${cardInner}</div>`;
-        // Outer wrapper: justify left for HOME, right for AWAY.
-        return `<div style="display:flex;justify-content:${isHome ? 'flex-start' : 'flex-end'};padding:6px 0;">${card}</div>`;
-    }).join('');
+        const who = playerOf(ev);
+        const teamName = ev.teamName || (isHome ? homeName : awayName);
+        // A log row never names a person (see v50 above); a scoring row names
+        // the player when one was picked, else the team.
+        const main = logKind ? teamName : (who || teamName);
+        const what = logKind
+            ? [logKind.label, String(ev.detail || '').trim()].filter(Boolean).join(' · ')
+            : (EVENT_TYPE_LABEL[evType] || meta.verb);
+        const clock = fmtClock(ev.gameClockSeconds);
+        const parts = [
+            `<span class="sp-bar" style="background:${escapeHtml(accent)}"></span>`,
+            `<span class="sp-emoji">${logKind ? logKind.emoji : meta.emoji}</span>`,
+            // Showing one player's plays: their name on every row is noise.
+            (spState.player && who)
+                ? `<span class="sp-text"><b>${escapeHtml(what)}</b></span>`
+                : `<span class="sp-text"><b>${escapeHtml(main)}</b> · ${escapeHtml(what)}</span>`,
+            clock ? `<span class="sp-clock">${clock}</span>` : '',
+            buildWatchHtml(ev),
+        ];
+        return `<div class="sp-row${isHome ? '' : ' away'}" style="background:${hexToRgba(accent, 0.12)};">`
+            + (isHome ? parts : parts.slice().reverse()).join('') + `</div>`;
+    };
 
-    $('scoringSummaryContent').innerHTML = rows;
+    if (spState.key !== gameId) spState = { key: gameId, player: '', open: {}, showAll: false };
+    const total = sorted.length;
+    const counts = {};
+    sorted.forEach(ev => { const p = playerOf(ev); if (p) counts[p] = (counts[p] || 0) + 1; });
+    const players = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    if (spState.player && !counts[spState.player]) spState.player = '';
+    const shown = spState.player ? sorted.filter(ev => playerOf(ev) === spState.player) : sorted;
+    $('scoringSummaryLabel').textContent = (hasLogRows ? 'Game Log' : meta.label) + (total > SHORT ? ` · ${total}` : '');
+
+    let html = '';
+    if (total > SHORT && players.length >= 2) {
+        const chip = (name, n, on) => `<button type="button" class="sp-chip${on ? ' on' : ''}" data-player="${escapeHtml(name)}">`
+            + `${escapeHtml(name || 'All')}<span class="n">${n}</span></button>`;
+        html += `<div class="sp-chips">${chip('', total, !spState.player)}${players.map(([n, c]) => chip(n, c, spState.player === n)).join('')}</div>`;
+    }
+
+    // Groups in the order they happened. A play with no set/period label (older
+    // games) falls in one unlabelled group, so nothing ever disappears.
+    const groups = [];
+    const byLabel = {};
+    shown.forEach(ev => {
+        const label = fmtHalf(ev.halfLabel) || '';
+        if (!byLabel[label]) { byLabel[label] = []; groups.push(label); }
+        byLabel[label].push(ev);
+    });
+    const grouped = total > SHORT && groups.some(l => l);
+    if (!grouped) {
+        const list = (shown.length > SHORT && !spState.showAll && !spState.player) ? shown.slice(0, SHORT) : shown;
+        html += `<div class="sp-list">${list.map(rowHtml).join('')}</div>`;
+        if (list.length < shown.length) {
+            html += `<button type="button" class="sp-more">Show all ${shown.length} plays</button>`;
+        }
+    } else {
+        // One group open: the current one while the game is live, the first one
+        // after. Whatever the viewer opens or closes stays that way across the
+        // live refreshes; a player filter opens every group (the list is short).
+        const live = String(game.status || '').toLowerCase() === 'live';
+        html += groups.map((label, i) => {
+            const evs = byLabel[label];
+            const key = label || '_';
+            const dflt = live ? i === groups.length - 1 : i === 0;
+            const open = spState.player ? true : (key in spState.open ? spState.open[key] : dflt);
+            return `<details class="sp-group" data-key="${escapeHtml(key)}"${open ? ' open' : ''}>`
+                + `<summary><span>${escapeHtml(label || 'Other')}</span><span class="sp-count">${evs.length} ${evs.length === 1 ? 'play' : 'plays'}</span></summary>`
+                + `<div class="sp-list">${evs.map(rowHtml).join('')}</div></details>`;
+        }).join('');
+    }
+
+    $('scoringSummaryContent').innerHTML = html;
+    const rerender = () => renderScoringSummary(hub, game, sport);
+    card.querySelectorAll('.sp-chip').forEach(b => b.addEventListener('click', () => {
+        spState.player = b.dataset.player || '';
+        rerender();
+    }));
+    card.querySelectorAll('.sp-group').forEach(d => d.addEventListener('toggle', () => {
+        if (!spState.player) spState.open[d.dataset.key] = d.open;
+    }));
+    const more = card.querySelector('.sp-more');
+    if (more) more.addEventListener('click', () => { spState.showAll = true; rerender(); });
     // Wire the watch buttons through seekToHighlight so they drive the
     // inline player rather than the external YouTube site (Eric repro:
     // tapping ▶ Watch was popping the YouTube web app inside the
