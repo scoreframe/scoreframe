@@ -133,7 +133,7 @@
   // second one ("photos") so the frequent save stays small. Native shells
   // write files (with rolling daily backups); a plain browser uses localStorage.
   AG.defaultSettings = () => ({
-    agent: '', brokerage: '', agentPhone: '', agentEmail: '', license: '', reviewLink: '', area: '',
+    agent: '', brokerage: '', agentPhone: '', agentEmail: '', license: '', reviewLink: '', area: '', franchise: false,
     commissionPct: 2.5, splitPct: 70, goal: 100000,
     theme: 'system', palette: 'harbor',
     mlsName: 'MLS', mlsPortal: '', mlsUrl: '',
@@ -181,11 +181,11 @@
   const N = () => G.Native;
   AG.loadError = false;
   AG.load = () => {
-    let raw = null, praw = null;
+    let raw = null, praw = null, fraw = null;
     try {
-      if (G.__AG_FILES) { raw = G.__AG_FILES.db; praw = G.__AG_FILES.photos; }
-      else if (N() && N().load) { raw = N().load('db'); praw = N().load('photos'); }
-      else if (G.localStorage) { raw = localStorage.getItem('ag.db'); praw = localStorage.getItem('ag.photos'); }
+      if (G.__AG_FILES) { raw = G.__AG_FILES.db; praw = G.__AG_FILES.photos; fraw = G.__AG_FILES.forms; }
+      else if (N() && N().load) { raw = N().load('db'); praw = N().load('photos'); fraw = N().load('forms'); }
+      else if (G.localStorage) { raw = localStorage.getItem('ag.db'); praw = localStorage.getItem('ag.photos'); fraw = localStorage.getItem('ag.forms'); }
     } catch (e) { console.error('load', e); }
     let db = null;
     if (raw) {
@@ -198,7 +198,11 @@
     }
     AG.db = migrate(db || AG.fresh());
     try { AG.photos = praw ? JSON.parse(praw) : {}; } catch { AG.photos = {}; }
+    try { AG.formFiles = fraw ? JSON.parse(fraw) : {}; } catch { AG.formFiles = {}; }
   };
+  /** The agent's own copies of association forms (forms.js), one PDF each, in a third file. */
+  AG.formFiles = {};
+  AG.saveForms = () => write('forms', JSON.stringify(AG.formFiles));
   function write(name, s) {
     try {
       if (N() && N().save) N().save(name, s);
@@ -595,6 +599,7 @@
     if (q.warranty === 'Buying one') add('Home warranty application', `${q.warrantyCo || 'Warranty company'}${q.warrantyMax ? ', up to ' + AG.money(q.warrantyMax) : ''}`);
     if (/trust|LLC|estate/i.test(q.titleHow || '')) add(q.titleHow === 'A trust' ? 'Trust papers or certificate of trust' : 'LLC / estate documents', 'Showing who can sign for the owner');
     if (q.foreign === 'Yes') add('FIRPTA — advise an attorney or accountant', 'An owner is a foreign person for tax purposes');
+    add('Wire fraud / cyber security addendum', 'Have them sign it with the listing — the contract’s cyber protection section');
     if (b(q.sAgencyDate)) add(disclosure, kansas ? 'At the first practical opportunity' : other ? 'Check your state’s timing' : 'Before the listing is signed or personal / financial info is gathered');
     const total = seller.length + terms.length;
     const notErts = !b(q.laType) && q.laType !== 'Exclusive right to sell';

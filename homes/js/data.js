@@ -659,6 +659,11 @@
       sellWhy: ['Relocating'], sellBy: '1–3 months', next: 'Buying elsewhere', sMotivation: 9,
       expect: 640000, minNet: 380000, payoff: 212000, allAgree: 'Yes', cond: 'Move-in ready', updates: ['Roof', 'Kitchen', 'HVAC'], updatesNote: 'Roof 2020, kitchen 2018, HVAC 2022',
       occupancy: 'Owner', showings: '24 hours’ notice', lockbox: 'Yes', sAgency: 'Seller’s Limited Agent', sAgencyDate: ymd(-20), laType: 'Exclusive right to sell', sNegotiable: 'Yes', offerBuyerComp: 'Yes', buyerCompPct: 2, buyerCompApproved: ymd(-20), la: 'Signed today', sNeeds: ['Top dollar', 'Close by a date'], soldBefore: 'Yes', sExpDisliked: 'Last agent never shared showing feedback', loveHome: 'Huge kitchen island, wooded backyard, finished basement theater', listPrice: 625000, listPct: 2.75, listDate: ymd(-12), listExpires: ymd(170), sCadence: 'Weekly',
+      // the listing contract's terms, so Me → Forms has a complete example
+      sSt: 'Missouri', onTitle: 'Robert J. Chen', marital: 'Single', titleHow: 'In their names', legal: 'Lot 14, Block 2, Oak Ridge Estates, Springfield, Greene County, Missouri',
+      propKind: 'Residential resale', mlsStatus: 'Active within 1 business day', inetOptOut: 'No', sign: 'Yes', emdPct: 0, backups: 'Yes', discloseWhy: 'Yes', discloseWhyText: 'Relocating for work',
+      otherOffers: 'That they exist', cSeller: 'Yes', cTB: 'Yes', cSub: 'No', cDual: 'No', cDesSeller: 'Yes', cDesBuyer: 'Yes', compDisclose: 'Yes', protection: 90,
+      titleCo: 'Sample Title Co.', warranty: 'Buying one', warrantyMax: 550, warrantyCo: 'Sample Home Warranty',
     });
     robert.sell.stage = 'active';
     robert.sell.deal = { price: 625000, pct: 2.75 };

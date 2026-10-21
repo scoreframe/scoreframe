@@ -680,3 +680,9 @@ body.presenting #view { padding-bottom: calc(var(--sab) + 40px + var(--kb)); }
 
 .qa.legal { display: block; }
 .qa.legal p { margin: 4px 0 0; font: 600 12.5px/1.45 var(--mono); color: var(--tx); text-transform: none; }
+
+/* Forms: the filled-in pages, as the phone's PDF renderer draws them */
+.fpages { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+.fpages img { width: 100%; border-radius: 8px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .2); }
+@media (min-width: 1000px) { .fpages { display: grid; grid-template-columns: 1fr 1fr; } }
+label.btn input[type=file] { display: none; }
