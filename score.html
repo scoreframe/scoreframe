@@ -1400,7 +1400,12 @@ window.showDisconnectDialog = function() {
         if (codeToClear) {
             try { remove(ref(db, `sessions/${codeToClear}/scorerRequest`)); } catch(_) {}
         }
-        location.reload();
+        // Reload WITHOUT ?code= — a plain reload kept the code in the
+        // address, auto-joined again 300ms later, and the phone went
+        // straight back to "Web scorer connected" (2026-10-21).
+        const url = new URL(location.href);
+        url.searchParams.delete('code');
+        location.replace(url.toString());
     }
 };
 
@@ -2945,6 +2950,6 @@ init();
 </script>
 <!-- Web version footer — bumped on every Pages push so we can see at a
      glance whether a phone's cached page is stale. -->
-<div style="position:fixed;bottom:4px;right:8px;font-size:9px;color:var(--text-muted);opacity:0.55;pointer-events:none;font-family:-apple-system,monospace;letter-spacing:0.5px;z-index:9999;">score v7</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:9px;color:var(--text-muted);opacity:0.55;pointer-events:none;font-family:-apple-system,monospace;letter-spacing:0.5px;z-index:9999;">score v8</div>
 </body>
 </html>
