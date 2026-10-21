@@ -918,9 +918,55 @@ function defaultState(sport) {
     }
 }
 
+// ── Echo guard (2026-10-21) ──────────────────────────────────────────
+// Every camera state used to replace ours outright. During a fast burst the
+// camera writes states that trail us (a state saying 22 lands after we sent
+// 23), so the next tap was built on 22 and points vanished: "lost taps right
+// after joining", worst while the camera is still approving the join. Now a
+// camera state that matches one of OUR OWN OLDER sends from the last few
+// seconds is just our echo arriving late, and it is ignored. Anything else (a
+// set change, an undo or a tap on the camera) still applies at once.
+const ECHO_WINDOW_MS = 3000;
+let sentRing = [];   // [{ proj, at }] — recent sends, oldest first
+
+// The comparable part of a state: top-level numbers, booleans and arrays of
+// numbers. Names and colors are left out because the camera keeps its own.
+function stateProj(st) {
+    const out = {};
+    if (!st || typeof st !== 'object') return out;
+    for (const k of Object.keys(st)) {
+        const v = st[k];
+        if (typeof v === 'number' || typeof v === 'boolean') out[k] = v;
+        else if (Array.isArray(v) && v.every(x => typeof x === 'number')) out[k] = JSON.stringify(v);
+    }
+    return out;
+}
+function projMatches(proj, st) {
+    let n = 0;
+    for (const k of Object.keys(proj)) {
+        if (!(k in st)) continue;
+        const v = st[k];
+        const cv = Array.isArray(v) ? JSON.stringify(v) : v;
+        if (cv !== proj[k]) return false;
+        n++;
+    }
+    return n > 0;
+}
+// True when `st` is one of our own older sends coming back late.
+function isStaleEcho(st) {
+    const now = Date.now();
+    sentRing = sentRing.filter(e => now - e.at < ECHO_WINDOW_MS);
+    if (sentRing.length < 2) return false;
+    const latest = sentRing[sentRing.length - 1];
+    if (projMatches(latest.proj, st)) return false;   // caught up with us
+    return sentRing.slice(0, -1).some(e => projMatches(e.proj, st));
+}
+
 // ── Send Command ──────────────────────────────────────────────────────
 function sendCommand(updatedState) {
     if (!currentCode || !currentSport) return;
+    sentRing.push({ proj: stateProj(updatedState), at: Date.now() });
+    if (sentRing.length > 30) sentRing.shift();
     lastSeq++;
     const cmd = {
         type: 'FULL_STATE_SYNC',
@@ -994,6 +1040,9 @@ function renderSetPrompt(p) {
 }
 window.answerSetPrompt = (confirm) => {
     if (!currentCode) return;
+    // The answer's result (the next set, or the point undone) must apply even
+    // though it can match a score we sent a moment ago.
+    sentRing = [];
     push(ref(db, `sessions/${currentCode}/commands`), { type: 'SET_PROMPT', confirm: !!confirm, sentAt: Date.now() });
     const card = document.querySelector('#setPromptScrim .modal-card');
     if (card) card.innerHTML = '<div class="modal-title">Sending to the camera…</div>';
@@ -1156,7 +1205,7 @@ function listenForState(code) {
 
         if (data.stateJson) {
             const st = typeof data.stateJson === 'string' ? JSON.parse(data.stateJson) : data.stateJson;
-            currentState = st;
+            if (!isStaleEcho(st)) currentState = st;
             if (data.seq) lastSeq = Math.max(lastSeq, data.seq);
         }
 
