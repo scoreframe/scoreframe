@@ -1,4 +1,4 @@
-// AgentSee core: dates, money, the store and its native save, the bridge,
+// Olive Owl core: dates, money, the store and its native save, the bridge,
 // calculators, listing links, client rules, match scores and the reminder →
 // notification plan. No DOM in this file, so Tools/test.mjs runs it in node.
 (function (G) {
@@ -135,7 +135,7 @@
   AG.defaultSettings = () => ({
     agent: '', brokerage: '', agentPhone: '', agentEmail: '', license: '', reviewLink: '', area: '', franchise: false, cmaAdj: {},
     commissionPct: 2.5, splitPct: 70, goal: 100000,
-    theme: 'system', palette: 'harbor',
+    theme: 'system', palette: 'olive',
     mlsName: 'MLS', mlsPortal: '', mlsUrl: '',
     digestHour: 8, notify: true,
     rate: 6.5, downPct: 10, taxPct: 1.1, insYear: 1800, years: 30,
@@ -156,6 +156,7 @@
     db.settings.costs = Object.assign(AG.defaultCosts(), db.settings.costs || {});
     for (const k of ['clients', 'homes', 'items', 'partners', 'cmas']) if (!Array.isArray(db[k])) db[k] = [];
     db.settings.cmaAdj = db.settings.cmaAdj || {};
+    if (!db.oliveLook) { if (db.settings.palette === 'harbor') db.settings.palette = 'olive'; db.oliveLook = 1; } // Olive Owl rebrand, 2026-10-21
     if (!Array.isArray(db.templates)) db.templates = AG.clone(AG.DEFAULT_TEMPLATES || []);
     // new built-in templates appear in older books too (unless removed on purpose)
     db.tplRemoved = db.tplRemoved || [];
@@ -203,7 +204,7 @@
   };
   /** The agent's own copies of association forms (forms.js), one PDF each, in a third file. */
   AG.formFiles = {};
-  AG.saveForms = () => write('forms', JSON.stringify(AG.formFiles));
+  AG.saveForms = () => (AG.cloud && AG.cloud.live ? AG.cloudPush() : write('forms', JSON.stringify(AG.formFiles)));
   function write(name, s) {
     try {
       if (N() && N().save) N().save(name, s);
@@ -219,11 +220,12 @@
   AG.saveNow = () => {
     clearTimeout(saveT);
     saveT = 0;
-    write('db', JSON.stringify(AG.db));
+    if (AG.cloud && AG.cloud.live) AG.cloudPush(); // the account is the book (cloud.js)
+    else write('db', JSON.stringify(AG.db));
     AG.syncReminders();
   };
   AG.savePending = () => saveT !== 0;
-  AG.savePhotos = () => write('photos', JSON.stringify(AG.photos));
+  AG.savePhotos = () => (AG.cloud && AG.cloud.live ? AG.cloudPush() : write('photos', JSON.stringify(AG.photos)));
 
   // ---------- bridge ----------
   AG.platform = () => { try { return N() && N().platform ? N().platform() : 'web'; } catch { return 'web'; } };
@@ -591,6 +593,8 @@
     const add = (name, why) => forms.push({ name, why });
     const land = q.propKind === 'Land' || q.sType === 'Land';
     if (!land && q.propKind !== 'New construction') add('Seller’s Disclosure and Condition of Property Addendum (Residential)', 'Residential resale');
+    if (q.sSt === 'Missouri') add('Methamphetamine disclosure', 'Missouri requires it on every sale — the seller answers');
+    if (q.sewer === 'Septic / onsite system') add('Wastewater system addendum', 'Septic or other onsite system — who pays to uncover and pump it for inspection');
     if (land || q.acreage === 'Yes') add('Seller’s Disclosure and Condition of Property Addendum (Land)', land ? 'Land' : 'Has acreage — used with the residential one');
     if (!b(q.sYear) && +q.sYear < 1978) add('Lead-Based Paint Disclosure Addendum', `Built ${q.sYear} (before 1978) — federally required`);
     if (b(q.sYear) && !land) add('Lead-Based Paint Disclosure Addendum — if built before 1978', 'Year built not entered yet');

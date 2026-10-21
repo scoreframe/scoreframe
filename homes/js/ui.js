@@ -1,4 +1,4 @@
-// AgentSee UI kit: icons, theme, navigation (tabs + pushed pages), bottom
+// Olive Owl UI kit: icons, theme, navigation (tabs + pushed pages), bottom
 // sheets, toasts, form binding and the pieces every screen shares. The look
 // follows ScoreFrame's new UI: mono eyebrow over a heavy uppercase title,
 // lifted cards with a coloured edge, chips, and a floating pill nav with a
@@ -70,7 +70,9 @@
   AG.applyTheme = () => {
     const dark = AG.isDark(), root = document.documentElement;
     root.dataset.theme = dark ? 'dark' : 'light';
-    const p = (AG.PALETTES[AG.db.settings.palette] || AG.PALETTES.harbor)[dark ? 'dark' : 'light'];
+    const p = (AG.PALETTES[AG.db.settings.palette] || AG.PALETTES.olive)[dark ? 'dark' : 'light'];
+    // a palette may set base tones too (Olive does): clear what the last one set before applying this one
+    for (const pal of Object.values(AG.PALETTES)) for (const k in pal.light) root.style.removeProperty('--' + k);
     for (const k in p) root.style.setProperty('--' + k, p[k]);
     const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
     const meta = $('meta[name=theme-color]');

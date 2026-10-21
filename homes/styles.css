@@ -1,4 +1,4 @@
-/* AgentSee — ScoreFrame new-look tokens: lifted surfaces, mono eyebrows,
+/* Olive Owl — ScoreFrame new-look tokens: lifted surfaces, mono eyebrows,
    heavy uppercase titles, one accent per palette (set from JS). */
 :root {
   --bg: #F5F5F2; --s1: #FFFFFF; --s2: #EDECEA; --ln: #DDDBD8; --tx: #1C1B1F; --mu: #5E5A64;
@@ -737,3 +737,16 @@ label.btn input[type=file] { display: none; }
 .eff.good { background: var(--ok); color: #fff; } .eff.bad { background: var(--red); color: #fff; }
 .card.comp .pill.adj { background: var(--s1); }
 .ph3 { margin: 18px 2px 8px; font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: .03em; }
+
+/* Sign-in gate (cloud.js): the owl on light olive, the choices below */
+body.gated #view, body.gated .nav, body.gated .fab { visibility: hidden; }
+#gate { position: fixed; inset: 0; z-index: 900; display: flex; flex-direction: column; background: #B8C27E; color: #22261A; }
+#gate .gate-top { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: calc(var(--sat) + 32px) 32px 16px; }
+#gate .gate-owl { width: 150px; height: 150px; }
+#gate .gate-name { font-size: 44px; font-weight: 900; letter-spacing: -0.01em; }
+#gate .gate-tag { font-size: 17px; font-weight: 600; color: #2F3912; }
+#gate .gate-sheet { background: var(--bg); color: var(--tx); border-radius: 28px 28px 0 0; padding: 26px 24px calc(var(--sab) + 32px); display: flex; flex-direction: column; gap: 12px; max-width: 520px; width: 100%; margin: 0 auto; }
+#gate .gate-btn { height: 54px; font-size: 17px; width: 100%; }
+#gate .gate-note { color: var(--mu); text-align: center; font-size: 14px; line-height: 1.45; margin: 0; }
+#gate .gate-err { color: var(--red); text-align: center; font-weight: 700; }
+#gate .gate-busy { display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 800; padding: 12px 0; }

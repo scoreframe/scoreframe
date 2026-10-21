@@ -1,4 +1,4 @@
-// AgentSee content: stages, process checklists, the meeting questionnaire,
+// Olive Owl content: stages, process checklists, the meeting questionnaire,
 // priorities, message templates, palettes and the sample book.
 (function (G) {
   'use strict';
@@ -233,6 +233,12 @@
   // Eric 2026-10-20: when the home is in a trust, the proceeds are paid to the trust — the seller may need a bank
   // account in the trust's name to deposit them, and that's worth knowing at the listing, not at the closing table.
   const inTrust = (q) => q.titleHow === 'A trust';
+  // Pre-listing disclosures (Eric 2026-10-21): the methamphetamine disclosure is Missouri-only; a septic / onsite
+  // system adds the wastewater addendum.
+  const mo = (q) => q.sSt === 'Missouri';
+  const septic = (q) => q.sewer === 'Septic / onsite system';
+  const methAny = (q) => mo(q) && (q.methSite === 'Yes' || q.methConvict === 'Yes');
+  const pre78 = (q) => +q.sYear > 0 && +q.sYear < 1978; // federal lead-based paint disclosure
   const TRUST_QS = [
     { k: 'trustName', t: 'text', label: 'Trust’s exact name', ph: 'The Smith Family Trust dated 3/4/2015', cap: 1, show: inTrust, sellerLabel: 'The trust’s exact name' },
     { k: 'trustee', t: 'text', label: 'Trustee(s) who will sign', cap: 1, show: inTrust, sellerLabel: 'Trustee(s) who will sign', tip: 'Title will ask for the trust papers (or a certificate of trust) showing who can sign.' },
@@ -276,6 +282,7 @@
       { k: 'sLot', t: 'text', label: 'Lot size', ph: '0.25 ac', half: 1 },
       { k: 'acreage', t: 'yn', label: 'Acreage / land with it?', half: 1, tip: 'Adds the land disclosure addendum.' },
       { k: 'hoaFee', t: 'money', label: 'HOA / month', half: 1 },
+      { k: 'sewer', t: 'one', label: 'Sewer', opts: ['Public sewer', 'Septic / onsite system', 'Not sure'], tip: 'A septic or other onsite system adds the wastewater addendum.' },
       { k: 'loveHome', t: 'area', label: 'What they love about it', rows: 2, tip: 'These become the listing’s highlights.' },
     ] },
     { id: 'sstatus', side: 'sell', title: 'Condition & showings', icon: 'check', qs: [
@@ -284,6 +291,14 @@
       { k: 'updatesNote', t: 'text', label: 'Years / details', ph: 'Roof 2019, HVAC 2021…' },
       { k: 'issues', t: 'area', label: 'Known issues (for disclosures)', ph: 'Leaks, foundation, past claims…', rows: 2 },
       { k: 'inspReports', t: 'yn', label: 'Any inspection reports?', tip: 'They’ll be given to buyers with the disclosure.' },
+      { k: 'lbpKnown', t: 'yn', label: 'Known lead-based paint or lead hazards?', show: pre78, tip: 'Built before 1978: the federal lead-based paint disclosure.' },
+      { k: 'lbpDescribe', t: 'area', label: 'What’s known about it', rows: 2, show: (q) => pre78(q) && q.lbpKnown === 'Yes' },
+      { k: 'lbpReports', t: 'yn', label: 'Any lead-based paint reports or records?', show: pre78 },
+      { k: 'lbpDocs', t: 'text', label: 'Which reports', ph: 'Risk assessment 2019, XRF inspection…', show: (q) => pre78(q) && q.lbpReports === 'Yes' },
+      { k: 'methSite', t: 'yn', label: 'Ever used to make methamphetamine?', show: mo, tip: 'Missouri requires the seller to disclose it, convicted or not (Methamphetamine Disclosure).' },
+      { k: 'methConvict', t: 'yn', label: 'Ever the home of someone convicted of a meth-related crime, or a storage site or lab for it?', show: mo },
+      { k: 'methWhich', t: 'many', label: 'Which', opts: ['Home of a convicted person', 'Storage site or lab'], show: (q) => mo(q) && q.methConvict === 'Yes' },
+      { k: 'methExplain', t: 'area', label: 'What they know about it', rows: 2, show: methAny },
       { k: 'smart', t: 'many', label: 'Smart-home devices (reset at closing)', opts: ['Thermostat', 'Door locks', 'Doorbell / cameras', 'Garage opener', 'Security system', 'Lights / switches', 'Sprinklers', 'Other'] },
       { k: 'occupancy', t: 'one', label: 'Lived in by', opts: ['Owner', 'Tenant', 'Vacant'] },
       { k: 'tenantEnd', t: 'date', label: 'Tenant lease ends', show: (q) => q.occupancy === 'Tenant' },
@@ -364,6 +379,8 @@
       { k: 'warrantyMax', t: 'money', label: 'Up to', half: 1, show: (q) => q.warranty === 'Buying one' },
       { k: 'warrantyCo', t: 'text', label: 'From (company)', half: 1, show: (q) => q.warranty === 'Buying one' },
       { k: 'addlTerms', t: 'area', label: 'Additional terms', rows: 2 },
+      { k: 'wwAccess', t: 'one', label: 'Septic inspection — uncovering the access lids is paid by', opts: ['Seller', 'Buyer', 'Not applicable'], show: septic },
+      { k: 'wwPump', t: 'one', label: 'Septic inspection — pumping the tank is paid by', opts: ['Seller', 'Buyer', 'Not applicable'], show: septic },
     ] },
 
     // ----- buying -----
@@ -481,6 +498,7 @@
       { k: 'sLot', t: 'text', label: 'Lot size', ph: '0.25 acre', half: 1 },
       { k: 'acreage', t: 'yn', label: 'Does it include acreage / land?', half: 1 },
       { k: 'hoaFee', t: 'money', label: 'HOA dues / month', half: 1, ph: '$0 if none' },
+      { k: 'sewer', t: 'one', label: 'Is it on city sewer or a septic system?', opts: ['Public sewer', 'Septic / onsite system', 'Not sure'] },
       { k: 'loveHome', t: 'area', label: 'What do you love most about it?', rows: 2, tip: 'We’ll use this in the listing.' },
     ] },
     { id: 'cond', title: 'Condition', qs: [
@@ -489,6 +507,14 @@
       { k: 'updatesNote', t: 'text', label: 'Years / details', ph: 'Roof 2019, HVAC 2021…' },
       { k: 'issues', t: 'area', label: 'Anything a buyer should know?', ph: 'Leaks, foundation, past insurance claims…', rows: 2, tip: 'Sellers have to disclose known defects — better to plan for them now.' },
       { k: 'inspReports', t: 'yn', label: 'Do you have any inspection reports?' },
+      { k: 'lbpKnown', t: 'yn', label: 'Do you know of any lead-based paint or lead hazards in the home?', show: pre78, tip: 'Federal law asks this of every seller of a home built before 1978.' },
+      { k: 'lbpDescribe', t: 'area', label: 'What do you know about it?', rows: 2, show: (q) => pre78(q) && q.lbpKnown === 'Yes' },
+      { k: 'lbpReports', t: 'yn', label: 'Do you have any lead-based paint reports or records?', show: pre78 },
+      { k: 'lbpDocs', t: 'text', label: 'Which ones?', ph: 'Risk assessment, inspection report…', show: (q) => pre78(q) && q.lbpReports === 'Yes' },
+      { k: 'methSite', t: 'yn', label: 'Has the home ever been used to make methamphetamine?', show: mo, tip: 'Missouri law asks every seller this — whether or not anyone was convicted.' },
+      { k: 'methConvict', t: 'yn', label: 'Was it ever the home of someone convicted of a meth-related crime, or a place those substances were stored or made?', show: mo },
+      { k: 'methWhich', t: 'many', label: 'Which applies?', opts: ['Home of a convicted person', 'Storage site or lab'], show: (q) => mo(q) && q.methConvict === 'Yes' },
+      { k: 'methExplain', t: 'area', label: 'Tell us what you know', rows: 2, show: methAny },
       { k: 'smart', t: 'many', label: 'Smart-home devices', opts: ['Thermostat', 'Door locks', 'Doorbell / cameras', 'Garage opener', 'Security system', 'Lights / switches', 'Sprinklers', 'Other'], tip: 'They get reset for the buyer at closing.' },
       { k: 'occupancy', t: 'one', label: 'Who lives there now?', opts: ['Owner', 'Tenant', 'Vacant'] },
       { k: 'tenantEnd', t: 'date', label: 'Tenant’s lease ends', show: (q) => q.occupancy === 'Tenant' },
@@ -612,6 +638,10 @@
 
   // ScoreFrame's token set (bg/s1/s2/ln/tx/mu are per theme; these are the accents)
   AG.PALETTES = {
+    // Olive Owl (Eric 2026-10-21: "a nice light olive color with some other color accents that go with it"):
+    // light olive for buttons and the brand, deep olive for readable text, terracotta / honey gold / slate accents.
+    olive: { name: 'Olive', light: { ac: '#B8C27E', on: '#22261A', acs: '#E3E8C4', act: '#4C5A1E', bg: '#F1F2E6', s1: '#FFFFFF', s2: '#E8EAD8', ln: '#D7DAC3', tx: '#22261A', mu: '#5C6150', gold: '#D9A03A', red: '#B4462B', cold: '#3E5C76', ok: '#3F7A2E', c1: '#6B7F1F', c2: '#3D6FB0' },
+      dark: { ac: '#B8C27E', on: '#15170F', acs: '#33391F', act: '#C9D395', bg: '#15170F', s1: '#1E2117', s2: '#282C1F', ln: '#363B2A', tx: '#EDEFE3', mu: '#B0B5A0', gold: '#F0C55A', red: '#E8785A', cold: '#8FB0CC', ok: '#8CCB6A', c1: '#8AA03A', c2: '#5E8FD0' } },
     harbor: { name: 'Harbor', light: { ac: '#0F8A74', on: '#FFFFFF', acs: '#D5F0E9', act: '#0B6B5A' }, dark: { ac: '#3CC7A8', on: '#04211B', acs: '#173A33', act: '#7FE0C9' } },
     sunset: { name: 'Sunset', light: { ac: '#FF9640', on: '#1A1004', acs: '#FFDCC2', act: '#8B5000' }, dark: { ac: '#FF9640', on: '#1A1004', acs: '#3A2A1A', act: '#FFB477' } },
     trailhead: { name: 'Trailhead', light: { ac: '#4E5A21', on: '#FFFFFF', acs: '#E3E7CF', act: '#4E5A21' }, dark: { ac: '#A9B86A', on: '#1A1F08', acs: '#2F3520', act: '#C8D58F' } },
