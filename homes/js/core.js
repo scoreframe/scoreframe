@@ -506,13 +506,21 @@
     monthly.total = monthly.pi + monthly.tax + monthly.ins + monthly.mi + monthly.hoa;
     return { cash, price, down, loan, taxYear, insYear, days, daily, lines, auto, subs, total, sellerPaid, due: down + total - sellerPaid, monthly };
   };
+  /** What a buyer plans to put down at [price]. Eric: "allow a percentage because it'll be different depending on the
+   *  home they find" — a % follows the price; a set amount stays put (capped at the price); else the Settings default %. */
+  AG.downFor = (q, price) => {
+    if (q.payWith === 'Cash') return price;
+    if (q.downAs === '% of price') return Math.round((price * (isSet(q.downPct) ? +q.downPct : AG.db.settings.downPct)) / 100);
+    if (isSet(q.down)) return Math.min(price, +q.down);
+    return Math.round((price * AG.db.settings.downPct) / 100);
+  };
   /** A worksheet option for a buying client (their numbers + Settings defaults). */
   AG.wsForClient = (c, price, extra = {}) => {
     const q = c.q || {}, s = AG.db.settings, deal = (c.buy && c.buy.deal) || {};
     const h = (extra.homeId || deal.homeId) && AG.home ? AG.home(extra.homeId || deal.homeId) : null;
     price = +(price || deal.price || (h && h.price) || q.budgetMax || q.preAmount || 0);
     const loanType = AG.wsLoanType(q);
-    const down = loanType === 'Cash' ? price : isSet(q.down) ? Math.min(price, +q.down) : Math.round((price * s.downPct) / 100);
+    const down = loanType === 'Cash' ? price : AG.downFor(q, price);
     // The part of the buyer agreement the seller isn't covering, when both numbers are known.
     let brokerComm = 0;
     const offered = h && h.comp === 'Offered' ? (+h.compPct || 0) : null;
@@ -665,7 +673,7 @@
     price = +(price || (c.buy && c.buy.deal && c.buy.deal.price) || q.budgetMax || q.preAmount || 0); // under contract → the real price
     if (!price) return null;
     const cash = q.payWith === 'Cash';
-    const down = cash ? price : !AG.blank(q.down) ? +q.down : (price * s.downPct) / 100;
+    const down = cash ? price : AG.downFor(q, price);
     const ws = AG.wsTotals(AG.wsForClient(c, price, { down, loanType: cash ? 'Cash' : AG.wsLoanType(q) }));
     const closing = ws.total, closingPct = Math.round((closing / price) * 1000) / 10;
     const needed = down + closing;
