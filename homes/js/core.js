@@ -133,7 +133,7 @@
   // second one ("photos") so the frequent save stays small. Native shells
   // write files (with rolling daily backups); a plain browser uses localStorage.
   AG.defaultSettings = () => ({
-    agent: '', brokerage: '', agentPhone: '', agentEmail: '', license: '', reviewLink: '', area: '', franchise: false,
+    agent: '', brokerage: '', agentPhone: '', agentEmail: '', license: '', reviewLink: '', area: '', franchise: false, cmaAdj: {},
     commissionPct: 2.5, splitPct: 70, goal: 100000,
     theme: 'system', palette: 'harbor',
     mlsName: 'MLS', mlsPortal: '', mlsUrl: '',
@@ -145,7 +145,7 @@
   });
   AG.fresh = () => ({
     v: 1, created: Date.now(), settings: AG.defaultSettings(),
-    clients: [], homes: [], items: [], partners: [],
+    clients: [], homes: [], items: [], partners: [], cmas: [],
     templates: AG.clone(AG.DEFAULT_TEMPLATES || []), calc: {},
     me: {}, links: AG.clone(AG.DEFAULT_LINKS || []),
   });
@@ -154,7 +154,8 @@
     db.settings = Object.assign(def, db.settings || {});
     db.settings.deadlines = Object.assign(AG.defaultSettings().deadlines, db.settings.deadlines || {});
     db.settings.costs = Object.assign(AG.defaultCosts(), db.settings.costs || {});
-    for (const k of ['clients', 'homes', 'items', 'partners']) if (!Array.isArray(db[k])) db[k] = [];
+    for (const k of ['clients', 'homes', 'items', 'partners', 'cmas']) if (!Array.isArray(db[k])) db[k] = [];
+    db.settings.cmaAdj = db.settings.cmaAdj || {};
     if (!Array.isArray(db.templates)) db.templates = AG.clone(AG.DEFAULT_TEMPLATES || []);
     // new built-in templates appear in older books too (unless removed on purpose)
     db.tplRemoved = db.tplRemoved || [];

@@ -686,3 +686,54 @@ body.presenting #view { padding-bottom: calc(var(--sab) + 40px + var(--kb)); }
 .fpages img { width: 100%; border-radius: 8px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .2); }
 @media (min-width: 1000px) { .fpages { display: grid; grid-template-columns: 1fr 1fr; } }
 label.btn input[type=file] { display: none; }
+
+/* Market analysis: range strip, market stats, comps */
+.cmastrip { width: 100%; height: auto; margin-top: 12px; overflow: visible; }
+.cmastrip .band { fill: var(--act); opacity: .14; }
+.cmastrip .mid { stroke: var(--act); stroke-width: 2; }
+.cmastrip .axis { stroke: var(--ln); stroke-width: 1; }
+.cmastrip text { font-size: 10px; fill: var(--mu); font-weight: 700; }
+.cmastrip text.val { fill: var(--tx); font-weight: 900; font-size: 11px; }
+.cmastrip circle { stroke: var(--s1); stroke-width: 2; cursor: pointer; }
+.cmastrip circle.sd { fill: var(--act); }
+.cmastrip circle.ac { fill: var(--s1); stroke: var(--act); stroke-width: 2.5; }
+.cmastrip .ex path { stroke: var(--red); stroke-width: 2.5; stroke-linecap: round; cursor: pointer; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; font-size: 12px; color: var(--mu); font-weight: 700; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; font-style: normal; }
+.legend i.sd { background: var(--act); } .legend i.ac { border: 2.5px solid var(--act); width: 6px; height: 6px; }
+.legend i.ex { width: auto; height: auto; color: var(--red); font-weight: 900; font-size: 14px; line-height: 1; }
+.legend i.band { border-radius: 3px; width: 16px; background: var(--act); opacity: .25; }
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+@media (min-width: 560px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+.stat { background: var(--s2); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; }
+.stat b { font-size: 20px; font-weight: 900; }
+.stat small { color: var(--mu); font-size: 12px; font-weight: 700; }
+.stat i { font-style: normal; color: var(--act); font-size: 12px; font-weight: 800; }
+.card.comp { width: 100%; text-align: left; padding: 12px; margin: 0 0 8px; background: var(--s2); box-shadow: none; display: block; }
+.card.comp.off { opacity: .55; }
+.card.comp .match { flex: none; }
+.card.comp .px { text-align: right; display: flex; flex-direction: column; }
+.card.comp .px b { font-size: 16px; font-weight: 900; }
+.card.comp .px small { color: var(--mu); font-size: 12px; }
+.pill.adj b { font-weight: 900; margin-left: 4px; }
+
+/* Location target: rings tinted by what helps (green) or hurts (red) */
+.target { width: 100%; max-width: 340px; display: block; margin: 4px auto 0; }
+.target .ring { cursor: pointer; }
+.target .rf { stroke: var(--s1); stroke-width: 2; fill: var(--s2); }
+.target .rf.g { fill: var(--ok); } .target .rf.r { fill: var(--red); }
+.target .rf.g.s1, .target .rf.r.s1 { fill-opacity: .16; } .target .rf.g.s2, .target .rf.r.s2 { fill-opacity: .24; }
+.target .rf.g.s3, .target .rf.r.s3 { fill-opacity: .32; } .target .rf.g.s4, .target .rf.r.s4 { fill-opacity: .4; }
+.target .ring.on .rf { stroke: var(--act); stroke-width: 3; }
+.target .tl { font-size: 11px; font-weight: 900; fill: var(--tx); text-transform: uppercase; letter-spacing: .04em; }
+.target .tc { font-size: 10px; font-weight: 800; fill: var(--mu); text-transform: none; letter-spacing: 0; }
+.target .fd { stroke: var(--s1); stroke-width: 2; }
+.fd.good, .fdot.good { fill: var(--ok); background: var(--ok); } .fd.bad, .fdot.bad { fill: var(--red); background: var(--red); } .fd.neutral, .fdot.neutral { fill: var(--mu); background: var(--mu); }
+.legend i.fd { border-radius: 50%; }
+.fdot { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; margin: 5px 2px 0 0; }
+.chip .fdot { margin: 0 6px 0 0; }
+.eff { flex: none; height: 28px; padding: 0 10px; border-radius: 14px; font-size: 12.5px; font-weight: 900; background: var(--s2); color: var(--mu); }
+.eff.good { background: var(--ok); color: #fff; } .eff.bad { background: var(--red); color: #fff; }
+.card.comp .pill.adj { background: var(--s1); }
+.ph3 { margin: 18px 2px 8px; font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: .03em; }

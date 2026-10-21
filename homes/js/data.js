@@ -626,7 +626,7 @@
     const day = (d) => AG.addDays(d0, d);
     const ymd = (d) => AG.ymd(day(d));
     const id = () => AG.uid();
-    const clients = [], homes = [], items = [], partners = [];
+    const clients = [], homes = [], items = [], partners = [], cmas = [];
     const P = (o) => { const p = { id: id(), demo: true, ...o }; partners.push(p); return p; };
     const lender = P({ name: 'Sarah Kim', company: 'Summit Home Loans', role: 'Lender', phone: '4175550147', email: 'sarah@example.com', notes: 'Fast pre-approvals, great with first-time buyers.' });
     P({ name: 'Mike Alvarez', company: 'Keystone Inspections', role: 'Inspector', phone: '4175550163', email: 'mike@example.com' });
@@ -787,6 +787,38 @@
     [['emd', 'Earnest money due', AG.addDays(base, dl.emd), 1, true], ['insp', 'Inspection deadline', AG.addDays(base, dl.insp), 2], ['appr', 'Appraisal deadline', AG.addDays(base, dl.appr), 3],
       ['fin', 'Financing deadline', AG.addDays(base, dl.fin), 3], ['walk', 'Final walkthrough', AG.addDays(close, -1), 2], ['close', '🔑 Closing', close, 7]].forEach(([k, t, when, warn, isDone]) =>
       I({ clientId: alyssa.id, kind: 'deadline', title: `${t} — 88 Willow Ln`, at: when, allDay: true, warn, side: 'buy', auto: 'buy_' + k, done: isDone ? at(-6) : undefined }));
-    return { clients, homes, items, partners };
+    // Robert's market analysis: made-up comps around his street (Springfield, MO), as if imported from the MLS.
+    const near = (dLat, dLng) => ({ lat: 37.1355 + dLat, lng: -93.238 + dLng });
+    const comp = (o) => ({ id: id(), city: 'Springfield', state: 'MO', zip: '65804', type: 'Single family', source: 'mls', extra: [], features: [], use: false, ...o });
+    const S = (mo, o) => comp({ status: 'Sold', soldDate: ymd(-Math.round(mo * 30.4)), ...o });
+    const robertCma = {
+      id: id(), demo: true, clientId: robert.id, homeId: '', created: now, updated: now, adj: {}, market: { sold12: 38, active: 9, pending: 4, expired: 6 }, pick: 629000,
+      subject: { address: '4512 Oak Ridge Dr', city: 'Springfield', state: 'MO', zip: '65804', type: 'Single family', beds: 4, baths: 3, sqft: 2650, year: 1998, lotAc: 0.31, garage: 2, bsmtFin: null, pool: 'No', cond: 'Updated', subdivision: 'Oak Ridge Estates', features: [], ...near(0, 0) },
+      props: [
+        S(2, { address: '4618 Oak Ridge Dr', listPrice: 619000, soldPrice: 612000, dom: 9, beds: 4, baths: 3, sqft: 2580, year: 1997, lotAc: 0.29, garage: 2, cond: 'Updated', subdivision: 'Oak Ridge Estates', ...near(0.0015, 0.0021) }),
+        S(4, { address: '4402 Oak Ridge Dr', listPrice: 609000, soldPrice: 598500, dom: 21, beds: 4, baths: 2.5, sqft: 2490, year: 1996, lotAc: 0.3, garage: 2, cond: 'Average', subdivision: 'Oak Ridge Estates', ...near(-0.0018, -0.0026) }),
+        S(5, { address: '3921 E Briarwood Ln', listPrice: 649900, soldPrice: 645000, dom: 14, beds: 4, baths: 3.5, sqft: 2810, year: 2001, lotAc: 0.35, garage: 3, cond: 'Updated', subdivision: 'Briarwood', ...near(0.0062, 0.0035) }),
+        S(7, { address: '4207 S Timber Creek Dr', listPrice: 589000, soldPrice: 575000, dom: 33, beds: 4, baths: 3, sqft: 2400, year: 1994, lotAc: 0.27, garage: 2, cond: 'Average', subdivision: 'Timber Creek', ...near(-0.0081, 0.0052) }),
+        S(3, { address: '4815 S Hawthorne Ave', listPrice: 629900, soldPrice: 629900, dom: 6, beds: 5, baths: 3, sqft: 2700, year: 1999, lotAc: 0.33, garage: 2, cond: 'Updated', subdivision: 'Oak Ridge Estates', ...near(0.0041, -0.0047) }),
+        S(10, { address: '3760 E Chestnut Hill Ct', listPrice: 579000, soldPrice: 560000, dom: 48, beds: 4, baths: 3, sqft: 2550, year: 1993, lotAc: 0.31, garage: 2, cond: 'Needs some work', subdivision: 'Chestnut Hill', ...near(0.0105, 0.0088) }),
+        S(14, { address: '5210 S Ridgecrest Ave', listPrice: 549000, soldPrice: 540000, dom: 27, beds: 3, baths: 2.5, sqft: 2300, year: 1990, lotAc: 0.25, garage: 2, cond: 'Average', subdivision: 'Ridgecrest', ...near(-0.0205, -0.0122) }),
+        S(6, { address: '2915 E Cedar Bluff Rd', listPrice: 749000, soldPrice: 735000, dom: 19, beds: 5, baths: 4, sqft: 3400, year: 2006, lotAc: 0.6, garage: 3, cond: 'Remodeled', subdivision: 'Cedar Bluff', ...near(0.0151, -0.0164) }),
+        comp({ status: 'Active', address: '4521 Oak Ridge Dr', listPrice: 639000, dom: 18, beds: 4, baths: 3, sqft: 2620, year: 1998, lotAc: 0.3, garage: 2, cond: 'Updated', subdivision: 'Oak Ridge Estates', ...near(0.0004, 0.0006) }),
+        comp({ status: 'Active', address: '4033 E Briarwood Ln', listPrice: 619500, dom: 41, beds: 4, baths: 3, sqft: 2550, year: 2000, lotAc: 0.32, garage: 2, cond: 'Average', subdivision: 'Briarwood', ...near(0.0058, 0.0049) }),
+        comp({ status: 'Active', address: '4700 S Hawthorne Ave', listPrice: 665000, dom: 9, beds: 5, baths: 3.5, sqft: 2900, year: 2003, lotAc: 0.34, garage: 3, cond: 'Updated', subdivision: 'Oak Ridge Estates', ...near(0.0036, -0.0039) }),
+        comp({ status: 'Pending', address: '4310 S Timber Creek Dr', listPrice: 605000, dom: 12, beds: 4, baths: 3, sqft: 2510, year: 1996, lotAc: 0.28, garage: 2, cond: 'Average', subdivision: 'Timber Creek', ...near(-0.0072, 0.0044) }),
+        comp({ status: 'Expired', address: '3850 E Chestnut Hill Ct', listPrice: 689000, dom: 120, offDate: ymd(-75), beds: 4, baths: 3, sqft: 2600, year: 1995, lotAc: 0.3, garage: 2, cond: 'Average', subdivision: 'Chestnut Hill', ...near(0.0098, 0.0081) }),
+      ],
+      place: { city: { factors: [] }, area: { name: 'Oak Ridge Estates', district: 'Springfield R-12', factors: [] }, home: { factors: [] }, over: {},
+        near: { factors: [
+          { id: id(), label: 'Elementary school — 0.5 mi', note: 'Sample: add the real school and its published rating', effect: 'good', src: 'agent' },
+          { id: id(), label: 'Park and walking trail — 0.3 mi', note: '', effect: 'good', src: 'agent' },
+          { id: id(), label: 'Backs to a busy road', note: 'Traffic noise in the backyard', effect: 'bad', src: 'agent' },
+        ] } },
+    };
+    if (AG.cmaAutoPick) { const save = AG.db; AG.db = AG.db || { settings: AG.defaultSettings() }; AG.cmaAutoPick(robertCma, now); AG.db = save; }
+    cmas.push(robertCma);
+
+    return { clients, homes, items, partners, cmas };
   };
 })(typeof window !== 'undefined' ? window : globalThis);
