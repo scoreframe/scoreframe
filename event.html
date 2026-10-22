@@ -327,6 +327,23 @@ async function tryAppAuthHandoff() {
     const m = hash.match(/[#&]auth=([^&]+)/);
     if (!m) return false;
     const idToken = decodeURIComponent(m[1]);
+    // 2026-10-21 (A51 regression) — already signed in as this person: skip the
+    // sign-in. Signing in again inside the app swapped the shared session out
+    // from under the page that opened this one; its next reads came back
+    // permission-denied ("Unable to load past games" on Back from a tournament).
+    try {
+        const p = JSON.parse(atob(idToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        const who = p.user_id || p.sub;
+        if (typeof auth.authStateReady === 'function') await auth.authStateReady();
+        if (who && auth.currentUser && auth.currentUser.uid === who) {
+            try {
+                const cleanHash0 = (window.location.hash || '').replace(/[#&]auth=[^&]+/, '').replace(/^#$/, '');
+                history.replaceState(null, '', window.location.pathname + window.location.search + cleanHash0);
+            } catch (_) {}
+            console.log('[auth] already signed in — handoff skipped');
+            return true;
+        }
+    } catch (_) {}
     try {
         const cleanHash = hash.replace(/[#&]auth=[^&]+/, '').replace(/^#$/, '');
         history.replaceState(null, '', window.location.pathname + window.location.search + cleanHash);
