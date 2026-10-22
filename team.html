@@ -3945,7 +3945,27 @@ async function loadRoster() {
         });
     } catch (e) {
         console.error('Roster error:', e);
+        retryAfterAuthBlip(e, 'roster', loadRoster);
     }
+}
+
+// 2026-10-21 (A51 regression) — opening another ScoreFrame page inside the app
+// (a tournament's event page) signs that page in, and this page's Firebase
+// session briefly switches over with it. A read made in that moment comes back
+// permission-denied and Results said "Unable to load past games" until a
+// refresh. A denied read while someone IS signed in is that blip: wait for the
+// session to settle and read again, once.
+const authBlipRetried = {};
+function retryAfterAuthBlip(e, key, fn) {
+    if (!e || e.code !== 'permission-denied' || authBlipRetried[key]) return;
+    authBlipRetried[key] = true;
+    setTimeout(() => {
+        if (auth.currentUser && !auth.currentUser.isAnonymous) {
+            Promise.resolve(fn()).finally(() => { setTimeout(() => { authBlipRetried[key] = false; }, 5000); });
+        } else {
+            authBlipRetried[key] = false;
+        }
+    }, 1500);
 }
 
 // ── A follower managing their OWN link ─────────────────────────────────────
@@ -4525,6 +4545,7 @@ async function loadPastGames() {
         try { renderStage(); } catch (e) { console.error('stage render failed:', e); }
     } catch (e) {
         console.error('Past games error:', e);
+        retryAfterAuthBlip(e, 'past', loadPastGames);
         // Past games are never public: they carry the box score and every
         // participant's name. Say so plainly instead of showing an error.
         $('pastGames').innerHTML = publicShell
