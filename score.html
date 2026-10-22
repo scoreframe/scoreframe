@@ -1113,6 +1113,8 @@ window.joinGame = async function() {
             status: 'pending',
             requestedAt: Date.now()
         });
+        scorerJoin = { code, uid };
+        armScorerPresence(code);
 
         // Show waiting screen
         showScreen('waitingScreen');
@@ -1291,6 +1293,10 @@ function listenForState(code) {
     onValue(ref(db, '.info/connected'), (snap) => {
         connected = snap.val() === true;
         updateConnectionStatus();
+        // Back from a dropped connection while joined: the server removed our
+        // request when we went away (armScorerPresence), so ask again — the
+        // camera approves on its own and scoring carries on.
+        if (connected && scorerJoin && scorerJoin.code === currentCode) rejoinAfterDrop();
     });
 }
 
@@ -1470,11 +1476,40 @@ function updateConnectionStatus() {
     }
 }
 
+// ── Presence (2026-10-21) ─────────────────────────────────────────────
+// A tab closed (or a phone locked, or a lost signal) without tapping
+// Disconnect never told the camera: it showed "Web scorer connected"
+// forever, and Discard wouldn't close the session because it believed someone
+// was scoring (A51 regression). The server now removes our request when this
+// page's connection drops; on reconnect we ask again.
+let scorerJoin = null;   // { code, uid } while joined
+function armScorerPresence(code) {
+    try { onDisconnect(ref(db, `sessions/${code}/scorerRequest`)).remove(); } catch (_) {}
+}
+async function rejoinAfterDrop() {
+    const j = scorerJoin;
+    if (!j) return;
+    try {
+        const snap = await get(ref(db, `sessions/${j.code}/scorerRequest`));
+        if (!snap.exists()) {
+            await set(ref(db, `sessions/${j.code}/scorerRequest`), {
+                uid: j.uid, displayName: 'Web Scorer', status: 'pending', requestedAt: Date.now()
+            });
+        }
+        armScorerPresence(j.code);
+    } catch (_) {}
+}
+function forgetScorerJoin(code) {
+    if (code) { try { onDisconnect(ref(db, `sessions/${code}/scorerRequest`)).cancel(); } catch (_) {} }
+    scorerJoin = null;
+}
+
 window.cancelJoin = function() {
     // Tell the host we're leaving so the on-phone "web scorer connected"
     // banner flips back to "waiting for scorer". Best-effort — even if the
     // remove fails (offline, permissions) we still tear down local listeners.
     const codeToClear = currentCode;
+    forgetScorerJoin(codeToClear);
     if (codeToClear) {
         try { remove(ref(db, `sessions/${codeToClear}/scorerRequest`)); } catch(_) {}
     }
@@ -1494,6 +1529,7 @@ window.showDisconnectDialog = function() {
         // the relay's scorerRequest stays in place and the phone keeps
         // showing "Web scorer connected". Same fix as cancelJoin().
         const codeToClear = currentCode;
+        forgetScorerJoin(codeToClear);
         if (codeToClear) {
             try { remove(ref(db, `sessions/${codeToClear}/scorerRequest`)); } catch(_) {}
         }
