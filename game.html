@@ -790,7 +790,10 @@ body.sf-nospoil #moreFromTeamCard { display: none !important; }
 // inline before paint so there's no flash of wrong theme.
 (function() {
     try {
-        var t = new URLSearchParams(location.search).get('theme');
+        var qs = new URLSearchParams(location.search);
+        var t = qs.get('theme');
+        // Public website default is light (matches the homepage); the app always passes ?theme=.
+        if (t !== 'light' && t !== 'dark' && qs.get('app') !== '1') t = 'light';
         if (t === 'light' || t === 'dark') {
             // Set on <html> first so the document-root cascade picks it up
             // immediately; the body[data-theme] CSS selectors will resolve

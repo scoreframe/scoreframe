@@ -910,6 +910,9 @@ html, body { font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe U
         // Without this the app's theme=light was simply discarded and the page
         // followed the phone instead of the app around it.
         var t = q.get('theme');
+        // The public website is light (2026-10-23, matches the new homepage).
+        // The app always passes ?theme=, so this only picks the web default.
+        if (t !== 'light' && t !== 'dark' && q.get('app') !== '1') t = 'light';
         if (t === 'light' || t === 'dark') {
             document.documentElement.setAttribute('data-theme', t);
             if (document.body) {
