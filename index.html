@@ -1,880 +1,252 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <link rel="icon" type="image/x-icon" href="favicon.ico" />
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
-  <title>ScoreFrame — Live Scoreboard on Your Sports Video</title>
-  <link rel="canonical" href="https://scoreframe.app/" />
-  <meta name="description" content="Record sports video with professional scoreboards burned in live. 12 sports, remote scoring, live streaming, team sharing. Free on iPhone and Android." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg-deepest: #0A0A0C;
-      --bg-deep: #0F0F11;
-      --bg-card: #161618;
-      --bg-elevated: #1E1E21;
-      --accent: #FF9640;
-      --accent-dim: rgba(255, 150, 64, 0.15);
-      --accent-glow: rgba(255, 150, 64, 0.08);
-      --text-primary: #F2F2F2;
-      --text-secondary: rgba(255, 255, 255, 0.55);
-      --text-tertiary: rgba(255, 255, 255, 0.35);
-      --red: #FF3B3B;
-    }
-
-    html { scroll-behavior: smooth; overflow-x: hidden; }
-
-    body {
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg-deepest);
-      color: var(--text-primary);
-      line-height: 1.6;
-      overflow-x: hidden;
-      max-width: 100vw;
-    }
-
-    /* ── NAV ─────────────────────────────────────────── */
-    nav {
-      position: fixed;
-      top: 0;
-      width: 100%;
-      z-index: 100;
-      background: rgba(10, 10, 12, 0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(255, 150, 64, 0.08);
-      padding: 0 24px;
-    }
-
-    .nav-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 64px;
-    }
-
-    .nav-logo {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 1.4rem;
-      font-weight: 900;
-      text-decoration: none;
-      color: var(--text-primary);
-    }
-
-    .nav-logo span { color: var(--accent); }
-
-    .nav-links { display: flex; gap: 32px; align-items: center; }
-
-    .nav-links a {
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-
-    .nav-links a:hover { color: var(--accent); }
-
-    .nav-cta {
-      background: var(--accent) !important;
-      color: #1A1A1A !important;
-      padding: 8px 20px;
-      border-radius: 8px;
-      font-weight: 700 !important;
-      font-size: 0.85rem !important;
-      transition: background 0.2s;
-    }
-
-    .nav-cta:hover { background: #FFa855 !important; }
-
-    /* ── HERO ─────────────────────────────────────────── */
-    .hero {
-      position: relative;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 120px 24px 80px;
-      overflow: hidden;
-    }
-
-    .hero::before {
-      content: '';
-      position: absolute;
-      top: -20%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 800px;
-      height: 800px;
-      background: radial-gradient(circle, rgba(255,150,64,0.08) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .hero::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(255,150,64,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,150,64,0.03) 1px, transparent 1px);
-      background-size: 80px 80px;
-      pointer-events: none;
-    }
-
-    .hero-content { position: relative; z-index: 1; max-width: 800px; }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--accent-dim);
-      border: 1px solid rgba(255,150,64,0.25);
-      border-radius: 100px;
-      padding: 6px 16px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--accent);
-      margin-bottom: 32px;
-      letter-spacing: 0.5px;
-    }
-
-    .hero-badge .dot {
-      width: 8px;
-      height: 8px;
-      background: #4CAF50;
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    .hero h1 {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: clamp(2.5rem, 6vw, 4.5rem);
-      font-weight: 900;
-      line-height: 1.1;
-      margin-bottom: 24px;
-      letter-spacing: -1px;
-    }
-
-    .hero h1 .accent { color: var(--accent); }
-
-    .hero-sub {
-      font-size: clamp(1rem, 2vw, 1.25rem);
-      color: var(--text-secondary);
-      max-width: 600px;
-      margin: 0 auto 40px;
-      line-height: 1.7;
-    }
-
-    .hero-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--accent);
-      color: #1A1A1A;
-      padding: 16px 32px;
-      border-radius: 12px;
-      font-size: 1rem;
-      font-weight: 700;
-      text-decoration: none;
-      transition: transform 0.2s, background 0.2s;
-    }
-
-    .btn-primary:hover { background: #FFa855; transform: translateY(-2px); }
-
-    .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-      padding: 16px 32px;
-      border-radius: 12px;
-      font-size: 1rem;
-      font-weight: 600;
-      text-decoration: none;
-      border: 1px solid rgba(255,255,255,0.08);
-      transition: transform 0.2s, border-color 0.2s;
-    }
-
-    .btn-secondary:hover { border-color: var(--accent); transform: translateY(-2px); }
-
-    .hero-sports {
-      margin-top: 48px;
-      display: flex;
-      gap: 24px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .hero-sports span {
-      font-size: 1.5rem;
-      opacity: 0.5;
-      transition: opacity 0.2s, transform 0.2s;
-    }
-
-    .hero-sports span:hover { opacity: 1; transform: scale(1.2); }
-
-    /* ── SECTION UTILITY ────────────────────────────── */
-    section { padding: 100px 24px; }
-
-    .section-inner { max-width: 1200px; margin: 0 auto; }
-
-    .section-label {
-      display: inline-block;
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--accent);
-      margin-bottom: 12px;
-    }
-
-    .section-title {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: clamp(1.8rem, 4vw, 2.8rem);
-      font-weight: 900;
-      margin-bottom: 16px;
-      letter-spacing: -0.5px;
-    }
-
-    .section-desc {
-      color: var(--text-secondary);
-      font-size: 1.05rem;
-      max-width: 600px;
-      margin-bottom: 48px;
-    }
-
-    /* ── FEATURES GRID ──────────────────────────────── */
-    .features { background: var(--bg-deep); }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 24px;
-    }
-
-    .feature-card {
-      background: var(--bg-card);
-      border: 1px solid rgba(255,255,255,0.04);
-      border-radius: 16px;
-      padding: 36px 32px;
-      transition: border-color 0.3s, transform 0.3s;
-    }
-
-    .feature-card:hover {
-      border-color: rgba(255,150,64,0.2);
-      transform: translateY(-4px);
-    }
-
-    .feature-icon {
-      font-size: 2rem;
-      margin-bottom: 16px;
-      display: block;
-    }
-
-    .feature-card h3 {
-      font-size: 1.15rem;
-      font-weight: 700;
-      margin-bottom: 10px;
-    }
-
-    .feature-card p {
-      color: var(--text-secondary);
-      font-size: 0.92rem;
-      line-height: 1.6;
-    }
-
-    /* ── HOW IT WORKS ───────────────────────────────── */
-    .how-it-works { background: var(--bg-deepest); }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 40px;
-      margin-top: 48px;
-    }
-
-    .step {
-      text-align: center;
-      position: relative;
-    }
-
-    .step-number {
-      width: 56px;
-      height: 56px;
-      background: var(--accent-dim);
-      border: 2px solid var(--accent);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Playfair Display', serif;
-      font-size: 1.3rem;
-      font-weight: 900;
-      color: var(--accent);
-      margin: 0 auto 20px;
-    }
-
-    .step h3 {
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    .step p {
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-    }
-
-    /* ── SPORTS SECTION ─────────────────────────────── */
-    .sports { background: var(--bg-deep); }
-
-    .sports-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 16px;
-    }
-
-    .sport-card {
-      background: var(--bg-card);
-      border: 1px solid rgba(255,255,255,0.04);
-      border-radius: 12px;
-      padding: 28px 20px;
-      text-align: center;
-      transition: border-color 0.3s, transform 0.3s;
-    }
-
-    .sport-card:hover {
-      border-color: rgba(255,150,64,0.25);
-      transform: translateY(-2px);
-    }
-
-    .sport-card .emoji { font-size: 2.4rem; margin-bottom: 12px; display: block; }
-    .sport-card h3 { font-size: 0.95rem; font-weight: 700; }
-
-    /* ── REMOTE SCORING ─────────────────────────────── */
-    .remote { background: var(--bg-deepest); }
-
-    .remote-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 60px;
-      align-items: center;
-    }
-
-    .remote-visual {
-      background: var(--bg-card);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 20px;
-      padding: 48px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .remote-visual::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(circle at 30% 40%, rgba(255,150,64,0.06) 0%, transparent 60%);
-    }
-
-    .phone-pair {
-      position: relative;
-      z-index: 1;
-      font-size: 4rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
-    }
-
-    .phone-pair .wifi {
-      color: var(--accent);
-      font-size: 1.5rem;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    .remote-text h3 {
-      font-size: 1.3rem;
-      font-weight: 700;
-      margin-bottom: 12px;
-    }
-
-    .remote-text p {
-      color: var(--text-secondary);
-      font-size: 0.95rem;
-      margin-bottom: 16px;
-    }
-
-    .check-list { list-style: none; }
-
-    .check-list li {
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      padding: 6px 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .check-list li::before {
-      content: '✓';
-      color: var(--accent);
-      font-weight: 700;
-    }
-
-    /* ── PRICING ─────────────────────────────────────── */
-    .pricing { background: var(--bg-deep); }
-
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 24px;
-      max-width: 700px;
-      margin: 0 auto;
-    }
-
-    .price-card {
-      background: var(--bg-card);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 16px;
-      padding: 40px 32px;
-    }
-
-    .price-card.pro {
-      border-color: var(--accent);
-      position: relative;
-    }
-
-    .price-card.pro::before {
-      content: 'MOST POPULAR';
-      position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--accent);
-      color: #1A1A1A;
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 4px 16px;
-      border-radius: 100px;
-      letter-spacing: 1px;
-    }
-
-    .price-card h3 {
-      font-size: 1.3rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    .price-amount {
-      font-family: 'Playfair Display', serif;
-      font-size: 2.5rem;
-      font-weight: 900;
-      margin-bottom: 4px;
-    }
-
-    .price-amount .period { font-size: 0.9rem; font-weight: 400; color: var(--text-secondary); }
-
-    .price-card .price-desc {
-      color: var(--text-tertiary);
-      font-size: 0.85rem;
-      margin-bottom: 24px;
-    }
-
-    .price-card ul {
-      list-style: none;
-      margin-bottom: 28px;
-    }
-
-    .price-card ul li {
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      padding: 6px 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .price-card ul li::before {
-      content: '✓';
-      color: var(--accent);
-      font-weight: 700;
-    }
-
-    /* ── CTA ──────────────────────────────────────────── */
-    .final-cta {
-      background: var(--bg-deepest);
-      text-align: center;
-      padding: 100px 24px;
-      position: relative;
-    }
-
-    .final-cta::before {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 600px;
-      height: 400px;
-      background: radial-gradient(circle, rgba(255,150,64,0.06) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .final-cta .section-title { margin-bottom: 20px; }
-
-    .final-cta p {
-      color: var(--text-secondary);
-      margin-bottom: 32px;
-      font-size: 1.05rem;
-    }
-
-    /* ── FOOTER ───────────────────────────────────────── */
-    footer {
-      background: var(--bg-deep);
-      border-top: 1px solid rgba(255,255,255,0.04);
-      padding: 40px 24px;
-      text-align: center;
-    }
-
-    .footer-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
-    .footer-links { display: flex; gap: 24px; }
-
-    .footer-links a {
-      color: var(--text-tertiary);
-      text-decoration: none;
-      font-size: 0.85rem;
-      transition: color 0.2s;
-    }
-
-    .footer-links a:hover { color: var(--accent); }
-
-    .footer-copy {
-      color: var(--text-tertiary);
-      font-size: 0.85rem;
-    }
-
-    /* ── RESPONSIVE ───────────────────────────────────── */
-    .nav-menu-btn {
-      display: none; background: none; border: none; color: var(--text-primary);
-      font-size: 24px; cursor: pointer; padding: 8px; order: -1; margin-right: 12px;
-    }
-    .nav-mobile-overlay {
-      display: none; position: fixed; top: 64px; left: 0; right: 0; bottom: 0;
-      background: rgba(10,10,12,0.97); z-index: 99; flex-direction: column;
-      align-items: center; padding-top: 40px; gap: 24px;
-    }
-    .nav-mobile-overlay.open { display: flex; }
-    .nav-mobile-overlay a {
-      color: var(--text-secondary); text-decoration: none; font-size: 18px; font-weight: 500;
-    }
-    .nav-mobile-overlay a:hover { color: var(--accent); }
-    .nav-mobile-overlay .nav-cta {
-      background: var(--accent); color: var(--bg-deepest) !important; padding: 10px 28px;
-      border-radius: 8px; font-weight: 600;
-    }
-
-    @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .nav-menu-btn { display: block; }
-      .remote-layout { grid-template-columns: 1fr; }
-      .hero { min-height: auto; padding: 140px 24px 80px; }
-      section { padding: 64px 24px; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ScoreFrame — Live Scoreboard on Your Sports Video</title>
+<link rel="canonical" href="https://scoreframe.app/">
+<meta name="description" content="Film the game on your phone and tap the score: ScoreFrame puts a live scoreboard into the video. 12 sports, a second phone to keep score, live to YouTube, team pages for families. Free on iPhone and Android.">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=JetBrains+Mono:wght@700&display=swap">
+<style>
+:root{
+  --paper:#F5F5F2; --card:#FFFFFF; --ink:#1C1B1F; --mu:#5A565F; --ln:#E2DFDA;
+  --orange:#FF9640; --on-orange:#1A1004; --deep:#111215; --deep2:#1B1C21; --deep-tx:#F1EEE9; --deep-mu:#A9ADB6;
+  --live:#FF3B3B; --link:#39D98A; --gold:#F2B300;
+  color-scheme: light;
+}
+/* One light theme on purpose (Eric: "too dark"); the page sets every colour itself. */
+*{box-sizing:border-box}
+html,body{margin:0;overflow-x:hidden}
+body{background:var(--paper);color:var(--ink);font-family:Archivo,-apple-system,"Helvetica Neue",Arial,sans-serif;line-height:1.5}
+img{max-width:100%;display:block}
+a{color:inherit}
+a:focus-visible,.btn:focus-visible{outline:3px solid #E07A1F;outline-offset:3px;border-radius:8px}
+.wrap{max-width:1160px;margin:0 auto;padding-inline:24px}
+.eb{font:700 12px "JetBrains Mono",ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:#B5651D}
+.deep .eb{color:#B5651D}
+h1,h2,h3{margin:0;font-weight:900;letter-spacing:-.015em;text-wrap:balance}
+h1{font-size:clamp(40px,6.2vw,76px);line-height:.98}
+h2{font-size:clamp(30px,4vw,48px);line-height:1.02}
+h3{font-size:20px}
+p{margin:0}
+.lede{font-size:clamp(17px,1.6vw,20px);color:var(--mu);max-width:44ch}
+.mark{font-weight:900;font-size:22px;letter-spacing:-.01em}
+.mark b{color:var(--orange)}
+
+/* top bar */
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--ln)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px}
+nav{display:flex;gap:22px;font-size:15px;font-weight:700;color:var(--mu)}
+nav a{text-decoration:none}
+.btn{display:inline-flex;align-items:center;gap:8px;height:48px;padding:0 22px;border-radius:14px;font-weight:900;font-size:16px;text-decoration:none;border:2px solid transparent}
+.btn.primary{background:var(--orange);color:var(--on-orange)}
+.btn.ghost{border-color:var(--ln);color:var(--ink);background:var(--card)}
+.btn.small{height:40px;padding:0 16px;font-size:14px;border-radius:12px}
+@media (max-width:760px){ nav{display:none} }
+
+/* hero */
+.hero{padding-block:56px 40px}
+.hero-grid{display:grid;grid-template-columns:5fr 7fr;gap:48px;align-items:center}
+.hero h1 span{color:#E07A1F}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.small-note{margin-top:14px;font:700 12px "JetBrains Mono",monospace;color:var(--mu);letter-spacing:.06em}
+.phone-land{background:#0B0B0D;border-radius:34px;padding:14px;box-shadow:0 30px 80px rgba(17,18,21,.28),0 0 0 3px #3A3D44}
+.phone-land img{border-radius:22px}
+@media (max-width:900px){ .hero-grid{grid-template-columns:1fr} }
+
+/* strip of real numbers */
+.facts{display:flex;flex-wrap:wrap;gap:10px;margin-top:36px}
+.fact{font:700 13px "JetBrains Mono",monospace;padding:8px 12px;border-radius:999px;background:var(--card);border:1px solid var(--ln);color:var(--mu)}
+
+/* sections */
+section{padding-block:72px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.split.flip > :first-child{order:2}
+@media (max-width:900px){ .split{grid-template-columns:1fr} .split.flip > :first-child{order:0} }
+.copy{display:flex;flex-direction:column;gap:16px}
+.ticks{list-style:none;padding:0;margin:4px 0 0;display:flex;flex-direction:column;gap:10px}
+.ticks li{display:flex;gap:10px;color:var(--mu)}
+.ticks li::before{content:"";flex:none;width:8px;height:8px;margin-top:8px;border-radius:2px;background:var(--orange)}
+.deep .ticks li{color:var(--mu)}
+
+.deep{background:#FFF4EA;color:var(--ink);border-block:1px solid #F3DCC6}
+.deep .lede{color:var(--mu)}
+.court{position:relative;overflow:hidden}
+.court::before{content:"";position:absolute;inset:0;background:url(img/home/court.jpg) center 60%/cover;opacity:.07}
+.court > *{position:relative}
+
+/* two phones */
+.pair{display:flex;align-items:center;gap:22px;justify-content:center;padding-inline:8px}
+.link{flex:0 0 40px;height:8px;border-radius:4px;background:repeating-linear-gradient(90deg,var(--link) 0 12px,transparent 12px 18px);filter:drop-shadow(0 0 8px rgba(57,217,138,.8))}
+
+/* upright phones row */
+.phones{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.phones figure{margin:0;display:flex;flex-direction:column;gap:12px}
+.phones .port{background:#0B0B0D;border-radius:30px;padding:8px;box-shadow:0 18px 50px rgba(17,18,21,.18),0 0 0 3px #3A3D44}
+.phones .port img{border-radius:22px}
+.phones figcaption{display:flex;flex-direction:column;gap:4px}
+.phones figcaption b{font-size:17px}
+.phones figcaption span{color:var(--mu);font-size:15px}
+@media (max-width:760px){ .phones{grid-template-columns:1fr;max-width:340px;margin-inline:auto} }
+
+
+/* A generic iPhone: thin dark bezel, metal edge, Dynamic Island, side buttons. */
+.iphone{position:relative;background:#0E0F12;padding:7px;border-radius:44px;
+  box-shadow:0 0 0 2px #3A3D44,0 0 0 3.5px #8A8E96,0 0 0 5px #2A2C31,0 24px 60px rgba(17,18,21,.22)}
+.iphone img{border-radius:37px;width:100%}
+.iphone .isl{position:absolute;z-index:2;top:16px;left:50%;transform:translateX(-50%);width:30%;height:3.2%;min-height:18px;border-radius:999px;background:#000}
+.iphone.land{border-radius:clamp(14px,2.4vw,30px);padding:6px}
+.iphone.land img{border-radius:clamp(9px,2vw,25px)}
+/* Small phones in the pair: corners scale with the screen so they never turn oval. */
+.iphone.small{border-radius:clamp(14px,3vw,36px);padding:5px}
+.iphone.small img{border-radius:clamp(10px,2.5vw,30px)}
+.iphone.small .isl{top:2.2%;height:2.4%;min-height:0}
+@media (max-width:700px){ .pair{flex-direction:column} .pair > .iphone.land{width:100%;flex:none!important} .pair > .iphone.small{width:56%;flex-basis:auto!important} .link{transform:rotate(90deg);margin-block:14px} }
+.iphone.land .isl{top:50%;left:14px;transform:translateY(-50%);width:16px;height:22%;min-height:0}
+
+/* Grid and flex children shrink to the screen (big images made the page scroll sideways on phones). */
+.hero-grid > *, .split > *, .pair > *{min-width:0}
+@media (max-width:900px){ .hero-grid, .split{grid-template-columns:minmax(0,1fr)} }
+/* sports */
+.sports{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.sports span{font:700 14px "JetBrains Mono",monospace;padding:8px 12px;border-radius:10px;border:1px solid var(--ln);background:var(--card)}
+
+/* pro */
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:28px}
+.plan{background:var(--card);border:1px solid var(--ln);border-radius:20px;padding:24px;display:flex;flex-direction:column;gap:12px}
+.plan.pro{border:2px solid var(--orange)}
+@media (max-width:760px){ .plans{grid-template-columns:1fr} }
+
+.flinks{display:flex;flex-wrap:wrap;gap:8px 18px}.flinks a{text-decoration:none}.flinks a:hover{text-decoration:underline}
+footer{border-top:1px solid var(--ln);padding-block:32px;color:var(--mu);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-between}
+.note{max-width:1160px;margin:24px auto 0;padding:14px 18px;border-radius:12px;background:#FFF3E6;color:#6B3D10;font-size:14px;border:1px solid #F3D3B0}
+</style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-  <div class="nav-inner">
-    <a href="#" class="nav-logo">Score<span>Frame</span></a>
-    <div class="nav-links">
-      <a href="features.html">Features</a>
-      <a href="#sports">Sports</a>
-      <a href="score.html">Score a Game</a>
-      <a href="https://www.reddit.com/r/ScoreFrame/" target="_blank">Community</a>
-      <a href="support.html">Support</a>
-      <a href="dashboard.html">Sign In</a>
-      <a href="#download" class="nav-cta">Download Free</a>
-    </div>
-    <button class="nav-menu-btn" onclick="document.getElementById('mobileMenu').classList.toggle('open');this.textContent=this.textContent==='&#9776;'?'&#10005;':'&#9776;'" aria-label="Menu">&#9776;</button>
+
+<header>
+  <div class="wrap bar">
+    <a class="mark" href="/" style="text-decoration:none">Score<b>Frame</b></a>
+    <nav><a href="#film">Film</a><a href="#two">Two phones</a><a href="#families">Families</a><a href="features.html">Features</a><a href="score.html">Score a game</a><a href="support.html">Support</a><a href="dashboard.html" id="signin">Sign in</a></nav>
+    <a class="btn primary small" href="#get-app">Get the app</a>
   </div>
-</nav>
-<div class="nav-mobile-overlay" id="mobileMenu">
-  <a href="features.html" onclick="document.getElementById('mobileMenu').classList.remove('open')">Features</a>
-  <a href="#sports" onclick="document.getElementById('mobileMenu').classList.remove('open')">Sports</a>
-  <a href="score.html">Score a Game</a>
-  <a href="https://www.reddit.com/r/ScoreFrame/" target="_blank">Community</a>
-  <a href="dashboard.html">Sign In</a>
-  <a href="#download" class="nav-cta">Download Free</a>
-</div>
+</header>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-content">
-    <div class="hero-badge">
-      <span class="dot"></span>
-      Live on the App Store &amp; Google Play
-    </div>
-    <h1>Live Scoreboard.<br /><span class="accent">On Your Video.</span></h1>
-    <p class="hero-sub">
-      Record sports video with a broadcast-quality scoreboard burned directly into the footage.
-      12 sports. Remote scoring. Live streaming. Team Sharing. No editing required.
-      <br /><strong style="color: var(--accent);">Now available on iPhone and Android.</strong>
-    </p>
-    <div class="hero-buttons" id="download">
-      <a href="https://apps.apple.com/us/app/scoreframe/id6762281454" class="btn-primary">
-        Get It on the App Store
-      </a>
-      <a href="https://play.google.com/store/apps/details?id=com.scoreframe.android" class="btn-primary">
-        Get It on Google Play
-      </a>
-      <a href="https://www.reddit.com/r/ScoreFrame/" class="btn-secondary">
-        Join r/ScoreFrame
-      </a>
-    </div>
-    <div class="hero-sports">
-      <span title="Basketball">&#x1F3C0;</span>
-      <span title="Football">&#x1F3C8;</span>
-      <span title="Baseball">&#x26BE;</span>
-      <span title="Softball">&#x1F94E;</span>
-      <span title="Bowling">&#x1F3B3;</span>
-      <span title="Soccer">&#x26BD;</span>
-      <span title="Volleyball">&#x1F3D0;</span>
-      <span title="Tennis">&#x1F3BE;</span>
-      <span title="Pickleball">&#x1F3D3;</span>
-      <span title="Hockey">&#x1F3D2;</span>
-      <span title="Lacrosse">&#x1F94D;</span>
-      <span title="Generic">&#x1F3C5;</span>
-    </div>
-  </div>
-</section>
-
-<!-- FEATURES -->
-<section class="features" id="features">
-  <div class="section-inner">
-    <span class="section-label">Features</span>
-    <h2 class="section-title">Everything You Need at the Game</h2>
-    <p class="section-desc">Built for parents, coaches, players, and content creators who want professional-looking game footage without the production crew.</p>
-
-    <div class="features-grid">
-      <div class="feature-card">
-        <span class="feature-icon">&#x1F3A5;</span>
-        <h3>Live Scoreboard Overlay</h3>
-        <p>The scoreboard renders in real time using OpenGL ES compositing. It's part of the video frame from the moment you record &#8212; not added in post.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">&#x1F4F1;</span>
-        <h3>Remote Scoring</h3>
-        <p>Connect a second phone or invite someone over the internet to control the score while you film. Wi-Fi, Wi-Fi Direct, Bluetooth, or web browser &#8212; whatever works.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">&#x2B50;</span>
-        <h3>Highlights &amp; Buffer Mode</h3>
-        <p>Tap the star during recording to clip a highlight. Or use Buffer Mode &#8212; a rolling 60-second buffer that only saves the moments you choose. No full game video needed.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">&#x1F4FA;</span>
-        <h3>Live Streaming</h3>
-        <p>Stream live to YouTube with the scoreboard burned into the broadcast, and share a link with family who can't make it. Pause between sets and pick it back up on the same stream &#8212; one video, one notification. Upload the finished game or a highlight reel straight to YouTube when you're done.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">&#x1F3E0;</span>
-        <h3>Team Sharing</h3>
-        <p>Create a public or private team page with schedules, rosters, game history, and live stream links. Organise by season, run tournaments, and let fans follow the team and get notified the moment you go live &#8212; no account needed to watch.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">&#x2B50;</span>
-        <h3>Player Highlight Reels</h3>
-        <p>Tag a kill, a goal, or a strikeout to a player and they get that clip automatically. At the end of the game, build each player their own highlight reel &#8212; their name on the intro card &#8212; ready to send to them or post.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">&#x23F8;&#xFE0F;</span>
-        <h3>Halftime Without Dead Air</h3>
-        <p>Switch the broadcast to an intermission card at any break &#8212; your own image or team logo, the score so far, and stats. The stream never stops and your recording keeps the real footage, so highlights still work straight through the break.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">&#x1F3AE;</span>
-        <h3>Bluetooth Button Control</h3>
-        <p>Pair any Bluetooth clicker to start, pause, and capture highlights without touching the phone. Mount it on a tripod and control from the sideline.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">&#x2601;&#xFE0F;</span>
-        <h3>Cloud Sync &amp; Game History</h3>
-        <p>Create an optional account to save your teams, rosters, and game history across devices. Track career stats per player &#8212; bowling averages, batting stats, win-loss records.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">&#x1F50D;</span>
-        <h3>Quick Settings Panel</h3>
-        <p>One-tap access to all controls: resolution, HDR, stabilization, fullscreen mode, scoreboard visibility, score-only mode, and more. Android control-center style.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- HOW IT WORKS -->
-<section class="how-it-works">
-  <div class="section-inner" style="text-align: center;">
-    <span class="section-label">How It Works</span>
-    <h2 class="section-title">Three Steps. That's It.</h2>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-number">1</div>
-        <h3>Pick Your Sport</h3>
-        <p>Choose from 12 sports. Each has a purpose-built broadcast-style scoreboard with the right stats for that game.</p>
-      </div>
-      <div class="step">
-        <div class="step-number">2</div>
-        <h3>Record &amp; Score</h3>
-        <p>Hit record and tap to update the score. The scoreboard updates live on the video in real time. Or connect a second phone to keep score remotely.</p>
-      </div>
-      <div class="step">
-        <div class="step-number">3</div>
-        <h3>Share</h3>
-        <p>Your video is done &#8212; scoreboard burned in, highlights clipped. Share straight from your gallery or stream live to YouTube.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- SPORTS -->
-<section class="sports" id="sports">
-  <div class="section-inner">
-    <span class="section-label">Sports Library</span>
-    <h2 class="section-title">Built for How Each Sport Is Played</h2>
-    <p class="section-desc">Not generic timers &#8212; real scoreboards with sport-specific stats, periods, and scoring rules.</p>
-
-    <div class="sports-grid">
-      <div class="sport-card"><span class="emoji">&#x1F3C0;</span><h3>Basketball</h3></div>
-      <div class="sport-card"><span class="emoji">&#x1F3C8;</span><h3>Football</h3></div>
-      <div class="sport-card"><span class="emoji">&#x26BE;</span><h3>Baseball</h3></div>
-      <div class="sport-card"><span class="emoji">&#x1F94E;</span><h3>Softball</h3></div>
-      <div class="sport-card"><span class="emoji">&#x1F3B3;</span><h3>Bowling</h3></div>
-      <div class="sport-card"><span class="emoji">&#x26BD;</span><h3>Soccer</h3></div>
-      <div class="sport-card"><span class="emoji">&#x1F3D0;</span><h3>Volleyball</h3></div>
-      <div class="sport-card"><span class="emoji">&#x1F3BE;</span><h3>Tennis</h3></div>
-      <div class="sport-card"><span class="emoji">&#x1F3D3;</span><h3>Pickleball</h3></div>
-      <div class="sport-card"><span class="emoji">&#x1F3D2;</span><h3>Hockey</h3></div>
-      <div class="sport-card"><span class="emoji">&#x1F94D;</span><h3>Lacrosse</h3></div>
-      <div class="sport-card"><span class="emoji">&#x1F3C5;</span><h3>Generic</h3></div>
-    </div>
-  </div>
-</section>
-
-<!-- REMOTE SCORING -->
-<section class="remote">
-  <div class="section-inner">
-    <div class="remote-layout">
-      <div class="remote-visual">
-        <div class="phone-pair">
-          &#x1F4F7; <span class="wifi">&#x27F7;</span> &#x1F3AE;
+<main>
+  <div class="wrap hero" id="get-app">
+    <div class="hero-grid">
+      <div>
+        <p class="eb">For parents, coaches and team volunteers</p>
+        <h1 style="margin-top:14px">The score is <span>in the video.</span></h1>
+        <p class="lede" style="margin-top:18px">Film the game on your phone and tap the score as it happens. ScoreFrame puts a live scoreboard into the recording, so the video is ready to share the moment the game ends.</p>
+        <div class="cta">
+          <a class="btn primary" href="https://apps.apple.com/us/app/scoreframe/id6762281454">App Store</a>
+          <a class="btn ghost" href="https://play.google.com/store/apps/details?id=com.scoreframe.android">Google Play</a>
         </div>
-        <p style="color: var(--text-tertiary); margin-top: 24px; font-size: 0.9rem; position: relative; z-index: 1;">Camera Phone &nbsp;&nbsp;&#x2194;&nbsp;&nbsp; Controller Phone</p>
+        <p class="small-note">FREE TO START · IPHONE AND ANDROID</p>
       </div>
-      <div class="remote-text">
-        <span class="section-label">Remote Scoring</span>
-        <h3>Two Phones. Four Ways to Connect.</h3>
-        <p>Connect a second phone nearby or invite someone over the internet to keep score while you focus on filming. They don't even need the app &#8212; web scoring works from any browser.</p>
-        <ul class="check-list">
-          <li>Wi-Fi &#8212; same network or mobile hotspot</li>
-          <li>Wi-Fi Direct &#8212; no router or internet needed</li>
-          <li>Bluetooth &#8212; works everywhere, even with no signal</li>
-          <li>Internet &#8212; score from anywhere via web browser</li>
-          <li>Controller phone is always free</li>
+      <div class="iphone land"><i class="isl"></i><img src="img/home/camera.jpg" alt="ScoreFrame filming a volleyball match with the live scoreboard in the corner of the video"></div>
+    </div>
+    <div class="facts">
+      <span class="fact">12 sports</span><span class="fact">Live to YouTube</span><span class="fact">Score from a second phone or a browser</span><span class="fact">Player highlight reels</span><span class="fact">Team pages for families</span>
+    </div>
+  </div>
+
+  <section class="deep court" id="film">
+    <div class="wrap split">
+      <div class="copy">
+        <p class="eb">Film</p>
+        <h2>Tap the score. It's on the video.</h2>
+        <p class="lede">The picture gets most of the screen and the score sits beside it. Tap a team for a point; hold it to take one back.</p>
+        <ul class="ticks">
+          <li>Big video, Window or Full screen, the same three views for every sport.</li>
+          <li>Tag a kill, an ace or a goal to a player and it's clipped into their highlight reel.</li>
+          <li>Go live on YouTube with the scoreboard in the stream. ScoreFrame gets your channel ready a day ahead.</li>
         </ul>
       </div>
+      <div class="iphone land"><i class="isl"></i><img src="img/home/camera.jpg" alt="The camera screen while filming"></div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- FINAL CTA -->
-<section class="final-cta">
-  <div class="section-inner" style="position: relative; z-index: 1;">
-    <h2 class="section-title">Ready to Record?</h2>
-    <p>Free to download on iPhone and Android. No editing required.</p>
-    <div class="hero-buttons" id="download-bottom" style="justify-content: center;">
-      <a href="https://apps.apple.com/us/app/scoreframe/id6762281454" class="btn-primary">
-        Get It on the App Store
-      </a>
-      <a href="https://play.google.com/store/apps/details?id=com.scoreframe.android" class="btn-primary">
-        Get It on Google Play
-      </a>
+  <section id="two">
+    <div class="wrap">
+      <div class="copy" style="max-width:640px">
+        <p class="eb">Two phones</p>
+        <h2>One films. Someone else keeps score.</h2>
+        <p class="lede">Prop the camera phone on a tripod and keep score from the bleachers on another phone, or in any browser with a code. A green border on the camera tells you it's linked.</p>
+      </div>
+      <div class="pair" style="margin-top:36px">
+        <div class="iphone land" style="flex:1 1 0;min-width:0"><i class="isl"></i><img src="img/home/camera_linked.jpg" alt="Camera phone with a green border: Jamie's iPhone is scoring"></div>
+        <div class="link" aria-hidden="true"></div>
+        <div class="iphone small" style="flex:0 0 26%"><i class="isl"></i><img src="img/home/scorer.jpg" alt="Scoring phone showing the camera's picture: Coach's iPhone is filming"></div>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- FOOTER -->
+  <section id="families" style="background:var(--card);border-block:1px solid var(--ln)">
+    <div class="wrap">
+      <div class="copy" style="max-width:640px">
+        <p class="eb">For families</p>
+        <h2>A page for every team, every game.</h2>
+        <p class="lede">Share a team page and families follow along: today's game, the season, box scores and every play linked to the moment in the video. No account needed to watch.</p>
+      </div>
+      <div class="phones" style="margin-top:40px">
+        <figure><div class="iphone"><i class="isl"></i><img src="img/home/today.jpg" alt="Today: your next game"></div><figcaption><b>Game day</b><span>Your next game, one tap from Go.</span></figcaption></figure>
+        <figure><div class="iphone"><i class="isl"></i><img src="img/home/game.jpg" alt="Game page with box score and plays"></div><figcaption><b>Game page</b><span>Box score and every play, linked to the video.</span></figcaption></figure>
+        <figure><div class="iphone"><i class="isl"></i><img src="img/home/season.jpg" alt="Season schedule"></div><figcaption><b>Season</b><span>The whole schedule, tournaments included.</span></figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap split flip">
+      <div class="copy">
+        <p class="eb">Every sport</p>
+        <h2>Built for how each sport is scored.</h2>
+        <p class="lede">Sets and serves in volleyball, downs and the field in football, the full scorebook in baseball, frame by frame in bowling.</p>
+        <div class="sports"><span>Volleyball</span><span>Basketball</span><span>Soccer</span><span>Football</span><span>Baseball</span><span>Softball</span><span>Hockey</span><span>Lacrosse</span><span>Bowling</span><span>Tennis</span><span>Pickleball</span><span>Any other sport</span></div>
+      </div>
+      <div class="copy">
+        <p class="eb">Tournaments</p>
+        <h3 style="font-size:26px">Pools, brackets and every match in one place.</h3>
+        <p class="lede">Build the pools and bracket, start the next match from GO, and families see results as they happen.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="court" id="pro" style="background:var(--card)">
+    <div class="wrap">
+      <p class="eb">Free and Pro</p>
+      <h2 style="margin-top:12px">Free to start. Pro when you want more.</h2>
+      <div class="plans">
+        <div class="plan"><h3>Free</h3><p class="lede">Record and score every sport, a second phone or browser keeps score, team pages, live streaming with a time limit.</p></div>
+        <div class="plan pro"><h3>Pro</h3><p class="lede">4K, no watermark, unlimited highlights and streaming, player highlight reels, the baseball scorebook. Try it free first.</p></div>
+      </div>
+      <p style="margin-top:18px"><a href="features.html" style="font-weight:700">Everything Free and Pro include →</a></p>
+    </div>
+  </section>
+</main>
+
 <footer>
-  <div class="footer-inner">
-    <span class="footer-copy">&copy; 2026 Glavin Labs LLC. All rights reserved. ScoreFrame is a Glavin Labs product.</span>
-    <div class="footer-links">
-      <a href="support.html">Support</a>
-      <a href="privacy.html">Privacy Policy</a>
-      <a href="terms.html">Terms</a>
-      <a href="https://www.reddit.com/r/ScoreFrame/" target="_blank">Reddit</a>
-    </div>
+  <div class="wrap">
+    <span><span class="mark" style="font-size:18px">Score<b>Frame</b></span> · © 2026 Glavin Labs LLC</span>
+    <span class="flinks"><a href="support.html">Support</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="delete-account.html">Delete account</a><a href="https://www.reddit.com/r/ScoreFrame/" target="_blank" rel="noopener">r/ScoreFrame</a></span>
   </div>
 </footer>
-
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, onAuthStateChanged }
-    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-
-const app = initializeApp({
-    apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
-    authDomain: "scoreframe-deploy.firebaseapp.com",
-    projectId: "scoreframe-deploy",
-    appId: "1:728886280072:android:0050478669b89fc76b043d"
-});
-const auth = getAuth(app);
-
-onAuthStateChanged(auth, (user) => {
-    const signInLink = document.querySelector('.nav-links a[href="dashboard.html"]');
-    const mobileSignIn = document.querySelector('#mobileMenu a[href="dashboard.html"]');
-    if (user && !user.isAnonymous) {
-        const name = user.displayName || user.email || 'Account';
-        if (signInLink) signInLink.textContent = name;
-        if (mobileSignIn) mobileSignIn.textContent = name;
-    } else {
-        if (signInLink) signInLink.textContent = 'Sign In';
-        if (mobileSignIn) mobileSignIn.textContent = 'Sign In';
-    }
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+const app = initializeApp({ apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU", authDomain: "scoreframe-deploy.firebaseapp.com",
+  projectId: "scoreframe-deploy", appId: "1:728886280072:android:0050478669b89fc76b043d" });
+onAuthStateChanged(getAuth(app), (user) => {
+  const a = document.getElementById('signin');
+  if (a) a.textContent = (user && !user.isAnonymous) ? (user.displayName || user.email || 'Account') : 'Sign in';
 });
 </script>
 </body>
