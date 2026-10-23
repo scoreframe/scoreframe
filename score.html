@@ -1282,7 +1282,11 @@ function listenForState(code) {
             // alert + reload — keeps the scorer's local state alive in
             // case the host restarts a game with the same code.
             const wgt = $('waitingForGameText');
-            if (wgt) wgt.textContent = 'Game ended on the camera. Waiting for next game…';
+            // The camera says why: "disconnected" = it let this browser go and
+            // keeps scoring itself; anything else = the game ended there.
+            if (wgt) wgt.textContent = meta.endReason === 'disconnected'
+                ? 'The camera phone disconnected this browser. Scoring carries on at the camera.'
+                : 'Game ended on the camera. Waiting for next game…';
             if (!document.querySelector('#waitingForGameScreen.active')) {
                 showWaitingForGame();
             }
