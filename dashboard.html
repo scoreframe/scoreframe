@@ -7,23 +7,18 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#F5F5F2">
 <title>ScoreFrame — Dashboard</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* Light only, like the rest of the public site (2026-10-23). The dashboard is
+   never shown inside the app, so it doesn't need the app's dark theme. */
 :root {
-    --bg-deepest: #0D0D0D; --bg-deep: #141414; --bg-surface: #1E1E1E;
-    --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
-    --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
+    color-scheme: light;
+    --bg-deepest: #F5F5F2; --bg-deep: #FFFFFF; --bg-surface: #FFFFFF;
+    --bg-elevated: #ECECE8; --accent: #E47A1F; --accent-dim: rgba(228,122,31,0.15);
+    --text-primary: #1A1A1A; --text-secondary: #555; --text-muted: #888;
     --success: #4CAF50; --error: #F44336; --recording-red: #CC2222;
-}
-@media (prefers-color-scheme: light) {
-    :root {
-        --bg-deepest: #F5F5F2; --bg-deep: #FFFFFF; --bg-surface: #FFFFFF;
-        --bg-elevated: #ECECE8; --accent: #E47A1F; --accent-dim: rgba(228,122,31,0.15);
-        --text-primary: #1A1A1A; --text-secondary: #555; --text-muted: #888;
-    }
 }
 html, body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
