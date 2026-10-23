@@ -386,7 +386,9 @@ async function doSearch(name, city, sport) {
         `<span class="pill ${visClass}">${visLabel}</span>`,
         r.sport ? `<span class="pill">${escapeHtml(r.sport)}</span>` : '',
         r.city ? `<span>📍 ${escapeHtml(r.city)}${r.region ? ', ' + escapeHtml(r.region) : ''}</span>` : '',
-        r.ownerNameInitial ? `<span>👤 ${escapeHtml(r.ownerNameInitial)}</span>` : '',
+        // The coach when one is named, else the owner.
+        r.coachNameInitial ? `<span>👤 Coach ${escapeHtml(r.coachNameInitial)}</span>`
+          : (r.ownerNameInitial ? `<span>👤 ${escapeHtml(r.ownerNameInitial)}</span>` : ''),
       ].filter(Boolean).join(' ');
       const followLabel = r.visibility === 'public' ? 'Follow' : 'Request to follow';
       const viewUrl = `team.html?code=${encodeURIComponent(r.hubCode)}`;
