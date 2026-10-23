@@ -325,6 +325,7 @@
       .feature h2 { font-size: 1.4rem; }
     }
   </style>
+  <link rel="stylesheet" href="/site.css">
 </head>
 <body>
 
@@ -376,7 +377,7 @@
         <li><a href="#video-quality">4K recording at 60fps</a></li>
         <li><a href="#custom-branding">Custom HSV team colors, secondary colors, per-team logos</a></li>
         <li><a href="#full-scorebook">Full baseball / softball scorebook with PDF export</a></li>
-        <li><a href="#fullscreen-mode">Fullscreen recording mode</a></li>
+        <li><a href="#fullscreen-mode">Three camera views</a></li>
         <li><a href="#coach-notes">Coach notes (push + email to followers)</a></li>
         <li><a href="#bt-buttons">External Bluetooth record / zoom buttons</a></li>
         <li><a href="#video-quality">Pro camera controls (white balance, exposure, HDR, sharpening)</a></li>
@@ -416,10 +417,10 @@
 
     <div class="sub">How to use it</div>
     <ol class="steps">
-      <li>On the camera phone, tap <strong>Connect Phones</strong> → <strong>Camera Phone</strong>.</li>
-      <li>On the controller phone, tap <strong>Connect Phones</strong> → <strong>Controller Phone</strong> → pick the camera from the discovered list.</li>
-      <li>The controller phone scores; every tap mirrors instantly to the camera and burns into the recorded video.</li>
-      <li>Out of Wi-Fi range? Pick <strong>Host Game Online</strong> on the camera and share the join code — the controller can join from anywhere.</li>
+      <li>On the camera phone, tap <strong>GO</strong> → <strong>Connect a phone</strong> → <strong>This phone films</strong>. It shows a QR code and a code.</li>
+      <li>On the other phone, tap <strong>GO</strong> → <strong>Connect a phone</strong> → <strong>This phone keeps score</strong> and pick the camera, or scan the QR code.</li>
+      <li>No app on that phone? Open <strong>scoreframe.app/score</strong> in any browser and type the code.</li>
+      <li>Every tap shows up on the camera and in the video. The camera gets a green border and "&lt;name&gt; is scoring"; tap that pill for the connection details or to disconnect.</li>
     </ol>
 
     <div class="callout">
@@ -437,19 +438,7 @@
         <div class="badges"><span class="badge free">Free</span></div>
       </div>
     </div>
-    <p class="lead">Every person who interacts with a team has a role. The role decides what they can see, edit, post, and get notified about. You set your own role the first time you open the app (and can change it any time in Settings → APP MODE).</p>
-
-    <div class="sub">Personal roles (per device)</div>
-    <div class="role-grid">
-      <div class="role-card">
-        <h4>Coach</h4>
-        <p>Default for the people running games. Records, scores, manages teams, posts coach notes, sends notifications. Sees the Home screen tuned for game-day workflow.</p>
-      </div>
-      <div class="role-card">
-        <h4>Fan</h4>
-        <p>For parents, family, friends. Read-only by default — follows teams, watches streams, gets notifications when followed teams go live or post results. No scoring controls clutter the UI.</p>
-      </div>
-    </div>
+    <p class="lead">Every person on a team has a role, and the role decides what they can see, edit and get notified about. Roles belong to each team, so you can run one team and simply follow another.</p>
 
     <div class="sub">Per-team roles</div>
     <div class="role-grid">
@@ -645,7 +634,7 @@
 
     <div class="sub">How to use it</div>
     <ol class="steps">
-      <li>Open the drawer → <strong>Go Live</strong>.</li>
+      <li>Start the game, turn the phone sideways and tap the red <strong>GO LIVE</strong> pill at the top of the camera screen.</li>
       <li>Sign in to YouTube on the first run (one tap, uses your existing Google account).</li>
       <li>Set the broadcast title (auto-suggested from team names + sport) and privacy: Unlisted, Public, or Private.</li>
       <li>Tap <strong>Go Live</strong>. The pill at the top of the screen turns red with a running uptime.</li>
@@ -834,18 +823,18 @@
     <div class="feature-head">
       <div class="feature-emoji">🖥️</div>
       <div class="feature-title-block">
-        <h2>Fullscreen Mode</h2>
-        <div class="badges"><span class="badge pro">Pro</span></div>
+        <h2>Three Camera Views</h2>
+        <div class="badges"><span class="badge free">Free</span></div>
       </div>
     </div>
-    <p class="lead">Hide the scoring panel behind a pull-tab and let the video fill the whole screen. The scoring drawer slides out from the right when you need it; recording controls float at the bottom on demand.</p>
+    <p class="lead">Pick how much of the screen the video gets. The same three views work for every sport, with the icons at the top of the scoring panel.</p>
 
     <div class="sub">How to use it</div>
     <ol class="steps">
-      <li>Tap the diagonal-arrow icon in the bottom-right corner of the video preview.</li>
-      <li>The scoring panel slides away. The video now fills the screen.</li>
-      <li>Tap the right-side pull-tab (or swipe in from the right) to slide the scoring panel back when you need to score.</li>
-      <li>Tap the collapse arrow to return to the split view.</li>
+      <li><strong>Big video</strong>: the picture runs full height and the scoring panel sits beside it.</li>
+      <li><strong>Window</strong>: the picture in a frame with room for the stat buttons (Stats when the sport has them).</li>
+      <li><strong>Full screen</strong>: the video fills the screen; tap <strong>Score ▲</strong> to pull the scoring panel up.</li>
+      <li>Hold the camera phone upright and it switches to Score only: the scoreboard on top, scoring below.</li>
     </ol>
   </article>
 
