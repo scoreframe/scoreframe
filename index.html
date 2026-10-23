@@ -46,7 +46,15 @@ nav a{text-decoration:none}
 .btn.primary{background:var(--orange);color:var(--on-orange)}
 .btn.ghost{border-color:var(--ln);color:var(--ink);background:var(--card)}
 .btn.small{height:40px;padding:0 16px;font-size:14px;border-radius:12px}
-@media (max-width:760px){ nav{display:none} }
+.menu-btn{display:none;width:44px;height:44px;border-radius:12px;border:1px solid var(--ln);background:var(--card);font-size:20px;color:var(--ink);cursor:pointer}
+.bar-right{display:flex;align-items:center;gap:10px}
+@media (max-width:860px){
+  .menu-btn{display:inline-flex;align-items:center;justify-content:center}
+  nav{display:none;position:absolute;left:0;right:0;top:64px;flex-direction:column;gap:0;background:var(--paper);border-bottom:1px solid var(--ln);padding:6px 24px 14px}
+  nav a{padding:12px 0;border-bottom:1px solid var(--ln);font-size:17px;color:var(--ink)}
+  nav a:last-child{border-bottom:none}
+  header.open nav{display:flex}
+}
 
 /* hero */
 .hero{padding-block:56px 40px}
@@ -133,8 +141,12 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-bet
 <header>
   <div class="wrap bar">
     <a class="mark" href="/" style="text-decoration:none">Score<b>Frame</b></a>
-    <nav><a href="#film">Film</a><a href="#two">Two phones</a><a href="#families">Families</a><a href="features.html">Features</a><a href="score.html">Score a game</a><a href="support.html">Support</a><a href="dashboard.html" id="signin">Sign in</a></nav>
-    <a class="btn primary small" href="#get-app">Get the app</a>
+    <nav onclick="if(event.target.tagName==='A'){const h=this.closest('header');h.classList.remove('open');const b=h.querySelector('.menu-btn');b.textContent='☰';b.setAttribute('aria-expanded','false')}"><a href="#film">Film</a><a href="#two">Two phones</a><a href="#families">Families</a><a href="features.html">Features</a><a href="score.html">Score a game</a><a href="support.html">Support</a><a href="dashboard.html" id="signin">Sign in</a></nav>
+    <span class="bar-right">
+      <a class="btn primary small" href="#get-app">Get the app</a>
+      <button class="menu-btn" type="button" aria-label="Menu" aria-expanded="false"
+        onclick="const h=this.closest('header');const o=h.classList.toggle('open');this.setAttribute('aria-expanded',o);this.textContent=o?'✕':'☰'">☰</button>
+    </span>
   </div>
 </header>
 
