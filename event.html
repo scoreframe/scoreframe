@@ -389,6 +389,19 @@ const params = new URLSearchParams(location.search);
 const hubCode = (params.get('team') || '').trim().toUpperCase();
 const eventId = (params.get('event') || '').trim();
 
+// Tap the 📍 venue to open the phone's maps app (Eric 2026-10-23): Apple Maps
+// on iPhone/iPad, Google Maps elsewhere. Same colour as the line, dotted underline.
+function mapsLink(place) {
+    const a = document.createElement('a');
+    const q = encodeURIComponent(String(place || '').trim());
+    const apple = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
+    a.href = apple ? `https://maps.apple.com/?q=${q}` : `https://www.google.com/maps/search/?api=1&query=${q}`;
+    a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = `📍 ${place}`;
+    a.setAttribute('aria-label', `${place}, open in maps`);
+    a.style.cssText = 'color:inherit;text-decoration:underline dotted;text-underline-offset:3px;';
+    return a;
+}
 const $ = (id) => document.getElementById(id);
 const SPORT_EMOJI = {
     Basketball: '🏀', Football: '🏈', Soccer: '⚽', Volleyball: '🏐',
@@ -501,7 +514,7 @@ function ourTheir(g, tid) {
         ? formatDateRange(ev.date, ev.endDate)
         : formatDate(ev.date);
     if (ev.location) {
-        $('heroLocation').textContent = `📍 ${ev.location}`;
+        $('heroLocation').replaceChildren(mapsLink(ev.location));
         $('heroLocation').style.display = '';
     }
     if (ev.notes) {
@@ -718,7 +731,7 @@ function renderV2() {
     $('heroTitle').textContent = ev.name || 'Tournament';
     const start = tms(ev.startDate), end = tms(ev.endDate);
     $('heroDate').textContent = end && end > start ? formatDateRange(start, end) : formatDate(start);
-    if (ev.venue) { $('heroLocation').textContent = `📍 ${ev.venue}`; $('heroLocation').style.display = ''; }
+    if (ev.venue) { $('heroLocation').replaceChildren(mapsLink(ev.venue)); $('heroLocation').style.display = ''; }
 
     const ours = v2OurGames();
     const live = ours.find(o => o.g.status === 'live');

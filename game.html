@@ -1739,13 +1739,19 @@ function renderUpcomingGame(hub, game) {
     } else if (game.date) {
         metaBits.push(formatDate(game.date));
     }
-    if (game.location) metaBits.push(`📍 ${game.location}`);
     // Show the event name (league / tournament / "vs Cardinals" label)
     // here too — Eric called this out: the hero meta is the only place
     // upcoming context surfaces above the fold, and dropping the event
     // makes the page feel anonymous.
-    if (eventName && opponent) metaBits.push(`🏷️ ${eventName}`);
-    $('heroMeta').textContent = metaBits.join('  ·  ');
+    const afterBits = [];
+    if (eventName && opponent) afterBits.push(`🏷️ ${eventName}`);
+    const hm = $('heroMeta');
+    hm.textContent = metaBits.join('  ·  ');
+    if (game.location) {
+        if (metaBits.length) hm.appendChild(document.createTextNode('  ·  '));
+        hm.appendChild(mapsLink(game.location));
+    }
+    if (afterBits.length) hm.appendChild(document.createTextNode(((metaBits.length || game.location) ? '  ·  ' : '') + afterBits.join('  ·  ')));
 
     // Countdown card replacing the player. We tick once per second; the
     // interval is harmless if the user navigates away because we never
@@ -4251,6 +4257,20 @@ function renderMeta(game, sport) {
         `<div class="meta-item"><div class="k">${i.k}</div><div class="v">${escapeHtml(i.v)}</div></div>`
     ).join('');
     $('metaCard').style.display = '';
+}
+
+// Tap the 📍 venue to open the phone's maps app (Eric 2026-10-23): Apple Maps
+// on iPhone/iPad, Google Maps elsewhere. Same colour as the line, dotted underline.
+function mapsLink(place) {
+    const a = document.createElement('a');
+    const q = encodeURIComponent(String(place || '').trim());
+    const apple = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
+    a.href = apple ? `https://maps.apple.com/?q=${q}` : `https://www.google.com/maps/search/?api=1&query=${q}`;
+    a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = `📍 ${place}`;
+    a.setAttribute('aria-label', `${place}, open in maps`);
+    a.style.cssText = 'color:inherit;text-decoration:underline dotted;text-underline-offset:3px;';
+    return a;
 }
 
 function escapeHtml(s) {
