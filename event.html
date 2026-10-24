@@ -814,7 +814,9 @@ function renderV2() {
             const sc = `${Math.floor(r.w)}-${Math.floor(r.l)}${d ? ' (tiebreak)' : ''}`;
             const res = g.status === 'completed' ? (r.w > r.l ? `W ${sc}` : r.l > r.w ? `L ${sc}` : sc) : g.status === 'live' ? 'LIVE' : '';
             const watch = v2Watch(g);
-            const sub = [o.time ? hhmm(o.time) : '', o.n?.label || g.phaseLabel, g.court ? v2Court(g.court) : '', r.sets.map(s => s.join('-')).join(', ')].filter(Boolean).join(' · ');
+            // Started games show when they actually started (2026-10-24).
+            const shown = Number(g.startedAt) || (g.timeSet === false && !g.startedAt ? 0 : o.time);
+            const sub = [shown ? hhmm(shown) : (g.timeSet === false ? 'Time TBD' : ''), o.n?.label || g.phaseLabel, g.court ? v2Court(g.court) : '', r.sets.map(s => s.join('-')).join(', ')].filter(Boolean).join(' · ');
             // A result with no recording has no game page to open.
             const tag = String(g.id).startsWith('result:') ? 'div' : 'a';
             const href = tag === 'a' ? ` href="/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}"` : '';
