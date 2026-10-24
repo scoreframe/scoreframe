@@ -1997,7 +1997,8 @@ async function checkAccess() {
  */
 window.acceptInvite = () => acceptInvite();
 async function acceptInvite() {
-    const btn = $('requestBtn');
+    // The follow-area button on a public team, or the access gate's on a private one.
+    const btn = $('acceptInviteBtn') || $('requestBtn');
     btn.disabled = true;
     btn.textContent = 'Accepting…';
     try {
@@ -2171,7 +2172,7 @@ function updateUserBar() {
     } else if (subStatus === 'pending' && (subSource === 'owner_invite' || subSource === 'hub_invite')) {
         // An invitation waiting on THIS person: accept it here (2026-10-24 —
         // it showed "Request to Follow" / "request pending" instead).
-        followBtn = `<button class="follow-btn" id="requestBtn" onclick="acceptInvite()">Accept invitation</button>`;
+        followBtn = `<button class="follow-btn" id="acceptInviteBtn" onclick="acceptInvite()">Accept invitation</button>`;
         statusText = 'The team invited you to follow';
     } else if (subStatus === 'pending') {
         statusText = '⏳ Follow request pending';
