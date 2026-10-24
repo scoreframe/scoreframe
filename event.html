@@ -813,10 +813,14 @@ function renderV2() {
             // A result with no recording has no game page to open.
             const tag = String(g.id).startsWith('result:') ? 'div' : 'a';
             const href = tag === 'a' ? ` href="/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}"` : '';
+            // Missed a match? Owners and managers type its score, so the day
+            // moves on and the next match is the one to start (Eric 2026-10-24).
+            const miss = V.staff && g.status === 'scheduled' && tag === 'a'
+                ? `<div style="padding:0 0 10px 14px"><button class="v2-link" data-ours="${escH(g.id)}">Missed it? Enter the score</button><div id="of-${escH(g.id)}"></div></div>` : '';
             return `<${tag} class="v2-row"${href}>
                 <div class="v2-bar" style="background:${bar}"></div>
                 <div style="flex:1;min-width:0"><div style="font-weight:700">vs ${escH(g.opponent || 'TBD')}</div><div class="v2-sub">${escH(sub)}${watch ? ' · Watch' : ''}</div></div>
-                <div class="v2-res ${cls}">${escH(res)}</div></${tag}>`;
+                <div class="v2-res ${cls}">${escH(res)}</div></${tag}>${miss}`;
         }).join('') : `<div class="empty" style="padding:16px 0">No matches yet. They'll appear here as the day is set up.</div>`) + `</div>`;
         const open = V.nodes.filter(n => !n.ours && n.phase === 'pool' && myPool && n.poolId === myPool.poolId && !(n.sets || []).length);
         if (open.length) {
@@ -828,6 +832,60 @@ function renderV2() {
     $('v2').innerHTML = h;
     $('v2').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { V.tab = b.dataset.tab; renderV2(); });
     $('v2').querySelectorAll('[data-score]').forEach(b => b.onclick = () => v2ScoreForm(b.dataset.score));
+    $('v2').querySelectorAll('[data-ours]').forEach(b => b.onclick = () => v2OursForm(b.dataset.ours));
+    if (V.staff === undefined) v2CheckStaff();
+}
+
+// Owner or manager of this team (the only people who can write its games).
+async function v2CheckStaff() {
+    V.staff = false;
+    const u = auth.currentUser;
+    if (!u || u.isAnonymous || !V.teamId) return;
+    try {
+        let owner = V.team && (V.team.ownerUid || (V.team.profile || {}).ownerUid);
+        if (!owner) owner = (await getDoc(doc(db, 'teams', V.teamId))).get('ownerUid');
+        V.staff = owner === u.uid || (await getDoc(doc(db, 'teams', V.teamId, 'managers', u.uid))).exists();
+    } catch (_) { V.staff = false; }
+    if (V.staff) renderV2();
+}
+
+// Our match, played but not recorded: its score goes on the match's own game
+// record, as End Game would leave it. The server copies it to the bracket and
+// standings (onEventGameWritten), and the next match becomes the one to start.
+function v2OursForm(gameId) {
+    const g = V.games.get(gameId) || V.legacy.get(gameId); const box = $('of-' + gameId);
+    if (!g || !box) return;
+    const n = V.nodes.find(x => x.gameId === gameId);
+    const score = v2IsScore();
+    const sets = score ? 1 : (n && n.phase === 'pool' ? 2 : 3);
+    const us = (V.team && ((V.team.profile || {}).name || V.team.name || V.team.teamName)) || 'Us', them = g.opponent || 'Opponent';
+    const cells = side => Array.from({ length: 3 }, (_, i) => i < sets ? `<input inputmode="numeric" data-s="${i}" data-side="${side}" aria-label="${escH((side === 'u' ? us : them) + (score ? ' final score' : ' set ' + (i + 1)))}">` : '<span></span>').join('');
+    box.innerHTML = `<div class="v2-score" style="margin-top:8px"><span>${escH(us)}</span>${cells('u')}<span>${escH(them)}</span>${cells('t')}</div>
+        <div class="v2-sub" style="margin-top:6px">${score ? 'The final score.' : 'Points in each set played; leave a set empty if it wasn\'t played.'}</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="v2-btn" id="ov-${escH(gameId)}">Save score</button><span class="v2-sub" id="om-${escH(gameId)}"></span></div>`;
+    const btn = $('ov-' + gameId), msg = $('om-' + gameId);
+    btn.onclick = async () => {
+        const val = (side, i) => parseInt((box.querySelector(`input[data-side="${side}"][data-s="${i}"]`) || {}).value || '', 10);
+        const u = [], t = [];
+        for (let i = 0; i < sets; i++) { const x = val('u', i), y = val('t', i); if (Number.isFinite(x) && Number.isFinite(y) && (x || y || score)) { u.push(x); t.push(y); } }
+        if (!u.length) { msg.textContent = score ? 'Enter the final score.' : 'Enter at least one set.'; return; }
+        const home = !g.homeTeamId || g.homeTeamId === V.teamId;
+        const hs = home ? u : t, as = home ? t : u;
+        const won = (a, b) => a.filter((x, i) => x > b[i]).length;
+        const now = Date.now();
+        const upd = score
+            ? { homeScore: hs[0], awayScore: as[0] }
+            : { homeScore: won(hs, as), awayScore: won(as, hs), 'sportSpecificStats.homeScoreBySet': hs, 'sportSpecificStats.awayScoreBySet': as };
+        btn.disabled = true; btn.textContent = 'Saving…'; msg.textContent = '';
+        try {
+            await updateDoc(doc(db, 'teams', V.teamId, 'games', gameId), { ...upd, status: 'completed', resultOnly: true,
+                endedAt: now, updatedAt: now, scoredBy: { uid: auth.currentUser.uid, name: auth.currentUser.displayName || '', via: 'web' } });
+            msg.textContent = 'Saved. The next match is ready to start.';
+        } catch (e) {
+            btn.disabled = false; btn.textContent = 'Save score';
+            msg.textContent = 'Couldn\'t save. Only the team\'s owner or managers can enter scores.';
+        }
+    };
 }
 
 function ordinal(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
