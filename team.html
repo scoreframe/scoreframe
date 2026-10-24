@@ -1995,6 +1995,7 @@ async function checkAccess() {
  * private team). The function proves the invitation is real by reading
  * `source` server-side, where a client can't forge it.
  */
+window.acceptInvite = () => acceptInvite();
 async function acceptInvite() {
     const btn = $('requestBtn');
     btn.disabled = true;
@@ -2167,6 +2168,11 @@ function updateUserBar() {
         `;
         const ua = $('unfollowArea');
         if (ua) ua.style.display = 'block';
+    } else if (subStatus === 'pending' && (subSource === 'owner_invite' || subSource === 'hub_invite')) {
+        // An invitation waiting on THIS person: accept it here (2026-10-24 —
+        // it showed "Request to Follow" / "request pending" instead).
+        followBtn = `<button class="follow-btn" id="requestBtn" onclick="acceptInvite()">Accept invitation</button>`;
+        statusText = 'The team invited you to follow';
     } else if (subStatus === 'pending') {
         statusText = '⏳ Follow request pending';
     } else if (subStatus === 'blocked') {
