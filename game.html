@@ -1509,9 +1509,7 @@ function buildEmbedSrc(url, platform, autoplay) {
 // YouTube → Twitch → first embeddable. Anything else just shows up in the
 // "Watch & Replays" card as a link.
 function pickPrimaryStream(streams) {
-    // Newest first: a restarted stream leaves the dead ones earlier in the
-    // list (2026-10-24, ISU vs Drake: three starts, the page played the first).
-    const list = (streams || []).filter(s => s && s.url).reverse();
+    const list = (streams || []).filter(s => s && s.url);
     const yt = list.find(s => detectPlatform(s.url) === 'youtube');
     if (yt) return yt;
     const tw = list.find(s => detectPlatform(s.url) === 'twitch');
@@ -2165,11 +2163,16 @@ function renderGame(hub, game) {
         return p !== 'youtube' && p !== 'twitch';
     });
     playlistStreams = [...ytFirst, ...twitchNext, ...others];
-    playlistIndex = 0;
+    // While live, open on the stream that's live now: the app saves it as
+    // streamUrl, and a restarted stream leaves dead ones first in the list
+    // (2026-10-24, ISU vs Drake: three starts). Once it's over, the first.
+    const liveUrl = isLive ? hub.hub.activeStreamUrl : (game.status === 'live' ? game.streamUrl : '');
+    const liveAt = liveUrl ? playlistStreams.findIndex(s => s.url === liveUrl) : -1;
+    playlistIndex = liveAt > 0 ? liveAt : 0;
     wirePlaylistControlsOnce();
 
     if (playlistStreams.length > 0) {
-        mountStreamAtIndex(0);
+        mountStreamAtIndex(playlistIndex);
     } else {
         $('playerSlot').innerHTML = `
             <div class="no-stream-card">
