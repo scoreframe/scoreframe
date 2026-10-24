@@ -765,10 +765,11 @@ function renderV2() {
 
     let h = '';
     if (live) {
-        const url = v2Watch(live.g);
-        const href = url || `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(live.g.id)}`;
+        // The game page, which plays the stream and has the live score
+        // (Eric 2026-10-24: tapping Live now went off to YouTube).
+        const href = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(live.g.id)}`;
         const r = v2Result(live.g);
-        h += `<a class="v2-card v2-live" href="${escH(href)}" ${url ? 'target="_blank" rel="noopener"' : ''}>
+        h += `<a class="v2-card v2-live" href="${escH(href)}">
             <div class="v2-play">▶</div>
             <div style="flex:1;min-width:0"><div class="v2-lbl" style="color:var(--recording-red)">Live now</div>
             <div class="v2-big">vs ${escH(live.g.opponent || 'TBD')}</div>
