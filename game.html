@@ -1509,7 +1509,9 @@ function buildEmbedSrc(url, platform, autoplay) {
 // YouTube → Twitch → first embeddable. Anything else just shows up in the
 // "Watch & Replays" card as a link.
 function pickPrimaryStream(streams) {
-    const list = (streams || []).filter(s => s && s.url);
+    // Newest first: a restarted stream leaves the dead ones earlier in the
+    // list (2026-10-24, ISU vs Drake: three starts, the page played the first).
+    const list = (streams || []).filter(s => s && s.url).reverse();
     const yt = list.find(s => detectPlatform(s.url) === 'youtube');
     if (yt) return yt;
     const tw = list.find(s => detectPlatform(s.url) === 'twitch');

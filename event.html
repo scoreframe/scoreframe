@@ -727,7 +727,10 @@ function v2Order(a, b) {
 }
 function v2Watch(g) {
     const streams = Array.isArray(g.streams) ? g.streams : [];
-    const url = (streams.find(s => s && s.url) || {}).url || g.streamUrl || g.youtubeVideoUrl || '';
+    // The game's own link first, then the NEWEST stream: a restarted stream
+    // leaves the dead ones first in the list (2026-10-24, ISU vs Drake: three
+    // starts, Watch opened the first).
+    const url = g.streamUrl || ([...streams].reverse().find(s => s && s.url) || {}).url || g.youtubeVideoUrl || '';
     return /^https:\/\//.test(url) ? url : '';
 }
 
