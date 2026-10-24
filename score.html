@@ -1208,6 +1208,8 @@ function listenForState(code) {
         const gs = data.gameState || null;
         gameState = gs;
 
+        // The camera's teams with rosters: the soccer/hockey player picker.
+        if (Array.isArray(data.teams)) relayTeams = data.teams;
         if (data.stateJson) {
             const st = typeof data.stateJson === 'string' ? JSON.parse(data.stateJson) : data.stateJson;
             if (!isStaleEcho(st)) currentState = st;
@@ -2292,6 +2294,56 @@ window.closeVbPlayerPicker = () => {
     if (el) el.remove();
 };
 
+// ── Who did it? (soccer, hockey) ─────────────────────────────────────
+// A goal, shot or save tapped here asks for the player, so the camera can
+// make that player's highlight, the same as the app scorers do (Eric
+// 2026-10-24: "force all of that stat scoring and highlights from any
+// controller method to the camera phone"). The camera owns the clip:
+// PLAYER_STAT → captureTriggers (goals; soccer AST/SOG/SAV; hockey AST/SOG).
+// Rosters come from the camera's teams on the relay. No roster, or "Team
+// only", records the team stat alone.
+let relayTeams = [];
+function rosterFor(side) {
+    const s = currentState || {};
+    const name = (side === 'home' ? s.homeName : s.awayName) || '';
+    const id = side === 'home' ? s.homeTeamId : s.awayTeamId;
+    const t = relayTeams.find(t => t && ((id && t.id === id) || (t.name || '').trim().toLowerCase() === name.trim().toLowerCase()));
+    return (t && Array.isArray(t.roster)) ? t.roster.filter(r => r && (r.playerId || r.name)) : [];
+}
+function askPlayerForHighlight(side, statKey, title) {
+    const roster = rosterFor(side);
+    if (!roster.length) return;
+    const teamName = side === 'home' ? (currentState.homeName || 'HOME') : (currentState.awayName || 'AWAY');
+    let rows = '';
+    roster.forEach(r => {
+        const pid = r.playerId || r.name;
+        rows += `<div class="modal-roster-row" onclick="pickHighlightPlayer('${side}','${escAttr(statKey)}','${escAttr(pid)}')">
+            <div class="roster-num">${r.number ? '#' + esc(r.number) : ''}</div>
+            <div class="roster-name">${esc(r.name || '')}</div>
+        </div>`;
+    });
+    rows += `<div class="modal-roster-row" onclick="closeHighlightPicker()">
+        <div class="roster-num" style="color:var(--text-muted);">—</div>
+        <div class="roster-name" style="color:var(--text-secondary);">Team only (no player)</div>
+    </div>`;
+    closeHighlightPicker();
+    const scrim = document.createElement('div');
+    scrim.id = 'hlPlayerPickerScrim';
+    scrim.className = 'modal-scrim';
+    scrim.innerHTML = `<div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-title">${esc(teamName)} — ${esc(title)}: who?</div>
+        ${rows}
+        <div class="modal-actions"><button class="modal-btn" onclick="closeHighlightPicker()">Skip</button></div>
+    </div>`;
+    scrim.addEventListener('click', closeHighlightPicker);
+    document.body.appendChild(scrim);
+}
+window.pickHighlightPlayer = (side, statKey, pid) => {
+    closeHighlightPicker();
+    sendPlayerStatIntent(side, statKey, pid, '');
+};
+window.closeHighlightPicker = () => { const el = $('hlPlayerPickerScrim'); if (el) el.remove(); };
+
 // ══════════════════════════════════════════════════════════════════════
 // ── Shared: Team-only stat section ───────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════
@@ -2385,19 +2437,27 @@ function renderSoccer() {
         ${buildTeamStatSection('home', s, hc, SOCCER_STATS, 'soccer')}
         ${buildTeamStatSection('away', s, ac, SOCCER_STATS, 'soccer')}`;
 }
-window.soccerGoal = (team, d=1) => updateAndSend(s => {
-    if (team==='home') s.homeScore = Math.max(0, s.homeScore+d);
-    else s.awayScore = Math.max(0, s.awayScore+d);
-});
+window.soccerGoal = (team, d=1) => {
+    updateAndSend(s => {
+        if (team==='home') s.homeScore = Math.max(0, s.homeScore+d);
+        else s.awayScore = Math.max(0, s.awayScore+d);
+    });
+    if (d > 0) askPlayerForHighlight(team, 'goals', 'Goal');
+};
 window.soccerHalf = d => updateAndSend(s => { s.currentHalf = Math.max(1, s.currentHalf+d); });
 window.soccerCard = (team, color) => updateAndSend(s => {
     if (team==='home') { if(color==='yellow') s.homeYellowCards++; else s.homeRedCards++; }
     else { if(color==='yellow') s.awayYellowCards++; else s.awayRedCards++; }
 });
-window.soccerStatTap = (side, statKey) => updateAndSend(s => {
-    const field = (side==='home' ? 'home' : 'away') + statKey;
-    s[field] = (s[field]||0) + 1;
-});
+window.soccerStatTap = (side, statKey) => {
+    updateAndSend(s => {
+        const field = (side==='home' ? 'home' : 'away') + statKey;
+        s[field] = (s[field]||0) + 1;
+    });
+    // The camera clips these per player (HighlightReel SOCCER: SOG, SAV).
+    if (statKey === 'ShotsOnGoal') askPlayerForHighlight(side, 'SOG', 'Shot on goal');
+    else if (statKey === 'Saves') askPlayerForHighlight(side, 'SAV', 'Save');
+};
 window.soccerStatDecrement = (ev, side, statKey) => {
     ev.preventDefault();
     updateAndSend(s => {
@@ -2964,7 +3024,8 @@ function renderHockey() {
         ${buildTeamStatSection('home', s, hc, HOCKEY_STATS, 'hk')}
         ${buildTeamStatSection('away', s, ac, HOCKEY_STATS, 'hk')}`;
 }
-window.hkGoal = (team, d=1) => updateAndSend(s => {
+window.hkGoal = (team, d=1) => { hkGoalScore(team, d); if (d > 0) askPlayerForHighlight(team, 'goals', 'Goal'); };
+const hkGoalScore = (team, d=1) => updateAndSend(s => {
     if (team==='home') {
         s.homeScore = Math.max(0, s.homeScore+d);
         if (d>0 && s.currentPeriod<=3) { s.homeScoreByPeriod[s.currentPeriod-1] = (s.homeScoreByPeriod[s.currentPeriod-1]||0)+1; }
@@ -2978,11 +3039,14 @@ window.hkTogglePp = side => updateAndSend(s => {
     const field = side==='home' ? 'homePowerPlay' : 'awayPowerPlay';
     s[field] = !s[field];
 });
-window.hkStatTap = (side, statKey) => updateAndSend(s => {
-    const step = (HOCKEY_STATS.find(st => st.key === statKey) || {}).step || 1;
-    const field = (side==='home' ? 'home' : 'away') + statKey;
-    s[field] = (s[field]||0) + step;
-});
+window.hkStatTap = (side, statKey) => {
+    updateAndSend(s => {
+        const step = (HOCKEY_STATS.find(st => st.key === statKey) || {}).step || 1;
+        const field = (side==='home' ? 'home' : 'away') + statKey;
+        s[field] = (s[field]||0) + step;
+    });
+    if (statKey === 'ShotsOnGoal') askPlayerForHighlight(side, 'SOG', 'Shot on goal');
+};
 window.hkStatDecrement = (ev, side, statKey) => {
     ev.preventDefault();
     updateAndSend(s => {
