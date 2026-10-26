@@ -916,7 +916,7 @@ body.sf-nospoil #moreFromTeamCard { display: none !important; }
              Sits above heroTeam so a tournament / conference label is
              the first thing the viewer sees on the page. -->
         <div id="heroEvent" style="display:none;font-size:13px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;"></div>
-        <a id="heroEventBack" href="#" style="display:none;font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;margin-bottom:8px;">← Back to tournament</a>
+        <a id="heroEventBack" href="#" style="display:none;width:fit-content;padding:6px 12px;border:1px solid var(--accent);border-radius:999px;font-size:13px;font-weight:700;color:var(--accent);text-decoration:none;margin-bottom:8px;">← Back to tournament</a>
         <div class="hero-team" id="heroTeam"></div>
         <div class="hero-title" id="heroTitle"></div>
         <!-- v20 (2026-07-21) — Movie-style result badge from the hub team's
@@ -2113,13 +2113,15 @@ function renderGame(hub, game) {
     // 2026-06-19 — Back-to-tournament link when this game is a child of a
     // multi-game parent event (parentEventId stamped by appendGameToScheduled).
     // Legacy fallback: scheduledGameId pointing at a different doc.
-    const parentEventId = (game.parentEventId || (game.scheduledGameId && game.scheduledGameId !== game.id ? game.scheduledGameId : '')) || '';
+    // Current tournaments stamp eventId on every match's game (2026-10-24,
+    // Eric: a tournament game page needs a way back to the tournament).
+    const parentEventId = (game.eventId || game.parentEventId || (game.scheduledGameId && game.scheduledGameId !== game.id ? game.scheduledGameId : '')) || '';
     if (parentEventId && hub.hubCode) {
         const eventHref = `/event.html?team=${encodeURIComponent(hub.hubCode)}&event=${encodeURIComponent(parentEventId)}`;
         const backEl = $('heroEventBack');
         backEl.setAttribute('href', eventHref);
-        backEl.style.display = '';
-        backEl.textContent = evt ? `← Back to ${evt}` : '← Back to tournament';
+        backEl.style.display = 'block';
+        backEl.textContent = `🏆 ${evt || game.eventName || 'Tournament'} ›`;
     }
 
     const metaBits = [];
