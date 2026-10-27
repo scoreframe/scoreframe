@@ -916,7 +916,6 @@ body.sf-nospoil #moreFromTeamCard { display: none !important; }
              Sits above heroTeam so a tournament / conference label is
              the first thing the viewer sees on the page. -->
         <div id="heroEvent" style="display:none;font-size:13px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;"></div>
-        <a id="heroEventBack" href="#" style="display:none;width:fit-content;padding:6px 12px;border:1px solid var(--accent);border-radius:999px;font-size:13px;font-weight:700;color:var(--accent);text-decoration:none;margin-bottom:8px;">← Back to tournament</a>
         <div class="hero-team" id="heroTeam"></div>
         <div class="hero-title" id="heroTitle"></div>
         <!-- v20 (2026-07-21) — Movie-style result badge from the hub team's
@@ -924,6 +923,8 @@ body.sf-nospoil #moreFromTeamCard { display: none !important; }
              shown only for completed (non-live, non-bowling) games. -->
         <div id="heroResult" class="hero-result" style="display:none;"></div>
         <div class="hero-meta" id="heroMeta"></div>
+        <!-- Under the location, above the video, centered (Eric 2026-10-26). -->
+        <a id="heroEventBack" href="#" style="display:none;width:fit-content;margin:12px auto 0;padding:7px 14px;border:1px solid var(--accent);border-radius:999px;font-size:13px;font-weight:700;color:var(--accent);text-decoration:none;">← Back to tournament page</a>
     </div>
 
     <!-- Player stage -->
@@ -2135,7 +2136,7 @@ function renderGame(hub, game) {
         const backEl = $('heroEventBack');
         backEl.setAttribute('href', eventHref);
         backEl.style.display = 'block';
-        backEl.textContent = `🏆 ${evt || game.eventName || 'Tournament'} ›`;
+        backEl.textContent = '← Back to tournament page';
     }
 
     const metaBits = [];
