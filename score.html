@@ -68,6 +68,9 @@ html, body {
     -webkit-text-size-adjust: 100%;
 }
 body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
+/* iOS Safari ignores user-scalable=no; quick repeat taps (+1, +1) were
+   double-tap zooming the scorer. Keeps pan/pinch, drops double-tap zoom. */
+* { touch-action: manipulation; }
 
 /* ── Status Bar ─────────────────────────────────────────────── */
 #statusBar {
