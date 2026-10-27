@@ -2126,8 +2126,12 @@ function renderGame(hub, game) {
     // Current tournaments stamp eventId on every match's game (2026-10-24,
     // Eric: a tournament game page needs a way back to the tournament).
     const parentEventId = (game.eventId || game.parentEventId || (game.scheduledGameId && game.scheduledGameId !== game.id ? game.scheduledGameId : '')) || '';
-    if (parentEventId && hub.hubCode) {
-        const eventHref = `/event.html?team=${encodeURIComponent(hub.hubCode)}&event=${encodeURIComponent(parentEventId)}`;
+    // The team code comes from the page URL: hubProfile has no .hubCode (see
+    // renderMoreFromTeam), so the link never showed on a shared link
+    // (Eric 2026-10-26). The app's local mode passes none, and gets none.
+    const evTeam = hub.hubCode || hubCode;
+    if (parentEventId && evTeam) {
+        const eventHref = `/event.html?team=${encodeURIComponent(evTeam)}&event=${encodeURIComponent(parentEventId)}`;
         const backEl = $('heroEventBack');
         backEl.setAttribute('href', eventHref);
         backEl.style.display = 'block';
