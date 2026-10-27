@@ -2079,6 +2079,16 @@ function sfMatchupTitle(home, away, sport) {
 
 function renderGame(hub, game) {
     // Stash for the shareable game-card renderer (window.shareGameCard).
+    // A score typed in without recording ("Missed it? Enter the score") saves
+    // the opponent but not the two names; the page read "Away" (Eric
+    // 2026-10-26, ISU vs UNL B). Fill them from the opponent and the team.
+    if (!game.homeTeam && !game.awayTeam && game.opponent) {
+        // Same side rule as the score writers: we're home unless the game
+        // names another team as home.
+        const us = hub.teamName || 'Home', away = !!game.homeTeamId && game.homeTeamId !== hub.teamId;
+        game.homeTeam = away ? game.opponent : us;
+        game.awayTeam = away ? us : game.opponent;
+    }
     window.__cardGame = game; window.__cardHub = hub;
     applyNoSpoil();   // now that the date is known (7-day window)
     const sport = (game.sport || hub.sport || 'GENERIC').toUpperCase();
