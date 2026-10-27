@@ -34,7 +34,7 @@
         ['b_agency', 'Agency relationship disclosed & signed', { tip: 'e.g. Buyer’s Limited Agent — your brokerage disclosure form.' }],
         ['b_process', 'Explained compensation is negotiable and not set by law'],
         ['b_bra', 'Buyer agreement signed', { tip: 'Required before touring (NAR practice change, Aug 2024).' }],
-        ['b_lender', 'Lender intro / pre-approval started'],
+        ['b_lender', 'Lender intro / pre-approval started', { pros: 'Loan & closing' }],
         ['b_preap', 'Pre-approval letter in hand'],
         ['b_search', 'Listing alerts set up'],
       ],
@@ -56,18 +56,18 @@
       contract: [
         ['b_rules', 'Went over the Top 10 Buyer Rules', { tip: 'How they stay out of trouble between contract and closing.', rules: true }],
         ['b_emd_dep', 'Earnest money deposited'],
-        ['b_insp_sched', 'Inspection scheduled'],
+        ['b_insp_sched', 'Inspection scheduled', { pros: 'Inspections' }],
         ['b_insp', 'Inspection done'],
-        ['b_repair', 'Repair request negotiated'],
+        ['b_repair', 'Repair request negotiated', { pros: 'Repairs' }],
         ['b_appr', 'Appraisal ordered'],
         ['b_appr_in', 'Appraisal came in at value'],
         ['b_hoa', 'HOA documents reviewed'],
         ['b_title', 'Title commitment reviewed'],
-        ['b_ins', 'Homeowners insurance bound'],
+        ['b_ins', 'Homeowners insurance bound', { pros: 'Loan & closing' }],
         ['b_ctc', 'Clear to close'],
         ['b_cd', 'Closing Disclosure reviewed (3 days out)'],
         ['b_wire', 'Wire instructions verified by phone', { tip: 'Wire fraud: always confirm by calling a number you already trust.' }],
-        ['b_utils', 'Utilities & move checklist sent'],
+        ['b_utils', 'Utilities & move checklist sent', { pros: 'Getting ready & moving' }],
         ['b_walk', 'Final walkthrough'],
       ],
       closed: [
@@ -94,8 +94,8 @@
       ],
       prep: [
         ['s_walk', 'Walkthrough & prep list'],
-        ['s_repairs', 'Repairs & touch-ups done'],
-        ['s_stage', 'Staging'],
+        ['s_repairs', 'Repairs & touch-ups done', { pros: 'Repairs' }],
+        ['s_stage', 'Staging', { pros: 'Getting ready & moving' }],
         ['s_photos', 'Professional photos'],
         ['s_media', 'Floor plan / video / 3D tour'],
         ['s_sign', 'Sign & lockbox installed'],
@@ -114,12 +114,12 @@
         ['s_accept', 'Offer accepted 🎉'],
         ['s_emd', 'Buyer earnest money confirmed'],
         ['s_insp', 'Buyer inspection'],
-        ['s_repair', 'Repair request negotiated'],
+        ['s_repair', 'Repair request negotiated', { pros: 'Repairs' }],
         ['s_appr', 'Appraisal'],
         ['s_fin', 'Buyer financing approved'],
         ['s_title', 'Title & payoff ordered'],
         ['s_hoa', 'HOA resale documents'],
-        ['s_move', 'Move-out plan & utilities'],
+        ['s_move', 'Move-out plan & utilities', { pros: 'Getting ready & moving' }],
         ['s_final', 'Final walkthrough'],
       ],
       closed: [
@@ -282,6 +282,7 @@
       { k: 'sLot', t: 'text', label: 'Lot size', ph: '0.25 ac', half: 1 },
       { k: 'acreage', t: 'yn', label: 'Acreage / land with it?', half: 1, tip: 'Adds the land disclosure addendum.' },
       { k: 'hoaFee', t: 'money', label: 'HOA / month', half: 1 },
+      { k: 'pool', t: 'yn', label: 'Pool or spa?', half: 1, tip: 'Needs the pool-spa disclosure rider.' },
       { k: 'sewer', t: 'one', label: 'Sewer', opts: ['Public sewer', 'Septic / onsite system', 'Not sure'], tip: 'A septic or other onsite system adds the wastewater addendum.' },
       { k: 'loveHome', t: 'area', label: 'What they love about it', rows: 2, tip: 'These become the listing’s highlights.' },
     ] },
@@ -384,6 +385,14 @@
     ] },
 
     // ----- buying -----
+    // Their why opens the buying steps (Eric 2026-10-22: "For buyers we also need to know motivation, what's their
+    // 'why'?") — it's what you come back to when they're stuck between homes or nervous about an offer.
+    { id: 'bwhy', side: 'buy', title: 'Their why', icon: 'heart', qs: [
+      { k: 'why', t: 'many', label: 'What’s behind the move?', opts: ['More space', 'Nicer / newer home', 'Downsizing', 'New job / relocating', 'First home', 'Schools', 'Closer to family', 'Investment', 'Second home', 'Life change', 'Other'] },
+      { k: 'whyNote', t: 'area', label: 'In their words — why now?', ph: 'Baby on the way — we need a yard and a real office…', rows: 2, tip: 'Write it the way they said it.' },
+      { k: 'stayCost', t: 'area', label: 'And if they don’t move?', ph: 'Another year in a one-bedroom, a longer commute…', rows: 2, tip: 'What staying put costs them — how much this matters, and how fast they’ll act.' },
+      { k: 'motivation', t: 'scale', label: 'How serious are they? (1–10)' },
+    ] },
     { id: 'current', side: 'buy', title: 'Where they live now', icon: 'house', qs: [
       { k: 'living', t: 'one', label: 'Current home', opts: ['Renting', 'Own a home', 'With family', 'Other'], show: (q, c) => !(c && c.sides.includes('sell')) },
       { k: 'leaseEnd', t: 'date', label: 'Lease ends', show: (q) => q.living === 'Renting', tip: 'You’ll get a check-in reminder 90 days before.' },
@@ -412,6 +421,7 @@
       { k: 'monthly', t: 'money', label: 'Comfortable monthly', half: 1, show: notCash },
       { k: 'savings', t: 'money', label: 'Cash on hand for this', half: 1, tip: 'Savings they’ll put toward the purchase.' },
       { k: 'gift', t: 'money', label: 'Gifts / help', half: 1 },
+      { k: 'income', t: 'many', label: 'How do they earn their income?', opts: ['Paid by an employer', 'Self-employed / own a business', 'Rental properties', 'Social Security / pension', 'Other'], show: notCash, tip: 'Decides which papers their lender will ask for (Money tab).' },
       { k: 'moneyNote', t: 'area', label: 'Money notes', ph: 'Down-payment help, selling stock, credit to fix…', rows: 2 },
     ] },
     { id: 'req', side: 'buy', title: 'The home they want', icon: 'search', qs: [
@@ -433,8 +443,6 @@
       { k: 'moveDate', t: 'date', label: 'Hard deadline (if any)', half: 1 },
       { k: 'lookingFor', t: 'one', label: 'Looking for how long?', opts: LOOKING },
       { k: 'whyLong', t: 'text', label: 'Why so long?', show: (q) => /1–3|3–6|6\+/.test(q.lookingFor || ''), ph: 'Nothing fits, outbid, waiting on money…' },
-      { k: 'motivation', t: 'scale', label: 'How serious are they? (1–10)' },
-      { k: 'why', t: 'many', label: 'Why are they moving?', opts: ['More space', 'Nicer / newer home', 'Downsizing', 'New job / relocating', 'First home', 'Schools', 'Closer to family', 'Investment', 'Second home', 'Life change', 'Other'] },
       { k: 'deciders', t: 'text', label: 'Who else has to say yes?', ph: 'Parents, partner out of town…' },
       { k: 'tourAvail', t: 'many', label: 'When can they tour?', opts: ['Weekday mornings', 'Weekday evenings', 'Saturdays', 'Sundays', 'Flexible'] },
     ] },
@@ -498,6 +506,7 @@
       { k: 'sLot', t: 'text', label: 'Lot size', ph: '0.25 acre', half: 1 },
       { k: 'acreage', t: 'yn', label: 'Does it include acreage / land?', half: 1 },
       { k: 'hoaFee', t: 'money', label: 'HOA dues / month', half: 1, ph: '$0 if none' },
+      { k: 'pool', t: 'yn', label: 'Is there a pool or spa?', half: 1 },
       { k: 'sewer', t: 'one', label: 'Is it on city sewer or a septic system?', opts: ['Public sewer', 'Septic / onsite system', 'Not sure'] },
       { k: 'loveHome', t: 'area', label: 'What do you love most about it?', rows: 2, tip: 'We’ll use this in the listing.' },
     ] },
@@ -545,7 +554,117 @@
     ] },
   ];
 
+  // A buyer's own questions, for their portal: their words ("you"), the meeting's questions and keys (options and
+  // show-rules come from AG.INTAKE, so the two never drift). Nothing agent-only (source, how serious, lender pick).
+  {
+    const qOf = (k) => AG.INTAKE.flatMap((s) => s.qs).find((x) => x.k === k);
+    const B = (k, label, more = {}) => ({ ...qOf(k), label, tip: undefined, ...more });
+    AG.BUYER_FORM = [
+      { id: 'you', title: 'About you', qs: [
+        B('first', 'First name'), B('last', 'Last name'), B('phone', 'Mobile'), B('email', 'Email'),
+        B('partner', 'Anyone buying with you?', { ph: 'Spouse / co-buyer — full name' }), B('partnerPhone', 'Their mobile'), B('partnerEmail', 'Their email'),
+        B('pref', 'Best way to reach you'), B('birthday', 'Birthday'), B('mailAddr', 'Mailing address', { ph: '' }),
+      ] },
+      { id: 'why', title: 'Your why', qs: [
+        B('why', 'What’s behind the move?'), B('whyNote', 'In your own words — why now?'), B('stayCost', 'And if you stayed where you are?'),
+      ] },
+      { id: 'now', title: 'Where you live now', qs: [
+        B('living', 'Right now you’re…'), B('leaseEnd', 'When does your lease end?'), B('needSell', 'Your current home'),
+        B('expect', 'What it’s worth (about)'), B('payoff', 'Mortgage balance (about)'), B('payoff2', '2nd mortgage / HELOC (about)'),
+        B('curPayment', 'Your payment today'), B('firstTime', 'Is this your first home?'),
+        B('firstNeed', 'Anything that has to happen first — or quickly?'), B('likeCurrent', 'What do you like — and want to change — about where you live now?'),
+      ] },
+      { id: 'money', title: 'Money', qs: [
+        B('payWith', 'Paying with'), B('preapproved', 'Are you pre-approved?'), B('preAmount', 'Pre-approved for'), B('preExpires', 'Letter expires'),
+        B('loanType', 'Loan type'), B('income', 'How do you earn your income?'), B('budgetMin', 'Price range — from'), B('budgetMax', 'up to'), B('downAs', 'Down payment as'),
+        B('down', 'Down payment you plan', { tip: 'Total, including earnest money.' }), B('downPct', 'Down payment %'), B('monthly', 'Comfortable monthly payment'),
+        B('savings', 'Savings you’ll put toward it'), B('gift', 'Gifts / help from family'), B('moneyNote', 'Anything else about money?', { ph: 'Down-payment help, selling stock, credit to fix…' }),
+      ] },
+      { id: 'want', title: 'The home you want', qs: [
+        B('searchArea', 'Where do you want to live?', { tip: 'Separate several with “;”.' }), B('areas', 'Neighborhoods & school districts you like'), B('propType', 'Type of home'),
+        B('beds', 'Bedrooms (at least)'), B('baths', 'Bathrooms (at least)'), B('sqft', 'Square feet (at least)'), B('yearMin', 'Built no earlier than'), B('garage', 'Garage'),
+        B('must', 'Must-haves'), B('dealbreakers', 'Deal-breakers'), B('rank', 'What matters most — tap in order', { tip: 'Your top picks count most when we score each home.' }),
+        B('commute', 'Work address', { ph: 'For drive times' }),
+      ] },
+      { id: 'when', title: 'Timing', qs: [
+        B('moveBy', 'When would you like to move?'), B('moveDate', 'Hard deadline (if any)'), B('lookingFor', 'How long have you been looking?'), B('whyLong', 'What’s held things up?'),
+        B('deciders', 'Anyone else who has to say yes?'), B('tourAvail', 'When can you tour?'),
+      ] },
+    ];
+  }
+
+  // What a buyer's lender will usually ask for (Eric 2026-10-22, from a loan officer's handout: "some information we can
+  // use to help the client understand what they need or can do for lending" · "the app isn't doing any lending
+  // services"). Our own words. A guide and a tick list only: the papers go straight to their lender, never into the app.
+  // Items: [id, what, why, applies(q, c)?]; a group's `when` decides whether it's theirs or "only if it applies".
+  const inc = (q, x) => (q.income || []).includes(x);
+  AG.LOAN_TIPS = [
+    'PDFs of every page — not phone photos or screenshots, which cut off details the lender needs.',
+    'Scan both sides when a statement prints on the back (bank and retirement statements often do).',
+    'Send them straight to your lender, through their secure upload. This app keeps only the list — never your papers.',
+  ];
+  AG.LOAN_DOCS = [
+    { id: 'all', title: 'Everyone on the loan', items: [
+      ['w2', 'W-2s from the last 2 years', 'Shows two years of steady pay.'],
+      ['stubs', 'Pay stubs covering the last 30 days', 'Two, three or five stubs, depending on how often you’re paid.'],
+      ['bank', 'Bank and asset statements, last 2 months — every page', 'Even the blank pages. It shows where the down payment and closing money comes from.'],
+      ['id', 'Driver’s license or other government photo ID', ''],
+      ['retire', 'Retirement statements (401k, IRA, SEP) — the full statement', 'If you have any. They can count as savings in reserve.'],
+    ] },
+    { id: 'self', title: 'Self-employed, a business or rentals', when: (q) => inc(q, 'Self-employed / own a business') || inc(q, 'Rental properties'), items: [
+      ['tax', 'Personal federal tax returns, last 2 years — every schedule', 'Self-employed income is read from the returns, not pay stubs.'],
+      ['biz', 'Business tax returns (1065 or 1120S), last 2 years', ''],
+      ['k1', 'K-1s for each of those years', ''],
+      ['pl', 'A profit & loss statement for this year so far', ''],
+    ] },
+    { id: 'va', title: 'VA loan', when: (q) => q.loanType === 'VA', items: [
+      ['coe', 'Certificate of Eligibility (COE)', 'Your lender can often request it for you.'],
+      ['dd214', 'DD-214, if you’ve left the service', ''],
+      ['service', 'Statement of service and current orders, if on active duty', ''],
+      ['les', 'Latest Leave and Earnings Statement (LES)', ''],
+    ] },
+    { id: 'more', title: 'Might also be asked for', each: true, items: [
+      ['gift', 'Gift letter from whoever is helping, and proof the money moved', 'Lenders need to see a gift doesn’t have to be paid back.', (q) => +q.gift > 0],
+      ['sale', 'Closing statement from selling your current home', 'Shows the money from the sale.', (q, c) => /sell first|buy first/i.test(q.needSell || '') || !!(c && c.sides.includes('sell'))],
+      ['leases', 'Lease agreements for your rentals', '', (q) => inc(q, 'Rental properties')],
+      ['award', 'Social Security or pension award letter', '', (q) => inc(q, 'Social Security / pension')],
+      ['reloc', 'Relocation or employer transfer letter', '', (q) => (q.why || []).includes('New job / relocating')],
+      ['divorce', 'Divorce decree and property settlement', ''],
+    ] },
+  ];
+  AG.CASH_DOCS = [
+    ['funds', 'Proof of funds — a recent statement showing the cash for the price and closing costs', 'Sellers ask for it with a cash offer.'],
+    ['id', 'Driver’s license or other government photo ID', ''],
+  ];
+
   /** The questionnaire sections for this client; all = include the ones not asked at the first meeting. */
+  // Where a section breaks into short pages in the walkthrough: question key → that page's title. The first
+  // page takes its title from its first key here, or the section's title.
+  AG.INTAKE_PAGES = {
+    who: { first: 'Who they are', source: 'How you met', birthday: 'Dates & mail' },
+    sreq: { addr: 'Where it is', sType: 'The house', hoaFee: 'Extras' },
+    sstatus: { cond: 'Condition', lbpKnown: 'Lead paint & meth', smart: 'Living there & showings' },
+    smoney: { expect: 'What they owe & expect', onTitle: 'Who’s on title', sellBy: 'Timing & what’s next' },
+    stogether: { otherAgents: 'Your relationship', offerBuyerComp: 'Buyer-agent compensation', la: 'The listing agreement' },
+    scontract: { legal: 'The property', emdPct: 'Offers & marketing', cSeller: 'Consents', listFlat: 'Compensation', titleCo: 'Title, warranty & terms' },
+    money: { payWith: 'The loan', budgetMin: 'Price & down payment', savings: 'Cash & income' },
+    req: { searchArea: 'Where', propType: 'The house', must: 'What matters' },
+    together: { otherAgent: 'Agency', bra: 'The buyer agreement', bAgency: 'Consents', braTerms: 'Terms & what you told them', cadence: 'Staying in touch' },
+  };
+  // The same for the questions clients answer themselves (AG.SELLER_FORM / AG.BUYER_FORM), by section id.
+  AG.FORM_PAGES = {
+    home: { addr: 'Where it is', sType: 'The house', hoaFee: 'Extras' },
+    cond: { cond: 'Condition', lbpKnown: 'Lead paint & meth', smart: 'Living there & showings' },
+    own: { onTitle: 'Who’s on title', payoff: 'Loans & insurance' },
+    money: { payWith: 'Your loan', budgetMin: 'Price & down payment', savings: 'Cash & income' },
+    want: { searchArea: 'Where', propType: 'The house', must: 'What matters' },
+  };
+  /** A section's showing questions (qs) split into short pages at the breaks in map[s.id]. */
+  AG.pagesOf = (s, qs, map) => {
+    const brk = (map || {})[s.id] || {}, out = [];
+    qs.forEach((q) => { if (!out.length || brk[q.k]) out.push({ title: brk[q.k] || s.title, qs: [] }); out[out.length - 1].qs.push(q); });
+    return out.length ? out : [{ title: s.title, qs: [] }];
+  };
   AG.intakeSections = (c, all) => AG.INTAKE.filter((s) => (!s.side || c.sides.includes(s.side)) && (all || s.meet !== false));
   /** The questions of a section that apply to this client right now. */
   AG.visibleQs = (sec, c) => sec.qs.filter((q) => !q.show || q.show(c.q, c));
@@ -569,7 +688,24 @@
   };
   AG.homeStatus = (h) => (AG.HOME_STATUS[h.listing ? 'list' : 'buy'].find((s) => s[0] === h.status) || AG.HOME_STATUS[h.listing ? 'list' : 'buy'][0]);
 
-  AG.PARTNER_ROLES = ['Lender', 'Inspector', 'Title / escrow', 'Attorney', 'Insurance', 'Stager', 'Photographer', 'Contractor', 'Mover', 'Other'];
+  // Contact book (Me → Contact book; the book is AG.db.partners). Eric 2026-10-22: "places we can refer buyers and
+  // sellers to. Inspection companies, wood rot specialists, pest control, HVAC, etc" · "choose at least 3 before we're
+  // allowed to send and the app should randomize the order they are listed in the correspondence".
+  AG.PRO_GROUPS = [
+    ['Loan & closing', ['Lender', 'Title / escrow', 'Attorney', 'Insurance', 'Home warranty', 'Appraiser']],
+    ['Inspections', ['Home inspector', 'Pest / termite', 'Radon', 'Sewer scope', 'Septic / wastewater', 'Well & water', 'Mold', 'Structural engineer', 'Chimney']],
+    ['Repairs', ['Wood rot / carpentry', 'HVAC', 'Plumber', 'Electrician', 'Roofer', 'Foundation / waterproofing', 'Gutters', 'Windows & doors', 'Garage doors', 'Painter', 'Flooring', 'Handyman', 'General contractor', 'Pool & spa', 'Tree service', 'Appliance repair']],
+    ['Getting ready & moving', ['Stager', 'Photographer', 'Cleaning', 'Lawn & landscaping', 'Junk removal', 'Movers', 'Storage', 'Locksmith']],
+  ];
+  AG.PARTNER_ROLES = [...AG.PRO_GROUPS.flatMap((g) => g[1]), 'Other'];
+  AG.PRO_MIN = 3; // of each kind in one message
+  // headings in the message ("HOME INSPECTORS"); a kind not listed is used as is
+  AG.PRO_HEAD = { Lender: 'Lenders', 'Title / escrow': 'Title & escrow', Attorney: 'Attorneys', Insurance: 'Homeowners insurance', 'Home warranty': 'Home warranties', Appraiser: 'Appraisers',
+    'Home inspector': 'Home inspectors', 'Pest / termite': 'Pest & termite control', Radon: 'Radon testing', 'Sewer scope': 'Sewer scopes', 'Septic / wastewater': 'Septic & wastewater', 'Well & water': 'Well & water testing', Mold: 'Mold testing & cleanup', 'Structural engineer': 'Structural engineers', Chimney: 'Chimney sweeps & inspection',
+    'Wood rot / carpentry': 'Wood rot & carpentry', Plumber: 'Plumbers', Electrician: 'Electricians', Roofer: 'Roofers', 'Foundation / waterproofing': 'Foundation & waterproofing', Painter: 'Painters', Handyman: 'Handymen', 'General contractor': 'General contractors', 'Pool & spa': 'Pool & spa service',
+    Stager: 'Stagers', Photographer: 'Photographers', Cleaning: 'Cleaners', Locksmith: 'Locksmiths' };
+  // kinds from before the contact book (0.19.0)
+  AG.ROLE_RENAMED = { Inspector: 'Home inspector', Contractor: 'General contractor', Mover: 'Movers' };
 
   AG.CARD_SERVICES = [
     ['handwrytten', 'Handwrytten', 'https://www.handwrytten.com/'],
@@ -599,6 +735,9 @@
     { id: 'offer', name: 'Offer accepted', kind: 'text', body: 'Congratulations {first}! 🎉 Your offer on {address} was accepted. Next up are inspection and appraisal — I’ll send the timeline today.' },
     { id: 'seller_update', name: 'Weekly seller update', kind: 'email', subject: 'This week at {address}', body: 'Hi {first},\n\nHere’s this week’s update on {address}:\n\n• Showings: \n• Feedback: \n• Online views: \n• Market notes: \n\nHappy to talk through any of it.\n\n{agent}' },
     { id: 'net', name: 'Net sheet', kind: 'email', subject: 'Your estimated net proceeds', body: 'Hi {first},\n\nHere’s the estimate we talked about:\n\n{list}\n\nThese are estimates — title and lender payoff figures will firm them up.\n\n{agent}' },
+    { id: 'loandocs', name: 'Papers for your lender', kind: 'email', subject: 'What your lender will ask for', body: 'Hi {first},\n\nHere’s what lenders usually ask for. Gather these and send them straight to your lender through their secure upload — PDFs of every page, not phone photos or screenshots:\n\n{list}\n\nYou can tick them off on your page as you go. Any questions, just ask.\n\n{agent}' },
+    { id: 'pros', name: 'Names to call', kind: 'email', subject: 'A few names to call', body: 'Hi {first},\n\nHere are a few companies you can call. They’re listed in random order, and you can choose anyone you like — on this list or not:\n\n{list}\n\nHappy to answer questions about any of them.\n\n{agent}\n{agentPhone}' },
+    { id: 'prostext', name: 'Names to call', kind: 'text', body: 'Hi {first}! Here are a few names to call, in random order — choose anyone you like, on this list or not:\n\n{list}\n\n{agent}' },
     { id: 'prep', name: 'Prep list for sellers', kind: 'email', subject: 'Getting {address} ready to list', body: 'Hi {first},\n\nHere’s the prep list we talked about for {address}. Anything you can knock out before photo day makes a real difference:\n\n{list}\n\nHappy to recommend help for any of it.\n\n{agent}' },
     { id: 'birthday', name: 'Happy birthday', kind: 'text', body: 'Happy birthday, {first}! 🎉 Hope you have a great day.' },
     { id: 'anniv', name: 'Home anniversary', kind: 'text', body: 'Happy home anniversary, {first}! 🏡 Hard to believe it’s been a year at {address}. Hope you’re loving it.' },
@@ -659,7 +798,17 @@
     const clients = [], homes = [], items = [], partners = [], cmas = [];
     const P = (o) => { const p = { id: id(), demo: true, ...o }; partners.push(p); return p; };
     const lender = P({ name: 'Sarah Kim', company: 'Summit Home Loans', role: 'Lender', phone: '4175550147', email: 'sarah@example.com', notes: 'Fast pre-approvals, great with first-time buyers.' });
-    P({ name: 'Mike Alvarez', company: 'Keystone Inspections', role: 'Inspector', phone: '4175550163', email: 'mike@example.com' });
+    P({ name: 'Mike Alvarez', company: 'Keystone Inspections', role: 'Home inspector', phone: '4175550163', email: 'mike@example.com', web: 'keystone.example.com', blurb: 'Reports the same day; does sewer scopes too.', area: 'Springfield, Nixa, Ozark' });
+    P({ name: 'Priya Shah', company: 'Clear View Home Inspections', role: 'Home inspector', phone: '4175550172', email: 'priya@example.com', area: 'Greene & Christian counties' });
+    P({ name: 'Tom Becker', company: 'Ozark Ridge Inspections', role: 'Home inspector', phone: '4175550135', blurb: 'Radon testing in the same visit.', notes: 'Booked out about a week in spring.' });
+    P({ company: 'Bluestem Pest Control', role: 'Pest / termite', phone: '4175550121', email: 'office@example.com', blurb: 'Termite (WDI) reports for closing.' });
+    P({ company: 'Guardian Termite & Pest', role: 'Pest / termite', phone: '4175550156' });
+    P({ name: 'Ray Dunn', company: 'Dunn Right Pest', role: 'Pest / termite', phone: '4175550198', area: 'Springfield' });
+    P({ company: 'Comfort Air Heating & Cooling', role: 'HVAC', phone: '4175550111', web: 'comfortair.example.com', blurb: 'Furnace and AC tune-ups and inspections.' });
+    P({ company: 'Four Seasons HVAC', role: 'HVAC', phone: '4175550144' });
+    P({ name: 'Luis Ortega', company: 'Ortega Mechanical', role: 'HVAC', phone: '4175550177', email: 'luis@example.com' });
+    P({ name: 'Walt Hughes', company: 'Hughes Carpentry', role: 'Wood rot / carpentry', phone: '4175550129', blurb: 'Rotted trim, sills and decks.' });
+    P({ company: 'Heritage Wood Repair', role: 'Wood rot / carpentry', phone: '4175550164' });
     P({ name: 'Dana Brooks', company: 'Lakeside Title', role: 'Title / escrow', phone: '4175550118', email: 'closings@example.com' });
     P({ name: 'Jen Ortiz', company: 'Ortiz Staging Co.', role: 'Stager', phone: '4175550189', email: 'jen@example.com' });
 
@@ -685,10 +834,13 @@
       rank: ['Schools', 'Location', 'Price', 'Size & bedrooms', 'Yard & lot', 'Commute'], top3: 'Great schools, fenced yard, home office',
       otherAgent: 'No', agency: 'Buyer’s Limited Agent', agencyDate: ymd(-9), bra: 'Signed today', braType: 'Exclusive', braCompType: '% of price', braPct: 2.5, braStart: ymd(-9), braExpires: ymd(171), braNegotiable: 'Yes', braCap: 'Yes', gapPlan: 'Ask for it in the offer', marital: 'Married', bAgency: 'Yes', bTB: 'Yes', bDual: 'No', bDes: 'Yes', bDesSeller: 'Yes', cadence: 'Every few days', alerts: 'Yes',
       notes: 'Jordan works from home — office with a door matters. Dog named Pepper.',
+      income: ['Paid by an employer'], partnerBday: '07-22', wedding: '09-18', people: [{ id: 'pepper', name: 'Pepper', rel: 'Pet', note: 'Goldendoodle', born: new Date(now).getFullYear() - 3 }],
+      facts: [{ id: 'f1', k: 'Works at', v: 'Maya: CoxHealth, physical therapist · Jordan: remote, software' }, { id: 'f2', k: 'Celebrating', v: 'First baby — a girl, due in March' }, { id: 'f3', k: 'Coffee order', v: 'Oat-milk latte (Maya), black drip (Jordan)' }],
       boughtBefore: 'No', otherSearch: 'Homes in Southern Hills go in a weekend; they lost one on Zillow before calling an agent.', likeCurrent: 'Walk to coffee and the park', changeCurrent: 'No yard, no office, street parking',
       firstNeed: 'Need to be in before the baby (due in March)', lookingFor: '1–3 months', whyLong: 'Were waiting on the pre-approval', stayCost: 'Two more months in a one-bedroom with a newborn', deciders: 'Jordan’s parents help with the down payment — want to see the finalists',
     });
     maya.buy.stage = 'search';
+    for (const k of ['w2', 'stubs', 'id']) maya.ready['loan:' + k] = at(-8);
     done(maya, AG.CHECK.buy.lead.map((x) => x[0]).concat(['b_consult', 'b_needs', 'b_agency', 'b_bra', 'b_lender', 'b_preap', 'b_search', 'b_tour1']), -9);
     log(maya, -9, 'meet', 'Buyer consultation — questionnaire done');
     log(maya, -3, 'showing', 'Toured 309 S Pasfield and 1820 Westview');
@@ -729,6 +881,8 @@
       sellBy: '3–6 months', next: 'Buying with me', expect: 395000, payoff: 96000, la: 'Signed today', listPrice: 389000, listDate: ymd(18), cond: 'Needs a little work',
       living: 'Own a home', needSell: 'Must sell first', moveBy: '3–6 months', payWith: 'Mortgage', preapproved: 'In progress', budgetMax: 520000, down: 104000, savings: 30000, curPayment: 1450, beds: '4', must: ['Single level', 'Big lot'],
       searchArea: 'Nixa, MO', rank: ['Location', 'Size & bedrooms', 'Yard & lot', 'Move-in ready', 'Price'],
+      birthday: '11-02', people: [{ id: 'emma', name: 'Emma', rel: 'Daughter', bday: '05-02', born: 2004, note: 'Junior at Mizzou' }, { id: 'jake', name: 'Jake', rel: 'Son', bday: '08-19', born: 2009, note: 'Plays baseball' }, { id: 'ruth', name: 'Ruth', rel: 'Parent', note: 'Lisa’s mom — may move in with them' }],
+      facts: [{ id: 'f1', k: 'Favorite team', v: 'Cardinals — season tickets' }, { id: 'f2', k: 'Hobbies', v: 'Tom restores old trucks; Lisa gardens' }],
     });
     hend.sell.stage = 'prep';
     hend.buy.stage = 'consult';
@@ -809,6 +963,7 @@
     I({ clientId: hend.id, kind: 'task', title: 'Book photographer — 2201 Maple Ave', at: at(0, 9) });
     I({ clientId: hend.id, kind: 'call', title: 'Lender intro for Tom & Lisa', at: at(2, 11), tpl: 'lender' });
     I({ clientId: marcus.id, kind: 'date', title: '🏡 Marcus’s home anniversary', at: AG.addMonths(AG.day0(marcus.buy.closedAt), 12), allDay: true, repeat: 'year', tpl: 'anniv', card: 'card_anniv', auto: 'buy_anniv' });
+    for (const c of [maya, hend]) for (const { key, ...x } of AG.familyDates(c, now)) I({ clientId: c.id, ...x, auto: key });
     I({ clientId: walsh.id, kind: 'date', title: '🎂 Grace’s birthday', at: day(6), allDay: true, repeat: 'year', tpl: 'birthday', card: 'card_bday', auto: 'bday' });
     I({ clientId: walsh.id, kind: 'date', title: '🏡 Grace & Henry’s home anniversary', at: AG.addMonths(AG.day0(walsh.buy.closedAt), 36), allDay: true, repeat: 'year', tpl: 'anniv', card: 'card_anniv', auto: 'buy_anniv' });
     // Alyssa's contract deadlines, the same way the app builds them

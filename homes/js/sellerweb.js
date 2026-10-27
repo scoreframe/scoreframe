@@ -25,6 +25,11 @@
     else { try { await navigator.clipboard.writeText(msg); AG.toast('Copied — paste it into a message to ' + (agent || 'your agent')); } catch { AG.toast('Couldn’t copy on this browser'); } }
   };
   document.title = agent ? `A few questions from ${agent}` : document.title;
-  AG.S.stack = [{ view: 'sweb', params: { i: 0 } }];
+  // their place is kept with their answers, so the link picks up where they stopped
+  let at = 0;
+  try { at = +localStorage.getItem(key + '.i') || 0; } catch {}
+  AG.sfOnGo = (i) => { try { localStorage.setItem(key + '.i', String(i)); } catch {} };
+  AG.S.stack = [{ view: 'sweb', params: { i: at } }];
+  if (at) setTimeout(() => AG.toast('Picked up where you left off'), 400);
   AG.render('push');
 })(window);

@@ -60,6 +60,8 @@
     target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
     sign: '<path d="M4 21V6M4 6h15v8H4"/><path d="M8 10h7"/>',
     copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+    heart: '<path d="M12 20s-7.5-4.6-9.2-9.4C1.6 7.2 3.8 4 7.1 4c2 0 3.6 1.1 4.9 3 1.3-1.9 2.9-3 4.9-3 3.3 0 5.5 3.2 4.3 6.6C19.5 15.4 12 20 12 20z"/>',
+    paw: '<ellipse cx="12" cy="16" rx="4.6" ry="3.8"/><circle cx="5.5" cy="10.5" r="1.9"/><circle cx="9.2" cy="6.2" r="1.9"/><circle cx="14.8" cy="6.2" r="1.9"/><circle cx="18.5" cy="10.5" r="1.9"/>',
   };
   AG.ic = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n] || ''}</svg>`;
   const ic = AG.ic;
@@ -143,6 +145,7 @@
     el.scrollTop = mode === 'keep' ? keep : mode === 'pop' ? restore : mode === 'tab' ? S.tabScroll[S.tab] || 0 : 0;
     if (v && v.after) v.after(el, cur.params || {});
     updateNav();
+    onScroll();
   }
 
   function buildNav() {
@@ -160,6 +163,41 @@
   AG.updateNav = updateNav;
   AG.acts.tab = (d) => { AG.buzz(6); AG.go(d.tab); };
   AG.acts.back = () => AG.pop();
+  /** The owl, top left of every page (Eric 2026-10-22: "clicking it goes back to home from anywhere"). In client
+   *  view — the agent's or a client's own page — home is that page's Overview: the owl never opens the book. */
+  AG.acts.home = () => {
+    AG.buzz(6);
+    if (AG.closeSheet && document.body.classList.contains('sheet-open')) AG.closeSheet();
+    const top = () => view().scrollTo({ top: 0, behavior: 'smooth' });
+    const drop = (keep) => {
+      for (let i = S.stack.length - 1; i >= keep; i--) { const lv = AG.views[S.stack[i].view]; if (lv && lv.leave) lv.leave(S.stack[i].params); }
+      S.stack.length = keep; S.scrolls.length = Math.min(S.scrolls.length, keep);
+    };
+    const at = AG.cur().view;
+    if (at === 'sweb' || (at === 'sform' && !S.stack.some((x) => x.view === 'present'))) { AG.cur().params.i = 0; render('push'); return; }
+    if (document.body.classList.contains('presenting') || (AG.cloud && AG.cloud.role === 'client')) {
+      const base = S.stack.findIndex((x) => x.view === 'present');
+      if (base < 0) return top();
+      drop(base + 1);
+      S.ui.ptab = 'overview';
+      render('keep'); top();
+      return;
+    }
+    if (S.tab === 'clients' && !S.stack.length) return top();
+    drop(0);
+    S.tab = 'clients'; S.tabScroll.clients = 0;
+    try { localStorage.setItem('ag.tab', 'clients'); } catch {}
+    render('tab');
+  };
+  // The top bar stays put and the page scrolls under it (Eric 2026-10-22). Once anything has scrolled under, it
+  // gets a hairline; a bar that floats over a photo (a home's page) turns solid once the photo has gone by.
+  function onScroll() {
+    const el = view(), y = el.scrollTop, bar = el.querySelector('.topbar');
+    if (!bar) return;
+    bar.classList.toggle('under', y > 2);
+    if (bar.classList.contains('over')) bar.classList.toggle('solid', y > (+bar.dataset.solid || 150));
+  }
+  AG.onScroll = onScroll;
 
   // ---------- sheets ----------
   const sheets = [];
@@ -194,6 +232,23 @@
   AG.sheetHead = (title, sub = '') => `<div class="sh-h"><div><h2>${title}</h2>${sub ? `<div class="sub">${sub}</div>` : ''}</div><button class="rb sm" data-act="closeSheet" aria-label="Close">${ic('x')}</button></div>`;
 
   let confirmRes = null;
+  // ---------- "is this really you?" before a risky action (Eric 2026-10-21: "a more secure method to make sure that
+  // they're doing that on purpose … hid behind a thumbprint … in case the user's phone gets compromised") ----------
+  let verifyWait = null;
+  /** The phone's own unlock (fingerprint / face / passcode). strict: a phone with no screen lock, or the web, signs in
+   *  with Google again instead (AG.cloudReauth). Leaving client view is not strict: no screen lock lets it through. */
+  AG.verifyOwner = (title, strict = true) => new Promise((res) => {
+    const N = G.Native;
+    const other = async () => res(strict && AG.cloudReauth ? await AG.cloudReauth(title) : await AG.confirm(title, 'Confirm it’s you.', 'Continue'));
+    if (N && (N.verifyFor || N.verify)) {
+      verifyWait = (r) => (r === 'nolock' ? other() : res(r === true || r === 'true'));
+      try { if (N.verifyFor) N.verifyFor(title, !!strict); else N.verify(); } catch { verifyWait = null; other(); }
+      return;
+    }
+    other();
+  });
+  /** Native → page: the answer to the phone's unlock (true / false / 'nolock'). */
+  AG.onVerify = (ok) => { const w = verifyWait; verifyWait = null; if (w) w(ok); };
   AG.confirm = (title, body = '', ok = 'OK', danger = false) => new Promise((res) => {
     confirmRes = res;
     AG.openSheet(() => `${AG.sheetHead(esc(title))}${body ? `<p class="muted">${esc(body)}</p>` : ''}
@@ -312,7 +367,7 @@
     if (!p) return;
     const on = form.obj.lenderId === p.id;
     form.obj.lenderId = on ? '' : p.id;
-    form.obj.lender = on ? '' : `${p.name}${p.company ? ' — ' + p.company : ''}`;
+    form.obj.lender = on ? '' : [p.name, p.company].filter(Boolean).join(' — ');
     AG.save();
     redraw(el);
   };
@@ -321,7 +376,12 @@
   AG.kb = (px) => {
     document.documentElement.style.setProperty('--kb', (px | 0) + 'px');
     document.body.classList.toggle('kbopen', px > 0);
-    if (px > 0) setTimeout(() => { const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) a.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60);
+    if (px > 0) setTimeout(() => {
+      const a = document.activeElement;
+      if (!a || !/INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
+      if (a.closest('#gate')) { const g = document.getElementById('gate'); g.scrollTop = g.scrollHeight; } // the sign-in sheet: its button sits under the box
+      else a.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 60);
   };
   AG.insets = (top, bottom) => {
     const r = document.documentElement.style;
@@ -331,7 +391,7 @@
 
   // ---------- fields ----------
   const attr = (k, v) => (v == null || v === '' ? '' : ` ${k}="${esc(v)}"`);
-  /** One questionnaire / form field. q: {k, t, label, ph, tip, opts, half, third, cap, im} */
+  /** One questionnaire / form field. q: {k, t, label, ph, tip, opts, half, third, two (thirds), cap, im} */
   AG.fld = (q, obj) => {
     const v = AG.getPath(obj, q.k);
     const lab = q.label ? `<label class="lab">${esc(q.label)}</label>` : '';
@@ -395,7 +455,7 @@
       case 'lender': {
         const lenders = AG.db.partners.filter((p) => p.role === 'Lender');
         ctl = `<input ${common} value="${esc(v || '')}" placeholder="Name / company">` +
-          (lenders.length ? `<div class="chips wrap">${lenders.map((p) => `<button class="chip ${obj.lenderId === p.id ? 'on' : ''}" data-act="lenderPick" data-id="${p.id}">${ic('brief', 'sm')}${esc(p.name)}</button>`).join('')}</div>` : '');
+          (lenders.length ? `<div class="chips wrap">${lenders.map((p) => `<button class="chip ${obj.lenderId === p.id ? 'on' : ''}" data-act="lenderPick" data-id="${p.id}">${ic('brief', 'sm')}${esc(p.name || AG.proName(p))}</button>`).join('')}</div>` : '');
         break;
       }
       default:
@@ -403,15 +463,29 @@
           ? `<input ${common} data-ac="${esc(JSON.stringify(q.ac))}" autocomplete="off" value="${esc(v || '')}"><div class="acl"></div>`
           : `<input ${common}${attr('inputmode', q.im)} value="${esc(v || '')}">`;
     }
-    return `<div class="fld ${q.half ? 'half' : ''} ${q.third ? 'third' : ''}">${lab}${ctl}${tip}</div>`;
+    return `<div class="fld ${q.half ? 'half' : ''} ${q.third ? 'third' : ''} ${q.two ? 'two' : ''}">${lab}${ctl}${tip}</div>`;
   };
 
   // ---------- shared pieces ----------
+  /** The Olive Owl mark ("The Watcher"). */
+  AG.owlSvg = (cls = '') => `<svg viewBox="0 0 100 100" class="${cls}" role="img" aria-label="Olive Owl">
+    <path d="M20 24 L33 33 C38 30 44 28.5 50 28.5 C56 28.5 62 30 67 33 L80 24 L78.5 47 C80 70 67 86 50 86 C33 86 20 70 21.5 47 Z" fill="#4C5A1E"/>
+    <circle cx="37.5" cy="51" r="14" fill="#F6F1DE"/><circle cx="62.5" cy="51" r="14" fill="#F6F1DE"/>
+    <circle cx="37.5" cy="51" r="9.5" fill="#E2A93B"/><circle cx="62.5" cy="51" r="9.5" fill="#E2A93B"/>
+    <circle cx="37.5" cy="51" r="5" fill="#1E2310"/><circle cx="62.5" cy="51" r="5" fill="#1E2310"/>
+    <circle cx="39.5" cy="48.5" r="1.8" fill="#FFF"/><circle cx="64.5" cy="48.5" r="1.8" fill="#FFF"/>
+    <path d="M46 61 L54 61 L50 69 Z" fill="#B4532E"/></svg>`;
+  /** Top left of every page: the owl in a circle, back to home from anywhere (acts.home). */
+  AG.owlBtn = () => `<button class="rb owl" data-act="home" aria-label="Home">${AG.owlSvg()}</button>`;
+  AG.backBtn = () => `<button class="rb" data-act="back" aria-label="Back">${ic('back')}</button>`;
+  // Every header is a .topbar: it stays put and the page scrolls under it.
   AG.head = ({ eyebrow = '', title, right = '' }) =>
-    `<header class="head"><div class="t"><div class="eyebrow">${eyebrow}</div><h1 class="title">${title}</h1></div><div class="hr">${right}</div></header>`;
+    `<header class="head topbar">${AG.owlBtn()}<div class="t"><div class="eyebrow">${eyebrow}</div><h1 class="title">${title}</h1></div><div class="hr">${right}</div></header>`;
   AG.pageHead = ({ eyebrow = '', title, right = '' }) =>
-    `<header class="head page"><button class="rb" data-act="back" aria-label="Back">${ic('back')}</button><div class="t"><div class="eyebrow">${eyebrow}</div><h1 class="title">${title}</h1></div><div class="hr">${right}</div></header>`;
+    `<header class="head page topbar">${AG.owlBtn()}${AG.backBtn()}<div class="t"><div class="eyebrow">${eyebrow}</div><h1 class="title">${title}</h1></div><div class="hr">${right}</div></header>`;
   AG.rb = (icon, act, data = '', label = '') => `<button class="rb" data-act="${act}" ${data} aria-label="${esc(label)}">${ic(icon)}</button>`;
+  /** Every question with its answer, or a dash when it's not answered yet — the detailed summaries. */
+  AG.qaRows = (q, qs) => qs.map((x) => AG.blank(q[x.k]) ? `<div class="qa none"><span>${esc(x.label)}</span><b>—</b></div>` : `<div class="qa"><span>${esc(x.label)}</span><b>${esc(AG.showVal(x, q[x.k]))}</b></div>`).join('');
   AG.sec = (title, body, right = '', cls = '') => `<section class="card sec ${cls}"><div class="sec-h"><h3>${title}</h3>${right}</div>${body}</section>`;
   AG.lnk = (label, act, data = '') => `<button class="lnk" data-act="${act}" ${data}>${label}</button>`;
   AG.empty = (icon, title, sub = '', actions = '') =>
@@ -423,7 +497,7 @@
   AG.ring = (n, cls = '') => {
     const r = 15, cir = 2 * Math.PI * r, f = Math.max(0, Math.min(100, n)) / 100;
     const tone = n >= 65 ? 'var(--ok)' : n >= 40 ? 'var(--amber)' : 'var(--mu)';
-    return `<div class="ring ${cls}"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="${r}" class="trk"/><circle cx="18" cy="18" r="${r}" style="stroke:${tone}" stroke-dasharray="${(cir * f).toFixed(1)} ${cir.toFixed(1)}" transform="rotate(-90 18 18)"/></svg><b>${n}</b></div>`;
+    return `<div class="ring ${cls}" title="Ready to buy or sell: ${n} of 100"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="${r}" class="trk"/><circle cx="18" cy="18" r="${r}" style="stroke:${tone}" stroke-dasharray="${(cir * f).toFixed(1)} ${cir.toFixed(1)}" transform="rotate(-90 18 18)"/></svg><b>${n}</b></div>`;
   };
   AG.stars = (n, act = '', data = '') => `<span class="stars">${[1, 2, 3, 4, 5].map((i) =>
     act ? `<button data-act="${act}" ${data} data-n="${i}" class="${i <= n ? 'on' : ''}" aria-label="${i} stars">${ic('star')}</button>` : `<i class="${i <= n ? 'on' : ''}">${ic('star')}</i>`).join('')}</span>`;
@@ -467,7 +541,7 @@
     else next = `<span class="amber">${ic('bell', 'xs')} No follow-up scheduled</span>`;
     return `<div class="card crow" data-act="${c.draft ? 'resumeIntake' : 'openClient'}" data-id="${c.id}">
       <span class="edge" style="background:${edge}"></span>${AG.avatar(c)}
-      <div class="grow"><div class="r1"><b>${esc(AG.cname(c))}</b>${AG.sideTags(c)}</div>
+      <div class="grow"><div class="r1"><b>${esc(AG.cname(c))}</b>${AG.sideTags(c)}${AG.portalTag ? AG.portalTag(c) : ''}</div>
         <div class="r2">${esc([stages, ...facts].join(' · '))}</div><div class="r3">${next}</div></div>
       ${c.status === 'active' && !c.draft ? AG.ring(AG.score(c)) : ''}</div>`;
   };
@@ -488,5 +562,6 @@
   };
 
   AG.build = () => { buildNav(); updateNav(); };
+  view() && view().addEventListener('scroll', onScroll, { passive: true });
   AG.render = render;
 })(window);

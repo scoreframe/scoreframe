@@ -11,24 +11,29 @@
   AG.FORMS_URL = 'https://scoreframe.app/homes';
   const visible = (sec, q) => sec.qs.filter((x) => !x.show || x.show(q));
 
-  /** One step of the questionnaire (i = SECS().length is the review). host: { q, i, by, standalone }. */
+  /** The questionnaire as short pages (AG.FORM_PAGES), section by section — like tax software (Eric 2026-10-26). */
+  const stepsOf = (q) => SECS().flatMap((sec, si) => { const pgs = AG.pagesOf(sec, visible(sec, q), AG.FORM_PAGES); return pgs.map((pg, k) => ({ sec, si, pg, k, of: pgs.length })); });
+  /** One page of the questionnaire (i = the page count is the review). host: { q, i, by, standalone }. */
   AG.sellerFormHtml = (host) => {
-    const secs = SECS(), n = secs.length, i = Math.min(host.i, n), q = host.q;
-    const dots = `<div class="steps">${[...secs, { title: 'Review' }].map((s, j) => `<button class="${j < i ? 'done' : ''} ${j === i ? 'on' : ''}" data-act="sfGo" data-i="${j}" aria-label="${esc(s.title)}"><i></i></button>`).join('')}</div>`;
-    const head = `<div class="phead"><div class="t"><div class="eyebrow">${esc(host.by || 'Selling your home')}</div>
-        <div class="title">${esc(i < n ? secs[i].title : 'All set')}</div></div>${host.standalone ? '' : `<button class="btn ghost sm pexit" data-act="presentExit">${ic('lock')} Done</button>`}</div>`;
-    if (i < n) {
-      const sec = secs[i];
-      const intro = i === 0 ? `<p class="muted" style="margin:0 2px 12px">About 10 minutes. Skip anything you’re not sure of — we’ll fill in the rest together.${host.standalone ? ' Your answers stay on this phone until you send them.' : ''}</p>` : '';
-      return `${head}${dots}${intro}<section class="card sec"><div class="form bottom" data-form="sform">${visible(sec, q).map((x) => AG.fld(x, q)).join('')}</div></section>
-        <div class="footbar">${i ? `<button class="btn ghost" data-act="sfGo" data-i="${i - 1}">${ic('back')} Back</button>` : '<span></span>'}<button class="btn" data-act="sfGo" data-i="${i + 1}">${i + 1 < n ? 'Next' : 'Review'} ${ic('right')}</button></div>`;
+    const secs = SECS(), q = host.q, steps = stepsOf(q), n = steps.length, i = Math.min(host.i, n), st = steps[i];
+    const si = st ? st.si : secs.length, first = (j) => steps.findIndex((x) => x.si === j);
+    const dots = `<div class="steps">${[...secs, { title: 'Review' }].map((s, j) => `<button class="${j < si ? 'done' : ''} ${j === si ? 'on' : ''}" data-act="sfGo" data-i="${j < secs.length ? first(j) : n}" aria-label="${esc(s.title)}"><i></i></button>`).join('')}</div>`;
+    const head = `<div class="phead">${AG.owlBtn()}<div class="t"><div class="eyebrow">${esc(host.by || 'Selling your home')}</div>
+        <div class="title">${esc(st ? st.sec.title : 'All set')}</div></div>${host.standalone ? '' : `<button class="btn ghost sm pexit" data-act="presentExit">${ic('lock')} Done</button>`}</div>`;
+    if (st) {
+      const intro = i === 0 ? `<p class="muted" style="margin:0 2px 12px">About 10 minutes. Skip anything you’re not sure of — we’ll fill in the rest together.${host.standalone ? ' Your answers and your place stay on this phone until you send them.' : ''}</p>` : '';
+      const part = st.of > 1 ? `<div class="wiz-pg"><small>Step ${si + 1} of ${secs.length} · part ${st.k + 1} of ${st.of}</small><b>${esc(st.pg.title)}</b></div>` : `<div class="wiz-pg"><small>Step ${si + 1} of ${secs.length}</small></div>`;
+      const nx = steps[i + 1];
+      return `<div class="topbar ptop">${head}${dots}</div>${intro}${part}<section class="card sec"><div class="form bottom" data-form="sform">${st.pg.qs.map((x) => AG.fld(x, q)).join('')}</div></section><div class="footpad"></div>
+        <div class="footbar">${i ? `<button class="btn ghost" data-act="sfGo" data-i="${i - 1}">${ic('back')} Back</button>` : '<span></span>'}<button class="btn" data-act="sfGo" data-i="${i + 1}">${nx ? `Next: ${esc(nx.si === si ? nx.pg.title : nx.sec.title)}` : 'Review'} ${ic('right')}</button></div>`;
     }
-    const rows = secs.map((sec) => {
-      const got = visible(sec, q).filter((x) => !AG.blank(q[x.k]));
-      return got.length ? `<section class="card sec"><div class="sec-h"><h3>${esc(sec.title)}</h3><button class="lnk" data-act="sfGo" data-i="${secs.indexOf(sec)}">Edit</button></div>${got.map((x) => `<div class="qa"><span>${esc(x.label)}</span><b>${esc(AG.showVal(x, q[x.k]))}</b></div>`).join('')}</section>` : '';
+    // the review: every question, answered or not, section by section, each with an Edit
+    const rows = secs.map((sec, j) => {
+      const qs = visible(sec, q), got = qs.filter((x) => !AG.blank(q[x.k])).length;
+      return `<section class="card sec"><div class="sec-h"><h3>${got === qs.length ? ic('check', 'sm') + ' ' : ''}${esc(sec.title)} <small>${got}/${qs.length}</small></h3><button class="lnk" data-act="sfGo" data-i="${first(j)}">Edit</button></div>${AG.qaRows(q, qs)}</section>`;
     }).join('');
     const send = host.standalone ? sendButtons(host) : `<div class="callout">${ic('check')}<div class="grow">Saved to your file. Thank you!</div></div>`;
-    return `${head}${dots}${send}${rows || '<p class="muted">Nothing answered yet.</p>'}`;
+    return `<div class="topbar ptop">${head}${dots}</div>${send}${rows}`;
   };
   function sendButtons(host) {
     const to = host.agentFirst || 'your agent';
@@ -87,6 +92,7 @@
   A.sfGo = (d) => {
     const cur = AG.cur();
     cur.params.i = Math.max(0, +d.i);
+    if (AG.sfOnGo) AG.sfOnGo(cur.params.i);
     AG.refresh();
     const v = AG.$('#view');
     if (v) v.scrollTop = 0;

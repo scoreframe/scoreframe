@@ -141,7 +141,7 @@
     rate: 6.5, downPct: 10, taxPct: 1.1, insYear: 1800, years: 30,
     sellCostPct: 6, costs: AG.defaultCosts(),
     deadlines: { emd: 3, insp: 10, appr: 21, fin: 30 },
-    lock: false,
+    lock: true, // Eric 2026-10-21: lock the app every time the phone locks
   });
   AG.fresh = () => ({
     v: 1, created: Date.now(), settings: AG.defaultSettings(),
@@ -155,7 +155,13 @@
     db.settings.deadlines = Object.assign(AG.defaultSettings().deadlines, db.settings.deadlines || {});
     db.settings.costs = Object.assign(AG.defaultCosts(), db.settings.costs || {});
     for (const k of ['clients', 'homes', 'items', 'partners', 'cmas']) if (!Array.isArray(db[k])) db[k] = [];
+    for (const p of db.partners) { // kinds from before the contact book (0.19.0)
+      const to = (AG.ROLE_RENAMED || {})[p.role];
+      if (to) p.role = to;
+      else if (p.role && AG.PARTNER_ROLES && !AG.PARTNER_ROLES.includes(p.role)) { p.what = p.what || p.role; p.role = 'Other'; }
+    }
     db.settings.cmaAdj = db.settings.cmaAdj || {};
+    if (!db.lockDefault) { db.settings.lock = true; db.lockDefault = 1; } // the app lock became the default (0.15.0)
     if (!db.oliveLook) { if (db.settings.palette === 'harbor') db.settings.palette = 'olive'; db.oliveLook = 1; } // Olive Owl rebrand, 2026-10-21
     if (!Array.isArray(db.templates)) db.templates = AG.clone(AG.DEFAULT_TEMPLATES || []);
     // new built-in templates appear in older books too (unless removed on purpose)
@@ -220,6 +226,7 @@
   AG.saveNow = () => {
     clearTimeout(saveT);
     saveT = 0;
+    if (AG.cloud && AG.cloud.role === 'client') { AG.portalSave(); return; } // a client in their portal: only their answers go up
     if (AG.cloud && AG.cloud.live) AG.cloudPush(); // the account is the book (cloud.js)
     else write('db', JSON.stringify(AG.db));
     AG.syncReminders();
@@ -610,6 +617,60 @@
     const notErts = !b(q.laType) && q.laType !== 'Exclusive right to sell';
     return { seller, terms, forms, missing: total, kansas, other, notErts };
   };
+  // ---------- every form a deal can need (Eric 2026-10-21, with the KCRAR forms packet: "the full context that would
+  // get filled out") — by phase, and who fills it: Olive Owl (a form map in forms.js), the seller (on their page), or
+  // not in Olive Owl yet. Names are the forms' own titles; nothing of their wording is copied.
+  AG.PAPER_PHASES = {
+    sell: [['list', 'Listing'], ['offers', 'Offers'], ['contract', 'Under contract']],
+    buy: [['agree', 'Working together'], ['offer', 'Making an offer'], ['contract', 'Under contract']],
+  };
+  const PAPER_NOW = { sell: { lead: 'list', appt: 'list', prep: 'list', active: 'offers', contract: 'contract', closed: 'contract' },
+    buy: { lead: 'agree', consult: 'agree', search: 'agree', offer: 'offer', contract: 'contract', closed: 'contract' } };
+  AG.paperNow = (c, side) => PAPER_NOW[side][(c[side] || {}).stage] || PAPER_NOW[side].lead;
+  AG.paperwork = (c, now = Date.now()) => {
+    const q = c.q || {}, out = [], m = new Date(now).getMonth(), winter = m >= 10 || m <= 2; // November – March
+    const add = (side, phase, name, why, o = {}) => out.push({ side, phase, name, why, ...o });
+    if (AG.has(c, 'sell')) {
+      const land = q.propKind === 'Land' || q.sType === 'Land', mo = q.sSt === 'Missouri';
+      add('sell', 'list', 'Exclusive Right to Sell Contract', 'The listing agreement', { fill: 'erts' });
+      if (!land && q.propKind !== 'New construction') {
+        add('sell', 'list', `Seller’s Disclosure and Condition of Property Addendum — ${q.sType === 'Condo' ? 'Condominium' : 'Residential'}`,
+          q.sType === 'Condo' ? 'Condo version — the seller answers it' : 'The seller answers it about the home', { who: 'seller' });
+      }
+      if (land || q.acreage === 'Yes') add('sell', 'list', 'Seller’s Disclosure and Condition of Property Addendum — Land', land ? 'Land' : 'Has acreage — used with the residential one', { who: 'seller' });
+      if (q.sType === 'Multi-family') add('sell', 'list', 'Multifamily Property Disclosure Rider', 'More than one unit — each unit’s details', { who: 'seller' });
+      if (q.pool === 'Yes') add('sell', 'list', 'Seller’s Disclosure Swimming Pool-Spa Rider', 'There’s a pool or spa', { who: 'seller' });
+      if (+q.sYear > 0 && +q.sYear < 1978) add('sell', 'list', 'Lead-Based Paint Disclosure', `Built ${q.sYear} — federally required before 1978`, { fill: 'lbp' });
+      else if (AG.blank(q.sYear) && !land) add('sell', 'list', 'Lead-Based Paint Disclosure', 'Only if built before 1978 — year built not entered', { fill: 'lbp', maybe: true });
+      if (mo) add('sell', 'list', 'Methamphetamine Disclosure', 'Missouri requires it on every sale', { fill: 'meth' });
+      if (q.sewer === 'Septic / onsite system') add('sell', 'list', 'Residential Septic System Addendum', 'Septic or other onsite system', { fill: 'ww' });
+      if ((q.sNeeds || []).includes('Sell as-is') || q.cond === 'Tear-down / land value') add('sell', 'list', 'In Its Present Condition Addendum', 'Selling as-is — sets how inspections and repairs work');
+      // the listing's other papers (agency, opt-outs, warranty, title documents) — the listing contract checklist
+      const known = /Seller’s Disclosure|Methamphetamine|Wastewater|Lead-Based|Wire fraud/;
+      for (const f of AG.contractStatus(c).forms) if (!known.test(f.name)) add('sell', 'list', f.name, f.why);
+      add('sell', 'offers', 'Counter Offer Addendum', 'When the seller counters an offer', { maybe: true });
+      add('sell', 'offers', 'Backup Contract Addendum', 'If a backup offer comes in while under contract', { maybe: true });
+      add('sell', 'contract', 'Inspection Notice', 'The buyer’s repair requests — the seller responds on it');
+      if (winter) add('sell', 'contract', 'Cold Weather Inspection Waiver', 'Winter: air conditioning, pool or sprinklers can’t be tested safely', { maybe: true });
+    }
+    if (AG.has(c, 'buy')) {
+      const h = c.buy && c.buy.deal && c.buy.deal.homeId && AG.home(c.buy.deal.homeId);
+      add('buy', 'agree', 'Exclusive Buyer Agency Contract', 'Signed before touring', { fill: 'eba' });
+      add('buy', 'agree', 'Buyer’s Estimated Expense Worksheet', 'What they’ll need to close', { fill: 'bew' });
+      add('buy', 'offer', 'Residential Real Estate Sale Contract', 'The offer itself');
+      if (q.needSell === 'Must sell first') add('buy', 'offer', 'Contingency for Sale and/or Closing of Buyer’s Property Addendum', 'Their offer depends on selling their home');
+      add('buy', 'offer', 'Backup Contract Addendum', 'If the home is already under contract', { maybe: true });
+      add('buy', 'offer', 'Counter Offer Addendum', 'When either side counters', { maybe: true });
+      add('buy', 'offer', 'Seller’s disclosure from the listing agent', 'Get it before they offer — they sign that they received it');
+      if (h && +h.year > 0 && +h.year < 1978) add('buy', 'offer', 'Lead-Based Paint Disclosure (from the seller)', `Built ${h.year} — they sign that they received it`);
+      add('buy', 'contract', 'Inspection Notice', 'To ask for repairs within the inspection period');
+      if (winter) add('buy', 'contract', 'Cold Weather Inspection Waiver', 'Winter: systems that can’t be tested safely', { maybe: true });
+    }
+    const tb = q.cTB === 'Yes' || q.bTB === 'Yes';
+    if (tb && !out.some((f) => /Transaction Broker/.test(f.name))) add(AG.has(c, 'sell') ? 'sell' : 'buy', AG.has(c, 'sell') ? 'list' : 'agree', 'Transaction Broker Addendum', 'If the same brokerage ends up on both sides');
+    add(AG.has(c, 'sell') ? 'sell' : 'buy', AG.has(c, 'sell') ? 'list' : 'agree', 'Cyber Protection Notice', 'Wire-fraud warning — every transaction');
+    return out;
+  };
   /** The listing details in the contract's order, for filling in the official form. */
   AG.contractText = (c) => {
     const q = c.q || {}, s = AG.db.settings, st = AG.contractStatus(c);
@@ -706,6 +767,38 @@
   AG.home = (id) => AG.db.homes.find((h) => h.id === id);
   AG.item = (id) => AG.db.items.find((i) => i.id === id);
   AG.partner = (id) => AG.db.partners.find((p) => p.id === id);
+
+  // ---------- contact book (AG.db.partners: {company, name, role, what (an "Other" kind), phone, email, web, area,
+  // blurb (goes out to clients), notes (only the agent)}) ----------
+  AG.proName = (p) => p.company || p.name || '';
+  AG.proKind = (p) => (p.role === 'Other' ? p.what || 'Other' : p.role || 'Other');
+  /** [{kind, list}] in book order (AG.PARTNER_ROLES, then your own kinds A–Z), each list A–Z. */
+  AG.proKinds = (list = AG.db.partners) => {
+    const by = new Map(), roles = AG.PARTNER_ROLES || [];
+    for (const p of list) { const k = AG.proKind(p); if (!by.has(k)) by.set(k, []); by.get(k).push(p); }
+    const at = (k) => { const i = roles.indexOf(k); return i < 0 || k === 'Other' ? 1e3 : i; };
+    return [...by.keys()].sort((a, b) => at(a) - at(b) || a.localeCompare(b))
+      .map((kind) => ({ kind, list: by.get(kind).sort((a, b) => AG.proName(a).localeCompare(AG.proName(b))) }));
+  };
+  const picked = (ids) => AG.proKinds(ids.map(AG.partner).filter(Boolean));
+  /** Kinds picked fewer than AG.PRO_MIN times: [{kind, have, need}]. */
+  AG.proShort = (ids) => picked(ids).filter((g) => g.list.length < AG.PRO_MIN).map((g) => ({ kind: g.kind, have: g.list.length, need: AG.PRO_MIN - g.list.length }));
+  /** Allowed to send: something picked, and at least AG.PRO_MIN of every kind picked. */
+  AG.proReady = (ids) => picked(ids).length > 0 && !AG.proShort(ids).length;
+  AG.shuffle = (arr, rnd = Math.random) => {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  };
+  const proHead = (k) => ((AG.PRO_HEAD || {})[k] || k);
+  /** The message text: each kind under its heading, its companies in a fresh random order so no one is favored. */
+  AG.proList = (ids, rnd = Math.random) => picked(ids).map((g) => `${proHead(g.kind).toUpperCase()}\n${AG.shuffle(g.list, rnd).map((p) => [
+    '• ' + AG.proName(p) + (p.company && p.name ? ` (${p.name})` : ''),
+    [AG.fmtPhone(p.phone), p.email, p.web].filter(Boolean).join(' · '),
+    p.area && 'Serves ' + p.area, p.blurb,
+  ].filter(Boolean).join('\n   ')).join('\n')}`).join('\n\n');
+  /** For the client's timeline: who was sent, A–Z. */
+  AG.proLog = (ids) => 'names: ' + picked(ids).map((g) => `${proHead(g.kind)} (${g.list.map(AG.proName).join(', ')})`).join('; ');
   AG.has = (c, side) => c.sides.includes(side);
   /** The home a buyer bought: the deal's home once they've closed, else one marked Bought. */
   AG.boughtHome = (c) => {
@@ -923,6 +1016,8 @@
     return out.sort((a, b) => a.at - b.at).slice(0, 60);
   };
   let lastPlan = '';
+  /** The app lock lives on the phone; the setting rides in the book, so every device follows it. */
+  AG.syncLock = () => { try { if (N() && N().setLock && AG.db) N().setLock(AG.db.settings.lock !== false); } catch {} };
   AG.syncReminders = () => {
     if (!N() || !N().schedule || !AG.db) return;
     const plan = JSON.stringify(AG.buildNotes(AG.db));
@@ -1082,6 +1177,71 @@
     ].filter((x) => !AG.db.items.some((i) => i.clientId === c.id && i.auto === x.key && !i.done));
   };
 
+  // ---------- family (Eric 2026-10-22: "a good place to capture facts and things about the client, their family,
+  // children's names, birthdays") ----------
+  // q.people = [{ id, name, rel, bday 'MM-DD', born (year), note }]; the partner stays q.partner (+ q.partnerBday),
+  // the couple's anniversary is q.wedding. q.famQuiet = { <person id> | 'partner' | 'wedding': true } turns a yearly
+  // reminder off. Private to the agent: never in the client's page projection, never sent to the AI search.
+  AG.REL = ['Son', 'Daughter', 'Child', 'Parent', 'Sibling', 'Grandchild', 'Pet', 'Other'];
+  AG.people = (c) => (Array.isArray(c.q.people) ? c.q.people : []);
+  /** Age today from a birth year (and the birthday, when known); '' when there's no year. */
+  AG.ageOf = (born, bday, now = Date.now()) => {
+    const y = +born;
+    if (!y) return '';
+    const d = new Date(now), md = AG.mdOf(bday);
+    let a = d.getFullYear() - y;
+    if (md && (d.getMonth() + 1 < md[0] || (d.getMonth() + 1 === md[0] && d.getDate() < md[1]))) a--;
+    return a >= 0 && a < 130 ? a : '';
+  };
+  /** The birth year for an age given today (and the birthday, when known). */
+  AG.bornFrom = (age, bday, now = Date.now()) => {
+    if (age === '' || age == null || !(+age >= 0)) return '';
+    const d = new Date(now), md = AG.mdOf(bday);
+    let y = d.getFullYear() - Math.round(+age);
+    if (md && (d.getMonth() + 1 < md[0] || (d.getMonth() + 1 === md[0] && d.getDate() < md[1]))) y--;
+    return y;
+  };
+  const relOf = (p) => (p.rel && p.rel !== 'Other' ? p.rel.toLowerCase() : p.note ? p.note.split(/[,;—]/)[0].trim().toLowerCase() : 'family');
+  /** The yearly dates a client's family brings: birthdays (partner + everyone listed) and the anniversary. */
+  AG.familyDates = (c, now = Date.now()) => {
+    const q = c.q, quiet = q.famQuiet || {}, out = [], me = (q.first || '').trim() || AG.firsts(c), both = AG.firsts(c);
+    const add = (key, title, md) => { const at = AG.nextMd(md, now); if (at && !quiet[key.replace(/^fam_/, '')]) out.push({ key, kind: 'date', title, at, allDay: true, repeat: 'year' }); };
+    const pFirst = (q.partner || '').trim().split(/\s+/)[0];
+    if (pFirst) add('fam_partner', `🎂 ${pFirst}’s birthday · ${me}’s partner`, q.partnerBday);
+    if (pFirst) add('fam_wedding', `💍 ${both}’s anniversary`, q.wedding);
+    for (const p of AG.people(c)) if (p.name) add('fam_' + p.id, `🎂 ${p.name.trim()}’s birthday · ${both}’s ${relOf(p)}`, p.bday);
+    return out;
+  };
+  /** Keep the family's yearly reminders in step with q: add or move each, drop the ones no longer wanted. */
+  AG.familySync = (c, now = Date.now()) => {
+    const want = AG.familyDates(c, now), keys = new Set(want.map((x) => x.key));
+    AG.db.items = AG.db.items.filter((i) => !(i.clientId === c.id && !i.done && /^fam_/.test(i.auto || '') && !keys.has(i.auto)));
+    for (const x of want) {
+      const ex = AG.db.items.find((i) => i.clientId === c.id && i.auto === x.key && !i.done);
+      // only a changed date moves an existing reminder (one already ticked off this year has moved on to next year's)
+      if (ex && AG.ymd(ex.at).slice(5) === AG.ymd(x.at).slice(5)) { ex.title = x.title; continue; }
+      AG.upsertAuto(c.id, x.key, { kind: x.kind, title: x.title, at: x.at, allDay: true, repeat: 'year' });
+    }
+    AG.save();
+  };
+
+  /** The papers a buyer's lender will likely ask for, from their answers (AG.LOAN_DOCS): groups = what applies to them,
+   *  maybe = the rest ("only if it applies"). Each item's tick lives in c.ready[key] — the same map the client ticks on
+   *  their page, so both sides see one list. Cash buyers just need proof of funds. */
+  AG.loanDocs = (c) => {
+    const q = c.q || {}, mk = ([id, t, why]) => ({ key: 'loan:' + id, t, why: why || '' });
+    if (q.payWith === 'Cash') return { cash: true, groups: [{ id: 'cash', title: 'Paying cash', items: AG.CASH_DOCS.map(mk) }], maybe: [] };
+    const groups = [], maybe = [];
+    for (const g of AG.LOAN_DOCS) {
+      if (g.each) {
+        const on = g.items.filter((x) => x[3] && x[3](q, c)), off = g.items.filter((x) => !on.includes(x));
+        if (on.length) groups.push({ id: g.id, title: 'Also for you', items: on.map(mk) });
+        if (off.length) maybe.push({ id: g.id, title: g.title, items: off.map(mk) });
+      } else (!g.when || g.when(q, c) ? groups : maybe).push({ id: g.id, title: g.title, items: g.items.map(mk) });
+    }
+    return { cash: false, groups, maybe };
+  };
+
   // ---------- compensation (2024 settlement rules) ----------
   /** What the buyer's agreement pays the agent on a home at [price], or null if not a set amount. */
   AG.braFee = (c, price) => {
@@ -1225,7 +1385,7 @@
       first: c ? AG.firsts(c) : 'there', name: c ? AG.cname(c) : '', last: q.last || '',
       agent: s.agent || 'your agent', brokerage: s.brokerage || '', agentPhone: AG.fmtPhone(s.agentPhone), agentEmail: s.agentEmail || '',
       address: extra.address || (home ? home.address : q.addr) || 'the home', goal,
-      date: extra.date || '', lender: lenderP ? `${lenderP.name}${lenderP.company ? ' (' + lenderP.company + ')' : ''} ${AG.fmtPhone(lenderP.phone)}`.trim() : q.lender || 'my lender contact',
+      date: extra.date || '', lender: lenderP ? `${lenderP.name && lenderP.company ? `${lenderP.name} (${lenderP.company})` : AG.proName(lenderP)} ${AG.fmtPhone(lenderP.phone)}`.trim() : q.lender || 'my lender contact',
       reviewLink: s.reviewLink || '', link: extra.link || '', list: extra.list || '',
       comp: extra.home ? AG.compDisclosure(extra.home) : '',
       forAddress: extra.address ? ' for ' + extra.address : '',
