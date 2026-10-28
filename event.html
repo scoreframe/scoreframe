@@ -735,8 +735,102 @@ function v2Watch(g) {
     return /^https:\/\//.test(url) ? url : '';
 }
 
+// ── Bowling events (2026-10-28): several schools, run in parts. Same maths
+// as the apps' BowlingEvent.kt / BowlingEvent.swift. -1 on the wire = not in.
+const bwNum = v => (typeof v === 'number' && v >= 0) ? v : null;
+function bwFrames(ev) {
+    // Our bowlers' scores from games scored with frames for a part.
+    const out = {};
+    for (const [partId, gid] of Object.entries(ev.partGames || {})) {
+        const g = V.games && V.games.get(gid); if (!g) continue;
+        const st = g.sportSpecificStats || {}, m = {};
+        for (const b of [...(st.bowlers || []), ...(st.untrackedBowlers || [])]) {
+            const name = String(b.name || '').trim(), pid = b.savedPlayerId || '';
+            const l = (ev.lineup || []).find(x => (pid && x.key === pid) || x.name.toLowerCase() === name.toLowerCase()
+                || x.name.split(' ')[0].toLowerCase() === name.split(' ')[0].toLowerCase());
+            if (!l) continue;
+            const sc = (b.gameScores || []).map(v => v > 0 ? v : null);
+            if (sc.some(v => v != null)) m[l.key] = sc;
+        }
+        out[partId] = m;
+    }
+    return out;
+}
+function bwBowlers(ev, frames, partId) {
+    const typed = (ev.bowlers || {})[partId] || {}, f = frames[partId] || {}, out = {};
+    for (const k of new Set([...Object.keys(typed), ...Object.keys(f)])) {
+        const a = (typed[k] || []).map(bwNum), b = f[k] || [];
+        out[k] = Array.from({ length: Math.max(a.length, b.length) }, (_, i) => b[i] ?? a[i] ?? null);
+    }
+    return out;
+}
+function bwGame(ev, frames, p, s, g) {
+    if (s.us) {
+        const sc = Object.values(bwBowlers(ev, frames, p.id)).map(l => l[g]).filter(v => v != null);
+        if (p.format !== 'baker' && sc.length) {
+            const c = p.count > 0 ? sc.sort((x, y) => y - x).slice(0, p.count) : sc;
+            return c.reduce((a, b) => a + b, 0);
+        }
+    }
+    return bwNum((((ev.totals || {})[p.id] || {})[s.id] || [])[g]);
+}
+function renderBowling(ev) {
+    document.title = `${ev.name || 'Bowling event'} — ScoreFrame`;
+    $('heroTitle').textContent = ev.name || 'Bowling event';
+    $('heroDate').textContent = formatDate(tms(ev.startDate));
+    if (ev.venue) { $('heroLocation').replaceChildren(mapsLink(ev.venue)); $('heroLocation').style.display = ''; }
+    $('livePill').style.display = 'none';
+    const frames = bwFrames(ev), parts = ev.parts || [], schools = ev.schools || [];
+    const fmt = n => n.toLocaleString('en-US');
+    const rows = schools.map(s => {
+        let pins = 0, n = 0;
+        for (const p of parts) for (let g = 0; g < p.games; g++) { const v = bwGame(ev, frames, p, s, g); if (v != null) { pins += v; n++; } }
+        return { s, pins, n };
+    }).sort((a, b) => b.pins - a.pins || a.s.name.localeCompare(b.s.name));
+    const any = rows.some(r => r.n);
+    const dot = c => `<span style="display:inline-block;width:12px;height:12px;border-radius:6px;background:${escH(typeof c === 'number' ? '#' + ((c >>> 0) & 0xFFFFFF).toString(16).padStart(6, '0') : c)};border:1px solid rgba(127,127,127,.5);flex:none"></span>`;
+    const ui = rows.findIndex(r => r.s.us);
+    let h = `<div class="v2-card" style="padding:14px"><div class="v2-lbl" style="color:var(--accent)">${any ? 'Standings · total pins' : 'Schools'}</div>`;
+    rows.forEach((r, i) => {
+        h += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;${r.s.us ? 'font-weight:800' : ''}">
+            <span style="width:18px;color:var(--text-muted)">${i + 1}</span>${dot(r.s.color)}
+            <span style="flex:1;min-width:0">${escH(r.s.name)}</span>
+            <span style="font-variant-numeric:tabular-nums;font-weight:700">${r.n ? fmt(r.pins) : '—'}</span></div>`;
+    });
+    if (any && ui > 0) h += `<div class="v2-sub">${escH(rows[ui].s.name)} ${fmt(rows[0].pins - rows[ui].pins)} behind 1st</div>`;
+    else if (any && ui === 0 && rows.length > 1) h += `<div class="v2-sub">In 1st by ${fmt(rows[0].pins - rows[1].pins)}</div>`;
+    h += `</div>`;
+    const us = schools.find(s => s.us);
+    parts.forEach((p, pi) => {
+        const label = (p.format === 'baker' ? 'Baker' : 'Traditional') + ` · ${p.games} game${p.games === 1 ? '' : 's'}`;
+        h += `<div class="v2-card" style="padding:14px"><div style="font-weight:800">${pi + 1} · ${escH(label)}</div>`;
+        const done = rows.filter(r => Array.from({ length: p.games }, (_, g) => bwGame(ev, frames, p, r.s, g)).some(v => v != null));
+        if (!done.length) h += `<div class="v2-sub">Not bowled yet</div>`;
+        for (const r of done) {
+            const gs = Array.from({ length: p.games }, (_, g) => bwGame(ev, frames, p, r.s, g));
+            h += `<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;${r.s.us ? 'font-weight:800' : ''}"><span>${escH(r.s.name)}</span>
+                <span style="font-variant-numeric:tabular-nums">${gs.map(v => v == null ? '–' : v).join(' · ')} = ${fmt(gs.reduce((a, b) => a + (b || 0), 0))}</span></div>`;
+        }
+        if (p.format !== 'baker' && us) {
+            const bw = bwBowlers(ev, frames, p.id);
+            const list = (ev.lineup || []).map(b => ({ b, sc: bw[b.key] || [] })).filter(x => x.sc.some(v => v != null))
+                .map(x => ({ ...x, tot: x.sc.reduce((a, v) => a + (v || 0), 0) })).sort((a, b) => b.tot - a.tot);
+            if (list.length) {
+                h += `<div class="v2-lbl" style="margin-top:10px">${escH(us.name)} series</div>`;
+                for (const x of list) h += `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span>${escH(x.b.name)}</span>
+                    <span style="font-variant-numeric:tabular-nums">${x.sc.slice(0, p.games).map(v => v == null ? '–' : v).join(' · ')} = ${fmt(x.tot)}</span></div>`;
+            }
+        }
+        const gid = (ev.partGames || {})[p.id];
+        if (gid && V.games && V.games.get(gid)) h += `<a class="v2-link" style="display:inline-block;margin-top:8px" href="/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(gid)}">Watch / game page</a>`;
+        h += `</div>`;
+    });
+    $('v2').innerHTML = h;
+}
+
 function renderV2() {
     const ev = V.ev; if (!ev) return;
+    if (ev.kind === 'bowling') { renderBowling(ev); return; }
     document.title = `${ev.name || 'Tournament'} — ScoreFrame`;
     $('heroTitle').textContent = ev.name || 'Tournament';
     const start = tms(ev.startDate), end = tms(ev.endDate);
