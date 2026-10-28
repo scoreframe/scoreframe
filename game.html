@@ -479,6 +479,14 @@ body.sf-nospoil #moreFromTeamCard { display: none !important; }
     font-variant-numeric: tabular-nums;
 }
 .bowling-frames-row.no-label { grid-template-columns: repeat(9, 1fr) 1.5fr; }
+/* Baker: who bowled each frame, under the frame (Eric 2026-10-28). */
+.bowling-frame .by { font-size: 10px; color: var(--text-secondary); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px 2px; }
+.baker-who { display: grid; gap: 8px; margin-top: 14px; }
+.baker-who h4 { margin: 0; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+.baker-who .bw-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 10px; border: 1px solid var(--border, rgba(127,127,127,.25)); border-radius: 10px; }
+.baker-who .bw-name { font-weight: 700; }
+.baker-who .bw-pins { font-weight: 700; color: var(--accent); text-align: right; }
+.baker-who .bw-detail { grid-column: 1 / -1; font-size: 12px; color: var(--text-secondary); }
 .bowling-frames-row .game-label {
     display: flex; align-items: center; justify-content: center;
     padding: 0 6px;
@@ -2912,6 +2920,9 @@ function renderTeamScore(hub, game) {
     $('scoreCard').style.display = '';
 }
 
+function bakerEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 function renderBowlingScore(game) {
     // v1.1.440 — Head-to-head bowling matchup header. When the saved
     // game carries `sportSpecificStats.h2h === true` we lead the score
@@ -3064,11 +3075,16 @@ function renderBowlingScore(game) {
     // by the scorer" signal — anything with a score is complete.
     const DASH_ROLL = '<span class="roll gutter">-</span>';
     const DOT_ROLL = '<span class="roll dot">·</span>';
-    function buildFrameCells(frames) {
+    function buildFrameCells(frames, names) {
         // Pad to 10 frames so the scoreboard always has the full row, even
         // for in-progress / abandoned games.
         const padded = [];
         for (let i = 0; i < 10; i++) padded.push(frames[i] || null);
+        // Baker: the bowler's first name under each frame.
+        const by = (i) => {
+            const n = Array.isArray(names) ? String(names[i] || '').trim() : '';
+            return n ? `<div class="by" title="${bakerEsc(n)}">${bakerEsc(n.split(' ')[0])}</div>` : '';
+        };
         return padded.map((f, idx) => {
             const isF10 = idx === 9;
             const cls = `bowling-frame${isF10 ? ' f10' : ''}`;
@@ -3076,7 +3092,7 @@ function renderBowlingScore(game) {
                 // Empty frame — placeholder rolls + blank cum.
                 const cells = isF10 ? 3 : 2;
                 const rolls = Array(cells).fill(DOT_ROLL).join('');
-                return `<div class="${cls}"><div class="rolls">${rolls}</div><div class="cum empty"></div></div>`;
+                return `<div class="${cls}"><div class="rolls">${rolls}</div><div class="cum empty"></div>${by(idx)}</div>`;
             }
             const r1 = parseRoll(f.r1, null);
             const r2 = parseRoll(f.r2, r1);
@@ -3148,10 +3164,10 @@ function renderBowlingScore(game) {
             const cumHtml = (score != null && Number(score) > 0)
                 ? `<div class="cum">${score}</div>`
                 : '<div class="cum empty"></div>';
-            return `<div class="${cls}"><div class="rolls">${rollsHtml}</div>${cumHtml}</div>`;
+            return `<div class="${cls}"><div class="rolls">${rollsHtml}</div>${cumHtml}${by(idx)}</div>`;
         }).join('');
     }
-    function buildFramesBlock(framesByGame) {
+    function buildFramesBlock(framesByGame, namesByGame) {
         if (!Array.isArray(framesByGame) || framesByGame.length === 0) return '';
         // v1.1.405 — Accept Firestore-legal shape: each game is a
         // {gameNumber, frames} map. Old in-flight data may still be a
@@ -3166,7 +3182,7 @@ function renderBowlingScore(game) {
         const rows = games.map((frames, idx) => {
             const label = multi ? `<div class="game-label">G${idx + 1}</div>` : '';
             const rowCls = multi ? 'bowling-frames-row' : 'bowling-frames-row no-label';
-            return `<div class="${rowCls}">${label}${buildFrameCells(frames)}</div>`;
+            return `<div class="${rowCls}">${label}${buildFrameCells(frames, namesByGame ? namesByGame[idx] : null)}</div>`;
         }).join('');
         return `<div class="bowling-frames-wrap">${rows}</div>`;
     }
@@ -3277,6 +3293,36 @@ function renderBowlingScore(game) {
     // the +hcp split. Broaden the rendering gate to ALSO fire when any
     // bowler in the rendered list carries a non-zero handicap. The H2H
     // header logic above is unaffected — it stays inside `if (isH2H)`.
+    // Baker (Eric 2026-10-28): who bowled each frame of each game, and each
+    // bowler's frames across the games. sportSpecificStats.baker =
+    // { lineup, bowlers:[{name, bakerFrames, strikes, spares, openFrames, pins}], games:[{game, bowledBy:[10]}] }.
+    const baker = (stats.baker && typeof stats.baker === 'object') ? stats.baker : null;
+    const bakerGames = (baker && Array.isArray(baker.games)) ? baker.games.slice().sort((a, b) => (a.game || 0) - (b.game || 0)) : [];
+    const bakerNames = bakerGames.length ? bakerGames.map(g => Array.isArray(g.bowledBy) ? g.bowledBy : []) : null;
+    function bakerWho() {
+        if (!baker || !Array.isArray(baker.bowlers) || !baker.bowlers.length) return '';
+        const multi = bakerGames.length > 1;
+        const rowsHtml = baker.bowlers.map(b => {
+            const name = String(b.name || '').trim();
+            const lname = name.toLowerCase();
+            const perGame = bakerGames.map((g, gi) => {
+                const fr = (Array.isArray(g.bowledBy) ? g.bowledBy : [])
+                    .map((n, i) => String(n || '').trim().toLowerCase() === lname ? i + 1 : 0).filter(Boolean);
+                return fr.length ? (multi ? `G${g.game || gi + 1}: ` : 'Frames ') + fr.join(', ') : '';
+            }).filter(Boolean).join(' · ');
+            const chips = [];
+            const x = Number(b.strikes || 0), sp = Number(b.spares || 0), op = Number(b.openFrames || 0);
+            if (x) chips.push(`${x} X`); if (sp) chips.push(`${sp} /`); if (op) chips.push(`${op} open`);
+            const frames = Number(b.bakerFrames || b.totalFrames || 0);
+            return `<div class="bw-row">
+                <div class="bw-name">${bakerEsc(name || 'Bowler')}</div>
+                <div class="bw-pins">${Number(b.pins || 0)} pins</div>
+                <div class="bw-detail">${frames} frame${frames === 1 ? '' : 's'}${chips.length ? ' · ' + chips.join(' · ') : ''}</div>
+                ${perGame ? `<div class="bw-detail">${perGame}</div>` : ''}
+            </div>`;
+        }).join('');
+        return `<div class="baker-who"><h4>Who bowled</h4>${rowsHtml}</div>`;
+    }
     const anyBowlerHcap = rows.some(r => Number(r.bowlerHcap) > 0);
     const showHcapColumn = hasHandicap || anyBowlerHcap;
     const seriesCell = r => {
@@ -3299,10 +3345,10 @@ function renderBowlingScore(game) {
                     <div class="bowling-detail">High ${r.high}</div>
                     ${seriesCell(r)}
                     ${buildStatsLine(r.name, r.scores.length)}
-                    ${r.framesByGame ? buildFramesBlock(r.framesByGame) : ''}
+                    ${r.framesByGame ? buildFramesBlock(r.framesByGame, bakerNames) : ''}
                 </div>
             `).join('')}
-        </div>`;
+        </div>` + bakerWho();
     $('scoreCard').style.display = '';
 }
 
