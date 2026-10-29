@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#111215">
+<title>Team Roster and People</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* Team management on the web (2026-10-29): roster + the team's address book.
+   Mockups: club canvas boards 4 and 8–12. Light only, like club.html and
+   dashboard.html: a desk page for staff, never shown inside the apps. */
+*, *::before, *::after { box-sizing: border-box; }
+:root {
+  color-scheme: light;
+  --paper: #F5F5F2; --card: #FFFFFF; --ink: #1C1B1F; --mu: #5A565F; --ln: #E2DFDA; --ln2: #EFECE7;
+  --deep: #111215; --deep2: #1B1C21; --deep-tx: #F1EEE9; --deep-mu: #A9ADB6;
+  --orange: #FF9640; --on-orange: #1A1004; --link: #A64F0A; --link-h: #7A3906;
+  --ok-bg: #E3F5EA; --ok: #146B3D; --warn-bg: #FFF1DC; --warn: #8A4B00; --bad-bg: #FFE3E3; --bad: #B3121D;
+  --info-bg: #FFF4EA; --info-ln: #F4CFA9;
+}
+html, body { margin: 0; background: var(--paper); color: var(--ink);
+  font-family: Archivo, -apple-system, "Helvetica Neue", Arial, sans-serif; font-variant-numeric: tabular-nums; }
+a { color: var(--link); } a:hover { color: var(--link-h); }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+input, select, textarea { font: inherit; font-size: 15px; padding: 9px 11px; border: 1px solid #D6D2CC; border-radius: 9px; background: #fff; color: var(--ink); min-width: 0; }
+textarea { resize: vertical; line-height: 1.45; }
+label { font-size: 13px; font-weight: 600; color: var(--mu); }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+header.top { background: var(--deep); color: var(--deep-tx); padding: 12px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--deep-tx); }
+.brand .tile { width: 30px; height: 30px; border-radius: 8px; background: var(--orange); color: var(--on-orange); font-weight: 900; display: flex; align-items: center; justify-content: center; }
+.brand .word { font-weight: 900; font-size: 18px; letter-spacing: .4px; } .brand .word b { color: var(--orange); }
+.pill-top { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; color: var(--deep-mu); border: 1px solid #3A3C44; border-radius: 99px; padding: 3px 9px; }
+.who { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--deep-mu); flex-wrap: wrap; }
+.who button { background: none; border: 1px solid #3A3C44; color: var(--deep-mu); border-radius: 7px; padding: 5px 10px; font-size: 13px; }
+main { max-width: 1180px; margin: 0 auto; padding: 24px 24px 64px; display: flex; flex-direction: column; gap: 18px; }
+.card { background: var(--card); border: 1px solid var(--ln); border-radius: 14px; }
+.pad { padding: 18px 20px; }
+.muted { color: var(--mu); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; padding: 10px 15px; border-radius: 10px; font-weight: 700; font-size: 15px; border: 1px solid transparent; min-height: 42px; }
+.btn.primary { background: var(--orange); color: var(--on-orange); }
+.btn.dark { background: var(--ink); color: #fff; }
+.btn.ok { background: var(--ok); color: #fff; }
+.btn.ghost { background: #fff; color: var(--ink); border-color: #D6D2CC; font-weight: 600; }
+.btn.link { background: none; color: var(--link); padding: 4px; min-height: 0; font-weight: 600; font-size: 14px; }
+.btn.sm { min-height: 34px; padding: 6px 12px; font-size: 14px; }
+.btn:disabled { opacity: .55; cursor: default; }
+.status { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; display: inline-block; }
+.s-ok { background: var(--ok-bg); color: var(--ok); } .s-warn { background: var(--warn-bg); color: var(--warn); }
+.s-bad { background: var(--bad-bg); color: var(--bad); } .s-mu { background: #ECECE8; color: #4A4650; }
+.chip { font-size: 13px; padding: 4px 10px; border-radius: 99px; font-weight: 600; display: inline-block; margin: 2px 4px 2px 0; }
+.hero { border-radius: 16px; padding: 18px 20px; color: #fff; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.crest { border-radius: 14px; color: #fff; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+img.logo { object-fit: contain; background: #fff; border: 1px solid var(--ln); padding: 3px; flex-shrink: 0; }
+nav.sub { display: flex; gap: 6px; flex-wrap: wrap; }
+nav.sub button { padding: 9px 16px; border-radius: 99px; background: #fff; color: var(--ink); border: 1px solid #D6D2CC; font-weight: 600; font-size: 14px; }
+nav.sub button[aria-current="page"] { background: var(--ink); color: #fff; border-color: var(--ink); font-weight: 700; }
+nav.sub .badge { background: var(--orange); color: var(--on-orange); border-radius: 99px; padding: 1px 7px; font-size: 12px; margin-left: 4px; }
+.filters button { padding: 7px 13px; border-radius: 99px; border: 1px solid #D6D2CC; background: #fff; font-weight: 600; font-size: 14px; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 15px; }
+.tbl th { text-align: left; color: var(--mu); font-size: 12px; letter-spacing: 1px; font-weight: 700; padding: 10px 12px; text-transform: uppercase; }
+.tbl td { padding: 11px 12px; border-top: 1px solid var(--ln2); vertical-align: middle; }
+.tbl th:first-child, .tbl td:first-child { padding-left: 20px; } .tbl th:last-child, .tbl td:last-child { padding-right: 20px; text-align: right; white-space: nowrap; }
+.scroll { overflow-x: auto; }
+.split { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+.split > .main { flex: 999 1 600px; min-width: 0; } .split > .side { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.wait { border-top: 1px solid var(--ln2); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.4; }
+.note { background: var(--info-bg); border: 1px solid var(--info-ln); border-radius: 14px; padding: 13px 16px; font-size: 13px; line-height: 1.5; color: #3B3842; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 14px; z-index: 20; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+dialog { border: 0; border-radius: 16px; padding: 0; width: min(560px, calc(100% - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.25); color: var(--ink); }
+dialog.wide { width: min(980px, calc(100% - 32px)); }
+dialog::backdrop { background: rgba(17,18,21,.45); }
+dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; max-height: calc(100vh - 40px); overflow-y: auto; }
+.linkrow { display: grid; grid-template-columns: minmax(0, 1fr) 150px 32px; gap: 8px; align-items: center; }
+.x { background: none; border: 0; color: var(--mu); font-size: 20px; width: 32px; height: 32px; }
+.hide { display: none !important; }
+.signin { max-width: 440px; margin: 40px auto; text-align: center; display: flex; flex-direction: column; gap: 14px; }
+.signin input { width: 100%; }
+.loading { padding: 60px 0; text-align: center; color: var(--mu); }
+@media (max-width: 720px) {
+  header.top { padding: 10px 16px; } main { padding: 18px 16px 48px; }
+  .linkrow { grid-template-columns: minmax(0, 1fr) 120px 32px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/"><span class="tile">F</span><span class="word">Score<b>Frame</b></span></a>
+  <span class="pill-top">TEAM</span>
+  <div class="who" id="who"></div>
+</header>
+<main id="main"><div class="loading">Loading…</div></main>
+<dialog id="dlg"></dialog>
+<div class="toast hide" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
+import { initializeFirestore, doc, getDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword,
+  GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, sendPasswordResetEmail }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU", authDomain: "scoreframe-deploy.firebaseapp.com",
+  databaseURL: "https://scoreframe-deploy-default-rtdb.firebaseio.com", projectId: "scoreframe-deploy",
+  storageBucket: "scoreframe-deploy.firebasestorage.app", messagingSenderId: "728886280072",
+  appId: "1:728886280072:android:0050478669b89fc76b043d"
+});
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {});
+const fns = getFunctions(app);
+const call = (name, data) => httpsCallable(fns, name, { timeout: 300000 })(data).then(r => r.data);
+const google = new GoogleAuthProvider(); google.setCustomParameters({ prompt: 'select_account' });
+const ua = navigator.userAgent || '';
+const useRedirect = /iP(hone|ad|od)|Safari/i.test(ua) && !/Chrome|CriOS|FxiOS/i.test(ua);
+getRedirectResult(auth).catch(() => {});
+
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const SPORTS = { VOLLEYBALL: 'Volleyball', BASKETBALL: 'Basketball', SOCCER: 'Soccer', BASEBALL: 'Baseball', SOFTBALL: 'Softball',
+  FOOTBALL: 'Football', HOCKEY: 'Hockey', LACROSSE: 'Lacrosse', BOWLING: 'Bowling', TENNIS: 'Tennis', PICKLEBALL: 'Pickleball', GENERIC: 'Other' };
+const RELS = [['parent', 'Parent'], ['guardian', 'Guardian'], ['grandparent', 'Grandparent'], ['other family', 'Other family'], ['self', 'This is me']];
+const relLabel = (r) => (RELS.find(x => x[0] === r) || [r, r || ''])[1];
+const initials = (s) => String(s || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+const fmtDay = (ms) => ms ? new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+const errText = (e) => {
+  const AUTH = { 'auth/invalid-credential': 'Wrong email or password.', 'auth/wrong-password': 'Wrong email or password.', 'auth/user-not-found': 'No account with that email.', 'auth/too-many-requests': 'Too many tries. Wait a minute and try again.' };
+  return (e && AUTH[e.code]) || (e && e.message ? String(e.message).replace(/^Firebase: /, '') : 'Something went wrong.');
+};
+function toast(msg, ms = 4000) { const t = $('toast'); t.textContent = msg; t.classList.remove('hide'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hide'), ms); }
+async function busy(btn, fn) { const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'Working…'; try { return await fn(); } catch (e) { toast(errText(e), 6000); } finally { btn.disabled = false; btn.innerHTML = old; } }
+
+const params = new URLSearchParams(location.search);
+const S = { user: null, teamId: params.get('team') || '', tab: params.get('tab') === 'people' ? 'people' : 'roster',
+  team: null, data: null, filter: 'all', view: 'person', loading: false };
+function setUrl() { const p = new URLSearchParams(); if (S.teamId) p.set('team', S.teamId); if (S.tab !== 'roster') p.set('tab', S.tab); history.replaceState(null, '', `${location.pathname}?${p}`); }
+
+// ── Auth ─────────────────────────────────────────────────────────────
+function renderWho() {
+  const w = $('who');
+  if (!S.user) { w.innerHTML = ''; return; }
+  w.innerHTML = `<span>${esc(S.user.displayName || S.user.email)}</span><button type="button" id="signOut">Sign out</button>`;
+  $('signOut').onclick = () => signOut(auth);
+}
+function renderSignIn() {
+  $('main').innerHTML = `<section class="signin card pad">
+    <h1 style="font-size:26px;font-weight:900;">Manage your team</h1>
+    <p class="muted" style="margin:0;line-height:1.5;">Team owners, managers and coaches: sign in to edit the roster and invite families.</p>
+    <button class="btn ghost" type="button" id="gBtn">Continue with Google</button>
+    <div class="muted" style="font-size:13px;">or with email</div>
+    <input id="em" type="email" autocomplete="email" placeholder="Email" aria-label="Email">
+    <input id="pw" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password">
+    <button class="btn dark" type="button" id="inBtn">Sign in</button>
+    <button class="btn link" type="button" id="forgot">Forgot password?</button>
+    <p class="muted" style="font-size:13px;margin:0;">Use the same account as the ScoreFrame app.</p>
+  </section>`;
+  $('gBtn').onclick = (ev) => busy(ev.currentTarget, () => useRedirect ? signInWithRedirect(auth, google) : signInWithPopup(auth, google));
+  $('inBtn').onclick = (ev) => busy(ev.currentTarget, () => signInWithEmailAndPassword(auth, $('em').value.trim(), $('pw').value));
+  $('forgot').onclick = () => { const e = $('em').value.trim(); if (!e) return toast('Type your email first.'); sendPasswordResetEmail(auth, e).then(() => toast('Password reset email sent.')).catch(err => toast(errText(err))); };
+}
+onAuthStateChanged(auth, async (u) => {
+  S.user = u && !u.isAnonymous ? u : null;
+  renderWho();
+  if (!S.user) return renderSignIn();
+  if (!S.teamId) { $('main').innerHTML = '<div class="loading">Open this page from your team, or from the club console.</div>'; return; }
+  await load();
+});
+
+async function load() {
+  $('main').innerHTML = '<div class="loading">Loading the team…</div>';
+  try {
+    const [t, d] = await Promise.all([getDoc(doc(db, 'teams', S.teamId)), call('teamPeopleList', { teamId: S.teamId })]);
+    S.team = t.exists() ? t.data() : {};
+    S.data = d;
+    render();
+  } catch (e) {
+    $('main').innerHTML = `<div class="loading">${/staff|permission/i.test(errText(e)) ? "Only this team's owner, managers and coaches can manage it." : esc(errText(e))}</div>`;
+  }
+}
+async function reload() { try { S.data = await call('teamPeopleList', { teamId: S.teamId }); const t = await getDoc(doc(db, 'teams', S.teamId)); if (t.exists()) S.team = t.data(); render(); } catch (e) { toast(errText(e)); } }
+
+// ── Shared derived data ──────────────────────────────────────────────
+const players = () => S.data.players || [];
+const pById = (id) => players().find(p => p.playerId === id);
+const rows = () => S.data.rows || [];
+function familyOf(pid) {
+  const out = [];
+  for (const r of rows()) {
+    const who = r.name || r.email || 'Follower';
+    for (const l of r.links || []) if (l.playerId === pid) out.push({ who, rel: l.relationship, state: l.status === 'approved' ? 'ok' : 'wait' });
+    if (r.status !== 'following') for (const a of r.assigned || []) if (a.playerId === pid && !(r.links || []).some(l => l.playerId === pid)) out.push({ who, rel: a.relationship, state: 'invited' });
+  }
+  return out;
+}
+const chip = (f) => `<span class="chip ${f.state === 'ok' ? 's-ok' : f.state === 'wait' ? 's-warn' : 's-mu'}">${esc(f.who)} · ${esc(relLabel(f.rel))}${f.state === 'wait' ? ' · waiting' : f.state === 'invited' ? ' · invited' : ''}</span>`;
+
+function render() {
+  const t = S.team || {}; const d = S.data;
+  const c1 = t.color || '#C8102E'; const c2 = t.color2 && t.color2.toUpperCase() !== '#FFFFFF' ? t.color2 : '#1C1B1F';
+  const waiting = rows().filter(r => r.waiting).length;
+  const crest = t.logoUrl && /^https:\/\//.test(t.logoUrl)
+    ? `<img class="logo" src="${esc(t.logoUrl)}" alt="" style="width:58px;height:58px;border-radius:14px;">`
+    : `<div class="crest" style="width:58px;height:58px;background:rgba(255,255,255,.16);font-size:20px;">${esc(initials(t.ageDivision || t.name))}</div>`;
+  $('main').innerHTML = `
+    ${t.club && t.club.clubId ? `<a href="/club.html?club=${encodeURIComponent(t.club.clubId)}&team=${encodeURIComponent(S.teamId)}" style="font-size:14px;font-weight:600;text-decoration:none;">← ${esc(t.club.name || 'Club console')}</a>` : ''}
+    <div class="hero" style="background-color:${esc(c1)};background-image:linear-gradient(110deg, ${esc(c1)} 0%, ${esc(c1)} 38%, ${esc(c2)} 100%);">
+      ${crest}
+      <div style="flex:1 1 260px;"><h1 style="font-size:26px;font-weight:900;">${esc(d.teamName || t.name || 'Team')}</h1>
+        <div style="opacity:.9;font-size:14px;margin-top:3px;">${esc(SPORTS[t.sport] || '')} · ${players().length} player${players().length === 1 ? '' : 's'}${d.canEdit ? '' : ' · view only (coach)'}</div></div>
+      ${t.hub && t.hub.hubCode ? `<a class="btn" style="background:rgba(255,255,255,.16);color:#fff;" href="/team.html?code=${encodeURIComponent(t.hub.hubCode)}" target="_blank" rel="noopener">Open team page</a>` : ''}
+    </div>
+    <nav class="sub" aria-label="Sections">
+      <button type="button" data-tab="roster" ${S.tab === 'roster' ? 'aria-current="page"' : ''}>Roster · ${players().length}</button>
+      <button type="button" data-tab="people" ${S.tab === 'people' ? 'aria-current="page"' : ''}>People · ${rows().length}${waiting ? `<span class="badge">${waiting}</span>` : ''}</button>
+    </nav>
+    <div id="tabBody"></div>`;
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; setUrl(); render(); });
+  if (S.tab === 'people') renderPeople(); else renderRoster();
+}
+
+// ── Roster ───────────────────────────────────────────────────────────
+function renderRoster() {
+  const d = S.data; const untracked = (S.team && S.team.untrackedRoster) || [];
+  $('tabBody').innerHTML = `<div class="split">
+    <section class="main card" style="overflow:hidden;">
+      <div class="scroll"><table class="tbl" style="min-width:560px;">
+        <thead><tr><th>#</th><th>Player</th><th>Position</th><th>Family</th><th><span class="hide">Actions</span></th></tr></thead>
+        <tbody>
+          ${players().map(p => `<tr><td style="font-weight:800;">${esc(p.number)}</td><td style="font-weight:700;">${esc(p.name)}</td><td class="muted">${esc(p.position || '')}</td>
+            <td>${familyOf(p.playerId).map(chip).join('') || '<span class="muted" style="font-size:13px;">None yet</span>'}</td>
+            <td>${d.canEdit ? `<button class="btn link" type="button" data-edit="${esc(p.playerId)}">Edit</button><button class="btn link" type="button" data-rm="${esc(p.playerId)}">Remove</button>` : ''}</td></tr>`).join('')}
+          ${d.canEdit ? `<tr style="background:#FAF9F7;">
+            <td><input id="nNum" placeholder="#" aria-label="Number" style="width:56px;"></td>
+            <td><input id="nName" placeholder="Player name" aria-label="Player name" style="width:100%;"></td>
+            <td><input id="nPos" placeholder="Position" aria-label="Position" style="width:110px;"></td>
+            <td colspan="2"><button class="btn dark sm" type="button" id="nAdd">Add player</button></td></tr>` : ''}
+        </tbody></table></div>
+      ${untracked.length ? `<div class="pad" style="border-top:1px solid var(--ln);font-size:14px;"><strong>Also on the roster in the app:</strong> ${untracked.map(u => esc(`${u.number ? '#' + u.number + ' ' : ''}${u.name}`)).join(', ')}.
+        <div class="muted" style="margin-top:4px;font-size:13px;">These were added in the app without stats tracking, so families can't be linked to them yet. Edit them in the app.</div></div>` : ''}
+    </section>
+    <aside class="side">
+      ${d.canEdit ? `<section class="card pad" style="display:flex;flex-direction:column;gap:10px;">
+        <h2 style="font-size:17px;font-weight:800;">Import a roster</h2>
+        <div class="muted" style="font-size:14px;line-height:1.5;">Paste a list (one player per line, like "4 Mia Torres OH"), or upload a spreadsheet, photo or PDF. You check the list before anything is saved.</div>
+        <label for="rPaste">Paste a list</label>
+        <textarea id="rPaste" rows="6" placeholder="4 Mia Torres OH&#10;7 Ava Lin S&#10;12 Kara Lind MB"></textarea>
+        <div class="row"><button class="btn primary" type="button" id="rRead">Read the list</button>
+          <label class="btn ghost" style="font-size:15px;color:var(--ink);" for="rFile">Upload a file</label>
+          <input id="rFile" type="file" accept=".csv,.txt,.tsv,image/*,application/pdf" class="hide"></div>
+        <div class="muted" style="font-size:12px;">Lists and spreadsheets are read here in your browser. Photos and PDFs are read by AI, with a daily limit.</div>
+      </section>` : ''}
+      <div class="note">Players you add here show up in the app right away for everyone on the staff. Full names stay with the staff; everyone else sees first name and last initial.</div>
+    </aside></div>`;
+  if (!d.canEdit) return;
+  $('nAdd').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const name = $('nName').value.trim(); if (!name) return toast('Type the player\'s name.');
+    await call('teamRosterSave', { teamId: S.teamId, action: 'add', players: [{ name, number: $('nNum').value.trim(), position: $('nPos').value.trim() }] });
+    toast(`${name} added.`); await reload(); const n = $('nName'); if (n) n.focus();
+  });
+  $('nName').onkeydown = (e) => { if (e.key === 'Enter') $('nAdd').click(); };
+  document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => editPlayer(pById(b.dataset.edit)));
+  document.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => busy(b, async () => {
+    const p = pById(b.dataset.rm);
+    if (!confirm(`Take ${p.name} off the roster? Their stats and games stay in the team's history.`)) return;
+    await call('teamRosterSave', { teamId: S.teamId, action: 'remove', players: [{ playerId: p.playerId }] });
+    toast(`${p.name} removed.`); await reload();
+  }));
+  $('rRead').onclick = () => { const list = parseRoster($('rPaste').value); if (!list.length) return toast('No players found. Put one player on each line.'); rosterPreview(list); };
+  $('rFile').onchange = () => busy($('rRead'), async () => {
+    const f = $('rFile').files[0]; if (!f) return;
+    let list;
+    if (/^text\/|csv|tab-separated/.test(f.type) || /\.(csv|txt|tsv)$/i.test(f.name)) list = parseRoster(await f.text());
+    else {
+      const b64 = await new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = bad; r.readAsDataURL(f); });
+      const isPdf = f.type === 'application/pdf';
+      const res = await call('rosterFromImage', isPdf ? { pdfs: [{ dataBase64: b64 }], teamName: S.data.teamName, sport: S.team.sport } : { images: [{ dataBase64: b64 }], teamName: S.data.teamName, sport: S.team.sport });
+      list = (res.players || []).map(p => ({ name: String(p.name || '').trim(), number: String(p.number == null ? '' : p.number).trim(), position: String(p.position || '').trim() })).filter(p => p.name);
+    }
+    $('rFile').value = '';
+    if (!list.length) return toast('No players found in that file.');
+    rosterPreview(list);
+  });
+}
+
+const POS = /^(OH|S|MB|M|L|DS|OPP|RS|LS|P|C|1B|2B|3B|SS|LF|CF|RF|DH|UT|G|F|PG|SG|SF|PF|GK|D|W|LW|RW|ATT|MID|DEF|FWD|LIB|SET|OUT|MID|OPP)$/i;
+/** "4 Mia Torres OH" · "Mia Torres, 4, OH" · CSV with a header row (name / number / position). */
+function parseRoster(text) {
+  const lines = String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return [];
+  const sep = lines[0].includes('\t') ? '\t' : (lines[0].split(',').length > 1 ? ',' : null);
+  let cols = null;
+  if (sep) {
+    const h = lines[0].split(sep).map(x => x.trim().toLowerCase());
+    if (h.some(x => /name|player/.test(x))) {
+      cols = { name: h.findIndex(x => /name|player/.test(x)), first: h.findIndex(x => /^first/.test(x)), last: h.findIndex(x => /^last/.test(x)),
+        number: h.findIndex(x => /^(#|no\.?|num|number|jersey)/.test(x)), position: h.findIndex(x => /^pos/.test(x)) };
+      lines.shift();
+    }
+  }
+  const out = [];
+  for (const line of lines) {
+    let name = '', number = '', position = '';
+    if (sep && line.includes(sep)) {
+      const c = line.split(sep).map(x => x.trim().replace(/^"|"$/g, ''));
+      if (cols) {
+        name = cols.first >= 0 && cols.last >= 0 ? `${c[cols.first] || ''} ${c[cols.last] || ''}`.trim() : (c[cols.name] || '');
+        number = cols.number >= 0 ? c[cols.number] || '' : ''; position = cols.position >= 0 ? c[cols.position] || '' : '';
+      } else {
+        for (const v of c) { if (!number && /^#?\d{1,3}$/.test(v)) number = v.replace('#', ''); else if (!position && POS.test(v)) position = v.toUpperCase(); else if (!name) name = v; }
+      }
+    } else {
+      const w = line.replace(/[–—-]/g, ' ').split(/\s+/);
+      if (/^#?\d{1,3}\.?$/.test(w[0])) number = w.shift().replace(/[#.]/g, '');
+      if (w.length > 1 && POS.test(w[w.length - 1])) position = w.pop().toUpperCase();
+      if (!number && /^#?\d{1,3}$/.test(w[w.length - 1] || '')) number = w.pop().replace('#', '');
+      name = w.join(' ');
+    }
+    name = name.replace(/\s+/g, ' ').trim();
+    if (name && !/^(name|player)s?$/i.test(name)) out.push({ name, number: String(number).replace(/\D/g, '').slice(0, 3), position: position.slice(0, 12) });
+  }
+  return out.slice(0, 80);
+}
+function rosterPreview(list) {
+  const have = new Set(players().map(p => `${p.number}|${p.name.toLowerCase()}`));
+  const d = $('dlg'); d.className = 'wide';
+  d.innerHTML = `<form method="dialog">
+    <h2 style="font-size:21px;font-weight:900;">Add ${list.length} player${list.length === 1 ? '' : 's'}?</h2>
+    <div class="muted" style="font-size:14px;">Untick anyone you don't want, and fix names or numbers before adding.</div>
+    <div class="scroll" style="border:1px solid var(--ln);border-radius:12px;"><table class="tbl" style="min-width:520px;">
+      <thead><tr><th><span class="hide">Add</span></th><th>#</th><th>Name</th><th>Position</th></tr></thead>
+      <tbody>${list.map((p, i) => { const dup = have.has(`${p.number}|${p.name.toLowerCase()}`); return `<tr>
+        <td><input type="checkbox" id="rc${i}" ${dup ? '' : 'checked'} aria-label="Add ${esc(p.name)}"></td>
+        <td><input id="rn${i}" value="${esc(p.number)}" aria-label="Number" style="width:60px;"></td>
+        <td><input id="rm${i}" value="${esc(p.name)}" aria-label="Name" style="width:100%;">${dup ? '<div class="muted" style="font-size:12px;">Already on the roster</div>' : ''}</td>
+        <td><input id="rp${i}" value="${esc(p.position)}" aria-label="Position" style="width:100px;"></td></tr>`; }).join('')}</tbody></table></div>
+    <div class="row"><button class="btn primary" type="button" id="rGo">Add players</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+  </form>`;
+  d.showModal();
+  $('rGo').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const pick = list.map((_, i) => ({ on: $(`rc${i}`).checked, number: $(`rn${i}`).value.trim(), name: $(`rm${i}`).value.trim(), position: $(`rp${i}`).value.trim() })).filter(p => p.on && p.name);
+    if (!pick.length) return toast('Nothing ticked.');
+    const r = await call('teamRosterSave', { teamId: S.teamId, action: 'add', players: pick });
+    d.close(); toast(`${r.changed} player${r.changed === 1 ? '' : 's'} added.`); const ta = $('rPaste'); if (ta) ta.value = ''; await reload();
+  });
+}
+function editPlayer(p) {
+  const d = $('dlg'); d.className = '';
+  d.innerHTML = `<form method="dialog">
+    <h2 style="font-size:20px;font-weight:800;">Edit ${esc(p.name)}</h2>
+    <div class="row" style="align-items:flex-end;">
+      <div class="field" style="width:80px;"><label for="eNum">Number</label><input id="eNum" value="${esc(p.number)}"></div>
+      <div class="field" style="flex:1 1 200px;"><label for="eName">Name</label><input id="eName" value="${esc(p.name)}"></div>
+    </div>
+    <div class="field"><label for="ePos">Position</label><input id="ePos" value="${esc(p.position || '')}"></div>
+    <div class="row"><button class="btn primary" type="button" id="eGo">Save</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+  </form>`;
+  d.showModal();
+  $('eGo').onclick = (ev) => busy(ev.currentTarget, async () => {
+    await call('teamRosterSave', { teamId: S.teamId, action: 'update', players: [{ playerId: p.playerId, name: $('eName').value.trim(), number: $('eNum').value.trim(), position: $('ePos').value.trim() }] });
+    d.close(); toast('Saved.'); await reload();
+  });
+}
+
+// ── People (the team's address book) ─────────────────────────────────
+const STATUS = { following: ['Following', 's-ok'], invited: ['Invited', 's-mu'], email: ['Email updates only', 's-mu'], requested: ['Asked to follow', 's-warn'], blocked: ['Blocked', 's-bad'] };
+function renderPeople() {
+  const d = S.data; const all = rows();
+  const counts = { all: all.length, waiting: all.filter(r => r.waiting).length, invited: all.filter(r => r.status === 'invited' || r.status === 'email').length, following: all.filter(r => r.status === 'following').length };
+  const show = all.filter(r => S.filter === 'all' || (S.filter === 'waiting' ? r.waiting : S.filter === 'invited' ? (r.status === 'invited' || r.status === 'email') : r.status === 'following'))
+    .sort((a, b) => (b.waiting - a.waiting) || String(a.name || a.email).localeCompare(String(b.name || b.email)));
+  const waitItems = [];
+  for (const r of all) {
+    if (r.status === 'requested') waitItems.push({ kind: 'follow', r });
+    for (const l of r.links || []) if (l.status === 'pending') waitItems.push({ kind: 'link', r, l });
+  }
+  $('tabBody').innerHTML = `
+    <div class="row">
+      <div class="row filters" role="group" aria-label="Show">
+        ${[['all', 'Everyone'], ['waiting', 'Waiting for you'], ['invited', 'Invited'], ['following', 'Following']].map(([k, t]) => `<button type="button" data-f="${k}" aria-pressed="${S.filter === k}">${t} ${counts[k]}</button>`).join('')}
+      </div>
+      <div class="row filters" role="group" aria-label="View" style="margin-left:6px;">
+        <button type="button" data-v="person" aria-pressed="${S.view === 'person'}">By person</button><button type="button" data-v="player" aria-pressed="${S.view === 'player'}">By player</button>
+      </div>
+      ${d.canEdit ? `<div class="row" style="margin-left:auto;"><button class="btn ghost" type="button" id="pImport">Import a list</button><button class="btn primary" type="button" id="pInvite">+ Invite people</button></div>` : ''}
+    </div>
+    <div class="split">
+      <section class="main card" style="overflow:hidden;">${S.view === 'player' ? byPlayer() : byPerson(show)}</section>
+      <aside class="side">
+        ${waitItems.length ? `<section class="card pad" style="display:flex;flex-direction:column;gap:12px;border:2px solid var(--orange);">
+          <h2 style="font-size:17px;font-weight:800;">Waiting for you · ${waitItems.length}</h2>
+          <div class="muted" style="font-size:13px;line-height:1.45;">They picked these themselves. Approve a player link only if you know they're that player's family.</div>
+          ${waitItems.map((w, i) => `<div class="wait">
+            <div>${w.kind === 'follow' ? `<strong>${esc(w.r.name || w.r.email)}</strong> asked to follow the team` : `<strong>${esc(w.r.name || w.r.email)}</strong> says they're <strong>${esc(w.l.player)}</strong>'s ${esc(relLabel(w.l.relationship).toLowerCase())}`}</div>
+            ${w.kind === 'follow' && !d.canEdit ? '<div class="muted" style="font-size:12px;">The owner or a manager decides this.</div>' : `<div class="row" style="gap:8px;"><button class="btn ok sm" type="button" data-ok="${i}">Approve</button><button class="btn ghost sm" type="button" data-no="${i}">Decline</button></div>`}
+          </div>`).join('')}
+        </section>` : ''}
+        <div class="note"><strong>Picking a player is optional.</strong> Everyone who joins follows the team. Someone who picks a player gets that player's updates once it's approved. People you match to a player yourself are approved the moment they join. Any follower can open any player's page; a player's highlight videos stay with their family unless a parent shares them.</div>
+      </aside>
+    </div>`;
+  document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.filter = b.dataset.f; renderPeople(); });
+  document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { S.view = b.dataset.v; renderPeople(); });
+  if (d.canEdit) { $('pInvite').onclick = () => inviteDialog(''); $('pImport').onclick = () => inviteDialog(null); }
+  document.querySelectorAll('[data-ok],[data-no]').forEach(b => b.onclick = () => busy(b, async () => {
+    const w = waitItems[+(b.dataset.ok ?? b.dataset.no)]; const yes = b.dataset.ok != null;
+    if (w.kind === 'follow') {
+      const ref = doc(db, 'teams', S.teamId, 'subscribers', w.r.uid);
+      if (yes) await updateDoc(ref, { status: 'approved', approvedAt: Date.now() }); else await deleteDoc(ref);
+    } else {
+      await updateDoc(doc(db, 'teams', S.teamId, 'subscribers', w.r.uid, 'claims', w.l.playerId), { status: yes ? 'approved' : 'denied', decidedAt: Date.now() });
+    }
+    toast(yes ? 'Approved.' : 'Declined.'); await reload();
+  }));
+  document.querySelectorAll('[data-person]').forEach(b => b.onclick = () => editPerson(rows().find(r => r.key === b.dataset.person)));
+  document.querySelectorAll('[data-resend]').forEach(b => b.onclick = () => busy(b, async () => {
+    const r = rows().find(x => x.key === b.dataset.resend);
+    await call('teamPeopleSave', { teamId: S.teamId, email: r.email, action: 'resend' }); toast(`Sent again to ${r.email}.`); await reload();
+  }));
+  document.querySelectorAll('[data-addfam]').forEach(b => b.onclick = () => inviteDialog('', b.dataset.addfam));
+}
+function byPerson(list) {
+  if (!list.length) return `<div class="pad muted">${rows().length ? 'Nobody here.' : 'Nobody yet. Invite the families with "+ Invite people", or import a list.'}</div>`;
+  const ed = S.data.canEdit;
+  return `<div class="scroll"><table class="tbl" style="min-width:640px;">
+    <thead><tr><th>Person</th><th>Player</th><th>Status</th><th><span class="hide">Actions</span></th></tr></thead>
+    <tbody>${list.map(r => {
+      const st = STATUS[r.status] || ['', 's-mu'];
+      const links = (r.links || []).map(l => ({ who: l.player, rel: l.relationship, state: l.status === 'approved' ? 'ok' : 'wait' }));
+      const pend = r.status !== 'following' ? (r.assigned || []).filter(a => !(r.links || []).some(l => l.playerId === a.playerId)).map(a => ({ who: a.player, rel: a.relationship, state: 'invited' })) : [];
+      const sub = r.status === 'invited' || r.status === 'email' ? (r.lastSentAt ? `Sent ${fmtDay(r.lastSentAt)}` : '') : r.status === 'following' && (r.links || []).some(l => l.byStaff) ? 'Matched by you' : '';
+      return `<tr><td><div style="font-weight:700;">${esc(r.name || r.email || 'Follower')}</div><div class="muted" style="font-size:12px;">${esc(r.name ? r.email : '')}</div></td>
+        <td>${[...links, ...pend].map(chip2).join('') || '<span class="muted" style="font-size:13px;">Not set</span>'}</td>
+        <td><span class="status ${st[1]}">${st[0]}</span><div class="muted" style="font-size:12px;margin-top:3px;">${esc(sub)}</div></td>
+        <td>${ed && r.email ? `<button class="btn link" type="button" data-person="${esc(r.key)}">Edit</button>` : ''}${ed && r.inBook && (r.status === 'invited' || r.status === 'email') ? `<button class="btn link" type="button" data-resend="${esc(r.key)}">Resend</button>` : ''}</td></tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+const chip2 = (f) => `<span class="chip ${f.state === 'ok' ? 's-ok' : f.state === 'wait' ? 's-warn' : 's-mu'}">${esc(f.who)} · ${esc(relLabel(f.rel))}${f.state === 'wait' ? ' · waiting' : ''}</span>`;
+function byPlayer() {
+  if (!players().length) return '<div class="pad muted">No players on the roster yet. Add them on the Roster tab.</div>';
+  return players().map(p => { const fam = familyOf(p.playerId); return `<div class="row" style="padding:13px 20px;border-top:1px solid var(--ln2);flex-wrap:wrap;">
+    <div style="width:42px;font-size:19px;font-weight:900;text-align:center;">${esc(p.number)}</div>
+    <div style="width:170px;font-weight:800;">${esc(p.name)}</div>
+    <div style="flex:1 1 320px;">${fam.map(chip).join('') || '<span style="font-size:13px;color:var(--bad);font-weight:600;">No family yet</span>'}</div>
+    ${S.data.canEdit ? `<button class="btn link" type="button" data-addfam="${esc(p.playerId)}">+ Add family</button>` : ''}</div>`; }).join('');
+}
+
+/** "Dana Torres <dana@x.com>, Mia mom" → { email, name, playerId?, relationship } */
+function parsePeople(text) {
+  const out = []; const seen = new Set();
+  const ps = players();
+  const lastOf = (n) => { const w = String(n).trim().split(/\s+/); return w.length > 1 ? w[w.length - 1].toLowerCase().replace(/\.$/, '') : ''; };
+  for (const line of String(text || '').split(/\r?\n/)) {
+    const m = line.match(/[A-Z0-9._%+'-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i) || line.match(/[^\s<>,;]+@[^\s<>,;]+/);
+    if (!m) continue;
+    const email = m[0].toLowerCase();
+    if (seen.has(email)) continue; seen.add(email);
+    const rest = line.replace(m[0], ' ').replace(/[<>"()]/g, ' ');
+    const parts = rest.split(/[,;\t]/).map(x => x.trim()).filter(Boolean);
+    const name = parts.length && !/\b(mom|dad|mother|father|parent|grand|guardian|nana|papa)\b/i.test(parts[0]) ? parts[0] : '';
+    const hint = parts.slice(name ? 1 : 0).join(' ').toLowerCase();
+    const words = (name + ' ' + hint).toLowerCase().split(/[^a-z']+/).filter(Boolean);
+    let pick = null;
+    const byFirst = ps.filter(p => words.includes(String(p.name).split(/\s+/)[0].toLowerCase()) && hint.includes(String(p.name).split(/\s+/)[0].toLowerCase()));
+    if (byFirst.length === 1) pick = byFirst[0];
+    if (!pick && name) { const ln = lastOf(name); const bySur = ln ? ps.filter(p => lastOf(p.name) === ln) : []; if (bySur.length === 1) pick = bySur[0]; }
+    let rel = /grand|nana|papa|grammy|gramps/.test(hint) ? 'grandparent' : /guardian/.test(hint) ? 'guardian' : /\b(aunt|uncle|cousin|sister|brother)\b/.test(hint) ? 'other family' : /\b(me|myself|player)\b/.test(hint) ? 'self' : 'parent';
+    out.push({ email, name, playerId: pick ? pick.playerId : '', relationship: pick ? rel : 'parent', bad: !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) });
+  }
+  return out.slice(0, 100);
+}
+const playerOptions = (sel) => `<option value="">Not set</option>${players().map(p => `<option value="${esc(p.playerId)}"${p.playerId === sel ? ' selected' : ''}>${esc(p.name)}${p.number ? ' #' + esc(p.number) : ''}</option>`).join('')}`;
+const relOptions = (sel) => RELS.map(([v, t]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${t}</option>`).join('');
+
+/** One email (mode '') or a whole list (mode null). presetPlayer: from "+ Add family". */
+function inviteDialog(mode, presetPlayer) {
+  const d = $('dlg'); d.className = 'wide';
+  const one = mode === '';
+  d.innerHTML = `<form method="dialog">
+    <h2 style="font-size:21px;font-weight:900;">Invite people to ${esc(S.data.teamName)}</h2>
+    ${one ? `<div class="row" style="align-items:flex-end;">
+        <div class="field" style="flex:2 1 240px;"><label for="iEm">Email</label><input id="iEm" type="email" placeholder="name@example.com"></div>
+        <div class="field" style="flex:1 1 180px;"><label for="iNm">Name (optional)</label><input id="iNm" placeholder="Dana Torres"></div></div>
+      <div class="field"><label>Players (optional)</label><div id="iLinks" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <button class="btn link" type="button" id="iMore" style="align-self:flex-start;">+ Add another player</button></div>`
+    : `<div class="field"><label for="iList">Paste emails, one per line. Add a name or the player if you have them.</label>
+        <textarea id="iList" rows="7" placeholder="Dana Torres, dana.torres@gmail.com, Mia mom&#10;rtorres58@yahoo.com, Mia grandpa&#10;jen.park@outlook.com"></textarea>
+        <div class="row"><button class="btn dark sm" type="button" id="iRead">Check the list</button><label class="btn ghost sm" for="iFile" style="color:var(--ink);font-size:14px;">Upload a spreadsheet</label><input id="iFile" type="file" accept=".csv,.txt,.tsv" class="hide"></div></div>
+      <div id="iPreview"></div>`}
+    <div class="muted" style="font-size:13px;line-height:1.45;">Picking a player is optional. Pick one and they're linked as soon as they join. Leave it as "Not set" and they can pick when they join; you approve it. Each email comes from ScoreFrame for ${esc(S.data.teamName)}, in the team's colors.</div>
+    <div class="row"><button class="btn primary" type="button" id="iGo">${one ? 'Send invite' : 'Send invites'}</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+  </form>`;
+  d.showModal();
+  let list = [];
+  const linkRow = (pid = '', rel = 'parent') => {
+    const el = document.createElement('div'); el.className = 'linkrow';
+    el.innerHTML = `<select aria-label="Player">${playerOptions(pid)}</select><select aria-label="Relationship">${relOptions(rel)}</select><button type="button" class="x" aria-label="Remove">×</button>`;
+    el.querySelector('.x').onclick = () => el.remove();
+    $('iLinks').appendChild(el);
+  };
+  if (one) { linkRow(presetPlayer || ''); $('iMore').onclick = () => linkRow(); setTimeout(() => $('iEm').focus(), 50); }
+  const showPreview = () => {
+    const bad = list.filter(p => p.bad).length;
+    $('iPreview').innerHTML = !list.length ? '' : `<div style="font-weight:700;margin:4px 0 8px;">Found ${list.length} ${list.length === 1 ? 'person' : 'people'}. Matched ${list.filter(p => p.playerId).length} to a player from the names in your list.${bad ? ` ${bad} email${bad === 1 ? '' : 's'} look wrong.` : ''}</div>
+      <div class="scroll" style="border:1px solid var(--ln);border-radius:12px;"><table class="tbl" style="min-width:680px;">
+      <thead><tr><th>Email</th><th>Name</th><th>Player</th><th>Relationship</th><th><span class="hide">Remove</span></th></tr></thead>
+      <tbody>${list.map((p, i) => `<tr${p.bad ? ' style="background:#FFF8EF;"' : ''}><td>${esc(p.email)}${p.bad ? '<div style="font-size:12px;color:var(--bad);">Check this address</div>' : ''}</td>
+        <td><input id="pn${i}" value="${esc(p.name)}" aria-label="Name" style="width:150px;"></td>
+        <td><select id="pp${i}" aria-label="Player">${playerOptions(p.playerId)}</select></td>
+        <td><select id="pr${i}" aria-label="Relationship">${relOptions(p.relationship)}</select></td>
+        <td><button type="button" class="x" data-drop="${i}" aria-label="Remove ${esc(p.email)}">×</button></td></tr>`).join('')}</tbody></table></div>`;
+    document.querySelectorAll('[data-drop]').forEach(b => b.onclick = () => { snapshot(); list.splice(+b.dataset.drop, 1); showPreview(); });
+  };
+  const snapshot = () => list.forEach((p, i) => { if ($(`pn${i}`)) { p.name = $(`pn${i}`).value.trim(); p.playerId = $(`pp${i}`).value; p.relationship = $(`pr${i}`).value; } });
+  if (!one) {
+    $('iRead').onclick = () => { list = parsePeople($('iList').value); if (!list.length) toast('No email addresses found.'); showPreview(); };
+    $('iFile').onchange = async () => { const f = $('iFile').files[0]; if (!f) return; list = parsePeople((await f.text()).replace(/\t/g, ',')); $('iFile').value = ''; showPreview(); if (!list.length) toast('No email addresses found.'); };
+  }
+  $('iGo').onclick = (ev) => busy(ev.currentTarget, async () => {
+    let people;
+    if (one) {
+      const email = $('iEm').value.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast('That email doesn\'t look right.');
+      const links = [...$('iLinks').querySelectorAll('.linkrow')].map(r => { const s = r.querySelectorAll('select'); return { playerId: s[0].value, relationship: s[1].value }; }).filter(l => l.playerId);
+      people = [{ email, name: $('iNm').value.trim(), links }];
+    } else {
+      if (!list.length) { list = parsePeople($('iList').value); showPreview(); if (!list.length) return toast('No email addresses found.'); return; }
+      snapshot();
+      people = list.filter(p => !p.bad).map(p => ({ email: p.email, name: p.name, links: p.playerId ? [{ playerId: p.playerId, relationship: p.relationship }] : [] }));
+      if (!people.length) return toast('Fix or remove the addresses that look wrong.');
+    }
+    const r = await call('teamPeopleInvite', { teamId: S.teamId, people });
+    const failed = r.results.filter(x => !x.ok);
+    d.close();
+    toast(failed.length ? `Sent ${r.sent}. Not sent: ${failed.map(f => `${f.email} (${f.reason})`).join('; ')}` : `Sent ${r.sent} invite${r.sent === 1 ? '' : 's'}.`, failed.length ? 9000 : 4000);
+    S.tab = 'people'; setUrl(); await reload();
+  });
+}
+
+function editPerson(r) {
+  const d = $('dlg'); d.className = '';
+  const cur = r.status === 'following' ? (r.links || []).map(l => ({ playerId: l.playerId, relationship: l.relationship })) : (r.assigned || []);
+  d.innerHTML = `<form method="dialog">
+    <h2 style="font-size:20px;font-weight:800;">${esc(r.name || r.email)}</h2>
+    <div class="muted" style="font-size:14px;">${esc(r.email)} · ${esc((STATUS[r.status] || [''])[0])}</div>
+    <div class="field"><label for="ePn">Name</label><input id="ePn" value="${esc(r.name || '')}"></div>
+    <div class="field"><label>Players</label><div id="eLinks" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <button class="btn link" type="button" id="eMore" style="align-self:flex-start;">+ Add another player</button></div>
+    <div class="muted" style="font-size:13px;line-height:1.45;">${r.status === 'following' ? 'Players you pick here are linked straight away.' : 'They\'re linked to these players as soon as they join.'} Removing a player here only removes a link you made, never one they asked for.</div>
+    <div class="row"><button class="btn primary" type="button" id="eSave">Save</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button>
+      ${r.inBook && r.status !== 'following' ? '<button class="btn link" type="button" id="eDel" style="margin-left:auto;color:var(--bad);">Cancel invitation</button>' : ''}</div>
+  </form>`;
+  d.showModal();
+  const add = (pid = '', rel = 'parent') => {
+    const el = document.createElement('div'); el.className = 'linkrow';
+    el.innerHTML = `<select aria-label="Player">${playerOptions(pid)}</select><select aria-label="Relationship">${relOptions(rel)}</select><button type="button" class="x" aria-label="Remove">×</button>`;
+    el.querySelector('.x').onclick = () => el.remove(); $('eLinks').appendChild(el);
+  };
+  (cur.length ? cur : [{}]).forEach(l => add(l.playerId, l.relationship || 'parent'));
+  $('eMore').onclick = () => add();
+  $('eSave').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const links = [...$('eLinks').querySelectorAll('.linkrow')].map(x => { const s = x.querySelectorAll('select'); return { playerId: s[0].value, relationship: s[1].value }; }).filter(l => l.playerId);
+    await call('teamPeopleSave', { teamId: S.teamId, email: r.email, name: $('ePn').value.trim(), links });
+    d.close(); toast('Saved.'); await reload();
+  });
+  if ($('eDel')) $('eDel').onclick = (ev) => busy(ev.currentTarget, async () => {
+    if (!confirm(`Cancel the invitation to ${r.email}?`)) return;
+    await call('teamPeopleSave', { teamId: S.teamId, email: r.email, action: 'remove' }); d.close(); toast('Invitation canceled.'); await reload();
+  });
+}
+</script>
+</body>
+</html>

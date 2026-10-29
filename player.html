@@ -491,6 +491,10 @@ html, body {
         </div>
     </div>
 
+    <!-- Who sees this player's highlights (2026-10-29): a parent's switch, the
+         staff's "back to family only", or a plain note for other followers. -->
+    <div id="shareBox" style="display:none;padding: 6px 16px 4px;"></div>
+
     <div id="gamesSection">
         <div class="section-label" style="padding: 14px 16px 4px;">Game History</div>
         <div class="games-list" id="gamesList"></div>
@@ -1589,7 +1593,75 @@ function renderEverything() {
     renderPlayerVideos();
     // Fire-and-forget: the videos are an addition to the page, not a gate on
     // it, so nothing else waits for the fetch.
-    loadPlayerVideos().then(renderPlayerVideos);
+    loadPlayerVideos().then(renderPlayerVideos).then(renderSharing).catch(() => {});
+}
+
+// ── Who sees this player's highlight videos (2026-10-29) ─────────────────
+// Eric: "the approved guardian of that child could have a setting where they
+// can choose to allow any approved team follower to find the highlight videos
+// of their player on the player page." Off by default. Parents and legal
+// guardians switch it; staff can only turn it back to family only. The server
+// (setHighlightSharing) checks all of that; the rules (playerSharedWithFollowers)
+// decide what a follower can actually read.
+const GUARDIAN_RELS = ['parent', 'guardian', 'legal guardian'];
+async function renderSharing() {
+    const box = $('shareBox');
+    if (!box || !currentUid || !teamId || !playerIdParam) return;
+    const safe = async (p) => { try { return await p; } catch (e) { return null; } };
+    const [claim, team, share, sub, mgr, coach] = await Promise.all([
+        safe(getDoc(doc(db, 'teams', teamId, 'subscribers', currentUid, 'claims', playerIdParam))),
+        safe(getDoc(doc(db, 'teams', teamId))),
+        safe(getDoc(doc(db, 'teams', teamId, 'playerSharing', playerIdParam))),
+        safe(getDoc(doc(db, 'teams', teamId, 'subscribers', currentUid))),
+        safe(getDoc(doc(db, 'teams', teamId, 'managers', currentUid))),
+        safe(getDoc(doc(db, 'teams', teamId, 'coaches', currentUid))),
+    ]);
+    const c = claim && claim.exists() ? claim.data() : null;
+    const td = team && team.exists() ? team.data() : {};
+    const guardian = !!(c && c.status === 'approved' && GUARDIAN_RELS.includes(String(c.relationship || '').toLowerCase()));
+    const staff = td.ownerUid === currentUid || !!(mgr && mgr.exists()) || !!(coach && coach.exists());
+    const shared = !!(share && share.exists() && share.data().highlightsToFollowers === true);
+    const follower = !!(sub && sub.exists() && sub.data().status === 'approved');
+    const vis = (td.hub || {}).visibility || 'private';
+    const name = String((playerProfile && (playerProfile.name || playerProfile.displayName)) || (c && c.playerName) || 'this player');
+    const first = name.split(/\s+/)[0] || name;
+    const card = 'background:var(--bg-surface);border:1px solid var(--outline, rgba(255,255,255,0.12));border-radius:14px;padding:14px 16px;';
+    const esc2 = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    const save = async (on, el) => {
+        const msg = box.querySelector('.share-msg');
+        box.querySelectorAll('input,button').forEach(x => { x.disabled = true; });
+        try {
+            const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
+            await httpsCallable(getFunctions(app), 'setHighlightSharing')({ teamId, playerId: playerIdParam, share: on });
+            await renderSharing();
+            const m2 = box.querySelector('.share-msg'); if (m2) m2.textContent = 'Saved.';
+        } catch (e) {
+            if (msg) msg.textContent = (e && e.message) ? String(e.message).replace(/^Firebase: /, '') : 'Could not save. Try again.';
+            box.querySelectorAll('input,button').forEach(x => { x.disabled = false; });
+        }
+    };
+    if (guardian) {
+        box.innerHTML = `<div style="${card}display:flex;flex-direction:column;gap:10px;">
+            <div style="font-weight:800;color:var(--text-primary);">Who can see ${esc2(first)}'s highlights</div>
+            <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4;color:var(--text-primary);cursor:pointer;"><input type="radio" name="hvshare" value="0" ${shared ? '' : 'checked'} style="margin-top:3px;accent-color:var(--accent);"> <span><strong>Family and the coaches</strong><br><span style="color:var(--text-secondary);">Family the team linked to ${esc2(first)}.</span></span></label>
+            <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4;color:var(--text-primary);cursor:pointer;"><input type="radio" name="hvshare" value="1" ${shared ? 'checked' : ''} style="margin-top:3px;accent-color:var(--accent);"> <span><strong>Everyone who follows the team</strong><br><span style="color:var(--text-secondary);">Lets college recruiters who follow the team find them.</span></span></label>
+            <div style="font-size:12px;color:var(--text-muted);line-height:1.4;">${esc2(first)}'s parents and guardians can change this. If one of you changes it, the others get an email.</div>
+            <div class="share-msg" style="font-size:12px;color:var(--accent);"></div></div>`;
+        box.querySelectorAll('input[name=hvshare]').forEach(r => r.onchange = () => save(r.value === '1', r));
+        box.style.display = 'block';
+    } else if (staff && shared) {
+        box.innerHTML = `<div style="${card}display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:14px;color:var(--text-primary);">
+            <span style="flex:1 1 220px;">A parent shared ${esc2(first)}'s highlights with everyone who follows the team.</span>
+            <button type="button" style="font:inherit;font-size:13px;font-weight:700;padding:8px 12px;border-radius:9px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;">Make family only</button>
+            <div class="share-msg" style="font-size:12px;color:var(--accent);width:100%;"></div></div>`;
+        box.querySelector('button').onclick = () => save(false);
+        box.style.display = 'block';
+    } else if (follower && !staff && !playerVideos.length && vis === 'link_only') {
+        box.innerHTML = `<div style="${card}font-size:14px;line-height:1.45;color:var(--text-secondary);"><strong style="color:var(--text-primary);">Highlights are for ${esc2(first)}'s family.</strong> Stats and games are all here; game videos are on each game's page.</div>`;
+        box.style.display = 'block';
+    } else {
+        box.style.display = 'none';
+    }
 }
 
 // ── Per-game-score extraction (priority chain — Android/iOS parity) ──

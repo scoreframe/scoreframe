@@ -1936,6 +1936,7 @@ async function handleInviteAcceptance() {
         // flag first so the reload doesn't try to accept again.
         const clean = new URL(location.href);
         clean.searchParams.delete('accept');
+        clean.searchParams.set('joined', '1');   // → "Are you here for a player?"
         location.replace(clean.toString());
     } catch (e) {
         console.warn('acceptHubInvite:', e && e.message);
@@ -2007,7 +2008,9 @@ async function acceptInvite() {
         await httpsCallable(getFunctions(app), 'acceptFollowInvite')({ teamId });
         subStatus = 'approved';
         isSubscriber = true;
-        location.reload();
+        const next = new URL(location.href);
+        next.searchParams.set('joined', '1');   // → "Are you here for a player?"
+        location.replace(next.toString());
     } catch (e) {
         console.error('[team.html] acceptFollowInvite failed:', e);
         btn.disabled = false;
@@ -2038,6 +2041,7 @@ function showContent() {
         loadPendingRequests();
         loadStaff();
         handleInviteAcceptance();
+        consumeJoinedFlag();
     } else if (isManager || isCoach || isSubscriber) {
         // Private hub but user has access. Coaches added 2026-09-28: the
         // rules already let them read (canReadTeam), the page shut them out.
@@ -2052,6 +2056,7 @@ function showContent() {
         listenForLive();
         loadPendingRequests();
         loadStaff();
+        consumeJoinedFlag();
     } else {
         // Private hub, no access — show gate. An invitee arriving from the email
         // lands HERE (their follow is pending), so the accept handler has to run
@@ -2576,6 +2581,7 @@ window.doFollow = async function() {
         subStatus = 'approved';
         isSubscriber = true;
         updateUserBar();
+        showJoinSheet();
     } catch (e) {
         console.error('Follow error:', e);
         $('followStatus').textContent = 'Failed to follow. Try again.';
@@ -3920,7 +3926,11 @@ async function loadRoster() {
             // is only true while the audience is vetted — on a link_only team
             // the "viewer" is anyone holding the link, so letting them claim a
             // player would hand a stranger a child's identity on the roster.
-            const claimsAllowed = hubProfile && !isLinkViewable(hubProfile.visibility);
+            // 2026-10-29 (Eric): link-only teams take family links too (club
+            // teams are link-only). A request reveals nothing until a manager
+            // approves it, and requests go through requestPlayerLinks, which
+            // checks the follow server-side. Directory-listed teams stay closed.
+            const claimsAllowed = hubProfile && hubProfile.visibility !== 'public' && (isSubscriber || isManager || isCoach);
             // Staff can claim a player too (Eric, 2026-08-17: "I'm the owner and
             // I'm actually a parent of one of the players"). This used to be
             // hidden for managers, which assumed staff and family are different
@@ -4193,17 +4203,11 @@ function openFamilyLinkDialog(playerId, playerName) {
                     source: 'staff_self',
                 }, { merge: true });
             }
-            await setDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid, 'claims', playerId), {
-                playerId,
-                playerName: playerName || '',
-                relationship: rel.toLowerCase(),
-                // Never anything but pending from a client; the rules enforce it.
-                status: 'pending',
-                claimantUid: currentUser.uid,
-                claimantName: currentUser.displayName || currentUser.email || 'A follower',
-                requestedAt: Date.now(),
-                decidedAt: 0
-            });
+            // Through the server (2026-10-29): it checks the follow, works on
+            // link-only teams, and approves at once when the team had already
+            // matched this email to this player.
+            const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
+            await httpsCallable(getFunctions(app), 'requestPlayerLinks')({ teamId, links: [{ playerId, relationship: rel.toLowerCase() }] });
             close();
             await loadMyClaims();
             await loadRoster();
@@ -4213,6 +4217,87 @@ function openFamilyLinkDialog(playerId, playerName) {
             msg.textContent = (e && e.code === 'permission-denied')
                 ? 'You need to be following this team before you can do this.'
                 : 'Could not send that request. Please try again.';
+        }
+    });
+}
+
+// ── "Are you here for a player?" (2026-10-29) ─────────────────────────────
+// Eric: "Let's not force a relationship or player pick... They can just follow
+// the team." and "When having two players on one team let's allow them to add
+// another one when they are picking their player. We can have a plus that lets
+// them add another and pick a new relationship." Shown once, right after
+// someone joins (an accepted invite lands here with ?joined=1, a link-only
+// Follow calls it directly). Links the team already set up are shown at the top.
+function consumeJoinedFlag() {
+    const u = new URL(location.href);
+    if (u.searchParams.get('joined') !== '1') return;
+    u.searchParams.delete('joined');
+    history.replaceState(null, '', u.toString());
+    if (isSubscriber && !isManager && !isCoach) showJoinSheet();
+}
+async function showJoinSheet() {
+    if (!currentUser || !teamId || !hubProfile || hubProfile.visibility === 'public') return;
+    if (document.querySelector('.join-sheet')) return;
+    let roster = [];
+    try {
+        const snap = await getDocs(collection(db, 'teams', teamId, 'roster'));
+        roster = snap.docs.map(d => ({ id: d.id, name: (d.data() || {}).name || 'Player', number: String((d.data() || {}).number ?? '') }))
+            .sort((a, b) => (parseInt(a.number, 10) || 999) - (parseInt(b.number, 10) || 999) || a.name.localeCompare(b.name));
+    } catch (_) { return; }
+    if (!roster.length) return;
+    await loadMyClaims();
+    const mine = Object.entries(myClaims).filter(([, c]) => c && (c.status === 'approved' || c.status === 'pending'));
+    const teamName = (hubProfile && (hubProfile.teamName || hubProfile.name)) || 'the team';
+    const selStyle = 'flex:1 1 140px;min-width:0;padding:9px 10px;border-radius:8px;border:1px solid var(--outline,#444);background:transparent;color:inherit;font:inherit;';
+    const relOpts = RELATIONSHIPS.map(r => `<option value="${escapeAttr(relationshipValue(r).toLowerCase())}">${escapeHtml(r)}</option>`).join('');
+    const playerOpts = `<option value="">Pick a player</option>` + roster.filter(p => !myClaims[p.id]).map(p => `<option value="${escapeAttr(p.id)}">${escapeHtml(p.name)}${p.number ? ' #' + escapeHtml(p.number) : ''}</option>`).join('');
+    const wrap = document.createElement('div');
+    wrap.className = 'family-modal join-sheet';
+    wrap.innerHTML = `
+      <div class="family-modal-card" style="max-width:420px;">
+        <h3>${mine.length ? 'You follow ' + escapeHtml(teamName) : 'Are you here for a player?'}</h3>
+        <p class="family-modal-sub">${mine.length ? 'The team linked you to:' : 'Pick your player to get updates about them. A team manager confirms it.'}</p>
+        ${mine.length ? `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">${mine.map(([pid, c]) =>
+            `<div style="padding:9px 12px;border-radius:10px;border:1px solid var(--outline,#333);font-size:14px;">✓ ${escapeHtml(relationshipLabel(c.relationship, c.playerName || (roster.find(p => p.id === pid) || {}).name))}${c.status === 'pending' ? ' <span style="color:var(--muted);">· waiting for the team</span>' : ''}</div>`).join('')}</div>
+            <p class="family-modal-sub" style="margin-top:4px;">Another player on this team?</p>` : ''}
+        <div class="join-rows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"></div>
+        <button type="button" class="join-more" style="background:none;border:1px dashed var(--outline,#555);color:var(--accent);border-radius:10px;padding:9px;font:inherit;font-weight:700;cursor:pointer;width:100%;margin-bottom:14px;">+ Add another player</button>
+        <div class="family-modal-actions" style="flex-wrap:wrap;">
+          <button class="family-cancel">${mine.length ? 'Done' : 'Just follow the team'}</button>
+          <button class="family-submit">Send to the team</button>
+        </div>
+        <div class="family-modal-msg"></div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const rows = wrap.querySelector('.join-rows');
+    const addRow = () => {
+        const r = document.createElement('div');
+        r.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;';
+        r.innerHTML = `<select aria-label="Player" style="${selStyle}">${playerOpts}</select><select aria-label="You are their" style="${selStyle}">${relOpts}</select>`;
+        rows.appendChild(r);
+    };
+    if (!mine.length) addRow();
+    const close = () => wrap.remove();
+    wrap.addEventListener('click', e => { if (e.target === wrap) close(); });
+    wrap.querySelector('.family-cancel').addEventListener('click', close);
+    wrap.querySelector('.join-more').addEventListener('click', addRow);
+    wrap.querySelector('.family-submit').addEventListener('click', async () => {
+        const links = [...rows.children].map(r => { const s = r.querySelectorAll('select'); return { playerId: s[0].value, relationship: s[1].value }; }).filter(l => l.playerId);
+        const msg = wrap.querySelector('.family-modal-msg');
+        if (!links.length) { msg.textContent = 'Pick a player, or tap "' + (mine.length ? 'Done' : 'Just follow the team') + '".'; return; }
+        const btn = wrap.querySelector('.family-submit');
+        btn.disabled = true; btn.textContent = 'Sending…';
+        try {
+            const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
+            const res = await httpsCallable(getFunctions(app), 'requestPlayerLinks')({ teamId, links });
+            const approved = ((res.data || {}).links || []).filter(l => l.status === 'approved').length;
+            close();
+            await loadMyClaims(); await loadRoster();
+            const box = $('followStatus');
+            if (box) box.textContent = approved === links.length ? 'Linked. You will get updates about your player.' : 'Sent. A team manager will confirm it.';
+        } catch (e) {
+            btn.disabled = false; btn.textContent = 'Send to the team';
+            msg.textContent = (e && e.message) ? String(e.message).replace(/^Firebase: /, '') : 'Could not send that. Please try again.';
         }
     });
 }
