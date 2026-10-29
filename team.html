@@ -1622,7 +1622,9 @@ if (!hubCode || hubCode.length < 4) {
                     name: df()
                 }, { merge: true });
             } catch (e) { console.error('User doc error:', e); }
-            await autoAcceptFollowerInvitations();
+            // No automatic accepting on sign-in any more (Eric 2026-10-29: "They
+            // need to be able to click that button voluntarily"). An invitation
+            // shows "Accept invitation"; only that tap accepts it.
         }
         // Repaint the account bar on EVERY auth event.
         //
@@ -1669,55 +1671,6 @@ if (!hubCode || hubCode.length < 4) {
         .then(() => loadTeam());
 }
 
-// Auto-accept any pending follower invitations addressed to the signed-in user's email.
-// Adds them to teams/{teamId}/subscribers as approved + marks invitation accepted.
-// Only role="follower" is processed here; manager invites still require explicit Accept on the dashboard.
-async function autoAcceptFollowerInvitations() {
-    if (!currentUser?.email) return;
-    const email = currentUser.email.toLowerCase().trim();
-    try {
-        const snap = await getDocs(query(
-            collection(db, 'invitations'),
-            where('email', '==', email),
-            where('status', '==', 'pending')
-        ));
-        for (const inv of snap.docs) {
-            const data = inv.data();
-            if ((data.role || '') !== 'follower') continue;
-            const inviteTeamId = data.teamId;
-            const inviteHubCode = data.hubCode || '';
-            if (!inviteTeamId) continue;
-            try {
-                // Accepting an invite goes through the SERVER (2026-08-17).
-                //
-                // This used to write `status:"approved"` straight from the
-                // client. The rule allowed that — and allowed it for ANY team,
-                // whether you'd been invited or not, which meant a signed-in
-                // stranger could self-approve into a private team and read its
-                // roster and its players' surnames. Verified, then closed.
-                //
-                // The rule now only lets a client self-create as "pending"
-                // (plus public auto-follow, where nothing is gained). An invite
-                // can't be checked in a rule because it carries the email in a
-                // FIELD and rules cannot query, so acceptHubInvite verifies it
-                // against the caller's token email and writes the approval.
-                const { getFunctions, httpsCallable } =
-                    await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
-                await httpsCallable(getFunctions(app), 'acceptHubInvite')({ teamId: inviteTeamId });
-                if (inviteHubCode) {
-                    await setDoc(doc(db, 'users', currentUser.uid),
-                        { subscribedHubs: arrayUnion(inviteHubCode) }, { merge: true });
-                }
-                await updateDoc(doc(db, 'invitations', inv.id), { status: 'accepted' });
-                console.log('Auto-accepted follower invite for', email, '→ team', inviteTeamId);
-            } catch (e) {
-                console.error('Failed to auto-accept follower invite', inv.id, e);
-            }
-        }
-    } catch (e) {
-        console.error('autoAcceptFollowerInvitations failed:', e);
-    }
-}
 
 async function loadTeam() {
     try {
@@ -1937,27 +1890,22 @@ async function handleInviteAcceptance() {
         if (box) box.textContent = 'Sign in to accept this invitation.';
         return;
     }
-    try {
-        const { getFunctions, httpsCallable } =
-            await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
-        const box = $('followStatus');
-        if (box) box.textContent = 'Accepting…';
-        await httpsCallable(getFunctions(app), 'acceptHubInvite')({ teamId });
-        // Reload rather than re-derive. Accepting flips access, the follow, the
-        // invite record and what the page is allowed to show, all at once —
-        // re-deriving that by hand is how a view ends up half-updated. Drop the
-        // flag first so the reload doesn't try to accept again.
-        const clean = new URL(location.href);
-        clean.searchParams.delete('accept');
-        clean.searchParams.set('joined', '1');   // → "Are you here for a player?"
-        location.replace(clean.toString());
-    } catch (e) {
-        console.warn('acceptHubInvite:', e && e.message);
-        const box = $('followStatus');
-        if (box) box.textContent = (e && /no pending invite/i.test(e.message || ''))
-            ? "This invitation isn't waiting for your account any more — it may already be accepted."
-            : 'Could not accept that invitation. Please try again.';
-    }
+    // The email's button only brings them here: accepting is still their own
+    // tap on "Accept invitation" (Eric 2026-10-29 — it used to accept as soon
+    // as they signed in, with "Accepting…" under the button). Point at the
+    // button instead. Already accepted: nothing to point at.
+    const clean = new URL(location.href);
+    clean.searchParams.delete('accept');
+    history.replaceState(null, '', clean.toString());
+    setTimeout(() => {
+        const gate = $('requestBtn');
+        const btn = $('acceptInviteBtn') || (gate && gate.style.display !== 'none' && gate.onclick === acceptInvite ? gate : null);
+        if (!btn) return;
+        const box = $('acceptInviteBtn') ? $('followStatus') : $('accessStatus');
+        if (box) box.textContent = 'Tap Accept invitation to follow the team.';
+        btn.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        try { btn.focus({ preventScroll: true }); } catch (_) {}
+    }, 300);
 }
 
 async function checkAccess() {
