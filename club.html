@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#111215">
+<title>ScoreFrame Club</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* Club console (2026-10-28, CLUB_BILLING_SPEC.md; mockups approved).
+   Light only, like dashboard.html: this page is never shown inside the apps,
+   which by design never link to anything that sells the club license. */
+*, *::before, *::after { box-sizing: border-box; }
+:root {
+  color-scheme: light;
+  --paper: #F5F5F2; --card: #FFFFFF; --ink: #1C1B1F; --mu: #5A565F; --ln: #E2DFDA; --ln2: #EFECE7;
+  --deep: #111215; --deep2: #1B1C21; --deep-tx: #F1EEE9; --deep-mu: #A9ADB6;
+  --orange: #FF9640; --on-orange: #1A1004; --link: #A64F0A; --link-h: #7A3906;
+  --ok-bg: #E3F5EA; --ok: #146B3D; --warn-bg: #FFF1DC; --warn: #8A4B00; --bad-bg: #FFE3E3; --bad: #B3121D;
+  --info-bg: #FFF4EA; --info-ln: #F4CFA9;
+}
+html, body { margin: 0; background: var(--paper); color: var(--ink);
+  font-family: Archivo, -apple-system, "Helvetica Neue", Arial, sans-serif; font-variant-numeric: tabular-nums; }
+a { color: var(--link); } a:hover { color: var(--link-h); }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+input, select { font: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid #D6D2CC; border-radius: 9px; background: #fff; color: var(--ink); min-width: 0; }
+label { font-size: 13px; font-weight: 600; color: var(--mu); }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+
+header.top { background: var(--deep); color: var(--deep-tx); padding: 12px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--deep-tx); }
+.brand .tile { width: 30px; height: 30px; border-radius: 8px; background: var(--orange); color: var(--on-orange); font-weight: 900; display: flex; align-items: center; justify-content: center; }
+.brand .word { font-weight: 900; font-size: 18px; letter-spacing: .4px; } .brand .word b { color: var(--orange); }
+.pill-club { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; color: var(--deep-mu); border: 1px solid #3A3C44; border-radius: 99px; padding: 3px 9px; }
+nav.tabs { display: flex; gap: 20px; margin-left: 12px; flex-wrap: wrap; }
+nav.tabs button { background: none; border: 0; color: var(--deep-mu); font-size: 15px; padding: 6px 0; border-bottom: 2px solid transparent; }
+nav.tabs button[aria-current="page"] { color: var(--deep-tx); font-weight: 700; border-bottom-color: var(--orange); }
+.who { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--deep-mu); flex-wrap: wrap; }
+.who select { background: var(--deep2); color: var(--deep-tx); border-color: #3A3C44; padding: 6px 10px; font-size: 14px; }
+.who button { background: none; border: 1px solid #3A3C44; color: var(--deep-mu); border-radius: 7px; padding: 5px 10px; font-size: 13px; }
+
+main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 64px; display: flex; flex-direction: column; gap: 22px; }
+.card { background: var(--card); border: 1px solid var(--ln); border-radius: 14px; }
+.pad { padding: 20px 22px; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 1.2px; color: var(--mu); text-transform: uppercase; }
+.muted { color: var(--mu); }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; padding: 11px 16px; border-radius: 10px; font-weight: 700; font-size: 15px; border: 1px solid transparent; min-height: 44px; }
+.btn.primary { background: var(--orange); color: var(--on-orange); }
+.btn.dark { background: var(--ink); color: #fff; }
+.btn.ghost { background: #fff; color: var(--ink); border-color: #D6D2CC; font-weight: 600; }
+.btn.link { background: none; color: var(--link); padding: 6px 4px; min-height: 0; font-weight: 600; }
+.btn:disabled { opacity: .55; cursor: default; }
+.status { font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+.s-ok { background: var(--ok-bg); color: var(--ok); } .s-warn { background: var(--warn-bg); color: var(--warn); }
+.s-bad { background: var(--bad-bg); color: var(--bad); } .s-mu { background: #ECECE8; color: var(--mu); }
+.banner { border-radius: 14px; padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 15px; line-height: 1.45; }
+.banner .txt { flex: 1 1 380px; }
+.b-info { background: var(--info-bg); border: 1px solid var(--info-ln); }
+.b-ok { background: var(--ok-bg); border: 1px solid #B7E2C8; }
+.b-warn { background: var(--warn-bg); border: 1px solid #F0D2A6; }
+.b-bad { background: var(--bad-bg); border: 1px solid #F3B9B9; }
+.crest { border-radius: 14px; color: #fff; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stats3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.bar { height: 8px; background: #ECECE8; border-radius: 99px; overflow: hidden; } .bar > span { display: block; height: 100%; background: var(--orange); }
+.big { font-size: 32px; font-weight: 900; line-height: 1.1; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 15px; }
+.tbl th { text-align: left; color: var(--mu); font-size: 12px; letter-spacing: 1px; font-weight: 700; padding: 10px 12px; text-transform: uppercase; }
+.tbl td { padding: 12px; border-top: 1px solid var(--ln2); vertical-align: middle; }
+.tbl tr.click { cursor: pointer; } .tbl tr.click:hover td { background: #FAF9F7; }
+.tbl th:first-child, .tbl td:first-child { padding-left: 22px; } .tbl th:last-child, .tbl td:last-child { padding-right: 22px; }
+.scroll { overflow-x: auto; }
+.teamsq { width: 34px; height: 34px; border-radius: 9px; color: #fff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.order button { background: none; border: 1px solid var(--ln); border-radius: 7px; width: 32px; height: 32px; color: var(--mu); }
+.order button:disabled { opacity: .3; }
+.split { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+.split > .main { flex: 999 1 560px; min-width: 0; } .split > .side { flex: 1 1 320px; min-width: 0; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.choice { text-align: left; padding: 14px; border-radius: 12px; border: 1px solid #D6D2CC; background: #fff; display: flex; flex-direction: column; gap: 4px; }
+.choice[aria-pressed="true"] { border: 2px solid var(--orange); background: var(--info-bg); padding: 13px; }
+.choice b { font-size: 18px; } .choice span { font-size: 13px; color: var(--mu); }
+.grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.stepper { display: flex; align-items: center; gap: 12px; }
+.stepper button { width: 48px; height: 48px; border-radius: 12px; border: 1px solid #D6D2CC; background: #fff; font-size: 24px; font-weight: 700; }
+.stepper output { min-width: 70px; text-align: center; font-size: 36px; font-weight: 900; }
+.summary { background: var(--deep); color: var(--deep-tx); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+.summary .ln { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; } .summary .ln span:first-child { color: var(--deep-mu); }
+.summary hr { border: 0; border-top: 1px solid #2E3038; margin: 2px 0; width: 100%; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 14px; z-index: 20; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+dialog { border: 0; border-radius: 16px; padding: 0; width: min(520px, calc(100% - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.25); color: var(--ink); }
+dialog::backdrop { background: rgba(17,18,21,.45); }
+dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.hero { border-radius: 16px; padding: 22px; color: #fff; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.person { display: flex; align-items: center; gap: 14px; padding: 13px 22px; border-top: 1px solid var(--ln2); }
+.avatar { width: 38px; height: 38px; border-radius: 50%; background: #ECECE8; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+.hide { display: none !important; }
+.signin { max-width: 440px; margin: 40px auto; text-align: center; display: flex; flex-direction: column; gap: 14px; }
+.signin input { width: 100%; }
+.loading { padding: 60px 0; text-align: center; color: var(--mu); }
+@media (max-width: 720px) {
+  .stats3 { grid-template-columns: 1fr; gap: 16px; }
+  .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  header.top { padding: 10px 16px; } main { padding: 20px 16px 48px; }
+  nav.tabs { margin-left: 0; order: 3; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/"><span class="tile">F</span><span class="word">Score<b>Frame</b></span></a>
+  <span class="pill-club">CLUB</span>
+  <nav class="tabs hide" id="tabs" aria-label="Club sections">
+    <button type="button" data-tab="teams">Teams</button>
+    <button type="button" data-tab="billing">License &amp; billing</button>
+    <button type="button" data-tab="settings">Club details</button>
+  </nav>
+  <div class="who" id="who"></div>
+</header>
+<main id="main"><div class="loading">Loading…</div></main>
+
+<dialog id="dlg"></dialog>
+<div class="toast hide" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
+import { initializeFirestore, doc, getDoc, getDocs, deleteDoc, addDoc, collection, query, where, onSnapshot }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword,
+  createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile,
+  setPersistence, browserLocalPersistence, sendPasswordResetEmail }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU", authDomain: "scoreframe-deploy.firebaseapp.com",
+  databaseURL: "https://scoreframe-deploy-default-rtdb.firebaseio.com", projectId: "scoreframe-deploy",
+  storageBucket: "scoreframe-deploy.firebasestorage.app", messagingSenderId: "728886280072",
+  appId: "1:728886280072:android:0050478669b89fc76b043d"
+});
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {});
+const fns = getFunctions(app);
+const call = (name, data) => httpsCallable(fns, name)(data).then(r => r.data);
+const google = new GoogleAuthProvider(); google.setCustomParameters({ prompt: 'select_account' });
+const ua = navigator.userAgent || '';
+const useRedirect = /iP(hone|ad|od)|Safari/i.test(ua) && !/Chrome|CriOS|FxiOS/i.test(ua);
+getRedirectResult(auth).catch(() => {});
+
+// ── Helpers ──────────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const DAY = 86400000;
+const SPORTS = { VOLLEYBALL: 'Volleyball', BASKETBALL: 'Basketball', SOCCER: 'Soccer', BASEBALL: 'Baseball', SOFTBALL: 'Softball',
+  FOOTBALL: 'Football', HOCKEY: 'Hockey', LACROSSE: 'Lacrosse', BOWLING: 'Bowling', TENNIS: 'Tennis', PICKLEBALL: 'Pickleball', GENERIC: 'Other' };
+const fmtYmd = (ymd) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }); };
+const ymdOf = (ms) => new Date(ms).toISOString().slice(0, 10);
+const addDaysYmd = (ymd, n) => { const [y, m, d] = ymd.split('-').map(Number); return ymdOf(Date.UTC(y, m - 1, d) + n * DAY); };
+/** The last day an `until` covers (server: endMs(Jun 1) = Jun 1 12:00 UTC → May 31). */
+const lastDay = (until) => fmtYmd(ymdOf(until - 36 * 3600 * 1000));
+/** The exclusive end date as YYYY-MM-DD (a renewal starts here). */
+const endYmdOf = (until) => ymdOf(until - 12 * 3600 * 1000);
+const daysLeft = (until) => Math.max(0, Math.ceil((until - Date.now()) / DAY));
+const money = (cents, cur = 'usd') => new Intl.NumberFormat('en-US', { style: 'currency', currency: cur.toUpperCase() }).format(cents / 100);
+const localToday = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const initials = (s) => String(s || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+const AUTH_ERR = { 'auth/invalid-credential': 'Wrong email or password.', 'auth/wrong-password': 'Wrong email or password.',
+  'auth/user-not-found': 'No account with that email. Create one instead.', 'auth/email-already-in-use': 'That email already has an account. Sign in instead.',
+  'auth/weak-password': 'Use at least 6 characters for the password.', 'auth/invalid-email': 'That email doesn\'t look right.',
+  'auth/too-many-requests': 'Too many tries. Wait a minute and try again.' };
+const errText = (e) => (e && AUTH_ERR[e.code]) || (e && e.message ? String(e.message).replace(/^Firebase: /, '') : 'Something went wrong.');
+function toast(msg, ms = 4000) { const t = $('toast'); t.textContent = msg; t.classList.remove('hide'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hide'), ms); }
+async function busy(btn, fn) { const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'Working…'; try { return await fn(); } catch (e) { toast(errText(e), 6000); } finally { btn.disabled = false; btn.innerHTML = old; } }
+
+const STATUS = {
+  none: ['No license yet', 's-mu'], trialing: ['Free trial', 's-ok'], active: ['Active', 's-ok'],
+  awaiting_payment: ['Invoice sent', 's-warn'], past_due: ['Invoice past due', 's-bad'], lapsed: ['Ended', 's-bad'], scheduled: ['Starts soon', 's-warn'],
+};
+const LSTATE = {
+  pending: ['Checkout open', 's-mu'], creating: ['Creating', 's-mu'], processing: ['Bank payment clearing', 's-warn'],
+  awaiting_payment: ['Unpaid invoice', 's-warn'], paid: ['Paid', 's-ok'], comp: ['Free (from ScoreFrame)', 's-ok'], trial: ['Trial', 's-ok'], void: ['Canceled', 's-mu'],
+};
+
+// ── State ────────────────────────────────────────────────────────────
+const params = new URLSearchParams(location.search);
+const S = { user: null, superUser: false, clubs: [], clubId: params.get('club') || null, club: null, licenses: [], teams: {},
+  tab: params.get('tab') || 'teams', teamId: null, unsub: [], buy: { kind: 'purchase', teams: 0, months: 7, start: '', pay: 'card', po: '', quote: null, qerr: '' },
+  pricing: null, paidWatch: params.get('paid'), canceled: params.get('canceled'), wantBuy: params.get('buy'), openedAt: Date.now(), paidAt: 0 };
+if (S.wantBuy) S.tab = 'billing';
+function setUrl() {
+  const p = new URLSearchParams();
+  if (S.clubId) p.set('club', S.clubId);
+  if (S.tab && S.tab !== 'teams') p.set('tab', S.tab);
+  if (S.teamId) p.set('team', S.teamId);
+  history.replaceState(null, '', `${location.pathname}${p.toString() ? '?' + p : ''}`);
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────
+function renderWho() {
+  const w = $('who');
+  if (!S.user) { w.innerHTML = ''; return; }
+  const opts = S.clubs.length > 1 || S.superUser
+    ? `<select id="clubPick" aria-label="Club">${S.clubs.map(c => `<option value="${esc(c.id)}"${c.id === S.clubId ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}<option value="__new">+ New club</option></select>` : '';
+  w.innerHTML = `${opts}<span>${esc(S.user.displayName || S.user.email)}${S.superUser ? ' · admin' : ''}</span><button type="button" id="signOut">Sign out</button>`;
+  $('signOut').onclick = () => signOut(auth);
+  const pick = $('clubPick');
+  if (pick) pick.onchange = () => { if (pick.value === '__new') { S.clubId = null; S.club = null; renderCreate(); } else openClub(pick.value); };
+}
+
+function renderSignIn() {
+  $('tabs').classList.add('hide');
+  $('main').innerHTML = `
+  <section class="signin card pad">
+    <h1 style="font-size:26px;font-weight:900;">ScoreFrame for clubs</h1>
+    <p class="muted" style="margin:0;line-height:1.5;">Club directors sign in here to set up teams, invite coaches and manage the club's licenses.</p>
+    <button class="btn ghost" type="button" id="gBtn">Continue with Google</button>
+    <div class="muted" style="font-size:13px;">or with email</div>
+    <input id="em" type="email" autocomplete="email" placeholder="Email" aria-label="Email">
+    <input id="pw" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password">
+    <div class="row" style="justify-content:center;">
+      <button class="btn dark" type="button" id="inBtn">Sign in</button>
+      <button class="btn ghost" type="button" id="upBtn">Create account</button>
+    </div>
+    <button class="btn link" type="button" id="forgot">Forgot password?</button>
+    <p class="muted" style="font-size:13px;margin:0;">Use the same account as the ScoreFrame app.</p>
+  </section>`;
+  $('gBtn').onclick = async () => { try { if (useRedirect) return signInWithRedirect(auth, google); await signInWithPopup(auth, google); } catch (e) { if (e.code === 'auth/popup-blocked') signInWithRedirect(auth, google); else toast(errText(e)); } };
+  $('inBtn').onclick = (ev) => busy(ev.currentTarget, () => signInWithEmailAndPassword(auth, $('em').value.trim(), $('pw').value));
+  $('upBtn').onclick = (ev) => busy(ev.currentTarget, async () => { const r = await createUserWithEmailAndPassword(auth, $('em').value.trim(), $('pw').value); await updateProfile(r.user, { displayName: $('em').value.split('@')[0] }); });
+  $('forgot').onclick = async () => { const e = $('em').value.trim(); if (!e) return toast('Type your email first.'); await sendPasswordResetEmail(auth, e).then(() => toast('Password reset email sent.')).catch(err => toast(errText(err))); };
+}
+
+onAuthStateChanged(auth, async (u) => {
+  S.unsub.forEach(f => f()); S.unsub = [];
+  S.user = u && !u.isAnonymous ? u : null;
+  if (!S.user) { renderWho(); renderSignIn(); return; }
+  try { const su = await getDoc(doc(db, 'app_config', 'super_users')); S.superUser = su.exists() && (su.data().uids || []).includes(u.uid); } catch (_) { S.superUser = false; }
+  await loadClubs();
+  try { const p = await getDoc(doc(db, 'app_config', 'club_pricing')); S.pricing = p.exists() ? p.data() : null; } catch (_) { S.pricing = null; }
+  if (S.clubId && (S.clubs.some(c => c.id === S.clubId) || S.superUser)) openClub(S.clubId);
+  else if (S.clubs.length) openClub(S.clubs[0].id);
+  else { renderWho(); renderCreate(); }
+});
+
+async function loadClubs() {
+  const q = S.superUser ? collection(db, 'clubs') : query(collection(db, 'clubs'), where('directorUids', 'array-contains', S.user.uid));
+  const snap = await getDocs(q);
+  S.clubs = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// ── Create a club ────────────────────────────────────────────────────
+function renderCreate() {
+  $('tabs').classList.add('hide');
+  $('main').innerHTML = `
+  <section class="card pad" style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:16px;">
+    <div><div class="eyebrow">New club</div><h1 style="font-size:28px;font-weight:900;margin-top:6px;">Set up your club</h1>
+    <p class="muted" style="line-height:1.5;margin:8px 0 0;">You'll add teams and invite their coaches next. Every coach and manager on a licensed team gets ScoreFrame Pro on that team, paid by the club. Start with a free 14-day trial for up to 3 teams.</p></div>
+    <div class="field"><label for="cName">Club name</label><input id="cName" placeholder="Rockets Volleyball Club" maxlength="80"></div>
+    <div class="grid2">
+      <div class="field"><label for="cSport">Sport</label><select id="cSport">${Object.entries(SPORTS).map(([k, v]) => `<option value="${k}"${k === 'VOLLEYBALL' ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div class="field"><label for="cCity">City</label><input id="cCity" placeholder="Omaha, NE" maxlength="80"></div>
+    </div>
+    <div class="field"><label for="cOrg">Name on invoices</label><input id="cOrg" placeholder="Rockets Volleyball Club Inc." maxlength="120"></div>
+    <div class="field"><label for="cBill">Billing email</label><input id="cBill" type="email" value="${esc(S.user.email || '')}" maxlength="120"></div>
+    <div class="row"><button class="btn primary" type="button" id="cGo">Create club</button>${S.clubs.length ? '<button class="btn ghost" type="button" id="cBack">Cancel</button>' : ''}</div>
+  </section>`;
+  $('cGo').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const r = await call('clubCreate', { name: $('cName').value, sport: $('cSport').value, city: $('cCity').value, orgName: $('cOrg').value || $('cName').value, billingEmail: $('cBill').value });
+    await loadClubs(); openClub(r.clubId); toast('Club created.');
+  });
+  const back = $('cBack'); if (back) back.onclick = () => openClub(S.clubs[0].id);
+}
+
+// ── Open a club (live) ───────────────────────────────────────────────
+function openClub(clubId) {
+  S.unsub.forEach(f => f()); S.unsub = [];
+  S.clubId = clubId; S.club = null; S.licenses = []; S.teams = {};
+  S.teamId = params.get('team') && S.tab === 'teams' ? params.get('team') : null;
+  params.delete('team');
+  renderWho(); setUrl();
+  $('main').innerHTML = '<div class="loading">Loading the club…</div>';
+  // The console refreshes coverage on open, which also picks up teams
+  // archived or deleted in the apps since the last daily check.
+  call('clubRefresh', { clubId }).catch(() => {});
+  S.unsub.push(onSnapshot(doc(db, 'clubs', clubId), async (snap) => {
+    if (!snap.exists()) { $('main').innerHTML = '<div class="loading">This club doesn\'t exist or you aren\'t its director.</div>'; return; }
+    S.club = { id: snap.id, ...snap.data() };
+    const before = S.teamId ? JSON.stringify(S.teams[S.teamId] || null) : null;
+    await loadTeams();
+    // On a team page, only redraw when that team changed (an invite being typed survives).
+    if (S.teamId && document.getElementById('iEm') && JSON.stringify(S.teams[S.teamId] || null) === before) return;
+    render();
+  }, (e) => { $('main').innerHTML = `<div class="loading">Couldn't open the club: ${esc(errText(e))}</div>`; }));
+  S.unsub.push(onSnapshot(collection(db, 'clubs', clubId, 'licenses'), (snap) => {
+    S.licenses = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    if (S.club && !S.teamId) render();
+  }));
+}
+
+async function loadTeams() {
+  const ids = S.club.teamIds || [];
+  const out = {};
+  await Promise.all(ids.map(async id => { try { const s = await getDoc(doc(db, 'teams', id)); if (s.exists()) out[id] = { id, ...s.data() }; } catch (_) {} }));
+  S.teams = out;
+}
+
+function render() {
+  if (!S.club) return;
+  $('tabs').classList.remove('hide');
+  document.querySelectorAll('#tabs button').forEach(b => {
+    b.setAttribute('aria-current', b.dataset.tab === S.tab && !S.teamId ? 'page' : 'false');
+    if (b.dataset.tab === 'teams' && S.teamId) b.setAttribute('aria-current', 'page');
+    b.onclick = () => { S.tab = b.dataset.tab; S.teamId = null; setUrl(); render(); };
+  });
+  if (S.teamId) return renderTeam();
+  if (S.tab === 'billing') return renderBilling();
+  if (S.tab === 'settings') return renderSettings();
+  return renderTeams();
+}
+
+// ── Shared bits ──────────────────────────────────────────────────────
+function clubHeader(extraBtns = '') {
+  const c = S.club; const st = STATUS[c.status] || STATUS.none;
+  return `<div class="row" style="align-items:flex-end;">
+    <div class="row" style="gap:14px;">
+      <div class="crest" style="width:56px;height:56px;background:${esc(c.color || '#C8102E')};font-size:20px;">${esc(initials(c.name))}</div>
+      <div><h1 style="font-size:28px;font-weight:900;">${esc(c.name)}</h1>
+      <div class="muted" style="font-size:15px;margin-top:2px;">${esc(SPORTS[c.sport] || 'Club')}${c.city ? ' · ' + esc(c.city) : ''} · <span class="status ${st[1]}">${st[0]}</span></div></div>
+    </div>
+    <div class="row" style="margin-left:auto;">${extraBtns}</div>
+  </div>`;
+}
+
+function statusBanner() {
+  const c = S.club; const L = S.licenses;
+  const unpaid = L.find(l => l.state === 'awaiting_payment');
+  if (S.paidWatch) {
+    const l = L.find(x => x.id === S.paidWatch);
+    if (l && l.state === 'paid') { if (!S.paidAt) S.paidAt = Date.now(); if (Date.now() - S.paidAt > 30000) { S.paidWatch = null; return statusBanner(); } return `<div class="banner b-ok"><div class="txt"><strong>Payment received.</strong> Your teams are covered through ${lastDay(c.licenseUntil || l.end)}. A receipt is on its way to ${esc(c.billing?.email || 'your billing email')}.</div></div>`; }
+    if (l && l.state === 'processing') return `<div class="banner b-info"><div class="txt"><strong>Bank payment received by Stripe.</strong> It takes a few business days to clear; your teams are covered meanwhile.</div></div>`;
+    return `<div class="banner b-info"><div class="txt"><strong>Finishing your payment…</strong> This updates by itself as soon as Stripe confirms it, usually within a minute.</div></div>`;
+  }
+  if (S.canceled && Date.now() - S.openedAt < 20000) return `<div class="banner b-info"><div class="txt">Checkout was canceled. Nothing was charged.</div></div>`;
+  if (c.status === 'none') return `<div class="banner b-info"><div class="txt"><strong>No license yet.</strong> ${c.trialUsed ? 'Buy licenses to cover your teams.' : 'Try it free for 14 days with up to 3 teams. No card needed.'}</div>
+    <div class="row">${c.trialUsed ? '' : '<button class="btn dark" type="button" id="trialBtn">Start free trial</button>'}<button class="btn primary" type="button" data-go="billing">Buy licenses</button></div></div>`;
+  if (c.status === 'trialing') return `<div class="banner b-info"><div class="txt"><strong>Free trial:</strong> ${c.seats} teams through ${lastDay(c.licenseUntil)} (${daysLeft(c.licenseUntil)} days left).</div><button class="btn primary" type="button" data-go="billing">Buy licenses</button></div>`;
+  if (c.status === 'past_due') return `<div class="banner b-bad"><div class="txt"><strong>Invoice ${esc(unpaid?.stripe?.invoiceNumber || '')} is past due.</strong> Teams stay covered through ${lastDay(c.licenseUntil)}; after that coverage pauses until it's paid.</div>${unpaid?.stripe?.hostedInvoiceUrl ? `<a class="btn dark" href="${esc(unpaid.stripe.hostedInvoiceUrl)}" target="_blank" rel="noopener">Pay the invoice</a>` : ''}</div>`;
+  if (c.status === 'awaiting_payment' && unpaid) return `<div class="banner b-warn"><div class="txt"><strong>Invoice ${esc(unpaid.stripe?.invoiceNumber || '')} sent</strong> to ${esc(c.billing?.email || '')}. Due ${unpaid.dueAt ? lastDay(unpaid.dueAt + DAY) : 'in 30 days'}. Your teams are covered meanwhile.</div>${unpaid.stripe?.hostedInvoiceUrl ? `<a class="btn ghost" href="${esc(unpaid.stripe.hostedInvoiceUrl)}" target="_blank" rel="noopener">View invoice</a>` : ''}</div>`;
+  if (c.status === 'lapsed') return `<div class="banner b-bad"><div class="txt"><strong>Coverage has ended.</strong> Teams, pages and history are all still here. Renew to turn Pro back on for your coaches.</div><button class="btn primary" type="button" data-go="billing">Renew</button></div>`;
+  if (c.status === 'scheduled') return `<div class="banner b-info"><div class="txt"><strong>Coverage starts ${c.nextStart ? fmtYmd(ymdOf(c.nextStart + 12 * 3600 * 1000)) : 'soon'}.</strong></div></div>`;
+  if (c.status === 'active' && c.licenseUntil && daysLeft(c.licenseUntil) <= 30) return `<div class="banner b-warn"><div class="txt"><strong>Coverage runs through ${lastDay(c.licenseUntil)}</strong> (${daysLeft(c.licenseUntil)} days left).</div><button class="btn primary" type="button" data-go="billing">Renew or extend</button></div>`;
+  return '';
+}
+
+function wireCommon() {
+  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { S.tab = b.dataset.go; S.teamId = null; setUrl(); render(); });
+  const tb = $('trialBtn'); if (tb) tb.onclick = (ev) => busy(ev.currentTarget, async () => { const r = await call('clubStartTrial', { clubId: S.clubId, today: localToday() }); toast(`Trial started: 3 teams through ${fmtYmd(addDaysYmd(r.endDate, -1))}.`); });
+}
+
+// ── Teams tab ────────────────────────────────────────────────────────
+function teamRows() {
+  const ids = S.club.teamIds || [];
+  return ids.map((id, i) => ({ id, i, t: S.teams[id] })).filter(r => r.t);
+}
+function coverPill(t) {
+  if (t.status === 'archived') return '<span class="status s-mu">Archived</span>';
+  const c = t.club || {};
+  if (c.covered && c.until > Date.now()) return `<span class="status s-ok">Covered</span>`;
+  return '<span class="status s-warn">Not covered</span>';
+}
+function renderTeams() {
+  const c = S.club; const rows = teamRows();
+  const used = Math.min(rows.filter(r => r.t.status !== 'archived').length, c.seats || 0);
+  const uncovered = rows.filter(r => r.t.status !== 'archived' && !(r.t.club && r.t.club.covered)).length;
+  const lastPaid = S.licenses.find(l => l.state === 'paid' || l.state === 'comp');
+  const unpaid = S.licenses.find(l => l.state === 'awaiting_payment');
+  $('main').innerHTML = `
+    ${clubHeader(`<button class="btn primary" type="button" id="addTeam">+ Add a team</button>`)}
+    ${statusBanner()}
+    <section class="card pad stats3" aria-label="License summary">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="eyebrow">Team licenses</div>
+        <div class="big">${used} <span style="font-size:18px;font-weight:600;color:var(--mu);">of ${c.seats || 0} in use</span></div>
+        <div class="bar"><span style="width:${c.seats ? Math.round(100 * used / c.seats) : 0}%"></span></div>
+        <div class="muted" style="font-size:14px;">${(c.openSeats || 0) > 0 ? `${c.openSeats} open. Add a team to use ${c.openSeats === 1 ? 'it' : 'one'}.` : uncovered ? `${uncovered} team${uncovered === 1 ? '' : 's'} not covered.` : 'Every team is covered.'}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="eyebrow">Covered</div>
+        ${c.licenseUntil ? `<div style="font-size:22px;font-weight:700;">Through ${lastDay(c.licenseUntil)}</div><div class="muted" style="font-size:14px;">${daysLeft(c.licenseUntil)} days left</div>` : '<div style="font-size:22px;font-weight:700;">Not yet</div>'}
+        <div class="row" style="gap:14px;font-size:14px;font-weight:600;"><a href="#" data-buy="addon">Add teams</a><a href="#" data-buy="renew">Extend</a></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="eyebrow">Billing</div>
+        ${unpaid ? `<div style="font-size:16px;font-weight:600;">Invoice ${esc(unpaid.stripe?.invoiceNumber || '')} unpaid</div>` : lastPaid ? `<div style="font-size:16px;font-weight:600;">${lastPaid.state === 'comp' ? 'Free license from ScoreFrame' : `Paid ${lastPaid.paidAt ? new Date(lastPaid.paidAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}`}</div>` : '<div style="font-size:16px;font-weight:600;">Nothing billed yet</div>'}
+        <div class="muted" style="font-size:14px;">${esc(c.billing?.name || '')}</div>
+        <div style="font-size:14px;font-weight:600;"><a href="#" data-go2="billing">Invoices &amp; receipts</a></div>
+      </div>
+    </section>
+    <section class="card" style="overflow:hidden;">
+      <div class="row pad" style="border-bottom:1px solid var(--ln);padding-block:14px;">
+        <h2 style="font-size:18px;font-weight:800;">Teams</h2>
+        <span class="muted" style="font-size:14px;">${rows.length} team${rows.length === 1 ? '' : 's'} · when there are more teams than licenses, the ones at the top are covered</span>
+      </div>
+      ${rows.length ? `<div class="scroll"><table class="tbl" style="min-width:640px;">
+        <thead><tr><th>Team</th><th>Staff</th><th>Status</th><th>Covered through</th><th><span class="hide">Order</span></th></tr></thead>
+        <tbody>${rows.map((r, k) => `<tr class="click" data-team="${esc(r.id)}">
+          <td><div class="row" style="gap:12px;flex-wrap:nowrap;"><div class="teamsq" style="background:${esc(r.t.color || '#555')}">${esc(initials(r.t.ageDivision || r.t.name))}</div><div><div style="font-weight:700;">${esc(r.t.name)}</div><div class="muted" style="font-size:13px;">${esc(SPORTS[r.t.sport] || '')}${r.t.ageDivision ? ' · ' + esc(r.t.ageDivision) : ''}</div></div></div></td>
+          <td>${(r.t.managers || []).length}</td>
+          <td>${coverPill(r.t)}</td>
+          <td>${r.t.club && r.t.club.covered && r.t.club.until ? lastDay(r.t.club.until) : '—'}</td>
+          <td class="order"><div class="row" style="gap:6px;flex-wrap:nowrap;"><button type="button" aria-label="Move ${esc(r.t.name)} up" data-up="${k}" ${k === 0 ? 'disabled' : ''}>↑</button><button type="button" aria-label="Move ${esc(r.t.name)} down" data-down="${k}" ${k === rows.length - 1 ? 'disabled' : ''}>↓</button></div></td>
+        </tr>`).join('')}</tbody></table></div>`
+      : `<div class="pad muted">No teams yet. <a href="#" id="addTeam2">Add your first team</a>; you'll invite its coaches next.</div>`}
+    </section>`;
+  wireCommon();
+  $('addTeam').onclick = addTeamDialog;
+  const a2 = $('addTeam2'); if (a2) a2.onclick = (e) => { e.preventDefault(); addTeamDialog(); };
+  document.querySelectorAll('[data-go2]').forEach(a => a.onclick = (e) => { e.preventDefault(); S.tab = 'billing'; setUrl(); render(); });
+  document.querySelectorAll('[data-buy]').forEach(a => a.onclick = (e) => { e.preventDefault(); S.buy.kind = a.dataset.buy === 'addon' ? 'addon' : 'purchase'; S.buy.quote = null; S.buy.start = ''; S.tab = 'billing'; setUrl(); render(); });
+  document.querySelectorAll('tr[data-team]').forEach(tr => tr.onclick = (e) => { if (e.target.closest('button')) return; S.teamId = tr.dataset.team; setUrl(); render(); });
+  const move = (from, to) => {
+    const ids = rows.map(r => r.id); const extra = (S.club.teamIds || []).filter(id => !ids.includes(id));
+    const [x] = ids.splice(from, 1); ids.splice(to, 0, x);
+    call('clubSetTeamOrder', { clubId: S.clubId, teamIds: [...ids, ...extra] }).catch(err => toast(errText(err)));
+  };
+  document.querySelectorAll('[data-up]').forEach(b => b.onclick = () => move(+b.dataset.up, +b.dataset.up - 1));
+  document.querySelectorAll('[data-down]').forEach(b => b.onclick = () => move(+b.dataset.down, +b.dataset.down + 1));
+}
+
+function addTeamDialog() {
+  const d = $('dlg');
+  d.innerHTML = `<form method="dialog">
+    <h2 style="font-size:20px;font-weight:800;">Add a team</h2>
+    <div class="field"><label for="tName">Team name</label><input id="tName" maxlength="60" placeholder="18 Elite" required></div>
+    <div class="grid2">
+      <div class="field"><label for="tAge">Age group</label><input id="tAge" maxlength="30" placeholder="18U"></div>
+      <div class="field"><label for="tSport">Sport</label><select id="tSport">${Object.entries(SPORTS).map(([k, v]) => `<option value="${k}"${k === S.club.sport ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="tC1">Main color</label><input id="tC1" type="color" value="${esc(S.club.color || '#C8102E')}" style="height:44px;padding:4px;"></div>
+      <div class="field"><label for="tC2">Second color</label><input id="tC2" type="color" value="#111215" style="height:44px;padding:4px;"></div>
+    </div>
+    <p class="muted" style="margin:0;font-size:14px;line-height:1.45;">${(S.club.openSeats || 0) > 0 ? 'This team will use one of your open licenses.' : 'All licenses are in use, so this team starts uncovered. Add a license on the billing page, or move it up the list.'} It gets its own team page right away.</p>
+    <div class="row"><button class="btn primary" value="ok" id="tGo">Add team</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+  </form>`;
+  d.showModal();
+  $('tGo').onclick = (ev) => { ev.preventDefault(); busy(ev.currentTarget, async () => {
+    if (!$('tName').value.trim()) return toast('Give the team a name.');
+    const r = await call('clubCreateTeam', { clubId: S.clubId, name: $('tName').value, ageDivision: $('tAge').value, sport: $('tSport').value, color: $('tC1').value, color2: $('tC2').value });
+    d.close(); toast(r.covered ? 'Team added and covered. Invite its coaches next.' : 'Team added (not covered yet).');
+    S.teamId = r.teamId; setUrl(); render();
+  }); };
+}
+
+// ── One team ─────────────────────────────────────────────────────────
+async function renderTeam() {
+  const t = S.teams[S.teamId];
+  if (!t) {
+    if ((S.club.teamIds || []).includes(S.teamId)) {
+      $('main').innerHTML = '<div class="loading">Loading the team…</div>';
+      const s = await getDoc(doc(db, 'teams', S.teamId)).catch(() => null);
+      if (s && s.exists()) { S.teams[s.id] = { id: s.id, ...s.data() }; return renderTeam(); }
+    }
+    S.teamId = null; setUrl(); return render();
+  }
+  const c2 = t.color2 && t.color2.toUpperCase() !== '#FFFFFF' ? t.color2 : '#1C1B1F';
+  const cov = t.club || {};
+  $('main').innerHTML = `
+    <a href="#" id="backAll" style="font-size:14px;font-weight:600;text-decoration:none;">← All teams</a>
+    <div class="hero" style="background:linear-gradient(120deg, ${esc(t.color || '#C8102E')}, ${esc(c2)});">
+      <div class="crest" style="width:64px;height:64px;background:rgba(255,255,255,.16);font-size:22px;">${esc(initials(t.ageDivision || t.name))}</div>
+      <div style="flex:1 1 280px;"><h1 style="font-size:28px;font-weight:900;">${esc(t.name)}</h1>
+        <div style="opacity:.88;font-size:15px;margin-top:4px;">${esc(SPORTS[t.sport] || '')}${t.ageDivision ? ' · ' + esc(t.ageDivision) : ''}</div></div>
+      <div class="row">
+        ${t.status === 'archived' ? '<span class="status s-mu">Archived</span>' : cov.covered ? `<span class="status" style="background:#fff;color:var(--ok);">✓ Covered through ${lastDay(cov.until)}</span>` : '<span class="status" style="background:#fff;color:var(--warn);">Not covered</span>'}
+        ${t.hub?.hubCode ? `<a class="btn" style="background:rgba(255,255,255,.16);color:#fff;" href="/team.html?code=${encodeURIComponent(t.hub.hubCode)}" target="_blank" rel="noopener">Open team page</a>` : ''}
+      </div>
+    </div>
+    <div class="split">
+      <section class="card main" style="overflow:hidden;">
+        <div class="row pad" style="border-bottom:1px solid var(--ln);padding-block:14px;"><h2 style="font-size:18px;font-weight:800;">Staff</h2><span class="muted" style="font-size:14px;">Everyone here gets Pro on this team</span></div>
+        <div id="staff"><div class="pad muted">Loading…</div></div>
+      </section>
+      <aside class="side" style="display:flex;flex-direction:column;gap:22px;">
+        <section class="card pad" style="display:flex;flex-direction:column;gap:12px;">
+          <h2 style="font-size:18px;font-weight:800;">Invite to ${esc(t.name)}</h2>
+          <div class="field"><label for="iEm">Email</label><input id="iEm" type="email" placeholder="coach@example.com"></div>
+          <div class="grid2" role="group" aria-label="Role">
+            <button type="button" class="choice" aria-pressed="true" data-role="coach"><b style="font-size:15px;">Coach</b></button>
+            <button type="button" class="choice" aria-pressed="false" data-role="manager"><b style="font-size:15px;">Manager</b></button>
+          </div>
+          <p class="muted" style="margin:0;font-size:13px;line-height:1.45;">Coaches and managers can record, score and run the team in the app. A parent who films games should be a manager.</p>
+          <button class="btn primary" type="button" id="iGo">Send invite</button>
+        </section>
+        <section class="card pad" style="display:flex;flex-direction:column;gap:10px;font-size:14px;">
+          <h2 style="font-size:16px;font-weight:800;">This team</h2>
+          <p class="muted" style="margin:0;line-height:1.45;">Taking a team out of the club never deletes it or its history.</p>
+          <button class="btn ghost" type="button" id="rmTeam">Take out of the club…</button>
+        </section>
+      </aside>
+    </div>`;
+  $('backAll').onclick = (e) => { e.preventDefault(); S.teamId = null; setUrl(); render(); };
+  let role = 'coach';
+  document.querySelectorAll('[data-role]').forEach(b => b.onclick = () => { role = b.dataset.role; document.querySelectorAll('[data-role]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
+  $('iGo').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const email = $('iEm').value.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast('That email doesn\'t look right.');
+    await invite(t, email, role); $('iEm').value = ''; toast(`Invite sent to ${email}.`); loadStaff(t);
+  });
+  $('rmTeam').onclick = () => removeTeamDialog(t);
+  loadStaff(t);
+}
+
+/** Same invitation shape the apps write (TeamHubManager.upsertInvitation), plus the club. */
+async function invite(t, email, role) {
+  const old = await getDocs(query(collection(db, 'invitations'), where('email', '==', email), where('teamId', '==', t.id), where('status', '==', 'pending')));
+  for (const d of old.docs) { try { await deleteDoc(d.ref); } catch (_) {} }
+  await addDoc(collection(db, 'invitations'), {
+    email, teamId: t.id, teamName: t.name, hubCode: t.hub?.hubCode || '', sport: t.sport || '', color: t.color || '',
+    role, inviterName: S.user.displayName || S.user.email || 'Club director', inviterUid: S.user.uid, inviteeName: '',
+    clubId: S.clubId, clubName: S.club.name, date: Date.now(), status: 'pending',
+  });
+}
+
+async function loadStaff(t) {
+  const box = $('staff'); if (!box) return;
+  try {
+    const [m, c, inv] = await Promise.all([
+      getDocs(collection(db, 'teams', t.id, 'managers')), getDocs(collection(db, 'teams', t.id, 'coaches')),
+      getDocs(query(collection(db, 'invitations'), where('teamId', '==', t.id), where('status', '==', 'pending'))),
+    ]);
+    const people = new Map();
+    m.docs.forEach(d => people.set(d.id, { uid: d.id, name: d.data().name || d.data().displayName || '', email: d.data().email || '', role: d.data().role === 'owner' ? 'owner' : 'manager', coll: 'managers' }));
+    c.docs.forEach(d => { if (!people.has(d.id)) people.set(d.id, { uid: d.id, name: d.data().displayName || d.data().name || '', email: d.data().email || '', role: 'coach', coll: 'coaches' }); });
+    const list = [...people.values()].sort((a, b) => (a.role === 'owner' ? -1 : b.role === 'owner' ? 1 : (a.name || a.email).localeCompare(b.name || b.email)));
+    const roleWord = { owner: 'Club director', manager: 'Manager', coach: 'Coach' };
+    box.innerHTML = list.map(p => `<div class="person">
+        <div class="avatar">${esc(initials(p.name || p.email))}</div>
+        <div style="flex:1 1 auto;min-width:0;"><div style="font-weight:700;">${esc(p.name || p.email || 'Staff member')}</div><div class="muted" style="font-size:13px;">${esc(roleWord[p.role])}${p.email ? ' · ' + esc(p.email) : ''}</div></div>
+        ${p.role === 'owner' ? '' : `<button class="btn link" type="button" data-rm="${esc(p.uid)}" data-coll="${p.coll}">Remove</button>`}
+      </div>`).join('')
+      + inv.docs.map(d => { const x = d.data(); return `<div class="person">
+        <div class="avatar">✉</div>
+        <div style="flex:1 1 auto;min-width:0;"><div style="font-weight:700;">${esc(x.email)}</div><div class="muted" style="font-size:13px;">${x.role === 'manager' ? 'Manager' : 'Coach'} · invited ${new Date(x.date || 0).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, waiting to accept</div></div>
+        <button class="btn link" type="button" data-resend="${esc(d.id)}">Resend</button><button class="btn link" type="button" data-cancel="${esc(d.id)}">Cancel</button>
+      </div>`; }).join('')
+      || '<div class="pad muted">No staff yet.</div>';
+    box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => busy(b, async () => {
+      if (!confirm('Remove this person from the team? They lose Pro on it straight away.')) return;
+      await deleteDoc(doc(db, 'teams', t.id, b.dataset.coll, b.dataset.rm));
+      if (b.dataset.coll === 'managers') { try { await deleteDoc(doc(db, 'teams', t.id, 'coaches', b.dataset.rm)); } catch (_) {} }
+      else { try { await deleteDoc(doc(db, 'teams', t.id, 'managers', b.dataset.rm)); } catch (_) {} }
+      toast('Removed.'); loadStaff(t);
+    }));
+    box.querySelectorAll('[data-cancel]').forEach(b => b.onclick = () => busy(b, async () => { await deleteDoc(doc(db, 'invitations', b.dataset.cancel)); loadStaff(t); }));
+    box.querySelectorAll('[data-resend]').forEach(b => b.onclick = () => busy(b, async () => {
+      const x = inv.docs.find(d => d.id === b.dataset.resend).data(); await invite(t, x.email, x.role); toast(`Sent again to ${x.email}.`); loadStaff(t);
+    }));
+  } catch (e) { box.innerHTML = `<div class="pad muted">Couldn't load staff: ${esc(errText(e))}</div>`; }
+}
+
+async function removeTeamDialog(t) {
+  const [m, c] = await Promise.all([getDocs(collection(db, 'teams', t.id, 'managers')), getDocs(collection(db, 'teams', t.id, 'coaches'))]);
+  const staff = new Map();
+  [...m.docs, ...c.docs].forEach(d => { const x = d.data(); if (x.role !== 'owner' && d.id !== t.ownerUid) staff.set(d.id, x.name || x.displayName || x.email || 'Staff member'); });
+  const d = $('dlg');
+  d.innerHTML = `<form method="dialog">
+    <h2 style="font-size:20px;font-weight:800;">Take ${esc(t.name)} out of the club</h2>
+    <p class="muted" style="margin:0;line-height:1.45;">Its page, games and history stay. Its staff lose the club's Pro on it.</p>
+    <label style="display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--ink);font-weight:500;"><input type="radio" name="then" value="transfer" ${staff.size ? 'checked' : 'disabled'}> <span>Hand it to one of its coaches${staff.size ? '' : ' (it has none yet)'}</span></label>
+    ${staff.size ? `<div class="field" style="margin-left:28px;"><label for="toUid">New owner</label><select id="toUid">${[...staff].map(([uid, n]) => `<option value="${esc(uid)}">${esc(n)}</option>`).join('')}</select></div>` : ''}
+    <label style="display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--ink);font-weight:500;"><input type="radio" name="then" value="archive" ${staff.size ? '' : 'checked'}> <span>Archive it</span></label>
+    <label style="display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--ink);font-weight:500;"><input type="radio" name="then" value="keep"> <span>Keep it on my own account</span></label>
+    <div class="row"><button class="btn dark" value="ok" id="rmGo">Take it out</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+  </form>`;
+  d.showModal();
+  $('rmGo').onclick = (ev) => { ev.preventDefault(); busy(ev.currentTarget, async () => {
+    const then = d.querySelector('input[name="then"]:checked').value;
+    await call('clubRemoveTeam', { clubId: S.clubId, teamId: t.id, then, toUid: then === 'transfer' ? $('toUid').value : undefined });
+    d.close(); toast(`${t.name} is no longer in the club.`); S.teamId = null; setUrl(); render();
+  }); };
+}
+
+// ── License & billing ────────────────────────────────────────────────
+function currentBase() {
+  const now = Date.now();
+  return S.licenses.filter(l => ['paid', 'comp', 'awaiting_payment', 'processing'].includes(l.state) && l.start <= now && l.end > now).sort((a, b) => b.end - a.end)[0];
+}
+function renderBilling() {
+  const c = S.club; const B = S.buy; const base = currentBase();
+  const active = (c.teamIds || []).filter(id => S.teams[id] && S.teams[id].status !== 'archived').length;
+  if (!B.teams) B.teams = S.wantBuy === 'renew' ? Math.max(2, c.seats || active) : (B.kind === 'addon' ? 1 : Math.max(2, active));
+  if (B.kind === 'addon' && !base) B.kind = 'purchase';
+  if (!B.start) B.start = c.licenseUntil && c.licenseUntil > Date.now() && c.status !== 'trialing' ? endYmdOf(c.licenseUntil) : localToday();
+  S.wantBuy = null;
+  const terms = [[1, '1 month', 'A tournament or short season'], [7, 'Season', '7 months'], [6, '6 months', ''], [12, '12 months', '']];
+  const savePct = (m) => ((S.pricing && S.pricing.discounts) || []).filter(d => m >= d.minMonths).reduce((b, d) => Math.max(b, d.pct), 0);
+  $('main').innerHTML = `
+    ${clubHeader()}
+    ${statusBanner()}
+    <div class="split">
+      <section class="card pad main" style="display:flex;flex-direction:column;gap:24px;">
+        <div class="row" style="justify-content:space-between;"><h2 style="font-size:20px;font-weight:800;">${B.kind === 'addon' ? 'Add teams to your current license' : c.licenseUntil && c.licenseUntil > Date.now() ? 'Buy or extend licenses' : 'Buy licenses'}</h2>
+          ${base ? `<div class="row" role="group" aria-label="What to buy" style="gap:6px;"><button type="button" class="btn ${B.kind === 'purchase' ? 'dark' : 'ghost'}" data-kind="purchase">New period</button><button type="button" class="btn ${B.kind === 'addon' ? 'dark' : 'ghost'}" data-kind="addon">More teams now</button></div>` : ''}</div>
+        <div class="field"><div class="eyebrow">1 · How many teams</div>
+          <div class="stepper"><button type="button" id="tMinus" aria-label="One fewer team">−</button><output id="tCount" aria-live="polite">${B.teams}</output><button type="button" id="tPlus" aria-label="One more team">+</button>
+          <span class="muted" style="font-size:14px;">${B.kind === 'addon' ? `added to the ${base?.teams || ''} you have, through ${base ? lastDay(base.end) : ''}` : `teams · you have ${active} in the club`}</span></div></div>
+        ${B.kind === 'addon' ? '' : `<div class="field"><div class="eyebrow">2 · How long</div>
+          <div class="grid4">${terms.map(([m, label, note]) => `<button type="button" class="choice" aria-pressed="${B.months === m}" data-months="${m}"><b>${label}</b><span>${note}${savePct(m) ? `${note ? ' · ' : ''}save ${savePct(m)}%` : ''}</span></button>`).join('')}</div>
+          <div class="row" style="font-size:15px;"><label for="start" style="color:var(--ink);">Starts</label><input id="start" type="date" value="${esc(B.start)}" min="${localToday()}"><label for="moreMonths" style="color:var(--ink);">or</label><select id="moreMonths">${Array.from({ length: 12 }, (_, i) => i + 1).map(m => `<option value="${m}"${m === B.months ? ' selected' : ''}>${m} month${m === 1 ? '' : 's'}</option>`).join('')}</select></div>
+        </div>`}
+        <div class="field"><div class="eyebrow">${B.kind === 'addon' ? '2' : '3'} · How you pay</div>
+          <div class="grid2">
+            <button type="button" class="choice" aria-pressed="${B.pay === 'card'}" data-pay="card"><b style="font-size:16px;">Card or bank now</b><span>Teams are covered as soon as it's paid.</span></button>
+            <button type="button" class="choice" aria-pressed="${B.pay === 'invoice'}" data-pay="invoice"><b style="font-size:16px;">Send me an invoice</b><span>For schools and POs. Due in 30 days; teams are covered right away.</span></button>
+          </div>
+          ${B.pay === 'invoice' ? `<div class="field" style="max-width:280px;"><label for="po">PO number (optional)</label><input id="po" maxlength="40" value="${esc(B.po)}"></div>` : ''}
+        </div>
+      </section>
+      <aside class="side summary" aria-live="polite">
+        <div class="eyebrow" style="color:var(--deep-mu);">Summary</div>
+        <div id="sumBody"><div style="color:var(--deep-mu);">Pricing…</div></div>
+      </aside>
+    </div>
+    <section class="card" style="overflow:hidden;">
+      <div class="row pad" style="border-bottom:1px solid var(--ln);padding-block:14px;"><h2 style="font-size:18px;font-weight:800;">Licenses</h2>
+        <button class="btn link" type="button" id="portal" style="margin-left:auto;">Billing details &amp; receipts</button></div>
+      ${S.licenses.filter(l => l.state !== 'creating').length ? `<div class="scroll"><table class="tbl" style="min-width:720px;"><thead><tr><th>What</th><th>Dates</th><th>Paid by</th><th>Status</th><th></th></tr></thead><tbody>
+        ${S.licenses.filter(l => l.state !== 'creating').map(l => { const st = LSTATE[l.state] || [l.state, 's-mu']; const pastGrace = l.state === 'awaiting_payment' && l.graceUntil && Date.now() > l.graceUntil;
+          return `<tr><td><strong>${l.teams} team${l.teams === 1 ? '' : 's'}</strong><div class="muted" style="font-size:13px;">${({ trial: 'Free trial', comp: 'From ScoreFrame', addon: 'Added teams', renewal: 'Renewal' })[l.kind] || 'License'}${l.price?.subtotalCents ? ' · ' + money(l.price.totalCents ?? l.price.paidCents ?? l.price.subtotalCents, l.price.currency) : ''}</div></td>
+          <td>${fmtYmd(l.startDate)} – ${fmtYmd(addDaysYmd(l.endDate, -1))}</td>
+          <td>${l.method === 'invoice' ? `Invoice ${esc(l.stripe?.invoiceNumber || '')}${l.po ? ' · PO ' + esc(l.po) : ''}` : l.method === 'card' ? 'Card or bank' : '—'}</td>
+          <td><span class="status ${pastGrace ? 's-bad' : st[1]}">${pastGrace ? 'Overdue — paused' : st[0]}</span></td>
+          <td style="white-space:nowrap;">${l.stripe?.hostedInvoiceUrl ? `<a href="${esc(l.stripe.hostedInvoiceUrl)}" target="_blank" rel="noopener">${l.state === 'awaiting_payment' ? 'Pay' : 'Receipt'}</a>` : ''}${l.state === 'awaiting_payment' ? ` <button class="btn link" type="button" data-cancelinv="${esc(l.id)}">Cancel invoice</button>` : ''}${S.superUser && l.state !== 'void' ? ` <button class="btn link" type="button" data-void="${esc(l.id)}">Void (admin)</button>` : ''}</td></tr>`; }).join('')}
+      </tbody></table></div>` : '<div class="pad muted">Nothing yet.</div>'}
+    </section>
+    ${S.superUser ? `<section class="card pad" style="display:flex;flex-direction:column;gap:12px;border-style:dashed;">
+      <h2 style="font-size:16px;font-weight:800;">Admin: give a free license</h2>
+      <div class="row"><div class="field"><label for="gTeams">Teams</label><input id="gTeams" type="number" min="1" max="200" value="4" style="width:100px;"></div>
+      <div class="field"><label for="gStart">Starts</label><input id="gStart" type="date" value="${localToday()}"></div>
+      <div class="field"><label for="gMonths">Months</label><input id="gMonths" type="number" min="1" max="24" value="7" style="width:100px;"></div>
+      <div class="field" style="flex:1 1 200px;"><label for="gNote">Note</label><input id="gNote" maxlength="200" placeholder="Pilot club"></div></div>
+      <div><button class="btn dark" type="button" id="gGo">Grant</button></div>
+    </section>` : ''}`;
+  wireCommon();
+  document.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { B.kind = b.dataset.kind; B.teams = B.kind === 'addon' ? 1 : Math.max(2, active); B.quote = null; render(); });
+  $('tMinus').onclick = () => { B.teams = Math.max(1, B.teams - 1); $('tCount').textContent = B.teams; requote(); };
+  $('tPlus').onclick = () => { B.teams = Math.min(200, B.teams + 1); $('tCount').textContent = B.teams; requote(); };
+  document.querySelectorAll('[data-months]').forEach(b => b.onclick = () => { B.months = +b.dataset.months; render(); });
+  const mm = $('moreMonths'); if (mm) mm.onchange = () => { B.months = +mm.value; render(); };
+  const st = $('start'); if (st) st.onchange = () => { B.start = st.value || localToday(); requote(); };
+  document.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => { B.pay = b.dataset.pay; render(); });
+  const po = $('po'); if (po) po.oninput = () => { B.po = po.value; };
+  $('portal').onclick = (ev) => busy(ev.currentTarget, async () => { const r = await call('clubBillingPortal', { clubId: S.clubId }); location.href = r.url; });
+  document.querySelectorAll('[data-cancelinv]').forEach(b => b.onclick = () => busy(b, async () => {
+    if (!confirm('Cancel this invoice? Coverage from it ends now.')) return;
+    await call('clubCancelInvoice', { clubId: S.clubId, licenseId: b.dataset.cancelinv }); toast('Invoice canceled.');
+  }));
+  document.querySelectorAll('[data-void]').forEach(b => b.onclick = () => busy(b, async () => {
+    const reason = prompt('Why void this license? (it stops counting immediately)'); if (!reason) return;
+    await call('clubAdminVoid', { clubId: S.clubId, licenseId: b.dataset.void, reason }); toast('Voided.');
+  }));
+  const g = $('gGo'); if (g) g.onclick = (ev) => busy(ev.currentTarget, async () => {
+    const r = await call('clubAdminGrant', { clubId: S.clubId, teams: +$('gTeams').value, startDate: $('gStart').value, months: +$('gMonths').value, note: $('gNote').value });
+    toast(`Free license through ${fmtYmd(addDaysYmd(r.endDate, -1))}.`);
+  });
+  requote(true);
+}
+
+let qTimer = null, qSeq = 0;
+function requote(now) {
+  clearTimeout(qTimer);
+  qTimer = setTimeout(async () => {
+    const B = S.buy; const seq = ++qSeq; const box = $('sumBody'); if (!box) return;
+    try {
+      const data = B.kind === 'addon' ? { clubId: S.clubId, kind: 'addon', teams: B.teams } : { clubId: S.clubId, teams: B.teams, months: B.months, startDate: B.start };
+      const q = await call('clubQuote', data);
+      if (seq !== qSeq) return; B.quote = q; B.qerr = '';
+    } catch (e) { if (seq !== qSeq) return; B.quote = null; B.qerr = errText(e); }
+    drawSummary();
+  }, now ? 0 : 250);
+}
+function drawSummary() {
+  const B = S.buy; const q = B.quote; const box = $('sumBody'); if (!box) return;
+  if (!q) { box.innerHTML = `<div style="color:#FFB4B4;font-size:15px;">${esc(B.qerr || 'Couldn\'t price that.')}</div>`; return; }
+  box.innerHTML = `<div style="display:flex;flex-direction:column;gap:12px;">
+    <div style="font-size:22px;font-weight:800;">${q.teams} team${q.teams === 1 ? '' : 's'} ${q.kind === 'addon' ? `· ${q.days} days` : `× ${q.months} month${q.months === 1 ? '' : 's'}`}</div>
+    <div style="color:var(--deep-mu);font-size:14px;">${fmtYmd(q.startDate)} – ${fmtYmd(addDaysYmd(q.endDate, -1))}</div>
+    <hr>
+    <div class="ln"><span>Per team, per month</span><span>${money(q.perTeamMonthCents, q.currency)}</span></div>
+    <div class="ln"><span>Length discount</span><span style="color:#39D98A;">${q.discountPct ? `−${q.discountPct}%` : 'None'}</span></div>
+    <div class="ln"><span>Sales tax</span><span>${B.pay === 'invoice' ? 'On the invoice' : 'At checkout'}</span></div>
+    <hr>
+    <div class="ln" style="align-items:baseline;"><span style="color:var(--deep-tx);">Total</span><span style="font-size:30px;font-weight:900;">${money(q.subtotalCents, q.currency)}</span></div>
+    <button class="btn primary" type="button" id="payGo">${B.pay === 'invoice' ? 'Email the invoice' : 'Continue to payment'}</button>
+    <div style="font-size:12px;color:var(--deep-mu);line-height:1.5;">Payments by Stripe. ${B.pay === 'invoice' ? `The invoice goes to ${esc(S.club.billing?.email || 'your billing email')}.` : 'Card, or a US bank account.'} Teams keep their pages and history if you don't renew.</div>
+  </div>`;
+  $('payGo').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const data = B.kind === 'addon' ? { clubId: S.clubId, kind: 'addon', teams: B.teams } : { clubId: S.clubId, teams: B.teams, months: B.months, startDate: B.start };
+    if (B.pay === 'invoice') {
+      const r = await call('clubSendInvoice', { ...data, po: B.po });
+      toast(`Invoice ${r.invoiceNumber || ''} emailed. Due ${fmtYmd(r.dueDate)}. Your teams are covered now.`, 8000);
+      B.quote = null; B.teams = 0;
+    } else {
+      const r = await call('clubCheckout', data);
+      location.href = r.url;
+    }
+  });
+}
+
+// ── Club details ─────────────────────────────────────────────────────
+function renderSettings() {
+  const c = S.club;
+  $('main').innerHTML = `${clubHeader()}
+    <section class="card pad" style="max-width:640px;display:flex;flex-direction:column;gap:14px;">
+      <h2 style="font-size:20px;font-weight:800;">Club details</h2>
+      <div class="field"><label for="sName">Club name</label><input id="sName" maxlength="80" value="${esc(c.name)}"></div>
+      <div class="grid2"><div class="field"><label for="sCity">City</label><input id="sCity" maxlength="80" value="${esc(c.city || '')}"></div>
+        <div class="field"><label for="sColor">Club color</label><input id="sColor" type="color" value="${esc(c.color || '#C8102E')}" style="height:44px;padding:4px;"></div></div>
+      <div class="field"><label for="sOrg">Name on invoices</label><input id="sOrg" maxlength="120" value="${esc(c.billing?.name || '')}"></div>
+      <div class="field"><label for="sBill">Billing email</label><input id="sBill" type="email" maxlength="120" value="${esc(c.billing?.email || '')}"></div>
+      <div><button class="btn primary" type="button" id="sGo">Save</button></div>
+      <p class="muted" style="margin:0;font-size:13px;line-height:1.45;">Need a second director, or to hand the club to someone else? Email support@scoreframe.app.</p>
+    </section>`;
+  $('sGo').onclick = (ev) => busy(ev.currentTarget, async () => {
+    await call('clubUpdate', { clubId: S.clubId, name: $('sName').value, city: $('sCity').value, color: $('sColor').value, orgName: $('sOrg').value, billingEmail: $('sBill').value });
+    toast('Saved.'); await loadClubs(); renderWho();
+  });
+}
+</script>
+</body>
+</html>
