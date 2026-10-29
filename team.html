@@ -1367,6 +1367,12 @@ function ourTheir(g, tid) {
     return away ? [a, h] : [h, a];
 }
 function isLinkViewable(v) { return v === 'public' || v === 'link_only'; }
+/** 2026-10-29: the club level "Signed-in ScoreFrame users" (hub.visibility
+ *  "signed_in") opens the team to any real account, never a guest. Mirrors
+ *  teamIsSignedInViewable() in firestore.rules. */
+function isOpenToViewer(v) {
+    return isLinkViewable(v) || (v === 'signed_in' && !!currentUser && !currentUser.isAnonymous);
+}
 
 let hubCode = null;
 let teamId = null;  // Resolved from hubIndex/{hubCode}
@@ -2021,7 +2027,7 @@ async function acceptInvite() {
 }
 
 function showContent() {
-    const isPublic = isLinkViewable(hubProfile.visibility);
+    const isPublic = isOpenToViewer(hubProfile.visibility);
 
     // Show manager badge if user is a manager
     const mb = $('managerBadge');
@@ -2092,7 +2098,9 @@ function showContent() {
                     'Sign in from the Account tab at the bottom of the app, then come back here to request access.';
                 $('gateAuthBtns').style.display = 'none';
             } else {
-                $('accessDesc').textContent = cameFromGame
+                $('accessDesc').textContent = (hubProfile && hubProfile.visibility === 'signed_in')
+                    ? 'This team is shared with people signed in to ScoreFrame. Sign in, or create a free account, to see it.'
+                    : cameFromGame
                     ? 'That game belongs to this team. Sign in, or create a free account, to request access.'
                     : 'Sign in, or create a free account, to request access.';
                 // Toggle the PAIR — hiding only the Sign In button would leave
@@ -2137,7 +2145,7 @@ function showContent() {
 function updateUserBar() {
     const accountBar = $('accountBar');
     const followArea = $('followArea');
-    const isPublic = hubProfile && isLinkViewable(hubProfile.visibility);
+    const isPublic = hubProfile && isOpenToViewer(hubProfile.visibility);
 
     const logo = `<a href="/" style="text-decoration:none;font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-right:auto;">Score<span style="color:var(--accent);">Frame</span></a>`;
 
@@ -2184,7 +2192,7 @@ function updateUserBar() {
     } else if (subStatus === 'blocked') {
         // Don't show anything
     } else if (isPublic) {
-        followBtn = `<button class="follow-btn" onclick="doFollow()">${(hubProfile && hubProfile.visibility) === 'link_only' ? 'Follow Team' : 'Request to Follow'}</button>`;
+        followBtn = `<button class="follow-btn" onclick="doFollow()">${['link_only', 'signed_in'].includes(hubProfile && hubProfile.visibility) ? 'Follow Team' : 'Request to Follow'}</button>`;
     }
 
     if (followArea) followArea.innerHTML = followBtn;
@@ -2545,7 +2553,7 @@ window.doFollow = async function() {
     // credential). A PUBLIC team is a directory listing since 08-27: the
     // rules refuse an approved self-follow there, so it's a request the
     // staff approve (notifyOwnerOfFollowRequest tells them).
-    const instant = (hubProfile && hubProfile.visibility) === 'link_only';
+    const instant = ['link_only', 'signed_in'].includes(hubProfile && hubProfile.visibility);
     if (!instant) {
         try {
             await setDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid), {
@@ -3044,7 +3052,7 @@ async function loadPendingRequests() {
 
         // Public teams can't have family links at all (anyone can follow one),
         // so say that rather than leaving a manager wondering where it went.
-        if (hubProfile && isLinkViewable(hubProfile.visibility)) {
+        if (hubProfile && hubProfile.visibility === 'public') {
             const note = document.createElement('div');
             note.style.cssText = 'font-size:12px; color:#8b8b8b; margin-top:6px;';
             note.textContent = 'Family links are off while this team is public, because anyone can follow a public team. Switch to private or invite-only to let parents and guardians link themselves to a player.';

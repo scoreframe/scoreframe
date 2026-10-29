@@ -386,6 +386,110 @@ function wireCommon() {
   const tb = $('trialBtn'); if (tb) tb.onclick = (ev) => busy(ev.currentTarget, async () => { const r = await call('clubStartTrial', { clubId: S.clubId, today: localToday() }); toast(`Trial started: 3 teams through ${fmtYmd(addDaysYmd(r.endDate, -1))}.`); });
 }
 
+// ── Setup checklist, privacy and Club Terms (club canvas boards 1–2) ──
+// Eric 2026-10-28: settings can be skipped and done later, but they're flagged,
+// and privacy (at least confirming the default) and the Club Terms come before
+// the club goes live. Live = families can be invited (teamPeopleInvite checks).
+const PRIVACY = {
+  followers: { title: 'Approved followers only', short: 'Approved followers only',
+    desc: 'Families ask to follow, and a coach or manager approves each one before they see anything.',
+    good: 'Younger teams, and clubs that want the most privacy.', mind: 'Grandparents and friends wait for an approval too.' },
+  signed_in: { title: 'Signed-in ScoreFrame users', short: 'Signed-in ScoreFrame users',
+    desc: 'Anyone with a free ScoreFrame account can open your team pages. Someone without one sees nothing.',
+    good: 'Most clubs: families share pages easily and nothing is open to the whole internet.', mind: 'Anyone can make a free account.' },
+  link: { title: 'Anyone with the link', short: 'Anyone with the link',
+    desc: 'Pages open without signing in, like an unlisted video. They are never listed in search.',
+    good: 'Older teams that want college recruiters to find them easily.', mind: 'A link can be forwarded to anyone.' },
+};
+const clubLive = () => !!(S.club.privacyConfirmedAt && S.club.terms && S.club.terms.acceptedAt);
+function setupSteps() {
+  const c = S.club; const rows = teamRows();
+  const staffed = rows.some(r => (r.t.managers || []).length > 1);
+  return [
+    { k: 'privacy', req: true, title: 'Who can see your teams', done: !!c.privacyConfirmedAt,
+      desc: c.privacyConfirmedAt ? PRIVACY[c.privacy || 'signed_in'].short : 'Confirm who can open your team pages. You can change it later.', btn: c.privacyConfirmedAt ? 'Change' : 'Choose' },
+    { k: 'terms', req: true, title: 'Club Terms', done: !!(c.terms && c.terms.acceptedAt),
+      desc: c.terms && c.terms.acceptedAt ? `Accepted ${new Date(c.terms.acceptedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Read and accept the Club Terms.', btn: 'Read and accept' },
+    { k: 'license', title: 'License', done: ['active', 'trialing'].includes(c.status), desc: c.trialUsed ? 'Buy licenses for your teams.' : 'Start the free trial or buy licenses.', btn: 'Open' },
+    { k: 'look', title: 'Club logo and colors', done: !!c.logoUrl, desc: 'Every team starts with them.', btn: 'Add' },
+    { k: 'teams', title: 'Add your teams', done: rows.length > 0, desc: 'One per license.', btn: 'Add a team' },
+    { k: 'staff', title: 'Invite coaches and managers', done: staffed, desc: "From each team's page. They get Pro on that team." },
+    { k: 'families', title: 'Invite families', done: false, opt: true, desc: "From each team's Roster and people page, once the club is live." },
+    { k: 'youtube', title: 'YouTube channel', done: false, soon: true, desc: "Coming soon: connect the club's channel once for every team." },
+  ];
+}
+function setupCard() {
+  const steps = setupSteps(); const live = clubLive();
+  const todo = steps.filter(x => !x.done && !x.soon && !x.opt);
+  let hidden = false; try { hidden = localStorage.getItem('club_setup_hidden_' + S.clubId) === '1'; } catch (_) {}
+  if (live && (hidden || !todo.length)) return '';
+  const counted = steps.filter(x => !x.soon && !x.opt);
+  const done = counted.filter(x => x.done).length;
+  const pill = (x) => x.done ? '<span class="status s-ok">Done</span>' : x.soon ? '<span class="status s-mu">Coming soon</span>' : x.req ? '<span class="status s-warn">Required</span>' : x.opt ? '<span class="status s-mu">Optional</span>' : '<span class="status s-mu">To do</span>';
+  return `<section class="card" style="overflow:hidden;" aria-label="Club setup">
+    <div class="row pad" style="border-bottom:1px solid var(--ln);padding-block:14px;">
+      <h2 style="font-size:18px;font-weight:800;">Set up your club</h2><span class="muted" style="font-size:14px;">${done} of ${counted.length} done</span>
+      ${live ? '<button class="btn link" type="button" id="setupHide" style="margin-left:auto;">Hide</button>' : ''}</div>
+    <div class="bar" style="border-radius:0;height:6px;"><span style="width:${Math.round(100 * done / counted.length)}%"></span></div>
+    ${steps.map(x => `<div class="person" style="padding:12px 22px;">
+      <div style="flex:1 1 auto;min-width:0;"><div style="font-weight:700;">${esc(x.title)}</div><div class="muted" style="font-size:13px;">${esc(x.desc)}</div></div>
+      ${pill(x)}${x.btn && !x.soon ? `<button class="btn ghost" type="button" data-step="${x.k}" style="min-height:36px;padding:6px 12px;font-size:14px;">${esc(x.btn)}</button>` : ''}
+    </div>`).join('')}
+    <div class="pad" style="border-top:1px solid var(--ln);font-size:14px;line-height:1.45;${live ? 'background:var(--ok-bg);' : 'background:var(--warn-bg);'}">
+      ${live ? '<strong>Your club is live.</strong> Coaches can invite families from each team.' : '<strong>Before families can be invited:</strong> choose who can see your teams and accept the Club Terms. You can set up teams and coaches meanwhile.'}</div>
+  </section>`;
+}
+function wireSetup() {
+  const h = $('setupHide'); if (h) h.onclick = () => { try { localStorage.setItem('club_setup_hidden_' + S.clubId, '1'); } catch (_) {} render(); };
+  document.querySelectorAll('[data-step]').forEach(b => b.onclick = () => {
+    const k = b.dataset.step;
+    if (k === 'privacy') return privacyDialog();
+    if (k === 'terms') return termsDialog();
+    if (k === 'license') { S.tab = 'billing'; setUrl(); return render(); }
+    if (k === 'look') { S.tab = 'settings'; setUrl(); return render(); }
+    if (k === 'teams') { const a = $('addTeam'); if (a) a.click(); }
+  });
+}
+function privacyDialog() {
+  const d = $('dlg'); let pick = S.club.privacy || 'signed_in';
+  d.innerHTML = `<form method="dialog" style="width:auto;">
+    <h2 style="font-size:21px;font-weight:900;">Who can see your teams</h2>
+    <p class="muted" style="margin:0;line-height:1.5;font-size:14px;">This is the club's default for every team page: schedule, results, live games and the roster. Coaches can make their own team stricter, never looser.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;" role="radiogroup" aria-label="Privacy">
+      ${Object.entries(PRIVACY).map(([k, v]) => `<button type="button" class="choice" role="radio" aria-pressed="${k === pick}" aria-checked="${k === pick}" data-lv="${k}">
+        <b style="font-size:16px;">${esc(v.title)}${k === 'signed_in' ? ' <span class="status s-ok" style="font-size:11px;vertical-align:middle;">Recommended</span>' : ''}</b>
+        <span style="font-size:14px;color:var(--ink);">${esc(v.desc)}</span>
+        <span><strong>Good for:</strong> ${esc(v.good)}</span><span><strong>Keep in mind:</strong> ${esc(v.mind)}</span></button>`).join('')}
+    </div>
+    <div class="banner b-info" style="font-size:13px;"><div class="txt">Whatever you pick, players show as first name and last initial to everyone except staff and approved family, and each player's highlight videos stay with their family unless a parent shares them.</div></div>
+    <div class="row"><button class="btn primary" value="ok" id="pvGo">Confirm</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+  </form>`;
+  d.style.width = 'min(640px, calc(100% - 32px))';
+  d.addEventListener('close', () => { d.style.width = ''; }, { once: true });
+  d.showModal();
+  d.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { pick = b.dataset.lv; d.querySelectorAll('[data-lv]').forEach(x => { x.setAttribute('aria-pressed', String(x === b)); x.setAttribute('aria-checked', String(x === b)); }); });
+  $('pvGo').onclick = (ev) => { ev.preventDefault(); busy(ev.currentTarget, async () => {
+    const r = await call('clubSetPrivacy', { clubId: S.clubId, level: pick });
+    d.close(); toast(`Saved: ${PRIVACY[pick].short}${r.teamsChanged ? `. ${r.teamsChanged} team page${r.teamsChanged === 1 ? '' : 's'} updated` : ''}.`);
+  }); };
+}
+function termsDialog() {
+  const d = $('dlg');
+  d.innerHTML = `<form method="dialog">
+    <h2 style="font-size:21px;font-weight:900;">Club Terms</h2>
+    <p class="muted" style="margin:0;line-height:1.5;font-size:14px;">They cover licenses and billing, refunds, your club's data, privacy for players, and YouTube. Please read them before accepting.</p>
+    <a class="btn ghost" href="/club-terms.html" target="_blank" rel="noopener">Open the Club Terms</a>
+    <label style="display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--ink);font-weight:500;line-height:1.45;"><input type="checkbox" id="tmOk" style="margin-top:3px;"> <span>I've read the Club Terms and accept them for ${esc(S.club.name)}.</span></label>
+    <div class="row"><button class="btn primary" value="ok" id="tmGo">Accept</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+  </form>`;
+  d.showModal();
+  $('tmGo').onclick = (ev) => { ev.preventDefault(); busy(ev.currentTarget, async () => {
+    if (!$('tmOk').checked) return toast('Tick the box to accept.');
+    await call('clubAcceptTerms', { clubId: S.clubId, accept: true });
+    d.close(); toast('Club Terms accepted.');
+  }); };
+}
+
 // ── Teams tab ────────────────────────────────────────────────────────
 function teamRows() {
   const ids = S.club.teamIds || [];
@@ -405,6 +509,7 @@ function renderTeams() {
   const unpaid = S.licenses.find(l => l.state === 'awaiting_payment');
   $('main').innerHTML = `
     ${clubHeader(`<button class="btn primary" type="button" id="addTeam">+ Add a team</button>`)}
+    ${setupCard()}
     ${statusBanner()}
     <section class="card pad stats3" aria-label="License summary">
       <div style="display:flex;flex-direction:column;gap:10px;">
@@ -442,6 +547,7 @@ function renderTeams() {
       : `<div class="pad muted">No teams yet. <a href="#" id="addTeam2">Add your first team</a>; you'll invite its coaches next.</div>`}
     </section>`;
   wireCommon();
+  wireSetup();
   const room = (c.maxSeats || 0) > rows.filter(r => r.t.status !== 'archived').length;
   $('addTeam').onclick = () => {
     if (room) return addTeamDialog();
@@ -790,6 +896,11 @@ function renderSettings() {
       <div><button class="btn primary" type="button" id="sGo">Save</button></div>
       <p class="muted" style="margin:0;font-size:13px;line-height:1.45;">Need a second director, or to hand the club to someone else? Email support@scoreframe.app.</p>
     </section>
+    <section class="card pad" style="max-width:640px;display:flex;flex-direction:column;gap:12px;">
+      <h2 style="font-size:20px;font-weight:800;">Privacy and terms</h2>
+      <div class="row"><div style="flex:1 1 260px;"><div style="font-weight:700;">Who can see your teams</div><div class="muted" style="font-size:14px;">${c.privacyConfirmedAt ? esc(PRIVACY[c.privacy || 'signed_in'].short) : 'Not chosen yet'}</div></div><button class="btn ghost" type="button" id="pvOpen">${c.privacyConfirmedAt ? 'Change' : 'Choose'}</button></div>
+      <div class="row"><div style="flex:1 1 260px;"><div style="font-weight:700;">Club Terms</div><div class="muted" style="font-size:14px;">${c.terms && c.terms.acceptedAt ? `Accepted ${new Date(c.terms.acceptedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} by ${esc(c.terms.acceptedByName || c.terms.acceptedByEmail || 'a director')}` : 'Not accepted yet'}</div></div><a class="btn ghost" href="/club-terms.html" target="_blank" rel="noopener">Read</a>${c.terms && c.terms.acceptedAt ? '' : '<button class="btn primary" type="button" id="tmOpen">Accept</button>'}</div>
+    </section>
     <section class="card pad" style="max-width:640px;display:flex;flex-direction:column;gap:14px;">
       <h2 style="font-size:20px;font-weight:800;">Club look</h2>
       <p class="muted" style="margin:0;line-height:1.5;">Every team starts with the club logo and colors. When you change them here, the teams still using the club look change too. A team whose coach or you picked its own keeps it.</p>
@@ -809,6 +920,8 @@ function renderSettings() {
       <div class="row" style="gap:10px;"><button class="btn primary" type="button" id="lkSave">Save colors</button>
         <button class="btn ghost" type="button" id="lkAll">Use the club look on every team…</button></div>
     </section>`;
+  $('pvOpen').onclick = () => privacyDialog();
+  if ($('tmOpen')) $('tmOpen').onclick = () => termsDialog();
   $('lgPick').onclick = () => $('lgFile').click();
   $('lgFile').onchange = () => busy($('lgPick'), async () => {
     const img = await logoDataUrl($('lgFile').files[0]); if (!img) return;
