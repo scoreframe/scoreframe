@@ -4246,6 +4246,7 @@ async function showJoinSheet() {
     } catch (_) { return; }
     if (!roster.length) return;
     await loadMyClaims();
+    loadRoster();   // the pills behind the sheet show links the team already made
     const mine = Object.entries(myClaims).filter(([, c]) => c && (c.status === 'approved' || c.status === 'pending'));
     const teamName = (hubProfile && (hubProfile.teamName || hubProfile.name)) || 'the team';
     const selStyle = 'flex:1 1 140px;min-width:0;padding:9px 10px;border-radius:8px;border:1px solid var(--outline,#444);background:transparent;color:inherit;font:inherit;';
