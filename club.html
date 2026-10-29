@@ -508,7 +508,7 @@ function renderTeams() {
   const lastPaid = S.licenses.find(l => l.state === 'paid' || l.state === 'comp');
   const unpaid = S.licenses.find(l => l.state === 'awaiting_payment');
   $('main').innerHTML = `
-    ${clubHeader(`<button class="btn primary" type="button" id="addTeam">+ Add a team</button>`)}
+    ${clubHeader(`${clubLive() ? `<a class="btn ghost" href="/clubpage.html?id=${encodeURIComponent(S.clubId)}" target="_blank" rel="noopener">Club page</a>` : ''}<button class="btn primary" type="button" id="addTeam">+ Add a team</button>`)}
     ${setupCard()}
     ${statusBanner()}
     <section class="card pad stats3" aria-label="License summary">

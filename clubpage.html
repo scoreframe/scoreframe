@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Club Teams</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* A club's public page (2026-10-29, club canvas board 7): every team in the
+   club, each linking to its team page. Data: clubPages/{clubId}, a projection
+   the server keeps (club_api.js rebuildClubPage). Light and dark. */
+*, *::before, *::after { box-sizing: border-box; }
+:root {
+  --bg: #F5F5F2; --card: #FFFFFF; --ink: #1C1B1F; --mu: #5A565F; --ln: #E2DFDA; --orange: #E47A1F; --on-orange: #1A1004;
+  --live-bg: #FFE3E3; --live: #B3121D; --tag-bg: #ECECE8; --tag: #4A4650; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141518; --card: #1E1F23; --ink: #EEEBE6; --mu: #A6A2AB; --ln: #2E3036; --orange: #FF9640; --on-orange: #1A1004;
+  --live-bg: #3C1C1A; --live: #FF8A80; --tag-bg: #2A2A30; --tag: #D2CED8; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #141518; --card: #1E1F23; --ink: #EEEBE6; --mu: #A6A2AB; --ln: #2E3036; --orange: #FF9640; --on-orange: #1A1004;
+  --live-bg: #3C1C1A; --live: #FF8A80; --tag-bg: #2A2A30; --tag: #D2CED8; color-scheme: dark; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: Archivo, -apple-system, "Helvetica Neue", Arial, sans-serif; }
+a { color: var(--orange); }
+.hero { color: #fff; padding-block: 34px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.hero .in { max-width: 1120px; margin: 0 auto; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.crest { width: 80px; height: 80px; border-radius: 20px; background: #fff; color: #C8102E; font-weight: 900; font-size: 28px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+.crest img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
+h1 { margin: 0; font-size: clamp(26px, 5vw, 36px); font-weight: 900; text-wrap: balance; }
+.sub { opacity: .9; font-size: 16px; margin-top: 4px; }
+main { max-width: 1120px; margin: 0 auto; padding-block: 24px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.team { text-decoration: none; color: var(--ink); background: var(--card); border: 1px solid var(--ln); border-radius: 14px; padding: 14px; display: flex; gap: 14px; align-items: center; min-width: 0; }
+.team:hover { border-color: var(--orange); }
+.team .sq { width: 48px; height: 48px; border-radius: 12px; color: #fff; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; background: #888; }
+.team .sq img { width: 100%; height: 100%; object-fit: contain; background: #fff; padding: 3px; }
+.team .nm { font-weight: 800; font-size: 16px; overflow-wrap: anywhere; }
+.team .meta { font-size: 13px; color: var(--mu); }
+.tag { margin-left: auto; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; background: var(--tag-bg); color: var(--tag); }
+.tag.live { background: var(--live-bg); color: var(--live); }
+.note { background: var(--card); border: 1px solid var(--ln); border-radius: 14px; padding: 16px 18px; color: var(--mu); line-height: 1.5; font-size: 15px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 11px 16px; border-radius: 10px; font: inherit; font-weight: 700; border: 1px solid var(--ln); background: var(--card); color: var(--ink); cursor: pointer; }
+.btn.primary { background: var(--orange); color: var(--on-orange); border-color: var(--orange); }
+input { font: inherit; padding: 10px 12px; border: 1px solid var(--ln); border-radius: 9px; background: var(--card); color: var(--ink); width: 100%; }
+.signin { max-width: 420px; margin: 30px auto; display: flex; flex-direction: column; gap: 12px; text-align: center; }
+:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+.hide { display: none !important; }
+</style>
+</head>
+<body>
+<div class="hero" id="hero" style="background:#111215;"><div class="in"><div><h1 id="title">Club</h1><div class="sub" id="sub"></div></div></div></div>
+<main id="main"><div class="note">Loading…</div></main>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { initializeFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signInWithEmailAndPassword, setPersistence, browserLocalPersistence }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+const app = initializeApp({
+  apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU", authDomain: "scoreframe-deploy.firebaseapp.com",
+  databaseURL: "https://scoreframe-deploy-default-rtdb.firebaseio.com", projectId: "scoreframe-deploy",
+  storageBucket: "scoreframe-deploy.firebasestorage.app", messagingSenderId: "728886280072",
+  appId: "1:728886280072:android:0050478669b89fc76b043d"
+});
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+const auth = getAuth(app); setPersistence(auth, browserLocalPersistence).catch(() => {});
+getRedirectResult(auth).catch(() => {});
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const SPORTS = { VOLLEYBALL: 'Volleyball', BASKETBALL: 'Basketball', SOCCER: 'Soccer', BASEBALL: 'Baseball', SOFTBALL: 'Softball', FOOTBALL: 'Football', HOCKEY: 'Hockey', LACROSSE: 'Lacrosse', BOWLING: 'Bowling' };
+const initials = (s) => String(s || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+const VIS = { private: 'Followers only', invite_only: 'Followers only', signed_in: 'Signed in', link_only: 'Open', public: 'Open' };
+const params = new URLSearchParams(location.search);
+const clubId = params.get('id') || '';
+const theme = params.get('theme'); if (theme === 'light' || theme === 'dark') document.documentElement.setAttribute('data-theme', theme);
+
+async function load(user) {
+  if (!clubId) { $('main').innerHTML = '<div class="note">This link is missing the club. Ask your club for the full link.</div>'; return; }
+  let snap = null;
+  try { snap = await getDoc(doc(db, 'clubPages', clubId)); } catch (e) { snap = null; }
+  if (!snap || !snap.exists()) {
+    if (!user) return signInBox();
+    $('main').innerHTML = '<div class="note">This club page isn\'t open yet, or the link is wrong. Check with your club.</div>';
+    return;
+  }
+  render(snap.data());
+}
+function render(c) {
+  document.title = c.name || 'Club Teams';
+  const c1 = /^#[0-9a-f]{6}$/i.test(c.color) ? c.color : '#C8102E';
+  const c2 = /^#[0-9a-f]{6}$/i.test(c.color2) && c.color2.toUpperCase() !== '#FFFFFF' ? c.color2 : '#111215';
+  $('hero').style.background = `linear-gradient(110deg, ${c1} 0%, ${c1} 40%, ${c2} 100%)`;
+  $('hero').querySelector('.in').innerHTML = `<div class="crest" style="color:${esc(c1)};">${c.logoUrl && /^https:\/\//.test(c.logoUrl) ? `<img src="${esc(c.logoUrl)}" alt="">` : esc(initials(c.name))}</div>
+    <div style="flex:1 1 280px;"><h1>${esc(c.name)}</h1><div class="sub">${[c.city, `${c.teams.length} team${c.teams.length === 1 ? '' : 's'}`].filter(Boolean).map(esc).join(' · ')}</div></div>`;
+  const teams = [...(c.teams || [])].sort((a, b) => (b.liveNow - a.liveNow) || String(b.ageDivision).localeCompare(String(a.ageDivision), undefined, { numeric: true }) || a.name.localeCompare(b.name));
+  $('main').innerHTML = `
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;"><h2 style="margin:0;font-size:20px;font-weight:800;">Teams</h2><span style="font-size:14px;color:var(--mu);">Tap a team for its schedule, results and live games.</span></div>
+    <div class="grid">${teams.map(t => { const tc = /^#[0-9a-f]{6}$/i.test(t.color) ? t.color : '#888';
+      return `<a class="team" href="/team.html?code=${encodeURIComponent(t.hubCode)}">
+        <div class="sq" style="background:${esc(tc)};">${t.logoUrl && /^https:\/\//.test(t.logoUrl) ? `<img src="${esc(t.logoUrl)}" alt="">` : esc(initials(t.ageDivision || t.name))}</div>
+        <div style="min-width:0;"><div class="nm">${esc(t.name)}</div><div class="meta">${esc([SPORTS[t.sport] || '', t.ageDivision].filter(Boolean).join(' · '))}</div></div>
+        <span class="tag ${t.liveNow ? 'live' : ''}">${t.liveNow ? 'Live now' : esc(VIS[t.visibility] || 'Followers only')}</span></a>`; }).join('')}</div>
+    <div class="note">${c.access === 'link' ? 'Open to anyone with the link.' : 'Shown to people signed in to ScoreFrame.'} Each team page has its own setting; "Followers only" teams ask you to follow first. Players appear as first name and last initial.</div>`;
+}
+function signInBox() {
+  $('main').innerHTML = `<section class="signin"><h2 style="margin:0;font-size:22px;">Sign in to see this club</h2>
+    <p style="margin:0;color:var(--mu);line-height:1.5;">This club shares its teams with people signed in to ScoreFrame. A free account takes a minute.</p>
+    <button class="btn" id="gBtn">Continue with Google</button>
+    <input id="em" type="email" placeholder="Email" aria-label="Email"><input id="pw" type="password" placeholder="Password" aria-label="Password">
+    <button class="btn primary" id="inBtn">Sign in</button>
+    <a href="/dashboard.html">New to ScoreFrame? Create an account</a></section>`;
+  const g = new GoogleAuthProvider(); g.setCustomParameters({ prompt: 'select_account' });
+  const ua = navigator.userAgent || ''; const redirect = /iP(hone|ad|od)|Safari/i.test(ua) && !/Chrome|CriOS|FxiOS/i.test(ua);
+  $('gBtn').onclick = () => (redirect ? signInWithRedirect(auth, g) : signInWithPopup(auth, g)).catch(() => {});
+  $('inBtn').onclick = () => signInWithEmailAndPassword(auth, $('em').value.trim(), $('pw').value).catch(e => alert('Sign-in failed: ' + (e.code || e.message)));
+}
+let started = false;
+onAuthStateChanged(auth, (u) => { const user = u && !u.isAnonymous ? u : null; if (started && !user) return; started = true; load(user); });
+</script>
+</body>
+</html>
