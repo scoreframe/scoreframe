@@ -219,6 +219,11 @@ const S = { user: null, superUser: false, clubs: [], clubId: params.get('club') 
   tab: params.get('tab') || 'teams', teamId: null, unsub: [], buy: { kind: 'purchase', teams: 0, months: 7, start: '', pay: 'card', po: '', quote: null, qerr: '' },
   pricing: null, paidWatch: params.get('paid'), canceled: params.get('canceled'), wantBuy: params.get('buy'), openedAt: Date.now(), paidAt: 0 };
 if (S.wantBuy) S.tab = 'billing';
+// Back from Google's YouTube sign-in (clubYouTubeAuthUrl sends it here). Take the
+// code off the address bar at once so a reload can't reuse it.
+const ytReturn = params.get('state') && (params.get('code') || params.get('error'))
+  ? { state: params.get('state'), code: params.get('code'), error: params.get('error') } : null;
+if (ytReturn) { ['state', 'code', 'error', 'scope', 'authuser', 'prompt', 'hd'].forEach(k => params.delete(k)); history.replaceState(null, '', location.pathname); }
 function setUrl() {
   const p = new URLSearchParams();
   if (S.clubId) p.set('club', S.clubId);
@@ -269,6 +274,18 @@ onAuthStateChanged(auth, async (u) => {
   try { const su = await getDoc(doc(db, 'app_config', 'super_users')); S.superUser = su.exists() && (su.data().uids || []).includes(u.uid); } catch (_) { S.superUser = false; }
   await loadClubs();
   try { const p = await getDoc(doc(db, 'app_config', 'club_pricing')); S.pricing = p.exists() ? p.data() : null; } catch (_) { S.pricing = null; }
+  if (ytReturn && !ytReturn.done) {
+    ytReturn.done = true;
+    if (ytReturn.error) toast(ytReturn.error === 'access_denied' ? 'YouTube wasn\'t connected. You can try again any time.' : `Google said: ${ytReturn.error}`, 6000);
+    else {
+      $('main').innerHTML = '<div class="loading">Connecting your YouTube channel…</div>';
+      try {
+        const r = await call('clubYouTubeConnect', { state: ytReturn.state, code: ytReturn.code });
+        S.clubId = r.clubId; S.tab = 'settings'; S.ytFocus = true;
+        toast(r.status === 'ready' ? `${r.title} is connected and ready to go live.` : `${r.title} is connected. YouTube still has to turn on live streaming for it.`, 7000);
+      } catch (e) { S.tab = 'settings'; S.ytFocus = true; toast(errText(e), 9000); }
+    }
+  }
   if (S.clubId && (S.clubs.some(c => c.id === S.clubId) || S.superUser)) openClub(S.clubId);
   else if (S.clubs.length) openClub(S.clubs[0].id);
   else { renderWho(); renderCreate(); }
@@ -419,7 +436,11 @@ function setupSteps() {
     { k: 'teams', title: 'Add your teams', done: rows.length > 0, desc: 'One per license.', btn: 'Add a team' },
     { k: 'staff', title: 'Invite coaches and managers', done: staffed, desc: "From each team's page. They get Pro on that team." },
     { k: 'families', title: 'Invite families', done: false, opt: true, desc: "From each team's Roster and people page, once the club is live." },
-    { k: 'youtube', title: 'YouTube channel', done: false, soon: true, desc: "Coming soon: connect the club's channel once for every team." },
+    (() => {
+      const ch = ytChannels(); const ready = ch.filter(x => x.status === 'ready');
+      return { k: 'youtube', title: 'YouTube channel', done: ready.length > 0, btn: ch.length ? 'Open' : 'Connect',
+        desc: ready.length ? `Teams stream to ${ready.map(x => x.title).join(', ')}.` : ch.length ? 'Connected. Waiting for YouTube to allow live streams.' : "Connect the club's channel once. Every team streams to it; coaches never sign in to YouTube." };
+    })(),
   ];
 }
 function setupCard() {
@@ -452,6 +473,7 @@ function wireSetup() {
     if (k === 'license') { S.tab = 'billing'; setUrl(); return render(); }
     if (k === 'look') { S.tab = 'settings'; setUrl(); return render(); }
     if (k === 'teams') { const a = $('addTeam'); if (a) a.click(); }
+    if (k === 'youtube') { S.tab = 'settings'; S.ytFocus = true; setUrl(); return render(); }
   });
 }
 function privacyDialog() {
@@ -987,6 +1009,74 @@ function drawSummary() {
 }
 
 // ── Club details ─────────────────────────────────────────────────────
+// ── YouTube (club_youtube.js) ────────────────────────────────────────
+const ytChannels = () => ((S.club && S.club.youtube && S.club.youtube.channels) || []);
+const fmtWhen = (ms) => new Date(ms).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+function ytStatus(x) {
+  if (x.status === 'ready') return ['<span class="status s-ok">Ready to go live</span>', ''];
+  if (x.status === 'reconnect') return ['<span class="status s-bad">Reconnect needed</span>',
+    "ScoreFrame lost access to this channel (a password change or removed access does that). Coaches can't go live until you reconnect it."];
+  const by = x.waitingSince ? ` YouTube's first-time wait is 24 hours, so it should be ready around ${esc(fmtWhen(x.waitingSince + 24 * 3600e3))}.` : '';
+  return ['<span class="status s-warn">Waiting on YouTube</span>',
+    `This channel can't go live yet. On YouTube, turn on live streaming at <a href="https://www.youtube.com/features" target="_blank" rel="noopener">youtube.com/features</a> (it asks for a phone number).${by} We check again whenever you open this page or a coach goes live.`];
+}
+function ytSection() {
+  const ch = ytChannels(); const y = (S.club && S.club.youtube) || {};
+  const rows = teamRows().filter(r => r.t.status !== 'archived');
+  const def = y.defaultChannelId || (ch[0] && ch[0].id);
+  const opt = (id, sel) => `<option value="${esc(id)}"${id === sel ? ' selected' : ''}>${esc((ch.find(x => x.id === id) || {}).title || id)}</option>`;
+  return `<section class="card pad" id="ytCard" style="max-width:640px;display:flex;flex-direction:column;gap:12px;">
+    <h2 style="font-size:20px;font-weight:800;">YouTube</h2>
+    <p class="muted" style="margin:0;line-height:1.5;">Your teams' live games go to the club's own YouTube channel. Connect it once here. Coaches never sign in to YouTube for club teams and can't change where a team streams.</p>
+    ${ch.map(x => { const [pill, note] = ytStatus(x); return `<div style="display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--ln2);padding-top:12px;">
+      <div class="row" style="gap:12px;">
+        ${x.thumb ? `<img src="${esc(x.thumb)}" alt="" width="40" height="40" style="border-radius:50%;flex:none;">` : ''}
+        <div style="flex:1 1 200px;min-width:0;"><div style="font-weight:700;overflow-wrap:anywhere;">${esc(x.title)}${ch.length > 1 && x.id === def ? ' <span class="muted" style="font-weight:400;">(club default)</span>' : ''}</div>
+          <div class="muted" style="font-size:13px;">Connected ${x.connectedAt ? new Date(x.connectedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}${x.connectedByName ? ` by ${esc(x.connectedByName)}` : ''}</div></div>
+        ${pill}
+      </div>
+      ${note ? `<div class="muted" style="font-size:13px;line-height:1.45;">${note}</div>` : ''}
+      <div class="row" style="gap:8px;">
+        ${x.status === 'reconnect' ? '<button class="btn primary" type="button" data-ytconnect>Reconnect</button>' : `<button class="btn ghost" type="button" data-ytcheck="${esc(x.id)}">Check again</button>`}
+        <button class="btn link" type="button" data-ytdrop="${esc(x.id)}" data-yttitle="${esc(x.title)}">Disconnect</button>
+      </div></div>`; }).join('')}
+    ${ch.length > 1 ? `<div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--ln2);padding-top:12px;">
+      <div class="field"><label for="ytDef">Club default</label><select id="ytDef">${ch.map(x => opt(x.id, def)).join('')}</select></div>
+      ${rows.length ? `<div style="font-weight:700;">Each team</div>${rows.map(r => `<div class="row" style="gap:10px;"><div style="flex:1 1 180px;min-width:0;overflow-wrap:anywhere;">${esc(r.t.name)}</div>
+        <select data-ytteam="${esc(r.id)}" aria-label="YouTube channel for ${esc(r.t.name)}" style="flex:1 1 200px;"><option value="">Club default</option>${ch.map(x => opt(x.id, (y.teamChannels || {})[r.id] || '')).join('')}</select></div>`).join('')}` : ''}
+    </div>` : ''}
+    <div class="row" style="gap:10px;"><button class="btn ${ch.length ? 'ghost' : 'primary'}" type="button" data-ytconnect>${ch.length ? 'Connect another channel' : 'Connect YouTube'}</button></div>
+    <div class="banner b-info" style="font-size:13px;"><div class="txt" style="line-height:1.5;">
+      <strong>Before you connect:</strong> the club needs its own YouTube channel. Google's screen lists every channel your Google account owns or manages, including brand channels; pick the club's. Leave the YouTube box ticked so ScoreFrame can start streams on it.<br>
+      <strong>New channels:</strong> YouTube makes a channel wait 24 hours after live streaming is first turned on. Connect a few days before your first game.<br>
+      The channel's owner controls its videos and who can watch them (public, unlisted or private).</div></div>
+  </section>`;
+}
+function wireYouTube() {
+  const card = $('ytCard'); if (!card) return;
+  if (S.ytFocus) { S.ytFocus = false; setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }
+  card.querySelectorAll('[data-ytconnect]').forEach(b => b.onclick = () => busy(b, async () => {
+    const r = await call('clubYouTubeAuthUrl', { clubId: S.clubId });
+    location.href = r.url;
+  }));
+  card.querySelectorAll('[data-ytcheck]').forEach(b => b.onclick = () => busy(b, async () => {
+    const r = await call('clubYouTubeCheck', { clubId: S.clubId, channelId: b.dataset.ytcheck });
+    const x = (r.channels || [])[0];
+    toast(!x ? 'Checked.' : x.status === 'ready' ? `${x.title} can go live.` : x.status === 'reconnect' ? `${x.title} needs reconnecting.` : `${x.title} still can't go live. YouTube hasn't turned live streaming on yet.`, 6000);
+  }));
+  card.querySelectorAll('[data-ytdrop]').forEach(b => b.onclick = () => busy(b, async () => {
+    if (!confirm(`Disconnect ${b.dataset.yttitle}? Teams streaming to it move to the club default. If it's the only channel, coaches can't go live until you connect one.`)) return;
+    await call('clubYouTubeDisconnect', { clubId: S.clubId, channelId: b.dataset.ytdrop });
+    toast('Disconnected.');
+  }));
+  const def = $('ytDef'); if (def) def.onchange = async () => { try { await call('clubYouTubeSetTeams', { clubId: S.clubId, defaultChannelId: def.value }); toast('Club default saved.'); } catch (e) { toast(errText(e), 6000); } };
+  card.querySelectorAll('[data-ytteam]').forEach(sel => sel.onchange = async () => {
+    try { await call('clubYouTubeSetTeams', { clubId: S.clubId, teamId: sel.dataset.ytteam, channelId: sel.value || null }); toast('Saved.'); } catch (e) { toast(errText(e), 6000); }
+  });
+  // A channel still waiting on YouTube: look again (once per visit, at most every 10 minutes).
+  const stale = ytChannels().filter(x => x.status === 'waiting' && (!x.checkedAt || Date.now() - x.checkedAt > 10 * 60e3));
+  if (stale.length && !S.ytChecked) { S.ytChecked = true; call('clubYouTubeCheck', { clubId: S.clubId }).catch(() => {}); }
+}
 function renderSettings() {
   const c = S.club;
   $('main').innerHTML = `${clubHeader()}
@@ -1004,6 +1094,7 @@ function renderSettings() {
       <div class="row"><div style="flex:1 1 260px;"><div style="font-weight:700;">Who can see your teams</div><div class="muted" style="font-size:14px;">${c.privacyConfirmedAt ? esc(PRIVACY[c.privacy || 'signed_in'].short) : 'Not chosen yet'}</div></div><button class="btn ghost" type="button" id="pvOpen">${c.privacyConfirmedAt ? 'Change' : 'Choose'}</button></div>
       <div class="row"><div style="flex:1 1 260px;"><div style="font-weight:700;">Club Terms</div><div class="muted" style="font-size:14px;">${c.terms && c.terms.acceptedAt ? `Accepted ${new Date(c.terms.acceptedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} by ${esc(c.terms.acceptedByName || c.terms.acceptedByEmail || 'a director')}` : 'Not accepted yet'}</div></div><a class="btn ghost" href="/club-terms.html" target="_blank" rel="noopener">Read</a>${c.terms && c.terms.acceptedAt ? '' : '<button class="btn primary" type="button" id="tmOpen">Accept</button>'}</div>
     </section>
+    ${ytSection()}
     <section class="card pad" style="max-width:640px;display:flex;flex-direction:column;gap:14px;">
       <h2 style="font-size:20px;font-weight:800;">Club look</h2>
       <p class="muted" style="margin:0;line-height:1.5;">Every team starts with the club logo and colors. When you change them here, the teams still using the club look change too. A team whose coach or you picked its own keeps it.</p>
@@ -1025,6 +1116,7 @@ function renderSettings() {
     </section>`;
   $('pvOpen').onclick = () => privacyDialog();
   if ($('tmOpen')) $('tmOpen').onclick = () => termsDialog();
+  wireYouTube();
   $('lgPick').onclick = () => $('lgFile').click();
   $('lgFile').onchange = () => busy($('lgPick'), async () => {
     const img = await logoDataUrl($('lgFile').files[0]); if (!img) return;
