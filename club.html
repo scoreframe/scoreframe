@@ -292,7 +292,8 @@ onAuthStateChanged(auth, async (u) => {
   S.unsub.forEach(f => f()); S.unsub = [];
   S.user = u && !u.isAnonymous ? u : null;
   if (!S.user) { renderWho(); renderSignIn(); return; }
-  try { const su = await getDoc(doc(db, 'app_config', 'super_users')); S.superUser = su.exists() && (su.data().uids || []).includes(u.uid); } catch (_) { S.superUser = false; }
+  // Admin = the two ScoreFrame admin Google accounts (rules isAdmin(), functions/lib/admin.js), not every super user.
+  try { const tok = await u.getIdTokenResult(); S.superUser = ['support@scoreframe.app', 'eric@bloomcamp.com'].includes(String(u.email || '').toLowerCase()) && u.emailVerified && tok.signInProvider === 'google.com'; } catch (_) { S.superUser = false; }
   await loadClubs();
   try { const p = await getDoc(doc(db, 'app_config', 'club_pricing')); S.pricing = p.exists() ? p.data() : null; } catch (_) { S.pricing = null; }
   if (ytReturn && !ytReturn.done) {
