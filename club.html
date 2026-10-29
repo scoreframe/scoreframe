@@ -123,6 +123,7 @@ dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
   <nav class="tabs hide" id="tabs" aria-label="Club sections">
     <button type="button" data-tab="teams">Teams</button>
     <button type="button" data-tab="billing">License &amp; billing</button>
+    <button type="button" data-tab="tournaments">Tournaments</button>
     <button type="button" data-tab="settings">Club details</button>
   </nav>
   <div class="who" id="who"></div>
@@ -346,6 +347,7 @@ function render() {
   if (S.teamId) return renderTeam();
   if (S.tab === 'billing') return renderBilling();
   if (S.tab === 'settings') return renderSettings();
+  if (S.tab === 'tournaments') return renderTournaments();
   return renderTeams();
 }
 
@@ -490,6 +492,105 @@ function termsDialog() {
     await call('clubAcceptTerms', { clubId: S.clubId, accept: true });
     d.close(); toast('Club Terms accepted.');
   }); };
+}
+
+// ── Tournaments (club canvas board 6) ────────────────────────────────
+// One AES link → the tournament on every club team that plays in it, built
+// the way the app builds it (clubTournamentCreate). Each team's coaches then
+// see and score it in the app; AES fills in the rest every 20 minutes.
+const normName = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+function bestTeamFor(aesName) {
+  const a = normName(aesName); const nums = (String(aesName).match(/\d+/g) || []);
+  let best = null, score = 0;
+  for (const r of teamRows()) {
+    const t = normName(r.t.name); let sc = 0;
+    if (a.includes(t) || t.includes(a)) sc += 3;
+    for (const n of nums) if (String(r.t.name).includes(n) || String(r.t.ageDivision || '').includes(n)) sc += 2;
+    for (const w of String(r.t.name).toLowerCase().split(/\s+/)) if (w.length > 2 && a.includes(normName(w))) sc += 1;
+    if (sc > score) { score = sc; best = r.id; }
+  }
+  return score >= 2 ? best : '';
+}
+async function renderTournaments() {
+  $('main').innerHTML = `${clubHeader(`<button class="btn primary" type="button" id="tNew">+ New tournament</button>`)}<div class="loading">Loading tournaments…</div>`;
+  $('tNew').onclick = () => tournamentDialog();
+  let list = [];
+  try { const snap = await getDocs(collection(db, 'clubs', S.clubId, 'tournaments')); list = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.startDate || 0) - (a.startDate || 0)); }
+  catch (e) { list = []; }
+  if (S.tab !== 'tournaments') return;
+  const fmtD = (ms) => ms ? new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  $('main').innerHTML = `${clubHeader(`<button class="btn primary" type="button" id="tNew">+ New tournament</button>`)}
+    <section class="card" style="overflow:hidden;">
+      <div class="row pad" style="border-bottom:1px solid var(--ln);padding-block:14px;"><h2 style="font-size:18px;font-weight:800;">Tournaments</h2>
+        <span class="muted" style="font-size:14px;">Set one up from its AES link and it lands on every club team that plays in it.</span></div>
+      ${list.length ? list.map(t => `<div class="person" style="align-items:flex-start;flex-wrap:wrap;">
+        <div style="flex:1 1 320px;min-width:0;"><div style="font-weight:800;">${esc(t.name)}</div>
+          <div class="muted" style="font-size:13px;">${esc([fmtD(t.startDate) + (t.endDate && t.endDate !== t.startDate ? '–' + fmtD(t.endDate) : ''), t.venue].filter(Boolean).join(' · '))}</div>
+          <div style="margin-top:6px;">${(t.teams || []).map(x => x.hubCode ? `<a class="status s-mu" style="text-decoration:none;margin:2px 4px 2px 0;display:inline-block;" href="/event.html?team=${encodeURIComponent(x.hubCode)}&event=${encodeURIComponent(x.eventId)}" target="_blank" rel="noopener">${esc(x.teamName)}${x.matches ? ` · ${x.matches} matches` : ''}</a>` : `<span class="status s-mu" style="margin:2px 4px 2px 0;display:inline-block;">${esc(x.teamName)}</span>`).join('')}
+          ${(t.teams || []).some(x => x.error) ? `<div style="font-size:13px;color:var(--bad);margin-top:4px;">${esc((t.teams || []).filter(x => x.error).map(x => `${x.teamName}: ${x.error}`).join('; '))}</div>` : ''}</div>
+        ${t.aes ? `<span class="status ${t.update ? 's-ok' : 's-mu'}">${t.update ? 'Updates from AES' : 'Imported once'}</span>` : '<span class="status s-mu">Set up by hand</span>'}
+      </div>`).join('') : '<div class="pad muted">No tournaments yet. Paste an AES link with "+ New tournament".</div>'}
+    </section>`;
+  $('tNew').onclick = () => tournamentDialog();
+}
+function tournamentDialog() {
+  const d = $('dlg'); let L = null;
+  const ymd = (ms) => { const x = new Date(ms); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+  const msOf = (v) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(v || '')) return 0; const [y, m, dd] = v.split('-').map(Number); return new Date(y, m - 1, dd, 8, 0).getTime(); };
+  d.style.width = 'min(860px, calc(100% - 32px))';
+  d.addEventListener('close', () => { d.style.width = ''; }, { once: true });
+  const draw = () => {
+    const teams = (L && L.teams) || [];
+    const clubKey = normName(S.club.name);
+    const mine = (t) => { const c = normName(t.club); return !!c && (c.includes(clubKey) || clubKey.includes(c)); };
+    const sorted = [...teams].sort((a, b) => (mine(b) - mine(a)) || a.name.localeCompare(b.name));
+    d.innerHTML = `<form method="dialog">
+      <h2 style="font-size:21px;font-weight:900;">New tournament</h2>
+      <div class="row" style="align-items:flex-end;"><div class="field" style="flex:1 1 380px;"><label for="tvUrl">AES link</label><input id="tvUrl" placeholder="https://results.advancedeventsystems.com/event/…" value="${esc(L ? L.url : '')}"></div>
+        <button class="btn dark" type="button" id="tvRead">Read AES</button></div>
+      ${L && L.divisions && L.divisions.length > 1 ? `<div class="field"><label for="tvDiv">Division</label><select id="tvDiv"><option value="">Pick the division…</option>${L.divisions.map(x => `<option value="${x.id}"${x.id === L.divisionId ? ' selected' : ''}>${esc(x.name)} (${x.teamCount} teams)</option>`).join('')}</select></div>` : ''}
+      <div class="grid2"><div class="field"><label for="tvName">Name</label><input id="tvName" value="${esc(L ? L.name : '')}" placeholder="Heartland Classic"></div>
+        <div class="field"><label for="tvVenue">Where</label><input id="tvVenue" value="${esc(L ? L.location : '')}"></div></div>
+      <div class="grid2"><div class="field"><label for="tvStart">Starts</label><input id="tvStart" type="date" value="${L && L.startDate ? String(L.startDate).slice(0, 10) : ymd(Date.now() + 7 * 86400000)}"></div>
+        <div class="field"><label for="tvEnd">Ends</label><input id="tvEnd" type="date" value="${L && L.endDate ? String(L.endDate).slice(0, 10) : ''}"></div></div>
+      ${teams.length ? `<div style="font-weight:700;">Which teams are yours?</div>
+        <div class="muted" style="font-size:13px;margin-top:-8px;">Ticked teams get the tournament in the app. We ticked the ones AES lists under ${esc(S.club.name)}; check them and pick the matching club team.</div>
+        <div class="scroll" style="border:1px solid var(--ln);border-radius:12px;max-height:340px;overflow-y:auto;"><table class="tbl" style="min-width:560px;"><tbody>
+        ${sorted.map((t, i) => `<tr><td style="width:40px;"><input type="checkbox" id="tvC${i}" ${mine(t) ? 'checked' : ''} aria-label="In my club"></td>
+          <td><div style="font-weight:700;">${esc(t.name)}</div><div class="muted" style="font-size:12px;">${esc(t.club || '')}</div></td>
+          <td><label class="hide" for="tvT${i}">Club team</label><select id="tvT${i}"><option value="">Which club team?</option>${teamRows().map(r => `<option value="${esc(r.id)}"${bestTeamFor(t.name) === r.id ? ' selected' : ''}>${esc(r.t.name)}</option>`).join('')}</select></td></tr>`).join('')}
+        </tbody></table></div>
+        <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--ink);font-weight:500;line-height:1.45;"><input type="checkbox" id="tvUpd" checked style="margin-top:3px;"> <span><strong>Update from AES</strong>: every 20 minutes during the tournament AES fills in pools, brackets, courts and results. Matches your coaches are scoring in ScoreFrame are left alone.</span></label>`
+      : L && L.divisions && L.divisions.length > 1 ? '<div class="muted">Pick the division to see its teams.</div>' : `<div class="muted" style="font-size:14px;">No AES link? Leave it empty, pick the teams below, and set up pools in the app.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">${teamRows().map(r => `<label style="display:flex;gap:6px;align-items:center;font-size:14px;color:var(--ink);font-weight:500;border:1px solid var(--ln);border-radius:9px;padding:7px 10px;"><input type="checkbox" class="tvMan" value="${esc(r.id)}"> ${esc(r.t.name)}</label>`).join('')}</div>`}
+      <div class="row"><button class="btn primary" type="button" id="tvGo">Create tournament</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+    </form>`;
+    $('tvRead').onclick = (ev) => busy(ev.currentTarget, async () => {
+      const url = $('tvUrl').value.trim(); if (!url) return toast('Paste the AES results link.');
+      const r = await call('aesLookup', { url }); L = { ...r, url }; draw();
+    });
+    const dv = $('tvDiv'); if (dv) dv.onchange = () => busy(dv, async () => { if (!dv.value) return; const r = await call('aesLookup', { url: L.url, divisionId: Number(dv.value) }); L = { ...r, url: L.url }; draw(); });
+    $('tvGo').onclick = (ev) => busy(ev.currentTarget, async () => {
+      const name = $('tvName').value.trim(); if (!name) return toast('Give the tournament a name.');
+      const startDate = msOf($('tvStart').value); const endDate = msOf($('tvEnd').value) || startDate;
+      let entries = [];
+      if (teams.length) {
+        for (let i = 0; i < sorted.length; i++) {
+          if (!$(`tvC${i}`).checked) continue;
+          const teamId = $(`tvT${i}`).value; if (!teamId) return toast(`Pick which club team ${sorted[i].name} is.`);
+          entries.push({ teamId, aesTeamId: sorted[i].id, aesTeamName: sorted[i].name });
+        }
+      } else entries = [...d.querySelectorAll('.tvMan:checked')].map(x => ({ teamId: x.value }));
+      if (!entries.length) return toast('Tick at least one of your teams.');
+      const r = await call('clubTournamentCreate', { clubId: S.clubId, name, venue: $('tvVenue').value.trim(), startDate, endDate,
+        url: teams.length ? L.url : '', divisionId: teams.length ? L.divisionId : null, update: teams.length ? $('tvUpd').checked : false,
+        tzOffsetMinutes: new Date().getTimezoneOffset(), entries });
+      d.close(); const bad = r.teams.filter(x => x.error);
+      toast(bad.length ? `Created, but AES failed for ${bad.map(x => x.teamName).join(', ')}.` : `Created for ${r.teams.length} team${r.teams.length === 1 ? '' : 's'}.`, 6000);
+      renderTournaments();
+    });
+  };
+  draw(); d.showModal();
 }
 
 // ── Teams tab ────────────────────────────────────────────────────────
