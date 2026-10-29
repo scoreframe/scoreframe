@@ -1030,20 +1030,78 @@ function drawSummary() {
     <div class="ln"><span>Sales tax</span><span>${B.pay === 'invoice' ? 'On the invoice' : 'At checkout'}</span></div>
     <hr>
     <div class="ln" style="align-items:baseline;"><span style="color:var(--deep-tx);">Total</span><span style="font-size:30px;font-weight:900;">${money(q.subtotalCents, q.currency)}</span></div>
-    <button class="btn primary" type="button" id="payGo">${B.pay === 'invoice' ? 'Email the invoice' : 'Continue to payment'}</button>
+    <button class="btn primary" type="button" id="payGo">Review purchase</button>
     <div style="font-size:12px;color:var(--deep-mu);line-height:1.5;">Payments by Stripe. ${B.pay === 'invoice' ? `The invoice goes to ${esc(S.club.billing?.email || 'your billing email')}.` : 'Card, or a US bank account.'} Teams keep their pages and history if you don't renew.</div>
   </div>`;
-  $('payGo').onclick = (ev) => busy(ev.currentTarget, async () => {
-    const data = B.kind === 'addon' ? { clubId: S.clubId, kind: 'addon', teams: B.teams } : { clubId: S.clubId, teams: B.teams, months: B.months, startDate: B.start };
-    if (B.pay === 'invoice') {
+  $('payGo').onclick = () => reviewPurchase();
+}
+
+// The step where the club actually buys (Eric 2026-10-29: "it wasn't clear
+// that's when I was actually signing up for service. I want it to be super
+// clear"). Says what is bought, for which dates, what it costs, when it's due
+// and what happens if it isn't paid; a tick confirms it; the result stays on
+// screen with the invoice link instead of a toast.
+function reviewPurchase() {
+  const B = S.buy, q = B.quote; if (!q) return;
+  const inv = B.pay === 'invoice', t = q.invoiceTerms || {};
+  const d = $('dlg');
+  const email = (S.club.billing && S.club.billing.email) || '';
+  const today = ymdOf(Date.now());
+  const due = addDaysYmd(today, t.daysUntilDue || 30), stop = addDaysYmd(due, t.graceDays || 14);
+  const nowTeams = t.provisionalTeams == null ? q.teams : Math.min(q.teams, t.provisionalTeams);
+  const what = q.kind === 'addon' ? `${q.teams} more team license${q.teams === 1 ? '' : 's'}` : `${q.teams} team license${q.teams === 1 ? '' : 's'} for ${q.months} month${q.months === 1 ? '' : 's'}`;
+  const data = B.kind === 'addon' ? { clubId: S.clubId, kind: 'addon', teams: B.teams } : { clubId: S.clubId, teams: B.teams, months: B.months, startDate: B.start };
+  let working = false;
+  const ln = (a, b, strong) => `<div class="ln" style="display:flex;justify-content:space-between;gap:12px;${strong ? 'font-weight:800;font-size:17px;' : ''}"><span>${a}</span><span>${b}</span></div>`;
+  d.innerHTML = `<form method="dialog" style="width:auto;">
+    <h2 style="font-size:21px;font-weight:900;">Review your purchase</h2>
+    <p class="muted" style="margin:0;line-height:1.5;font-size:14px;">You're buying ScoreFrame club licenses for <strong>${esc(S.club.name)}</strong>. ${inv ? 'Nothing is charged today: we email an invoice.' : 'You pay on the next page, on Stripe.'}</p>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid var(--line, #ddd);border-radius:12px;font-size:15px;">
+      ${ln('What', esc(what))}
+      ${ln('Dates', `${fmtYmd(q.startDate)} – ${fmtYmd(addDaysYmd(q.endDate, -1))}`)}
+      ${ln('Per team, per month', money(q.perTeamMonthCents, q.currency))}
+      ${ln('Total', `${money(q.subtotalCents, q.currency)}<span class="muted" style="font-weight:500;font-size:13px;"> + sales tax if it applies</span>`, true)}
+    </div>
+    <ul style="margin:0;padding-left:20px;line-height:1.55;font-size:14px;color:var(--ink);">
+      ${inv ? `<li>The invoice goes to <strong>${esc(email || 'your billing email')}</strong>${B.po ? ` with PO ${esc(B.po)}` : ''}. It's due <strong>${fmtYmd(due)}</strong>.</li>
+      <li>${nowTeams < q.teams ? `<strong>${nowTeams} of the ${q.teams} teams</strong> can be used now; all ${q.teams} once it's paid.` : `All ${q.teams} teams can be used now.`}</li>
+      <li>If it isn't paid by <strong>${fmtYmd(stop)}</strong>, the unpaid teams stop recording as Pro that day. Team pages and history stay.</li>
+      <li>Pay by card, bank account or bank transfer from the invoice, or by check.</li>`
+      : `<li>The teams can be used as soon as the payment goes through.</li><li>A receipt goes to ${esc(email || 'your billing email')}.</li>`}
+      <li>No automatic renewal: we remind you before it ends.</li>
+    </ul>
+    <label style="display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--ink);font-weight:500;line-height:1.45;"><input type="checkbox" id="rvOk" style="margin-top:3px;"> <span>I'm buying these licenses for ${esc(S.club.name)} under the <a href="/club-terms.html" target="_blank" rel="noopener">Club Terms</a>.</span></label>
+    <div class="row"><button class="btn primary" value="ok" id="rvGo">${inv ? 'Buy and email the invoice' : 'Buy and pay now'}</button><button class="btn ghost" value="cancel" id="rvBack" formnovalidate>Back</button></div>
+    <div id="rvMsg" style="font-size:14px;line-height:1.5;" role="status" aria-live="polite"></div>
+  </form>`;
+  d.style.width = 'min(560px, calc(100% - 32px))';
+  d.addEventListener('close', () => { d.style.width = ''; }, { once: true });
+  d.oncancel = (e) => { if (working) e.preventDefault(); };
+  d.showModal();
+  $('rvGo').onclick = async (ev) => {
+    ev.preventDefault();
+    const msg = $('rvMsg'), go = $('rvGo');
+    if (!$('rvOk').checked) { msg.textContent = 'Tick the box to confirm the purchase.'; return; }
+    working = true; go.disabled = true; $('rvBack').disabled = true;
+    go.textContent = inv ? 'Creating your invoice…' : 'Opening Stripe…';
+    msg.textContent = inv ? 'Creating the invoice and emailing it. This takes a few seconds; keep this page open.' : 'Taking you to Stripe\'s secure payment page.';
+    try {
+      if (!inv) { const r = await call('clubCheckout', data); location.href = r.url; return; }
       const r = await call('clubSendInvoice', { ...data, po: B.po });
-      toast(`Invoice ${r.invoiceNumber || ''} emailed. Due ${fmtYmd(r.dueDate)}. Your teams are covered now.`, 8000);
-      B.quote = null; B.teams = 0;
-    } else {
-      const r = await call('clubCheckout', data);
-      location.href = r.url;
+      B.quote = null; B.teams = 0; working = false;
+      const covered = r.coveredNow != null ? r.coveredNow : nowTeams;
+      d.querySelector('form').innerHTML = `
+        <h2 style="font-size:21px;font-weight:900;">Purchase made</h2>
+        <p style="margin:0;line-height:1.55;font-size:15px;color:var(--ink);">Invoice <strong>${esc(r.invoiceNumber || '')}</strong> for <strong>${money(r.totalCents != null ? r.totalCents : q.subtotalCents, q.currency)}</strong> was emailed to <strong>${esc(r.email || email || 'your billing email')}</strong>. It's due <strong>${fmtYmd(r.dueDate)}</strong>.</p>
+        <p style="margin:0;line-height:1.55;font-size:15px;color:var(--ink);">${covered < (r.teams || q.teams) ? `${covered} teams can be used now; all ${r.teams || q.teams} once it's paid.` : `All ${r.teams || q.teams} teams can be used now.`}</p>
+        <div class="row">${r.hostedInvoiceUrl ? `<a class="btn primary" href="${esc(r.hostedInvoiceUrl)}" target="_blank" rel="noopener">Open the invoice</a>` : ''}<button class="btn ghost" value="ok">Done</button></div>`;
+      render();
+    } catch (e) {
+      working = false; go.disabled = false; $('rvBack').disabled = false;
+      go.textContent = inv ? 'Buy and email the invoice' : 'Buy and pay now';
+      msg.innerHTML = `<span style="color:#B42318;font-weight:600;">The purchase didn't go through: ${esc(errText(e))}</span>`;
     }
-  });
+  };
 }
 
 // ── Club details ─────────────────────────────────────────────────────
