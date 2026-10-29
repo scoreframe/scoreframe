@@ -2,992 +2,684 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0D0D0D">
-<title>ScoreFrame — Admin</title>
+<title>ScoreFrame Admin</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-    --bg-deepest: #0D0D0D; --bg-deep: #141414; --bg-surface: #1E1E1E;
-    --bg-elevated: #272727; --accent: #FF9640; --accent-dim: rgba(255,150,64,0.15);
-    --text-primary: #E0E0E0; --text-secondary: #999; --text-muted: #666;
-    --success: #4CAF50; --error: #F44336; --warning: #FFB74D; --info: #64B5F6;
-    --border: rgba(255,255,255,0.08);
-}
-html, body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-deepest); color: var(--text-primary);
-    min-height: 100vh;
-}
-header {
-    padding: 16px 24px; background: var(--bg-deep);
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
-}
-.brand { font-size: 18px; font-weight: 700; }
-.brand .sf-orange { color: var(--accent); }
-.user-info { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 12px; }
-.user-info button {
-    background: transparent; color: var(--accent); border: 1px solid var(--accent);
-    padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;
-}
-main { max-width: 1100px; margin: 0 auto; padding: 24px; }
-
-/* Sign-in gate */
-.gate {
-    max-width: 420px; margin: 80px auto; padding: 32px;
-    background: var(--bg-surface); border-radius: 12px;
-    border: 1px solid var(--border); text-align: center;
-}
-.gate h1 { font-size: 22px; margin-bottom: 8px; }
-.gate p { color: var(--text-secondary); margin-bottom: 24px; font-size: 14px; }
-.btn-google {
-    background: white; color: #1A1A1A; border: 0;
-    padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 600;
-    cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
-}
-.btn-google:hover { opacity: 0.9; }
-.gate-error { color: var(--error); margin-top: 16px; font-size: 13px; }
-
-/* Tabs */
-.tabs {
-    display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
-    overflow-x: auto;
-}
-.tab {
-    padding: 10px 16px; cursor: pointer; color: var(--text-secondary);
-    border-bottom: 2px solid transparent; font-size: 13px; font-weight: 600;
-    white-space: nowrap;
-}
-.tab:hover { color: var(--text-primary); }
-.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-/* Cards */
-.card {
-    background: var(--bg-surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 20px; margin-bottom: 16px;
-}
-.card h2 { font-size: 16px; margin-bottom: 12px; }
-.card .hint { color: var(--text-secondary); font-size: 12px; margin-bottom: 16px; }
-
-/* Form */
-label { display: block; font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; margin-top: 12px; }
-input[type="text"], input[type="url"], textarea, select {
-    width: 100%; padding: 10px 12px; background: var(--bg-elevated);
-    border: 1px solid var(--border); border-radius: 6px;
-    color: var(--text-primary); font-size: 14px; font-family: inherit;
-}
-input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-textarea { resize: vertical; min-height: 80px; }
-.form-row { display: flex; gap: 12px; }
-.form-row > * { flex: 1; }
-
-button.primary {
-    background: var(--accent); color: #1A1A1A; border: 0;
-    padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 700;
-    cursor: pointer; margin-top: 16px;
-}
-button.primary:hover { opacity: 0.9; }
-button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
-button.secondary {
-    background: transparent; color: var(--text-primary);
-    border: 1px solid var(--border); padding: 8px 14px; border-radius: 6px;
-    cursor: pointer; font-size: 12px;
-}
-button.danger {
-    background: var(--error); color: white; border: 0;
-    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
-}
-
-/* Status messages */
-.status { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-top: 12px; }
-.status.success { background: rgba(76,175,80,0.15); color: var(--success); }
-.status.error   { background: rgba(244,67,54,0.15); color: var(--error); }
-.status.info    { background: rgba(100,181,246,0.15); color: var(--info); }
-
-/* Tables */
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-tr:hover td { background: rgba(255,255,255,0.02); }
-/* Tickets-specific responsive layout — under 720px the Category and
-   Updated columns fold into the first cell as inline metadata so the
-   table doesn't horizontally overflow. */
-@media (max-width: 720px) {
-    .tickets-table th.col-cat,
-    .tickets-table td.col-cat,
-    .tickets-table th.col-updated,
-    .tickets-table td.col-updated,
-    .tickets-table th.col-customer,
-    .tickets-table td.col-customer { display: none; }
-    .tickets-table .mobile-meta {
-        display: block; font-size: 11px; color: var(--text-secondary);
-        margin-top: 4px;
-    }
-    .tickets-table .mobile-meta a { color: var(--accent); text-decoration: none; }
-    .tickets-table td:first-child { max-width: 100%; }
-    .tickets-table .badge { white-space: nowrap; }
-}
-@media (min-width: 721px) {
-    .tickets-table .mobile-meta { display: none; }
-}
-.badge {
-    display: inline-block; padding: 2px 8px; border-radius: 10px;
-    font-size: 11px; font-weight: 600;
-}
-.badge.sent     { background: rgba(76,175,80,0.2); color: var(--success); }
-.badge.pending  { background: rgba(255,183,77,0.2); color: var(--warning); }
-.badge.expired  { background: rgba(255,255,255,0.05); color: var(--text-muted); }
-.badge.error    { background: rgba(244,67,54,0.2); color: var(--error); }
-.muted { color: var(--text-muted); font-size: 11px; }
-.empty { text-align: center; color: var(--text-muted); padding: 32px; font-size: 13px; }
-
-/* Stat cards */
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
-.stat-card { background: var(--bg-elevated); padding: 16px; border-radius: 8px; }
-.stat-card .label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
-.stat-card .value { font-size: 24px; font-weight: 700; color: var(--accent); margin-top: 4px; }
-
-/* Tab badge for unread tickets count */
-.tab-badge {
-    display: inline-block; min-width: 18px; padding: 1px 6px; margin-left: 4px;
-    background: var(--error); color: white; border-radius: 9px;
-    font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
-}
-
-/* Ticket modal */
-.modal-backdrop {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100;
-    display: flex; align-items: flex-start; justify-content: center; padding: 24px; overflow-y: auto;
-}
-.modal {
-    background: var(--bg-surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 24px; max-width: 720px; width: 100%;
-    max-height: 90vh; overflow-y: auto;
-}
-.modal-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
-.modal-header h2 { font-size: 18px; }
-.modal-header .meta { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
-.modal .close-x { background: transparent; color: var(--text-secondary); border: 0; font-size: 22px; cursor: pointer; padding: 0 8px; margin-top: 0; width: auto; }
-.thread-row {
-    padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; line-height: 1.5;
-    white-space: pre-wrap; word-break: break-word;
-}
-/* Row indicator for tickets where the customer was the last to reply
-   (i.e. waiting on us). Renders as a small blue dot before the ticket id
-   — uses a CSS pseudo-element so we don't have to inject HTML through
-   the html`` tagged template (which auto-escapes interpolations). */
-tr[data-attn="attn"] td:first-child strong::before {
-    content: "● ";
-    color: var(--info);
-    font-weight: 700;
-}
-
-.thread-row.customer { background: var(--bg-elevated); border-left: 3px solid var(--info); }
-.thread-row.admin { background: rgba(255,150,64,0.08); border-left: 3px solid var(--accent); }
-.thread-row .who { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.thread-row .copy-btn {
-    background: transparent; color: var(--accent); border: 1px solid var(--border);
-    padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; letter-spacing: 0.5px; font-weight: 600;
-    text-transform: uppercase; flex-shrink: 0;
-}
-.thread-row .copy-btn:hover { background: var(--accent-dim); }
-.thread-row .copy-btn.copied { color: var(--success); border-color: var(--success); }
-.debug-block {
-    background: var(--bg-elevated); padding: 10px 12px; border-radius: 6px;
-    font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--text-secondary);
-    margin-top: 12px; max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-all;
-}
+/* Admin console (2026-10-29): the club console's look, a desk page. Canvas:
+   claude.ai artifact "ScoreFrame Admin console". Data comes only from the
+   admin* callables in functions/admin_console.js. */
+:root { color-scheme: light;
+  --paper: #F5F5F2; --card: #FFFFFF; --ink: #1C1B1F; --mu: #5A565F; --ln: #E2DFDA; --ln2: #EFECE7; --in: #D5D1CB;
+  --deep: #111215; --deep2: #1F2026; --deep-tx: #F1EEE9; --deep-mu: #A9ADB6;
+  --orange: #FF9640; --on-orange: #1A1004; --link: #A64F0A; --link-h: #7A3906; --sel: #FFF4EA;
+  --ok-bg: #E3F5EA; --ok: #146B3D; --warn-bg: #FFF1DC; --warn: #8A4B00; --bad-bg: #FFE3E3; --bad: #B3121D; --info-bg: #EEF0F4; --info: #3B4150; }
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { background: var(--paper); color: var(--ink); font-family: Archivo, -apple-system, "Helvetica Neue", Arial, sans-serif; font-variant-numeric: tabular-nums; font-size: 15px; }
+a { color: var(--link); } a:hover { color: var(--link-h); }
+:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+h1 { margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -.5px; text-wrap: balance; }
+h2 { margin: 0; font-size: 19px; font-weight: 800; }
+.lbl { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--mu); }
+.sub { color: var(--mu); font-size: 13px; }
+.mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; }
+.card { background: var(--card); border: 1px solid var(--ln); border-radius: 14px; }
+.pad { padding: 18px 20px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 700; border: 1px solid var(--in); background: #fff; color: var(--ink); cursor: pointer; text-decoration: none; white-space: nowrap; }
+.btn:hover { background: #FBFAF8; color: var(--ink); }
+.btn.pri { background: var(--orange); border-color: var(--orange); color: var(--on-orange); }
+.btn.danger { border-color: #E7B4B4; color: var(--bad); }
+.btn.sm { min-height: 32px; padding: 0 10px; font-size: 13px; }
+.btn:disabled { opacity: .55; cursor: default; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.bad { background: var(--bad-bg); color: var(--bad); } .warn { background: var(--warn-bg); color: var(--warn); } .ok { background: var(--ok-bg); color: var(--ok); } .info { background: var(--info-bg); color: var(--info); }
+.in { font: inherit; font-size: 15px; padding: 9px 11px; border: 1px solid var(--in); border-radius: 9px; background: #fff; color: var(--ink); min-width: 0; }
+label.f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--mu); font-weight: 600; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font-size: 12px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: var(--mu); padding: 9px 10px; border-bottom: 1px solid var(--ln); white-space: nowrap; }
+td { padding: 10px; border-bottom: 1px solid var(--ln2); vertical-align: top; }
+tr.go { cursor: pointer; } tr.go:hover td { background: #FBFAF8; }
+.scroll { overflow-x: auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.tile .v { font-size: 27px; font-weight: 900; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cols { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.main-col { flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.side-col { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--ln2); font-size: 14px; }
+.li:first-of-type { border-top: 0; }
+.empty { color: var(--mu); font-size: 14px; padding: 8px 0; }
+.err { background: var(--bad-bg); color: var(--bad); border-radius: 10px; padding: 10px 12px; font-size: 14px; font-weight: 600; }
+.note { background: var(--warn-bg); color: #5C3300; border-radius: 10px; padding: 10px 12px; font-size: 14px; line-height: 1.5; }
+.crest { width: 34px; height: 34px; border-radius: 9px; color: #fff; font-weight: 900; font-size: 13px; display: flex; align-items: center; justify-content: center; flex: none; overflow: hidden; }
+.crest img { width: 100%; height: 100%; object-fit: cover; }
+.bar { height: 6px; border-radius: 3px; background: var(--ln2); overflow: hidden; width: 90px; } .bar span { display: block; height: 100%; background: var(--orange); }
+.f-chip { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--in); background: #fff; font: inherit; font-size: 14px; font-weight: 700; color: var(--ink); cursor: pointer; }
+.f-chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+/* Shell */
+.shell { display: flex; flex-wrap: wrap; min-height: 100vh; }
+.rail { flex: 1 1 232px; max-width: 232px; min-width: 200px; background: var(--deep); color: var(--deep-tx); padding: 20px 14px; display: flex; flex-direction: column; gap: 6px; }
+.rail .brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px 18px; text-decoration: none; color: var(--deep-tx); }
+.rail .brand img { width: 32px; height: 32px; border-radius: 8px; }
+.rail nav { display: flex; flex-direction: column; gap: 4px; }
+.rail nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; color: #C9CCD3; text-decoration: none; font-size: 15px; font-weight: 600; }
+.rail nav a:hover { background: var(--deep2); color: var(--deep-tx); }
+.rail nav a[aria-current="page"] { background: #2A2117; color: #FFB877; }
+.rail nav a .ct { margin-left: auto; font-size: 12px; font-weight: 700; background: var(--orange); color: var(--on-orange); border-radius: 999px; padding: 1px 8px; }
+.rail .foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding: 16px 6px 0; border-top: 1px solid #26272D; font-size: 13px; color: var(--deep-mu); line-height: 1.4; }
+.rail .foot button { all: unset; cursor: pointer; color: #FFB877; font-size: 14px; }
+.mode { align-self: flex-start; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; background: #3A2A10; color: #FFC97A; }
+.mode.live { background: #12351F; color: #8FE0AE; }
+main { flex: 999 1 560px; min-width: 0; padding: 32px; display: flex; flex-direction: column; gap: 20px; }
+.head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 24px; }
+.head .t { display: flex; flex-direction: column; gap: 4px; }
+/* Gate */
+.gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.gate .card { width: min(440px, 100%); padding: 28px; display: flex; flex-direction: column; gap: 14px; }
+.codebox { font: 600 26px 'IBM Plex Mono', monospace; letter-spacing: 6px; text-align: center; padding: 12px; }
+.backup { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font: 15px 'IBM Plex Mono', monospace; background: var(--paper); border-radius: 10px; padding: 14px; }
+/* Dialog, toast */
+dialog { border: 0; border-radius: 16px; padding: 0; width: min(520px, calc(100% - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+dialog::backdrop { background: rgba(17,18,21,.45); }
+dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 14px; z-index: 30; max-width: calc(100% - 32px); }
+.hide { display: none !important; }
+.msg { border-radius: 12px; padding: 12px 14px; font-size: 15px; line-height: 1.55; background: var(--paper); white-space: pre-wrap; word-break: break-word; }
+.msg.us { background: var(--sel); align-self: flex-end; max-width: 88%; }
+@media (max-width: 760px) { main { padding: 20px 16px; } .rail { max-width: none; flex-basis: 100%; } .rail nav { flex-direction: row; flex-wrap: wrap; } .rail .foot { margin-top: 8px; } }
 </style>
 </head>
 <body>
-<header>
-    <div class="brand">Score<span class="sf-orange">Frame</span> · Admin</div>
-    <div class="user-info" id="userInfo" style="display: none;">
-        <span id="userEmail"></span>
-        <button onclick="signOutUser()">Sign out</button>
-    </div>
-</header>
-
-<main>
-    <!-- Sign-in gate (shown when not authed or not a super-user) -->
-    <div id="gate" class="gate" style="display: none;">
-        <h1>Admin Console</h1>
-        <p id="gateMessage">Sign in with Google to continue. Access is restricted to super-users.</p>
-        <button id="signInBtn" class="btn-google" onclick="signIn()">Sign in with Google</button>
-        <div id="gateError" class="gate-error"></div>
-    </div>
-
-    <!-- Authed admin UI -->
-    <div id="adminUI" style="display: none;">
-        <div class="tabs">
-            <div class="tab active" data-tab="broadcast">Broadcast</div>
-            <div class="tab" data-tab="active">Active Broadcasts</div>
-            <div class="tab" data-tab="tickets">Tickets <span id="ticketBadge" class="tab-badge" style="display:none;"></span></div>
-            <div class="tab" data-tab="hubs">Team Sharing</div>
-            <div class="tab" data-tab="health">Health</div>
-        </div>
-
-        <!-- Tab: Compose Broadcast -->
-        <div id="tab-broadcast" class="tab-panel">
-            <div class="card">
-                <h2>Send App-Wide Announcement</h2>
-                <div class="hint" style="color:#FF9640;font-weight:700;">
-                    Broadcasting to every user is turned off (2026-09-29). The database refuses new broadcasts
-                    and the server function refuses them too.
-                </div>
-                <div style="display:none;">
-
-                <label for="bTitle">Title</label>
-                <input id="bTitle" type="text" placeholder='e.g. "v1.1.107 is out"' maxlength="80">
-
-                <label for="bBody">Body</label>
-                <textarea id="bBody" placeholder='e.g. "Streaming UI got cleaned up — give it a try."' maxlength="280"></textarea>
-
-                <div class="form-row">
-                    <div>
-                        <label for="bExpires">Visible for</label>
-                        <select id="bExpires">
-                            <option value="86400000">24 hours</option>
-                            <option value="259200000">3 days</option>
-                            <option value="604800000">7 days</option>
-                            <option value="1209600000" selected>14 days</option>
-                            <option value="2592000000">30 days</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="bUrl">Action URL (optional)</label>
-                        <input id="bUrl" type="url" placeholder="https://scoreframe.app/whats-new">
-                    </div>
-                </div>
-
-                </div>
-                <div id="bStatus"></div>
-            </div>
-        </div>
-
-        <!-- Tab: Active Broadcasts -->
-        <div id="tab-active" class="tab-panel" style="display: none;">
-            <div class="card">
-                <h2>Recent Broadcasts</h2>
-                <div class="hint">Last 25 entries. "Sent" means FCM fan-out completed; expired ones stop surfacing in the app's poll on next launch.</div>
-                <div id="activeList"><div class="empty">Loading…</div></div>
-            </div>
-        </div>
-
-        <!-- Tab: Tickets -->
-        <div id="tab-tickets" class="tab-panel" style="display: none;">
-            <div class="card">
-                <h2>Support Tickets</h2>
-                <div class="hint">
-                    Tickets come in via /support.html, the in-app feedback flow, or direct email.
-                    Click a row to view the thread, reply, or change status. Customer replies arrive via
-                    the SendGrid Inbound webhook and append automatically — no action needed on your part.
-                </div>
-                <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
-                    <label style="margin: 0; font-size: 11px; color: var(--text-secondary);">Filter:</label>
-                    <select id="ticketFilter" style="width: auto; padding: 6px 10px;" onchange="loadTickets()">
-                        <option value="needs_attn" selected>Needs your attention</option>
-                        <option value="open_only">Open only</option>
-                        <option value="response_received">Response received</option>
-                        <option value="awaiting">Awaiting customer</option>
-                        <option value="in_progress">In progress</option>
-                        <option value="resolved">Resolved</option>
-                        <option value="closed">Closed</option>
-                        <option value="all">All</option>
-                    </select>
-                    <button class="secondary" onclick="loadTickets()">Refresh</button>
-                </div>
-                <div id="ticketList"><div class="empty">Loading…</div></div>
-            </div>
-        </div>
-
-        <!-- Tab: Hubs Overview -->
-        <div id="tab-hubs" class="tab-panel" style="display: none;">
-            <div class="card">
-                <h2>Team Sharing Health</h2>
-                <div class="hint">Quick view of team shares with stuck live state — useful for support. Tap "Clear" to run forceClearLiveState remotely.</div>
-                <div id="hubsStats" class="stats-grid"></div>
-                <div style="margin-top: 16px;" id="stuckHubs"></div>
-            </div>
-        </div>
-
-        <!-- Tab: Health -->
-        <div id="tab-health" class="tab-panel" style="display: none;">
-            <div class="card">
-                <h2>System Health</h2>
-                <div id="healthStats" class="stats-grid"></div>
-                <h2 style="margin-top: 24px;">Recent Broadcast Errors</h2>
-                <div id="errorList"></div>
-            </div>
-        </div>
-    </div>
-</main>
+<div id="root"><div class="gate"><div class="card"><span class="sub">Loading…</span></div></div></div>
+<dialog id="dlg"></dialog>
+<div class="toast hide" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import {
-    getFirestore, collection, query, orderBy, limit, where,
-    getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp,
-    onSnapshot
-} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getFunctions, httpsCallable }
-    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
-import {
-    getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
-    GoogleAuthProvider, signOut, onAuthStateChanged, setPersistence,
-    browserLocalPersistence
-} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
+import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
-    authDomain: "scoreframe-deploy.firebaseapp.com",
-    projectId: "scoreframe-deploy",
-    storageBucket: "scoreframe-deploy.firebasestorage.app",
-    messagingSenderId: "728886280072",
-    appId: "1:728886280072:android:0050478669b89fc76b043d"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const app = initializeApp({
+  apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU", authDomain: "scoreframe-deploy.firebaseapp.com",
+  databaseURL: "https://scoreframe-deploy-default-rtdb.firebaseio.com", projectId: "scoreframe-deploy",
+  storageBucket: "scoreframe-deploy.firebasestorage.app", messagingSenderId: "728886280072",
+  appId: "1:728886280072:android:0050478669b89fc76b043d"
+});
 const auth = getAuth(app);
-const fn = getFunctions(app);
-const replyToTicket = httpsCallable(fn, 'replyToTicket');
-setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence:', e));
+setPersistence(auth, browserLocalPersistence).catch(() => {});
+const fns = getFunctions(app);
+const google = new GoogleAuthProvider(); google.setCustomParameters({ prompt: 'select_account' });
+const ADMINS = ['support@scoreframe.app', 'eric@bloomcamp.com'];
 
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
-
-const _ua = navigator.userAgent || '';
-const _useRedirectAuth = /iP(hone|ad|od)|Safari/i.test(_ua) && !/Chrome|CriOS|FxiOS/i.test(_ua);
-
+// ── Small helpers ──────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
-const html = (strings, ...values) => {
-    // Tagged template literal that escapes interpolated values to avoid XSS
-    // when we render Firestore-supplied strings into the table.
-    let out = strings[0];
-    for (let i = 0; i < values.length; i++) {
-        const v = values[i] == null ? '' : String(values[i]);
-        out += v
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        out += strings[i + 1];
-    }
-    return out;
-};
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = (c, cur = 'usd') => new Intl.NumberFormat('en-US', { style: 'currency', currency: String(cur || 'usd').toUpperCase(), maximumFractionDigits: (c || 0) % 100 ? 2 : 0 }).format((c || 0) / 100);
+const day = (ms) => ms ? new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+const dayShort = (ms) => ms ? new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+const when = (ms) => ms ? new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
+const ymdDay = (ymd) => { if (!ymd) return '—'; const [y, m, d] = ymd.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }); };
+const ymdOf = (ms) => new Date(ms).toISOString().slice(0, 10);
+function ago(ms) {
+  if (!ms) return '—';
+  const s = (Date.now() - ms) / 1000;
+  if (s < 90) return 'just now'; if (s < 3600) return `${Math.round(s / 60)} min ago`; if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+  if (s < 86400 * 14) return `${Math.round(s / 86400)} days ago`; return dayShort(ms);
+}
+const chip = (t, k = 'info') => `<span class="chip ${k}">${esc(t)}</span>`;
+const initials = (n) => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
+function crest(c, px = 34) {
+  return `<span class="crest" style="width:${px}px;height:${px}px;background:${esc(c.color || '#555')}">${c.logoUrl && /^https:\/\//.test(c.logoUrl) ? `<img src="${esc(c.logoUrl)}" alt="">` : esc(initials(c.name))}</span>`;
+}
+function toast(m, ms = 3500) { const t = $('toast'); t.textContent = m; t.classList.remove('hide'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add('hide'), ms); }
+const errText = (e) => String((e && e.message) || e || 'Something went wrong').replace(/^.*?:\s*(?=[A-Z])/, '');
 
-// Expose UI handlers for inline onclick attributes.
-window.signIn = signIn;
-window.signOutUser = signOutUser;
-window.sendBroadcast = sendBroadcast;
-window.expireBroadcast = expireBroadcast;
-window.deleteBroadcast = deleteBroadcast;
-window.clearStuckHub = clearStuckHub;
-window.loadTickets = loadTickets;
-window.openTicket = openTicket;
-window.closeTicketModal = closeTicketModal;
-window.sendTicketReply = sendTicketReply;
-window.copyMessageBody = copyMessageBody;
-window.copyDebugInfo = copyMessageBody;  // alias — same impl, different button
-
-// ── Auth flow ──
-
-async function signIn() {
-    $('gateError').textContent = '';
-    try {
-        if (_useRedirectAuth) {
-            await signInWithRedirect(auth, googleProvider);
-        } else {
-            await signInWithPopup(auth, googleProvider);
-        }
-    } catch (e) {
-        $('gateError').textContent = e.message || String(e);
-    }
+let ME = null;   // adminMe
+async function call(name, data = {}) {
+  try { return (await httpsCallable(fns, name)(data)).data; }
+  catch (e) {
+    if (e && e.code === 'functions/unauthenticated' && /MFA_REQUIRED/.test(e.message || '')) { codeGate(); throw new Error('Enter your Google Authenticator code to continue.'); }
+    throw e;
+  }
+}
+/** A dialog with fields; resolves to the values, or null on cancel. Every change needs a reason. */
+function ask({ title, body = '', fields = [], reason = true, code = false, ok = 'Save', danger = false }) {
+  return new Promise((resolve) => {
+    const d = $('dlg');
+    d.returnValue = '';
+    d.innerHTML = `<form method="dialog">
+      <h2>${esc(title)}</h2>${body ? `<div style="font-size:14px;line-height:1.5;color:var(--ink)">${body}</div>` : ''}
+      ${fields.map((f, i) => f.type === 'check'
+        ? `<label style="display:flex;gap:8px;align-items:center;font-size:15px"><input type="checkbox" id="af${i}" ${f.value ? 'checked' : ''}> ${esc(f.label)}</label>`
+        : f.type === 'select' ? `<label class="f">${esc(f.label)}<select class="in" id="af${i}">${f.options.map((o) => `<option value="${esc(o[0])}" ${o[0] === f.value ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</select></label>`
+        : f.type === 'area' ? `<label class="f">${esc(f.label)}<textarea class="in" id="af${i}" rows="4">${esc(f.value || '')}</textarea></label>`
+        : `<label class="f">${esc(f.label)}<input class="in" id="af${i}" type="${f.type || 'text'}" value="${esc(f.value ?? '')}" ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} ${f.step ? `step="${f.step}"` : ''}></label>`).join('')}
+      ${reason ? `<label class="f">Reason (goes in the audit log)<input class="in" id="aReason" placeholder="Why, in a few words"></label>` : ''}
+      ${code ? `<label class="f">Google Authenticator code<input class="in mono" id="aCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6"></label>` : ''}
+      <div class="err hide" id="aErr"></div>
+      <div class="row"><button class="btn ${danger ? 'danger' : 'pri'}" value="ok" id="aOk">${esc(ok)}</button><button class="btn" value="cancel" formnovalidate>Cancel</button></div>
+    </form>`;
+    d.showModal();
+    d.onclose = () => { if (d.returnValue !== 'ok') resolve(null); };
+    $('aOk').onclick = (ev) => {
+      ev.preventDefault();
+      const vals = fields.map((f, i) => f.type === 'check' ? $(`af${i}`).checked : $(`af${i}`).value.trim());
+      const r = reason ? $('aReason').value.trim() : '';
+      if (reason && !r) { $('aErr').textContent = 'Add a reason.'; $('aErr').classList.remove('hide'); return; }
+      const out = { vals, reason: r, code: code ? $('aCode').value.trim() : '' };
+      d.returnValue = 'ok'; d.close(); resolve(out);
+    };
+  });
+}
+async function act(name, data, done) {
+  try { const r = await call(name, data); if (done) done(r); else toast('Saved.'); route(); return r; }
+  catch (e) { toast(errText(e), 7000); }
 }
 
-async function signOutUser() {
-    await signOut(auth);
-    location.reload();
+// ── Sign-in and the authenticator gate ─────────────────────────────────
+const root = $('root');
+function gate(html) { root.innerHTML = `<div class="gate"><div class="card">${html}</div></div>`; }
+function signInGate(msg = '') {
+  gate(`<div class="row" style="gap:10px"><img src="/apple-touch-icon.png" alt="" width="40" height="40" style="border-radius:10px"><h2 style="font-size:22px">ScoreFrame Admin</h2></div>
+    <p style="margin:0;line-height:1.5">For ScoreFrame staff only. Sign in with Google as support@scoreframe.app or eric@bloomcamp.com.</p>
+    ${msg ? `<div class="err">${esc(msg)}</div>` : ''}<button class="btn pri" id="gIn">Sign in with Google</button>`);
+  $('gIn').onclick = async () => { try { await signInWithPopup(auth, google); } catch (e) { if (e.code === 'auth/popup-blocked') signInWithRedirect(auth, google); else signInGate(errText(e)); } };
 }
-
-// On Safari/iOS, signInWithRedirect bounces back here — finish the handshake.
-getRedirectResult(auth).catch(e => console.warn('Redirect result:', e));
-
-onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-        $('gate').style.display = 'block';
-        $('adminUI').style.display = 'none';
-        $('userInfo').style.display = 'none';
-        return;
+async function enrollGate() {
+  let r;
+  try { r = await call('adminMfaStart'); } catch (e) { return gate(`<h2>Set up Google Authenticator</h2><div class="err">${esc(errText(e))}</div><button class="btn" id="gOut">Sign out</button>`), $('gOut').onclick = () => signOut(auth); }
+  gate(`<h2>Set up Google Authenticator</h2>
+    <p style="margin:0;line-height:1.5">One time. In Google Authenticator tap <strong>+</strong>, then <strong>Scan a QR code</strong>. From now on the admin console asks for the 6-digit code every 12 hours.</p>
+    <div id="qr" style="align-self:center;padding:10px;background:#fff;border:1px solid var(--ln);border-radius:12px"></div>
+    <details><summary class="sub" style="cursor:pointer">Can't scan? Type this key instead</summary><p class="mono" style="word-break:break-all;margin:8px 0 0">${esc(r.secret.replace(/(.{4})/g, '$1 ').trim())}</p></details>
+    <label class="f">The 6-digit code it shows<input class="in codebox" id="gCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6"></label>
+    <div class="err hide" id="gErr"></div><button class="btn pri" id="gGo">Turn it on</button>`);
+  try { new QRCode($('qr'), { text: r.otpauth, width: 184, height: 184 }); } catch (_) { $('qr').textContent = 'QR code unavailable: type the key below.'; }
+  $('gCode').focus();
+  $('gGo').onclick = () => verify($('gCode').value, true);
+}
+function codeGate() {
+  gate(`<h2>Enter your code</h2>
+    <p style="margin:0;line-height:1.5">Open Google Authenticator and enter the 6-digit code for <strong>ScoreFrame Admin</strong>. Lost your phone? Enter one of your backup codes.</p>
+    <label class="f">Code<input class="in codebox" id="gCode" inputmode="numeric" autocomplete="one-time-code" maxlength="11"></label>
+    <div class="err hide" id="gErr"></div><button class="btn pri" id="gGo">Unlock for 12 hours</button>
+    <button class="btn" id="gOut">Sign out</button>`);
+  $('gCode').focus();
+  $('gCode').onkeydown = (e) => { if (e.key === 'Enter') verify($('gCode').value, false); };
+  $('gGo').onclick = () => verify($('gCode').value, false);
+  $('gOut').onclick = () => signOut(auth);
+}
+async function verify(code, enrolling) {
+  const btn = $('gGo'); btn.disabled = true;
+  try {
+    const r = await httpsCallable(fns, 'adminMfaVerify')({ code: String(code || '').trim() }).then((x) => x.data);
+    await auth.currentUser.getIdToken(true);
+    ME = await call('adminMe');
+    if (r.backupCodes) {
+      gate(`<h2>Save your backup codes</h2><p style="margin:0;line-height:1.5">Each works once if your phone is lost. Keep them somewhere safe, like a password manager. They won't be shown again.</p>
+        <div class="backup">${r.backupCodes.map((c) => `<span>${esc(c)}</span>`).join('')}</div>
+        <button class="btn" id="gCopy">Copy them</button><button class="btn pri" id="gDone">I've saved them</button>`);
+      $('gCopy').onclick = () => navigator.clipboard.writeText(r.backupCodes.join('\n')).then(() => toast('Copied.'));
+      $('gDone').onclick = () => shell();
+      return;
     }
-    // Check super-user list. Doc shape:
-    //   app_config/super_users { uids: ["abc...", ...] }
-    let isSuper = false;
-    try {
-        const snap = await getDoc(doc(db, 'app_config', 'super_users'));
-        const uids = snap.exists() ? (snap.data().uids || []) : [];
-        isSuper = Array.isArray(uids) && uids.includes(user.uid);
-    } catch (e) {
-        console.warn('super-user check failed:', e);
-    }
-    if (!isSuper) {
-        $('gate').style.display = 'block';
-        $('adminUI').style.display = 'none';
-        $('userInfo').style.display = 'none';
-        $('gateMessage').textContent = `Signed in as ${user.email}, but this account is not on the super-user list. Sign out and try a different account, or ask Eric to add this UID.`;
-        $('signInBtn').style.display = 'none';
-        return;
-    }
-    $('gate').style.display = 'none';
-    $('adminUI').style.display = 'block';
-    $('userInfo').style.display = 'flex';
-    $('userEmail').textContent = user.email;
-    // Live ticket badge — runs continuously so the count updates as new
-    // tickets land or get closed without a manual refresh.
-    startTicketBadgeListener();
-});
-
-// ── Tabs ──
-
-document.querySelectorAll('.tab').forEach(t => {
-    t.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-        document.querySelectorAll('.tab-panel').forEach(x => x.style.display = 'none');
-        t.classList.add('active');
-        const id = 'tab-' + t.dataset.tab;
-        $(id).style.display = 'block';
-        // Lazy-load tab content the first time it's shown.
-        if (t.dataset.tab === 'active') loadActiveBroadcasts();
-        if (t.dataset.tab === 'tickets') loadTickets();
-        if (t.dataset.tab === 'hubs') loadHubs();
-        if (t.dataset.tab === 'health') loadHealth();
-    });
-});
-
-// ── Compose Broadcast ──
-
-async function sendBroadcast() {
-    // Disabled 2026-09-29 — see the notice on this tab. Kept as a stub so the
-    // window.sendBroadcast export still resolves.
-    alert('Broadcasting to every user is turned off.');
+    if (r.usedBackup) toast(`Backup code used. ${r.backupLeft} left.`, 6000);
+    shell();
+  } catch (e) {
+    btn.disabled = false;
+    const box = $('gErr'); box.textContent = errText(e); box.classList.remove('hide');
+  }
+}
+onAuthStateChanged(auth, async (u) => {
+  if (!u) return signInGate();
+  const tok = await u.getIdTokenResult().catch(() => null);
+  if (!ADMINS.includes(String(u.email || '').toLowerCase()) || !tok || tok.signInProvider !== 'google.com') {
+    gate(`<h2>Not an admin account</h2><p style="margin:0;line-height:1.5">You're signed in as <strong>${esc(u.email || 'an account with no email')}</strong>${tok && tok.signInProvider !== 'google.com' ? ' with a password' : ''}. The admin console is for support@scoreframe.app and eric@bloomcamp.com, signed in with Google.</p><button class="btn" id="gOut">Sign out</button>`);
+    $('gOut').onclick = () => signOut(auth);
     return;
-    const title = $('bTitle').value.trim();
-    const body = $('bBody').value.trim();
-    const url = $('bUrl').value.trim();
-    const expiresMs = parseInt($('bExpires').value, 10);
-    const status = $('bStatus');
+  }
+  try { ME = await call('adminMe'); } catch (e) { return signInGate(errText(e)); }
+  if (!ME.enrolled) return enrollGate();
+  if (!(ME.mfaUntil > Date.now()) || !(Number(tok.claims.adminMfaUntil) > Date.now())) return codeGate();
+  shell();
+});
 
-    if (!title || !body) {
-        status.className = 'status error';
-        status.textContent = 'Title and body are required.';
-        return;
-    }
-
-    if (!confirm(`Send "${title}" to every ScoreFrame user? This pushes immediately and cannot be unsent (only expired or deleted).`)) {
-        return;
-    }
-
-    status.className = 'status info';
-    status.textContent = 'Sending…';
-
-    try {
-        const now = Date.now();
-        const docData = {
-            title, body,
-            type: 'announcement',
-            createdAt: now,
-            expiresAt: now + expiresMs,
-        };
-        if (url) docData.actionUrl = url;
-        const ref = await addDoc(collection(db, 'broadcasts'), docData);
-        status.className = 'status success';
-        status.textContent = `Sent — broadcast ${ref.id}. The Cloud Function should fan-out within a few seconds.`;
-        $('bTitle').value = ''; $('bBody').value = ''; $('bUrl').value = '';
-    } catch (e) {
-        status.className = 'status error';
-        status.textContent = 'Failed: ' + (e.message || String(e));
-    }
-}
-
-// ── Active Broadcasts ──
-
-async function loadActiveBroadcasts() {
-    const target = $('activeList');
-    target.innerHTML = '<div class="empty">Loading…</div>';
-    try {
-        const q = query(collection(db, 'broadcasts'), orderBy('createdAt', 'desc'), limit(25));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-            target.innerHTML = '<div class="empty">No broadcasts yet.</div>';
-            return;
-        }
-        const now = Date.now();
-        const rows = snap.docs.map(d => {
-            const x = d.data();
-            const sent = !!x.sent;
-            const expired = x.expiresAt && now > x.expiresAt;
-            let badge = '';
-            if (x.error) badge = `<span class="badge error">error</span>`;
-            else if (expired) badge = `<span class="badge expired">expired</span>`;
-            else if (sent) badge = `<span class="badge sent">sent</span>`;
-            else badge = `<span class="badge pending">pending</span>`;
-
-            const created = x.createdAt ? new Date(x.createdAt).toLocaleString() : '—';
-            const expires = x.expiresAt ? new Date(x.expiresAt).toLocaleString() : '—';
-            return html`
-                <tr>
-                    <td>${x.title || '—'}<div class="muted">${x.body || ''}</div></td>
-                    <td>${badge}</td>
-                    <td><span class="muted">${created}</span></td>
-                    <td><span class="muted">${expires}</span></td>
-                    <td>
-                        ${expired ? '' : `<button class="secondary" onclick="expireBroadcast('${d.id}')">Expire now</button>`}
-                        <button class="danger" onclick="deleteBroadcast('${d.id}')">Delete</button>
-                    </td>
-                </tr>`;
-        }).join('');
-        target.innerHTML = `
-            <table>
-                <thead><tr><th>Title / Body</th><th>Status</th><th>Sent</th><th>Expires</th><th></th></tr></thead>
-                <tbody>${rows}</tbody>
-            </table>`;
-    } catch (e) {
-        target.innerHTML = `<div class="status error">Failed to load: ${e.message || e}</div>`;
-    }
-}
-
-async function expireBroadcast(id) {
-    if (!confirm('Expire this broadcast now? It will stop showing up in app launches but the FCM push already went out.')) return;
-    try {
-        await updateDoc(doc(db, 'broadcasts', id), { expiresAt: Date.now() - 1 });
-        loadActiveBroadcasts();
-    } catch (e) { alert('Failed: ' + e.message); }
-}
-
-async function deleteBroadcast(id) {
-    if (!confirm('Delete this broadcast doc? The FCM push (if it already went out) cannot be recalled — this only removes the doc.')) return;
-    try {
-        await deleteDoc(doc(db, 'broadcasts', id));
-        loadActiveBroadcasts();
-    } catch (e) { alert('Failed: ' + e.message); }
-}
-
-// ── Hubs ──
-
-async function loadHubs() {
-    const stats = $('hubsStats');
-    const stuck = $('stuckHubs');
-    stats.innerHTML = '<div class="empty">Loading…</div>';
-    stuck.innerHTML = '';
-    try {
-        const teams = await getDocs(collection(db, 'teams'));
-        let hubCount = 0;
-        let stuckCount = 0;
-        let stuckList = [];
-        const now = Date.now();
-        teams.forEach(t => {
-            const d = t.data();
-            const hub = d.hub;
-            if (!hub) return;
-            hubCount++;
-            // Stuck = activeStreamCode set AND updatedAt > 6h ago
-            const code = hub.activeStreamCode || '';
-            const url = hub.activeStreamUrl || '';
-            const updatedAt = d.updatedAt || 0;
-            if (code && (now - updatedAt > 6 * 3600_000)) {
-                stuckCount++;
-                stuckList.push({ teamId: t.id, teamName: d.teamName || '—', hubCode: hub.hubCode, code, url, updatedAt });
-            }
-        });
-        stats.innerHTML = `
-            <div class="stat-card"><div class="label">Hubs</div><div class="value">${hubCount}</div></div>
-            <div class="stat-card"><div class="label">Stuck Live</div><div class="value">${stuckCount}</div></div>
-        `;
-        if (stuckList.length === 0) {
-            stuck.innerHTML = '<div class="empty">No team shares are stuck.</div>';
-        } else {
-            const rows = stuckList.map(s => html`
-                <tr>
-                    <td>${s.teamName}<div class="muted">${s.hubCode || s.teamId}</div></td>
-                    <td><span class="muted">${new Date(s.updatedAt).toLocaleString()}</span></td>
-                    <td>${s.url ? `<a href="${s.url}" target="_blank" style="color: var(--accent);">watch</a>` : '<span class="muted">no url</span>'}</td>
-                    <td><button class="secondary" onclick="clearStuckHub('${s.teamId}')">Clear</button></td>
-                </tr>`).join('');
-            stuck.innerHTML = `
-                <h2 style="margin-top: 24px;">Stuck-Live Team Shares</h2>
-                <table>
-                    <thead><tr><th>Team</th><th>Last update</th><th>Stream</th><th></th></tr></thead>
-                    <tbody>${rows}</tbody>
-                </table>`;
-        }
-    } catch (e) {
-        stats.innerHTML = `<div class="status error">Failed: ${e.message}</div>`;
-    }
-}
-
-async function clearStuckHub(teamId) {
-    if (!confirm('Clear stuck live state on this team share? Equivalent to the Danger-Zone button in the app.')) return;
-    try {
-        // Mirror TeamHubManager.forceClearLiveState — clear hub.activeStream*
-        // and flip schedule entries stuck at status="live" back to "completed".
-        await updateDoc(doc(db, 'teams', teamId), {
-            'hub.activeStreamCode': '',
-            'hub.activeStreamUrl': '',
-            'updatedAt': Date.now(),
-        });
-        const sched = await getDocs(query(collection(db, 'teams', teamId, 'games'), where('status', '==', 'live')));
-        for (const s of sched.docs) {
-            await updateDoc(s.ref, { status: 'completed' });
-        }
-        loadHubs();
-    } catch (e) {
-        alert('Failed: ' + e.message);
-    }
-}
-
-// ── Health ──
-
-// ── Tickets ──
-
-const STATUS_LABEL = {
-    open: 'Open',
-    awaiting_customer: 'Awaiting customer',
-    response_received: 'Response received',
-    in_progress: 'In progress',
-    resolved: 'Resolved',
-    closed: 'Closed',
+// ── Shell and routing ──────────────────────────────────────────────────
+const ICON = {
+  today: '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>',
+  clubs: '<path d="M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7z"></path>',
+  billing: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 10h18M7 15h4"></path>',
+  people: '<circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.5a3.5 3.5 0 010 7M18 14.8c2 .7 3.2 2.5 3.6 5.2"></path>',
+  support: '<path d="M4 5h16v11H8l-4 4z"></path>',
+  system: '<path d="M3 12h4l3-8 4 16 3-8h4"></path>',
 };
-const STATUS_BADGE_CLASS = {
-    open: 'pending',
-    awaiting_customer: 'sent',
-    response_received: 'pending',  // amber = needs your attention
-    in_progress: 'sent',
-    resolved: 'expired',
-    closed: 'expired',
+const NAV = [['today', 'Today'], ['clubs', 'Clubs'], ['billing', 'Billing'], ['people', 'People and teams'], ['support', 'Support'], ['system', 'System and audit']];
+let badges = {};
+function shell() {
+  root.innerHTML = `<div class="shell">
+    <aside class="rail">
+      <a class="brand" href="#today"><img src="/apple-touch-icon.png" alt=""><span style="display:flex;flex-direction:column;line-height:1.1"><span style="font-weight:900;font-size:18px">Score<span style="color:var(--orange)">Frame</span></span><span style="font-size:12px;color:var(--deep-mu);letter-spacing:1.2px;text-transform:uppercase;font-weight:700">Admin</span></span></a>
+      <nav aria-label="Admin">${NAV.map(([k, t]) => `<a href="#${k}" data-nav="${k}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>${t}<span class="ct hide" data-ct="${k}"></span></a>`).join('')}</nav>
+      <div class="foot"><span class="mode ${ME.stripeMode === 'live' ? 'live' : ''}">Stripe · ${ME.stripeMode === 'live' ? 'live' : 'test mode'}</span>
+        <span>${esc(ME.email)}<br>Google · unlocked until ${new Date(ME.mfaUntil).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+        <button id="sOut">Sign out</button></div>
+    </aside>
+    <main id="view" aria-live="polite"></main></div>`;
+  $('sOut').onclick = () => signOut(auth);
+  if (!location.hash) location.hash = '#today'; else route();
+}
+function setBadge(k, n) { badges[k] = n; const el = document.querySelector(`[data-ct="${k}"]`); if (el) { el.textContent = n; el.classList.toggle('hide', !n); } }
+window.addEventListener('hashchange', () => route());
+async function route() {
+  const v = $('view'); if (!v) return;
+  const [k, a, b] = location.hash.replace(/^#/, '').split('/');
+  const top = k === 'club' ? 'clubs' : (k || 'today');
+  document.querySelectorAll('[data-nav]').forEach((x) => { if (x.dataset.nav === top) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
+  const seq = route.seq = (route.seq || 0) + 1;
+  v.innerHTML = `<div class="sub">Loading…</div>`;
+  try {
+    const html = await (VIEWS[k] || VIEWS.today)(a, b);
+    if (seq !== route.seq) return;
+    v.innerHTML = html;
+    (WIRE[k] || (() => {}))(a, b);
+    window.scrollTo(0, 0);
+  } catch (e) {
+    if (seq !== route.seq) return;
+    v.innerHTML = `<div class="err">${esc(errText(e))}</div>`;
+  }
+}
+const state = {};
+const head = (eyebrow, title, extra = '') => `<header class="head"><div class="t"><span class="lbl">${eyebrow}</span><h1>${title}</h1></div>${extra}</header>`;
+
+// ── Today ─────────────────────────────────────────────────────────────
+const VIEWS = {}, WIRE = {};
+VIEWS.today = async () => {
+  const r = state.today = await call('adminOverview');
+  const k = r.kpis;
+  setBadge('today', r.needs.length); setBadge('support', k.ticketsWaiting);
+  const tile = (l, v, s, cls = '') => `<div class="card tile"><span class="lbl">${l}</span><span class="v" ${cls ? `style="color:var(--bad)"` : ''}>${v}</span><span class="sub">${s}</span></div>`;
+  const sevChip = { bad: ['Overdue', 'bad'], warn: ['Your OK', 'warn'], info: ['Heads up', 'info'] };
+  const needBtn = (n) => n.clubId ? `<a class="btn pri" href="#club/${esc(n.clubId)}">Open the club</a>${n.kind === 'approve' ? `<button class="btn" data-approve="${esc(n.clubId)}">Allow invoices</button>` : ''}`
+    : n.kind === 'tickets' ? '<a class="btn" href="#support">Open Support</a>' : n.kind === 'tax' ? '<a class="btn" href="#billing">See Stripe setup</a>' : '';
+  return `${head(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }), 'Today')}
+    <section class="grid" aria-label="At a glance">
+      ${tile('Clubs paying', k.paying, `${k.seatsUsed} of ${k.seats} licenses in use`)}
+      ${tile('On a trial', k.trials, 'clubs')}
+      ${tile('Unpaid invoices', money(k.unpaidCents), k.overdueCents ? `${money(k.overdueCents)} overdue` : 'none overdue', k.overdueCents)}
+      ${tile('Club money this month', money(k.monthCents), `${k.monthCount} payment${k.monthCount === 1 ? '' : 's'}`)}
+      ${tile('Pro subscribers', k.pro, `Play ${k.proPlay} · App Store ${k.proApple}${k.proComp ? ` · given ${k.proComp}` : ''}`)}
+      ${tile('New accounts, 7 days', k.newUsers, `${k.newBots} bot-like left out · ${k.totalUsers} in all`)}
+    </section>
+    <div class="cols">
+      <section class="main-col" aria-labelledby="nd"><h2 id="nd">Needs you <span class="sub" style="font-size:19px">· ${r.needs.length}</span></h2>
+        ${r.needs.length ? r.needs.map((n) => `<article class="card pad" style="display:flex;flex-direction:column;gap:10px">
+          <div class="row">${chip(...(sevChip[n.sev] || sevChip.info))}<strong style="font-size:16px">${esc(n.title)}</strong></div>
+          <p style="margin:0;color:var(--mu);font-size:14px;line-height:1.5">${esc(n.body)}</p><div class="row">${needBtn(n)}</div></article>`).join('')
+          : '<div class="card pad empty">Nothing needs you right now.</div>'}
+      </section>
+      <aside class="side-col">
+        <section class="card pad"><h2>Systems</h2>
+          <div class="li"><span>Server errors, 24 h</span>${r.systems.errors24h ? chip(`${r.systems.errors24h} · ${r.systems.errorFns} functions`, 'warn') : chip('None', 'ok')}</div>
+          <div class="li"><span>Last Stripe event</span>${r.systems.lastStripeEvent ? chip(ago(r.systems.lastStripeEvent), 'ok') : chip('None yet', 'info')}</div>
+          <div class="li"><span>Stripe</span>${chip(r.systems.stripeMode === 'live' ? 'Live' : 'Test mode', r.systems.stripeMode === 'live' ? 'ok' : 'warn')}</div>
+          <a href="#system" style="font-weight:700;font-size:14px">All of System</a></section>
+        <section class="card pad"><h2>Latest admin changes</h2>
+          ${r.latest.length ? r.latest.map((x) => `<div class="li" style="flex-direction:column;align-items:flex-start;gap:2px"><span>${esc(describeAudit(x))}</span><span class="sub">${when(x.at)} · ${esc(x.by)}${x.reason ? ` · "${esc(x.reason)}"` : ''}</span></div>`).join('') : '<div class="empty">None yet.</div>'}
+          <a href="#system" style="font-weight:700;font-size:14px">Full audit log</a></section>
+      </aside></div>`;
+};
+WIRE.today = () => {
+  document.querySelectorAll('[data-approve]').forEach((b) => b.onclick = async () => {
+    const a = await ask({ title: 'Allow invoices for this club', body: 'The director can then email themselves an invoice instead of paying by card.', ok: 'Allow' });
+    if (a) act('adminClubAction', { clubId: b.dataset.approve, action: 'invoiceApproved', on: true, reason: a.reason });
+  });
+};
+function describeAudit(x) {
+  const d = x.details || {};
+  const club = d.club ? ` · ${d.club}` : '';
+  const M = { club_provisional: `Teams before payment set to ${d.teams}${club}`, club_trusted: `${d.trusted ? 'Trusted' : 'Untrusted'} for invoices${club}`,
+    club_invoiceApproved: `Invoices ${d.approved ? 'allowed' : 'turned off'}${club}`, club_extendGrace: `Unpaid teams now stop ${d.until}${club}`,
+    club_markPaid: `Marked paid${d.ref ? ` (${d.ref})` : ''}${club}`, club_grant: `Free license, ${d.teams} teams × ${d.months} months${club}`,
+    club_void: `License voided${club}`, club_price: `Club price ${money(d.perTeamMonthCents)} a team until ${d.until}${club}`, club_pause: `${d.paused ? 'Paused' : 'Resumed'}${club}`,
+    club_addDirector: `Director added: ${d.email}${club}`, club_removeDirector: `Director removed${club}`, pricing: 'Prices and terms changed',
+    user_givePro: `Gave Pro for ${d.days} days · ${d.email}`, user_endPro: `Ended given Pro · ${d.email}`, user_tester: `${d.tester ? 'Made a tester' : 'No longer a tester'} · ${d.email}`,
+    user_signOut: `Signed out everywhere · ${d.email}`, user_resetLink: `Password reset link · ${d.email}`, team_clearLive: `Cleared a stuck live · ${d.team}`,
+    ticket_status: `Ticket set to ${d.status}`, mfa_enrolled: 'Set up Google Authenticator', mfa_ok: 'Unlocked with Google Authenticator', mfa_backup_code: 'Unlocked with a backup code' };
+  return M[x.action] || x.action;
+}
+
+// ── Clubs ──────────────────────────────────────────────────────────────
+const CLUB_STATUS = { active: ['Active', 'ok'], trialing: ['Trial', 'info'], awaiting_payment: ['Invoice unpaid', 'warn'], past_due: ['Overdue', 'bad'],
+  lapsed: ['Ended', 'info'], scheduled: ['Starts later', 'info'], none: ['No license', 'info'], paused: ['Paused', 'bad'] };
+const clubChip = (s) => chip(...(CLUB_STATUS[s] || [s, 'info']));
+VIEWS.clubs = async () => {
+  const r = state.clubs = await call('adminClubs');
+  return `${head(`${r.clubs.length} club${r.clubs.length === 1 ? '' : 's'}`, 'Clubs', `<label class="f" style="margin-left:auto;flex:0 1 320px">Search clubs<input class="in" id="cq" placeholder="Club, director or billing email"></label>`)}
+    <div class="row" role="group" aria-label="Show" id="cf"></div>
+    <div class="card scroll"><table><thead><tr><th>Club</th><th>Status</th><th>Licenses used</th><th>Money</th><th>Covered through</th><th>Setup</th><th>Last activity</th></tr></thead><tbody id="ct"></tbody></table></div>
+    <p class="sub" style="margin:0">Licenses used counts covered teams against licenses bought or given. An unpaid invoice covers a few teams until it's paid.</p>`;
+};
+const CLUB_FILTERS = [['needs', 'Needs attention', (c) => c.overdueCents > 0 || c.ytProblem || c.status === 'past_due' || (c.invoiceApprovalRequestedAt && !c.invoiceApproved) || c.status === 'paused'],
+  ['paying', 'Paying', (c) => c.paidCents > 0 && ['active', 'awaiting_payment', 'past_due'].includes(c.status)], ['trial', 'Trial', (c) => c.status === 'trialing'],
+  ['unpaid', 'Unpaid invoice', (c) => c.unpaidCents > 0], ['ended', 'Ended', (c) => ['lapsed', 'none'].includes(c.status)], ['test', 'Test clubs', (c) => c.test], ['all', 'All', () => true]];
+WIRE.clubs = () => {
+  const r = state.clubs; let f = state.clubFilter || 'all', q = '';
+  const draw = () => {
+    $('cf').innerHTML = CLUB_FILTERS.map(([k, t, fn]) => `<button class="f-chip" aria-pressed="${k === f}" data-f="${k}">${t} · ${r.clubs.filter((c) => k === 'test' ? c.test : (!c.test || k === 'all') && fn(c)).length}</button>`).join('');
+    document.querySelectorAll('[data-f]').forEach((b) => b.onclick = () => { f = state.clubFilter = b.dataset.f; draw(); });
+    const fn = CLUB_FILTERS.find((x) => x[0] === f)[2];
+    const rows = r.clubs.filter((c) => (f === 'test' ? c.test : (f === 'all' || !c.test) && fn(c)))
+      .filter((c) => !q || `${c.name} ${(c.directors || []).map((d) => `${d.name} ${d.email}`).join(' ')}`.toLowerCase().includes(q));
+    $('ct').innerHTML = rows.length ? rows.map((c) => {
+      const used = c.seats ? Math.round(100 * c.covered / Math.max(c.seats, 1)) : 0;
+      const money1 = c.unpaidCents ? `<strong>${money(c.unpaidCents)} due</strong><br><span class="sub">${c.overdueCents ? `${Math.max(1, Math.floor((Date.now() - c.overdueSince) / 86400000))} days late` : 'not late yet'}</span>`
+        : c.paidCents ? `<strong>${money(c.paidCents)} paid</strong><br><span class="sub">last ${day(c.lastPaidAt)}</span>` : '<strong>$0</strong><br><span class="sub">no purchase</span>';
+      return `<tr class="go" data-go="#club/${esc(c.id)}"><td><a href="#club/${esc(c.id)}" style="display:flex;gap:12px;align-items:center;color:var(--ink);text-decoration:none">${crest(c)}<span style="display:flex;flex-direction:column"><strong>${esc(c.name)}</strong><span class="sub">${esc((c.directors || []).map((d) => d.name || d.email).join(', ') || 'no director')}</span></span></a></td>
+        <td>${clubChip(c.status)}${c.test ? ' ' + chip('Test', 'info') : ''}</td>
+        <td><div style="display:flex;flex-direction:column;gap:5px"><span><strong>${c.covered}</strong> of ${c.seats} · ${c.teams} teams</span><span class="bar" aria-hidden="true"><span style="width:${Math.min(100, used)}%"></span></span>${c.unpaidCapped ? '<span class="sub">some wait on payment</span>' : ''}</div></td>
+        <td>${money1}</td><td>${c.licenseUntil ? day(c.licenseUntil - 36e5 * 36) : '—'}${c.graceUntil && c.graceUntil < Infinity && c.unpaidCents ? `<br><span class="sub">unpaid stop ${dayShort(c.graceUntil)}</span>` : ''}</td>
+        <td>${c.setupDone === c.setupOf ? chip('Done', 'ok') : chip(`${c.setupDone} of ${c.setupOf}`, 'warn')}${c.ytProblem ? '<br>' + chip('YouTube', 'bad') : ''}</td><td class="sub">${ago(c.lastActivityAt)}</td></tr>`;
+    }).join('') : `<tr><td colspan="7" class="empty">No clubs here.</td></tr>`;
+    document.querySelectorAll('tr[data-go]').forEach((tr) => tr.onclick = (e) => { if (!e.target.closest('a')) location.hash = tr.dataset.go; });
+  };
+  $('cq').oninput = () => { q = $('cq').value.trim().toLowerCase(); draw(); };
+  draw();
 };
 
-let _ticketBadgeUnsub = null;
+// ── One club ──────────────────────────────────────────────────────────
+const LIC_STATE = { paid: ['Paid', 'ok'], comp: ['Free', 'ok'], trial: ['Trial', 'info'], awaiting_payment: ['Unpaid', 'warn'], processing: ['Clearing', 'warn'],
+  pending: ['Checkout open', 'info'], void: ['Voided', 'info'], creating: ['Not sent', 'info'], refunded: ['Refunded', 'info'] };
+VIEWS.club = async (id) => {
+  const r = state.club = await call('adminClub', { clubId: id });
+  const c = r.club, now = Date.now();
+  const unpaid = r.licenses.filter((l) => l.state === 'awaiting_payment' || l.state === 'processing');
+  const pct = c.seats ? Math.round(100 * c.covered / c.seats) : 0;
+  const lrow = (l) => {
+    const st = l.state === 'awaiting_payment' && l.dueAt && now > l.dueAt ? [`${Math.floor((now - l.dueAt) / 864e5)} days late`, 'bad'] : (LIC_STATE[l.state] || [l.state, 'info']);
+    const what = l.kind === 'trial' ? `Trial · ${l.teams} teams` : l.kind === 'addon' ? `${l.teams} more teams` : `${l.teams} teams × ${l.months} month${l.months === 1 ? '' : 's'}`;
+    const how = l.method === 'invoice' ? `Invoice <span class="mono">${esc(l.invoiceNumber || '')}</span>` : l.method === 'card' ? 'Card / bank' : l.kind === 'comp' ? 'Given' : esc(l.method || '');
+    const btns = [];
+    if (l.state === 'awaiting_payment' || l.state === 'processing') btns.push(`<button class="btn sm" data-paid="${esc(l.id)}">Got a check</button>`, `<button class="btn sm" data-grace="${esc(l.id)}" data-gd="${l.graceUntil ? ymdOf(l.graceUntil) : ''}">Change stop date</button>`);
+    if (!['void', 'refunded'].includes(l.state)) btns.push(`<button class="btn sm danger" data-void="${esc(l.id)}">Void</button>`);
+    return `<tr><td><strong>${what}</strong>${l.po ? `<br><span class="sub">PO ${esc(l.po)}</span>` : ''}${l.note ? `<br><span class="sub">${esc(l.note)}</span>` : ''}</td>
+      <td>${ymdDay(l.startDate)} – ${l.endDate ? ymdDay(addDays(l.endDate, -1)) : '—'}</td><td>${how}</td>
+      <td><strong>${money(l.cents, l.currency)}</strong>${l.perTeamMonthCents ? `<br><span class="sub">${money(l.perTeamMonthCents)} a team a month</span>` : ''}</td>
+      <td>${chip(...st)}${l.dueAt && l.state === 'awaiting_payment' ? `<br><span class="sub">due ${day(l.dueAt)}${l.graceUntil ? ` · stops ${dayShort(l.graceUntil)}` : ''}</span>` : ''}${l.paidAt ? `<br><span class="sub">${day(l.paidAt)}</span>` : ''}${l.voidReason ? `<br><span class="sub">${esc(l.voidReason)}</span>` : ''}</td>
+      <td style="white-space:nowrap">${l.invoiceUrl ? `<a href="${esc(l.invoiceUrl)}" target="_blank" rel="noopener">Invoice</a> ` : ''}${l.invoicePdf ? `<a href="${esc(l.invoicePdf)}" target="_blank" rel="noopener">PDF</a>` : ''}<div class="row" style="margin-top:6px">${btns.join('')}</div></td></tr>`;
+  };
+  const setupItem = (l, v, s) => `<div style="display:flex;flex-direction:column;gap:4px"><span class="lbl">${l}</span><span>${v}</span><span class="sub">${s}</span></div>`;
+  const PRIV = { link: 'Anyone with the link', signed_in: 'Signed-in ScoreFrame users', approved: 'Approved followers only' };
+  return `<a href="#clubs" style="font-weight:700;font-size:14px">Clubs</a>
+    <header class="head" style="align-items:center">${crest(c, 64)}
+      <div class="t" style="flex:1 1 300px;min-width:0"><div class="row"><h1>${esc(c.name)}</h1>${clubChip(c.status)}${c.test ? chip('Test', 'info') : ''}${c.trusted ? chip('Trusted', 'ok') : ''}</div>
+        <span class="sub">Club since ${day(c.createdAt)}${c.billing.email ? ` · billing ${esc(c.billing.email)}` : ''} · <span class="mono">${esc(c.id)}</span></span></div>
+      <div class="row"><a class="btn" href="/club.html?club=${esc(c.id)}" target="_blank" rel="noopener">Their console</a>${r.stripeCustomerUrl ? `<a class="btn" href="${esc(r.stripeCustomerUrl)}" target="_blank" rel="noopener">Stripe customer</a>` : ''}<a class="btn" href="/clubpage.html?club=${esc(c.id)}" target="_blank" rel="noopener">Club page</a>${c.directors.length ? `<a class="btn" href="mailto:${esc(c.directors.map((d) => d.email).join(','))}">Email the directors</a>` : ''}</div></header>
+    ${c.paused ? `<div class="err">Paused: no team is Pro right now. "${esc(c.pausedReason)}"</div>` : ''}
+    <div class="cols"><div class="main-col">
+      <section class="card pad" style="display:flex;flex-direction:column;gap:14px"><div class="row" style="justify-content:space-between"><h2>Coverage now</h2><span class="sub">${c.seats} license${c.seats === 1 ? '' : 's'}${c.licenseUntil ? ` through ${day(c.licenseUntil - 36e5 * 36)}` : ''}</span></div>
+        <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--ln2)" aria-hidden="true"><span style="width:${pct}%;background:#2E9B5F"></span>${c.unpaidCapped ? `<span style="width:${Math.max(0, 100 - pct)}%;background:#F0B35A"></span>` : ''}</div>
+        <div class="row" style="gap:8px 20px;font-size:14px"><span><strong>${c.covered}</strong> teams covered now</span><span><strong>${c.teams}</strong> teams in the club</span><span><strong>${Math.max(0, c.seats - c.covered)}</strong> licenses free</span>${unpaid.length ? `<span><strong>${c.provisionalTeams}</strong> count before payment${c.provisionalOverride ? ' (set here)' : ''}</span>` : ''}</div>
+        ${unpaid.length ? `<div class="note">An invoice is unpaid, so ${c.trusted ? 'every team counts (trusted club)' : `${c.provisionalTeams} teams count`} until it's paid.${c.graceUntil && c.graceUntil < Infinity ? ` If it's still unpaid on <strong>${day(c.graceUntil)}</strong>, those stop too.` : ''} Pages, games and history stay either way.</div>` : ''}
+        <div class="scroll"><table><thead><tr><th>Team</th><th>Pro</th><th>Staff</th><th>Followers</th><th>YouTube</th><th>Who can see</th><th>Last game</th></tr></thead><tbody>
+          ${r.teams.length ? r.teams.map((t) => `<tr class="go" data-go="#people/t/${esc(t.id)}"><td><strong>${esc(t.name)}</strong>${t.ageDivision ? ` <span class="sub">${esc(t.ageDivision)}</span>` : ''}${t.archived ? ' ' + chip('Archived', 'info') : ''}</td><td>${t.covered ? chip('Covered', 'ok') : chip('Not covered', 'warn')}</td><td>${t.staff + t.coaches}</td><td>${t.followers}</td><td>${esc(t.youtube || '—')}</td><td class="sub">${esc(PRIV[t.visibility] || t.visibility || '—')}</td><td class="sub">${t.lastGame ? dayShort(t.lastGame) : '—'}</td></tr>`).join('') : '<tr><td colspan="7" class="empty">No teams yet.</td></tr>'}
+        </tbody></table></div></section>
+      <section class="card pad" style="display:flex;flex-direction:column;gap:12px"><h2>Licenses and payments</h2>
+        <div class="scroll"><table><thead><tr><th>What</th><th>Dates</th><th>How</th><th>Amount</th><th>State</th><th></th></tr></thead><tbody>${r.licenses.length ? r.licenses.map(lrow).join('') : '<tr><td colspan="6" class="empty">No licenses.</td></tr>'}</tbody></table></div>
+        <span class="sub">${c.priceLock && c.priceLock.until > now ? `Price lock: ${money(c.priceLock.perTeamMonthCents)} a team a month until ${day(c.priceLock.until)}${c.priceLock.setBy ? ` (set by ${esc(c.priceLock.setBy)})` : ''}.` : `No price lock yet; the price table applies (${money(r.pricing.perTeamMonthCents)} a team a month).`}</span></section>
+      <section class="card pad" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px"><h2 style="grid-column:1/-1">Setup</h2>
+        ${setupItem('Who can see teams', esc(PRIV[c.privacy] || 'Not chosen'), c.privacyConfirmedAt ? `Confirmed ${day(c.privacyConfirmedAt)}` : 'Not confirmed yet')}
+        ${setupItem('Club Terms', c.terms && c.terms.acceptedAt ? `Accepted, version ${esc(c.terms.version || '')}` : 'Not accepted', c.terms && c.terms.acceptedAt ? `${day(c.terms.acceptedAt)} by ${esc(c.terms.acceptedByName || c.terms.acceptedByEmail || '')}` : '')}
+        ${setupItem('YouTube', c.youtube.length ? esc(c.youtube.map((y) => y.title).join(', ')) : 'No channel', c.youtube.length ? esc(c.youtube.map((y) => y.status).join(', ')) : 'Coaches can\'t go live on a club channel')}
+        ${setupItem('Directors', esc(c.directors.map((d) => d.name || d.email).join(', ') || 'none'), esc(c.directors.map((d) => d.email).join(', ')))}
+        ${setupItem('Invoices', c.invoiceApproved ? 'Allowed' : (c.invoiceApprovalRequestedAt ? 'Asked for, needs your OK' : 'Default rules'), c.trusted ? 'Trusted: every team counts before payment' : '')}
+        ${setupItem('Live', c.live ? 'Yes' : 'Not yet', c.live ? 'Privacy and terms done' : 'Needs privacy and terms')}</section>
+      <section class="card pad" style="display:flex;flex-direction:column;gap:12px"><h2>History</h2>
+        <ol style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.45">
+          ${r.log.length ? r.log.slice(0, 40).map((x) => `<li style="display:grid;grid-template-columns:120px 1fr;gap:12px"><span class="sub">${when(x.at)}</span><span>${x.admin ? chip('Admin', 'info') + ' ' : ''}${esc(String(x.action || '').replace(/^admin_/, '').replace(/_/g, ' '))}${x.reason ? ` <span class="sub">· "${esc(x.reason)}"</span>` : ''} <span class="sub">· ${esc(x.who || '')}</span></span></li>`).join('') : '<li class="empty">Nothing yet.</li>'}
+        </ol></section>
+      <section class="card pad" style="display:flex;flex-direction:column;gap:10px"><h2>Notes for us</h2>
+        ${r.notes.map((n) => `<p style="margin:0;font-size:14px;line-height:1.5"><strong>${esc(n.who)} · ${day(n.at)}</strong> ${esc(n.text)}</p>`).join('') || '<div class="empty">No notes. Only admins see them.</div>'}
+        <label class="f">Add a note<textarea class="in" id="nn" rows="2"></textarea></label><div><button class="btn" id="nAdd">Add note</button></div></section>
+    </div>
+    <aside class="side-col"><section class="card pad" style="display:flex;flex-direction:column;gap:2px"><h2>Overrides</h2><p class="sub" style="margin:4px 0 10px;line-height:1.5">Each change asks for a reason and goes in the history and the audit log.</p>
+      <div class="li"><span>Teams before payment<br><span class="sub">${c.provisionalOverride ? 'set for this club' : `price table: ${r.pricing.invoiceProvisionalTeams}`}</span></span><button class="btn sm" id="oProv">${c.trusted ? 'All' : c.provisionalTeams}</button></div>
+      <div class="li"><span>Trusted club<br><span class="sub">every team counts before payment</span></span><button class="btn sm" id="oTrust">${c.trusted ? 'On' : 'Off'}</button></div>
+      <div class="li"><span>Pay by invoice<br><span class="sub">${c.invoiceApprovalRequestedAt && !c.invoiceApproved ? 'they asked' : 'when invoices need an OK'}</span></span><button class="btn sm" id="oInv">${c.invoiceApproved ? 'Allowed' : 'Not yet'}</button></div>
+      <div class="li"><span>Free license<br><span class="sub">pilots, goodwill</span></span><button class="btn sm" id="oGrant">Give</button></div>
+      <div class="li"><span>Club price<br><span class="sub">a club deal</span></span><button class="btn sm" id="oPrice">${c.priceLock && c.priceLock.until > now ? money(c.priceLock.perTeamMonthCents) : 'Set'}</button></div>
+      <div class="li"><span>Directors<br><span class="sub">${c.directors.length} now</span></span><span class="row"><button class="btn sm" id="oDirAdd">Add</button>${c.directors.length > 1 ? '<button class="btn sm" id="oDirRm">Remove</button>' : ''}</span></div>
+      <div class="li"><span>Refund<br><span class="sub">partial, by time left</span></span>${r.stripeCustomerUrl ? `<a class="btn sm" href="${esc(r.stripeCustomerUrl)}" target="_blank" rel="noopener">In Stripe</a>` : '<span class="sub">no Stripe customer</span>'}</div>
+      <div class="li"><span style="color:var(--bad);font-weight:700">${c.paused ? 'Resume the club' : 'Pause the club'}<br><span class="sub" style="font-weight:400">${c.paused ? 'Pro comes back on covered teams' : 'stops Pro on every team now'}</span></span><button class="btn sm danger" id="oPause">${c.paused ? 'Resume' : 'Pause'}</button></div>
+    </section></aside></div>`;
+};
+function addDays(ymd, n) { const [y, m, d] = ymd.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d) + n * 864e5).toISOString().slice(0, 10); }
+WIRE.club = (id) => {
+  const r = state.club, c = r.club;
+  const A = (action, extra, reason) => act('adminClubAction', { clubId: id, action, reason, ...extra });
+  document.querySelectorAll('tr[data-go]').forEach((tr) => tr.onclick = () => { location.hash = tr.dataset.go; });
+  $('nAdd').onclick = () => { const t = $('nn').value.trim(); if (t) act('adminClubAction', { clubId: id, action: 'note', text: t }); };
+  $('oProv').onclick = async () => { const a = await ask({ title: 'Teams usable before payment', body: `While an invoice is unpaid, this many teams count. Leave it empty to use the price table (${r.pricing.invoiceProvisionalTeams}).`, fields: [{ label: 'Teams', type: 'number', value: c.provisionalOverride ? c.provisionalTeams : '' }] }); if (a) A('provisional', { teams: a.vals[0] === '' ? null : Number(a.vals[0]) }, a.reason); };
+  $('oTrust').onclick = async () => { const a = await ask({ title: c.trusted ? 'Stop trusting this club' : 'Trust this club', body: c.trusted ? 'Unpaid invoices go back to covering only some teams.' : 'Every team counts as soon as an invoice is sent, before it\'s paid. For schools and districts that pay late but always pay.', ok: c.trusted ? 'Stop trusting' : 'Trust' }); if (a) A('trusted', { on: !c.trusted }, a.reason); };
+  $('oInv').onclick = async () => { const a = await ask({ title: c.invoiceApproved ? 'Turn off invoices' : 'Allow invoices', body: c.invoiceApproved ? 'The club pays by card or bank from now on.' : 'The director can email themselves an invoice instead of paying by card.' }); if (a) A('invoiceApproved', { on: !c.invoiceApproved }, a.reason); };
+  $('oGrant').onclick = async () => { const a = await ask({ title: 'Give a free license', body: 'Covers this many teams from the start date. No invoice, no payment.', fields: [{ label: 'Teams', type: 'number', value: 3 }, { label: 'Months', type: 'number', value: 1 }, { label: 'Starts', type: 'date', value: ymdOf(Date.now()) }], ok: 'Give license' }); if (a) A('grant', { teams: Number(a.vals[0]), months: Number(a.vals[1]), startDate: a.vals[2] }, a.reason); };
+  $('oPrice').onclick = async () => { const a = await ask({ title: 'Club price', body: 'A price for this club\'s new purchases, a team a month, until the date. It replaces their 12-month price lock.', fields: [{ label: 'Dollars a team a month', type: 'number', step: '0.01', value: c.priceLock ? (c.priceLock.perTeamMonthCents / 100) : (r.pricing.perTeamMonthCents / 100) }, { label: 'Until', type: 'date', value: c.priceLock && c.priceLock.until ? ymdOf(c.priceLock.until) : ymdOf(Date.now() + 365 * 864e5) }] }); if (a) A('price', { perTeamMonthCents: Math.round(Number(a.vals[0]) * 100), until: a.vals[1] }, a.reason); };
+  $('oDirAdd').onclick = async () => { const a = await ask({ title: 'Add a director', body: 'They need a ScoreFrame account with this email.', fields: [{ label: 'Email', type: 'email' }], ok: 'Add' }); if (a) A('addDirector', { email: a.vals[0] }, a.reason); };
+  if ($('oDirRm')) $('oDirRm').onclick = async () => { const a = await ask({ title: 'Remove a director', fields: [{ label: 'Director', type: 'select', options: c.directors.map((d) => [d.uid, d.name ? `${d.name} (${d.email})` : d.email]), value: c.directors[0].uid }], ok: 'Remove', danger: true }); if (a) A('removeDirector', { uid: a.vals[0] }, a.reason); };
+  $('oPause').onclick = async () => {
+    if (c.paused) { const a = await ask({ title: 'Resume the club', body: 'Pro comes back on the teams their licenses cover.', ok: 'Resume' }); if (a) A('pause', { on: false }, a.reason); return; }
+    const a = await ask({ title: `Pause ${c.name}`, body: 'Stops Pro on every team right away. Pages, games and history stay. Type the club\'s name and a current code to confirm.', fields: [{ label: 'Club name', placeholder: c.name }], code: true, ok: 'Pause the club', danger: true });
+    if (a) A('pause', { on: true, confirm: a.vals[0], code: a.code }, a.reason);
+  };
+  document.querySelectorAll('[data-paid]').forEach((b) => b.onclick = async () => { const a = await ask({ title: 'Mark paid by check', body: 'Marks the invoice paid in Stripe too ("paid outside Stripe"), so both agree. Every team on it counts again.', fields: [{ label: 'Check number', placeholder: 'e.g. 1042' }], ok: 'Mark paid' }); if (a) A('markPaid', { licenseId: b.dataset.paid, ref: a.vals[0] }, a.reason); });
+  document.querySelectorAll('[data-grace]').forEach((b) => b.onclick = async () => { const a = await ask({ title: 'When unpaid teams stop', body: 'If the invoice is still unpaid on this day, the teams it covers stop being Pro.', fields: [{ label: 'Stop date', type: 'date', value: b.dataset.gd }] }); if (a) A('extendGrace', { licenseId: b.dataset.grace, date: a.vals[0] }, a.reason); });
+  document.querySelectorAll('[data-void]').forEach((b) => b.onclick = async () => { const a = await ask({ title: 'Void this license', body: 'It stops counting now. An unpaid Stripe invoice is not cancelled by this; cancel it in Stripe or from their console.', ok: 'Void', danger: true }); if (a) A('void', { licenseId: b.dataset.void }, a.reason); });
+};
 
-function startTicketBadgeListener() {
-    if (_ticketBadgeUnsub) return;
-    // Live-update the tab badge with the count of tickets needing attention
-    // (status=open OR lastReplyFrom=customer in_progress / awaiting state).
-    // Listener runs as long as the page is open; cheap query, in-flight only.
-    const q = query(
-        collection(db, 'tickets'),
-        where('status', 'in', ['open', 'response_received', 'in_progress']),
-        limit(50)
-    );
-    _ticketBadgeUnsub = onSnapshot(q, (snap) => {
-        const count = snap.size;
-        const badge = $('ticketBadge');
-        if (count > 0) {
-            badge.textContent = count;
-            badge.style.display = '';
-        } else {
-            badge.style.display = 'none';
-        }
-    }, (err) => console.warn('ticket badge listener:', err.message));
+// ── Billing ───────────────────────────────────────────────────────────
+VIEWS.billing = async () => {
+  const r = state.billing = await call('adminBilling');
+  const m = r.money, p = r.pricing, now = Date.now();
+  const tier2 = (p.tiers || []).find((t) => t.minMonths > 1) || { minMonths: 6, cents: p.perTeamMonthCents };
+  const ST = { paid: ['Paid', 'ok'], comp: ['Free', 'ok'], awaiting_payment: ['Unpaid', 'warn'], processing: ['Clearing', 'warn'], pending: ['Checkout open', 'info'], void: ['Voided', 'info'], refunded: ['Refunded', 'info'] };
+  return `${head('Club money · Stripe', 'Billing', `<span class="mode ${r.stripeMode === 'live' ? 'live' : ''}" style="margin-left:auto;margin-bottom:8px">${r.stripeMode === 'live' ? 'Live' : 'Test mode'}</span>`)}
+    <section class="grid"><div class="card tile"><span class="lbl">Collected this month</span><span class="v">${money(m.monthCents)}</span><span class="sub">${m.monthCount} payment${m.monthCount === 1 ? '' : 's'}</span></div>
+      <div class="card tile"><span class="lbl">Unpaid invoices</span><span class="v">${money(m.unpaidCents)}</span><span class="sub">${m.unpaidCount} open</span></div>
+      <div class="card tile"><span class="lbl">Overdue</span><span class="v" style="${m.overdueCents ? 'color:var(--bad)' : ''}">${money(m.overdueCents)}</span><span class="sub">past the due date</span></div>
+      <div class="card tile"><span class="lbl">This year</span><span class="v">${money(m.yearCents)}</span><span class="sub">collected</span></div>
+      <div class="card tile"><span class="lbl">Renewals, 60 days</span><span class="v">${m.renewals60}</span><span class="sub">clubs ending soon</span></div></section>
+    <div class="cols"><section class="main-col"><div class="card pad" style="display:flex;flex-direction:column;gap:12px"><h2>Invoices and payments</h2>
+        <div class="scroll"><table><thead><tr><th>Club</th><th>What</th><th>How</th><th>Amount</th><th>State</th></tr></thead><tbody>
+        ${r.rows.length ? r.rows.map((x) => `<tr class="go" data-go="#club/${esc(x.clubId)}"><td><strong>${esc(x.club)}</strong></td><td>${x.kind === 'comp' ? `Free · ${x.teams} teams × ${x.months} mo` : x.kind === 'addon' ? `${x.teams} more teams` : `${x.teams} teams × ${x.months} mo`}<br><span class="sub">${ymdDay(x.startDate)} – ${x.endDate ? ymdDay(addDays(x.endDate, -1)) : ''}</span></td>
+          <td>${x.method === 'invoice' ? `Invoice <span class="mono">${esc(x.invoiceNumber || '')}</span>` : x.kind === 'comp' ? 'Given' : 'Card / bank'}</td><td><strong>${money(x.cents)}</strong></td>
+          <td>${x.state === 'awaiting_payment' && x.dueAt && now > x.dueAt ? chip(`${Math.floor((now - x.dueAt) / 864e5)} days late`, 'bad') : chip(...(ST[x.state] || [x.state, 'info']))}${x.paidAt ? `<br><span class="sub">${day(x.paidAt)}</span>` : x.dueAt ? `<br><span class="sub">due ${day(x.dueAt)}</span>` : ''}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">No purchases yet.</td></tr>'}
+        </tbody></table></div><span class="sub">Licenses come from ScoreFrame; invoice numbers and links come from Stripe.</span></div>
+      <div class="card pad" style="display:flex;flex-direction:column;gap:10px"><h2>What Stripe told us</h2>
+        <div class="scroll"><table><thead><tr><th>When</th><th>Event</th><th>Result</th></tr></thead><tbody>
+        ${r.events.length ? r.events.map((e) => `<tr><td class="sub">${when(e.receivedAt)}</td><td class="mono">${esc(e.type)}</td><td>${e.error ? chip('Failed', 'bad') + ` <span class="sub">${esc(e.error)}</span>` : e.processed ? chip(e.outcome || 'ok', 'ok') : chip('Not processed', 'warn')}</td></tr>`).join('') : '<tr><td colspan="3" class="empty">No events yet. They arrive when a club pays, an invoice is cancelled or a refund happens.</td></tr>'}
+        </tbody></table></div></div></section>
+    <aside class="side-col"><section class="card pad"><h2>Stripe setup</h2><p class="sub" style="margin:6px 0 4px">Checked from Stripe just now.</p>
+        ${r.checks.map((x) => `<div class="li"><span>${esc(x.k)}</span>${chip(x.v, x.ok ? 'ok' : 'warn')}</div>`).join('')}
+        ${r.dashboard ? `<a class="btn" style="margin-top:10px" href="${esc(r.dashboard)}" target="_blank" rel="noopener">Open the Stripe dashboard</a>` : ''}</section>
+      <section class="card pad"><h2>Prices and terms</h2><p class="sub" style="margin:6px 0 4px;line-height:1.5">New purchases use these. Clubs keep their 12-month price lock.</p>
+        <div class="li"><span>A team, a month</span><strong>${money(p.perTeamMonthCents)}</strong></div>
+        <div class="li"><span>At ${tier2.minMonths} months or more</span><strong>${money(tier2.cents)}</strong></div>
+        <div class="li"><span>Fewest teams</span><strong>${p.minTeams}</strong></div>
+        <div class="li"><span>Trial</span><strong>${p.trialDays} days · ${p.trialTeams} teams</strong></div>
+        <div class="li"><span>Invoice due after</span><strong>${p.invoiceDaysUntilDue} days</strong></div>
+        <div class="li"><span>Unpaid teams stop</span><strong>${p.invoiceGraceDays} days later</strong></div>
+        <div class="li"><span>Teams before payment</span><strong>${p.invoiceProvisionalTeams}</strong></div>
+        <div class="li"><span>Invoices need your OK</span><strong>${p.invoiceRequiresApproval ? 'Yes' : 'No'}</strong></div>
+        <button class="btn" style="margin-top:10px" id="pEdit">Edit prices and terms</button></section></aside></div>`;
+};
+WIRE.billing = () => {
+  document.querySelectorAll('tr[data-go]').forEach((tr) => tr.onclick = () => { location.hash = tr.dataset.go; });
+  const p = state.billing.pricing, tier2 = (p.tiers || []).find((t) => t.minMonths > 1) || { minMonths: 6, cents: p.perTeamMonthCents };
+  $('pEdit').onclick = async () => {
+    const a = await ask({ title: 'Prices and terms', body: 'New purchases use these right away. Clubs that already bought keep their price lock.', ok: 'Save prices',
+      fields: [{ label: 'Dollars a team a month', type: 'number', step: '0.01', value: p.perTeamMonthCents / 100 }, { label: 'Discount starts at months', type: 'number', value: tier2.minMonths },
+        { label: 'Discounted dollars a team a month', type: 'number', step: '0.01', value: tier2.cents / 100 }, { label: 'Fewest teams', type: 'number', value: p.minTeams },
+        { label: 'Trial days', type: 'number', value: p.trialDays }, { label: 'Trial teams', type: 'number', value: p.trialTeams },
+        { label: 'Invoice due after (days)', type: 'number', value: p.invoiceDaysUntilDue }, { label: 'Unpaid teams stop after (days past due)', type: 'number', value: p.invoiceGraceDays },
+        { label: 'Teams before payment', type: 'number', value: p.invoiceProvisionalTeams }, { label: 'Invoices need my OK for new clubs', type: 'check', value: p.invoiceRequiresApproval }] });
+    if (!a) return;
+    const v = a.vals;
+    act('adminSetPricing', { reason: a.reason, pricing: { perTeamMonthCents: Math.round(Number(v[0]) * 100), discountMonths: Number(v[1]), discountCents: Math.round(Number(v[2]) * 100),
+      minTeams: Number(v[3]), trialDays: Number(v[4]), trialTeams: Number(v[5]), invoiceDaysUntilDue: Number(v[6]), invoiceGraceDays: Number(v[7]), invoiceProvisionalTeams: Number(v[8]), invoiceRequiresApproval: v[9] } });
+  };
+};
+
+// ── People and teams ──────────────────────────────────────────────────
+VIEWS.people = async (kind, id) => {
+  const search = `<form class="row" id="pf"><label for="pq" class="hide">Email, name, team or share code</label><input class="in" id="pq" style="flex:1 1 360px;font-size:16px;padding:12px 14px" placeholder="Email, name, team name or share code" value="${esc(state.pq || '')}"><button class="btn pri">Look up</button></form>`;
+  if (kind === 'u' && id) return head('Person', 'People and teams') + search + await personView(id);
+  if (kind === 't' && id) return head('Team', 'People and teams') + search + await teamView(id);
+  let results = '';
+  if (state.pq) {
+    const r = await call('adminSearch', { q: state.pq });
+    results = `<div class="cols"><section class="card pad main-col" style="gap:0"><h2>People</h2>${r.people.length ? r.people.map((p) => `<a class="li" href="#people/u/${esc(p.uid)}" style="color:var(--ink);text-decoration:none"><span><strong>${esc(p.name || p.email)}</strong><br><span class="sub">${esc(p.email)}</span></span><span class="sub">Open</span></a>`).join('') : '<div class="empty">No one found.</div>'}</section>
+      <section class="card pad side-col" style="gap:0"><h2>Teams</h2>${r.teams.length ? r.teams.map((t) => `<a class="li" href="#people/t/${esc(t.id)}" style="color:var(--ink);text-decoration:none"><span><strong>${esc(t.name)}</strong><br><span class="sub">${esc(t.sport)}</span></span><span class="sub">Open</span></a>`).join('') : '<div class="empty">No teams found.</div>'}</section></div>`;
+  } else results = '<div class="card pad empty">Look up an account by email or name, or a team by name or share code.</div>';
+  return head('Look someone up', 'People and teams') + search + results;
+};
+async function personView(uid) {
+  const u = state.person = await call('adminUser', { uid });
+  const p = u.plan;
+  const planText = p.pro ? `Pro through ${day(p.proUntil)} · ${({ play: 'Google Play', appstore: 'App Store', admin: 'given by ScoreFrame' })[p.source] || p.source}` : 'Free';
+  const teamLine = (t) => `<a href="#people/t/${esc(t.id)}">${esc(t.name)}</a> <span class="sub">${esc(t.sport)}${t.club ? ` · ${esc(t.club)}` : ''}</span>`;
+  return `<div class="cols"><div class="main-col">
+    <section class="card pad" style="display:flex;flex-direction:column;gap:16px"><div class="row" style="gap:14px">${u.photo ? `<img src="${esc(u.photo)}" alt="" width="52" height="52" style="border-radius:50%">` : `<span class="crest" style="width:52px;height:52px;border-radius:50%;background:#2E7D32;font-size:19px">${esc(initials(u.name || u.email))}</span>`}
+      <div style="flex:1 1 240px;display:flex;flex-direction:column;gap:3px"><h2>${esc(u.name || u.email)}</h2><span class="sub">${esc(u.email)} · ${esc(u.providers.join(', ') || 'no sign-in')} · <span class="mono">${esc(u.uid)}</span></span></div>
+      <span class="row">${p.pro ? chip('Pro', 'ok') : chip('Free', 'info')}${u.clubTeams.length ? chip('Club Pro', 'ok') : ''}${u.tester ? chip('Tester', 'warn') : ''}${u.admin ? chip('Admin', 'warn') : ''}${u.botLike ? chip('Bot-like', 'bad') : ''}${u.disabled ? chip('Disabled', 'bad') : ''}</span></div>
+      <div class="grid">
+        <div style="display:flex;flex-direction:column;gap:3px"><span class="lbl">Joined</span><span>${day(u.created)}</span></div>
+        <div style="display:flex;flex-direction:column;gap:3px"><span class="lbl">Last sign-in</span><span>${ago(u.lastSignIn)}</span></div>
+        <div style="display:flex;flex-direction:column;gap:3px"><span class="lbl">App</span><span>${esc(u.app.platform || '—')} ${esc(u.app.version || '')}</span><span class="sub">synced ${ago(u.app.lastSync)}</span></div>
+        <div style="display:flex;flex-direction:column;gap:3px"><span class="lbl">Own plan</span><span>${esc(planText)}</span></div>
+        <div style="display:flex;flex-direction:column;gap:3px"><span class="lbl">Games scored</span><span>${u.app.games}</span><span class="sub">last ${ago(u.app.lastGame)}</span></div>
+        <div style="display:flex;flex-direction:column;gap:3px"><span class="lbl">Notifications</span><span>${u.app.push ? 'On' : 'Off'}</span><span class="sub">${u.app.devices || 0} phone${u.app.devices === 1 ? '' : 's'}</span></div>
+      </div>
+      ${p.play || p.appstore || p.comp ? `<div class="sub" style="line-height:1.6">${p.play ? `Google Play: ${p.play.active ? 'active' : 'not active'}, ${esc(p.play.basePlanId)}, ends ${day(p.play.expiresAt)}<br>` : ''}${p.appstore ? `App Store: ${p.appstore.active ? 'active' : 'not active'}, ${esc(p.appstore.productId)}, ends ${day(p.appstore.expiresAt)}<br>` : ''}${p.comp ? `Given by ${esc(p.comp.by)} until ${day(p.comp.expiresAt)}: "${esc(p.comp.reason)}"` : ''}</div>` : ''}
+    </section>
+    <section class="card pad" style="display:flex;flex-direction:column;gap:6px"><h2>Teams</h2>
+      ${u.owns.length ? `<div class="li" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="lbl">Owns</span>${u.owns.map(teamLine).join('<br>')}</div>` : ''}
+      ${u.manages.length ? `<div class="li" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="lbl">Manages</span>${u.manages.map(teamLine).join('<br>')}</div>` : ''}
+      ${u.coaches && u.coaches.length ? `<div class="li" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="lbl">Coaches</span>${u.coaches.map(teamLine).join('<br>')}</div>` : ''}
+      ${u.clubTeams.length ? `<div class="li" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="lbl">Club Pro on</span>${u.clubTeams.map((t) => `${teamLine(t)} <span class="sub">until ${day(t.until)}</span>`).join('<br>')}</div>` : ''}
+      <div class="li"><span class="lbl">Follows</span><span>${u.follows} team${u.follows === 1 ? '' : 's'}</span></div></section>
+    <section class="card pad" style="display:flex;flex-direction:column"><h2>Tickets</h2>${u.tickets.length ? u.tickets.map((t) => `<a class="li" href="#support/${esc(t.id)}" style="color:var(--ink);text-decoration:none"><span>${esc(t.subject || '(no subject)')}</span>${chip(TK[t.status] || t.status, t.status === 'resolved' || t.status === 'closed' ? 'ok' : 'warn')}</a>`).join('') : '<div class="empty">No tickets.</div>'}</section>
+  </div>
+  <aside class="side-col"><section class="card pad" style="display:flex;flex-direction:column;gap:10px"><h2>Actions</h2><p class="sub" style="margin:0;line-height:1.5">Each asks for a reason and goes in the audit log.</p>
+    <button class="btn" id="uPro">Give Pro…</button>${p.comp ? '<button class="btn" id="uEndPro">End the Pro we gave</button>' : ''}
+    <button class="btn" id="uTester">${u.tester ? 'Stop being a tester' : 'Make a tester (tier switcher)'}</button>
+    <button class="btn" id="uOut">Sign out on every phone</button>
+    ${u.providers.includes('password') ? '<button class="btn" id="uReset">Password reset link</button>' : ''}
+    <a class="btn" href="mailto:${esc(u.email)}">Email them</a></section>
+    <section class="card pad"><h2>About testers</h2><p class="sub" style="margin:6px 0 0;line-height:1.5">Testers can use the tier switcher and Labs in the apps. They are not admins and can't open this page.</p></section></aside></div>`;
 }
-
-async function loadTickets() {
-    const target = $('ticketList');
-    target.innerHTML = '<div class="empty">Loading…</div>';
-    try {
-        const filter = $('ticketFilter').value;
-        let statusFilter = null;
-        if (filter === 'needs_attn') statusFilter = ['open', 'response_received', 'in_progress'];
-        else if (filter === 'open_only') statusFilter = ['open'];
-        else if (filter === 'response_received') statusFilter = ['response_received'];
-        else if (filter === 'awaiting') statusFilter = ['awaiting_customer'];
-        else if (filter === 'in_progress') statusFilter = ['in_progress'];
-        else if (filter === 'resolved') statusFilter = ['resolved'];
-        else if (filter === 'closed') statusFilter = ['closed'];
-
-        let q;
-        if (statusFilter) {
-            q = query(
-                collection(db, 'tickets'),
-                where('status', 'in', statusFilter),
-                orderBy('updatedAt', 'desc'),
-                limit(100)
-            );
-        } else {
-            q = query(collection(db, 'tickets'), orderBy('updatedAt', 'desc'), limit(100));
-        }
-        const snap = await getDocs(q);
-        if (snap.empty) {
-            target.innerHTML = '<div class="empty">No tickets match this filter.</div>';
-            return;
-        }
-        const rows = snap.docs.map((d) => {
-            const t = d.data();
-            const sub = t.submittedBy || {};
-            const status = t.status || 'open';
-            const badgeClass = STATUS_BADGE_CLASS[status] || 'pending';
-            const updated = t.updatedAt ? new Date(t.updatedAt).toLocaleString() : '—';
-            // Customer-replied-last gets a blue dot — that's the "needs your
-            // attention" signal. The dot itself is hard-coded HTML (the
-            // `html` tagged template escapes interpolations to prevent XSS,
-            // so we can't pass markup through a variable). Conditional on
-            // a flag we *can* interpolate.
-            const needsAttn = t.lastReplyFrom === 'customer' ? 'attn' : '';
-            return html`
-                <tr style="cursor: pointer;" data-attn="${needsAttn}" onclick="openTicket('${d.id}')">
-                    <td>
-                        <strong>${t.id || d.id}</strong>
-                        <div class="muted">${t.subject || ''}</div>
-                        <div class="mobile-meta">
-                            ${sub.name || '—'}${sub.email ? ` · ${sub.email}` : ''}<br>
-                            ${t.category || '—'} · ${updated}
-                        </div>
-                    </td>
-                    <td class="col-customer">${sub.name || '—'}<div class="muted">${sub.email || ''}</div></td>
-                    <td><span class="badge ${badgeClass}">${STATUS_LABEL[status] || status}</span></td>
-                    <td class="col-cat"><span class="muted">${t.category || '—'}</span></td>
-                    <td class="col-updated"><span class="muted">${updated}</span></td>
-                </tr>`;
-        }).join('');
-        target.innerHTML = `
-            <table class="tickets-table">
-                <thead><tr><th>Ticket</th><th class="col-customer">Customer</th><th>Status</th><th class="col-cat">Category</th><th class="col-updated">Updated</th></tr></thead>
-                <tbody>${rows}</tbody>
-            </table>`;
-    } catch (e) {
-        target.innerHTML = `<div class="status error">Failed to load tickets: ${e.message || e}</div>`;
-    }
+async function teamView(id) {
+  const t = state.team = await call('adminTeam', { teamId: id });
+  const p = (x) => esc(x.name ? `${x.name} (${x.email || ''})` : (x.email || x.uid));
+  return `<div class="cols"><div class="main-col"><section class="card pad" style="display:flex;flex-direction:column;gap:4px">
+      <div class="row" style="justify-content:space-between"><h2>${esc(t.name)}</h2><span class="row">${t.club ? chip(t.club.covered ? 'Club Pro' : 'Club, not covered', t.club.covered ? 'ok' : 'warn') : ''}${t.liveCode ? chip('Live', 'bad') : ''}${t.status === 'archived' ? chip('Archived', 'info') : ''}</span></div>
+      <span class="sub">${esc(t.sport)}${t.club ? ` · <a href="#club/${esc(t.club.clubId)}">${esc(t.club.name)}</a>` : ''}${t.hubCode ? ` · share code <span class="mono">${esc(t.hubCode)}</span>` : ''} · <span class="mono">${esc(t.id)}</span></span>
+      <div class="li" style="margin-top:10px"><span>Owner</span><span>${t.owner.uid ? `<a href="#people/u/${esc(t.owner.uid)}">${p(t.owner)}</a>` : '—'}</span></div>
+      <div class="li"><span>Managers</span><span style="text-align:right">${t.managers.map((m) => `<a href="#people/u/${esc(m.uid)}">${p(m)}</a>`).join('<br>') || '—'}</span></div>
+      <div class="li"><span>Coaches</span><span style="text-align:right">${t.coaches.map((m) => `<a href="#people/u/${esc(m.uid)}">${p(m)}</a>`).join('<br>') || '—'}</span></div>
+      <div class="li"><span>Followers</span><span>${t.followers}${t.waiting ? ` · ${t.waiting} waiting` : ''}</span></div>
+      <div class="li"><span>Who can see it</span><span>${esc(t.visibility)}</span></div>
+      <div class="li"><span>Games</span><span>${t.games}</span></div>
+      <div class="li"><span>Live</span><span>${t.liveCode ? `Since ${when(t.updatedAt)}${t.liveUrl ? ` · <a href="${esc(t.liveUrl)}" target="_blank" rel="noopener">watch</a>` : ''}` : 'No'}</span></div>
+    </section></div>
+    <aside class="side-col"><section class="card pad" style="display:flex;flex-direction:column;gap:10px"><h2>Actions</h2>
+      ${t.hubCode ? `<a class="btn" href="/team.html?code=${esc(t.hubCode)}" target="_blank" rel="noopener">Team page</a>` : ''}
+      <button class="btn" id="tLive" ${t.liveCode || t.liveGames.length ? '' : 'disabled'}>Clear a stuck live</button>
+      <span class="sub">Same as the app's "clear stuck live": the team stops showing as live and live games are marked finished.</span></section></aside></div>`;
 }
+WIRE.people = (kind, id) => {
+  $('pf').onsubmit = (e) => { e.preventDefault(); state.pq = $('pq').value.trim(); if (location.hash === '#people') route(); else location.hash = '#people'; };
+  if (kind === 'u') {
+    const u = state.person;
+    $('uPro').onclick = async () => { const a = await ask({ title: 'Give Pro', body: 'Pro on every phone they sign in to, on top of anything they pay for. Their phones pick it up at the next app start.', fields: [{ label: 'For', type: 'select', options: [['30', '30 days'], ['90', '90 days'], ['365', '1 year']], value: '30' }], ok: 'Give Pro' }); if (a) act('adminUserAction', { uid: u.uid, action: 'givePro', days: Number(a.vals[0]), reason: a.reason }); };
+    if ($('uEndPro')) $('uEndPro').onclick = async () => { const a = await ask({ title: 'End the Pro we gave', ok: 'End it', danger: true }); if (a) act('adminUserAction', { uid: u.uid, action: 'endPro', reason: a.reason }); };
+    $('uTester').onclick = async () => { const a = await ask({ title: u.tester ? 'Stop being a tester' : 'Make a tester', body: 'Testers get the tier switcher and Labs in the apps.' }); if (a) act('adminUserAction', { uid: u.uid, action: 'tester', on: !u.tester, reason: a.reason }); };
+    $('uOut').onclick = async () => { const a = await ask({ title: 'Sign out on every phone', body: 'Their phones and browsers sign out within the hour and ask them to sign in again.', ok: 'Sign them out', danger: true }); if (a) act('adminUserAction', { uid: u.uid, action: 'signOut', reason: a.reason }); };
+    if ($('uReset')) $('uReset').onclick = async () => { const a = await ask({ title: 'Password reset link', body: 'Makes a link you can send them. It works once.' }); if (a) act('adminUserAction', { uid: u.uid, action: 'resetLink', reason: a.reason }, (r) => { navigator.clipboard.writeText(r.link).then(() => toast('Link copied.')).catch(() => prompt('Reset link', r.link)); }); };
+  }
+  if (kind === 't') {
+    $('tLive').onclick = async () => { const a = await ask({ title: 'Clear a stuck live', body: 'The team stops showing as live, and games still marked live are marked finished.', ok: 'Clear it' }); if (a) act('adminTeamAction', { teamId: id, action: 'clearLive', reason: a.reason }); };
+  }
+};
 
-async function openTicket(ticketId) {
-    // If this exact ticket is already open, do nothing — prevents a phantom
-    // touch event on screen-unlock from wiping any draft the user was typing.
-    const existing = $('ticketModal');
-    if (existing && existing.dataset.ticketId === ticketId) return;
-    closeTicketModal();
-    // Lazy fetch the ticket doc + thread, render in a modal.
-    try {
-        const tDoc = await getDoc(doc(db, 'tickets', ticketId));
-        if (!tDoc.exists()) {
-            alert('Ticket not found');
-            return;
-        }
-        const ticket = { id: ticketId, ...tDoc.data() };
-        const msgs = await getDocs(query(
-            collection(db, 'tickets', ticketId, 'messages'),
-            orderBy('createdAt', 'asc')
-        ));
-        const sub = ticket.submittedBy || {};
-        const debug = ticket.debugInfo || null;
+// ── Support ───────────────────────────────────────────────────────────
+const TK = { open: 'Open', awaiting_customer: 'Waiting on them', response_received: 'They replied', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed' };
+VIEWS.support = async (ticketId) => {
+  const f = state.tf || 'needs';
+  const r = await call('adminTickets', { filter: f });
+  setBadge('support', r.counts.needs);
+  const list = `<nav class="card" aria-label="Tickets" style="flex:1 1 280px;min-width:0;overflow:hidden;align-self:flex-start">
+    <div style="padding:12px 14px;border-bottom:1px solid var(--ln)"><label class="f">Show<select class="in" id="tf">${[['needs', 'Waiting on you'], ['awaiting_customer', 'Waiting on them'], ['resolved', 'Resolved'], ['closed', 'Closed'], ['all', 'All']].map(([k, t]) => `<option value="${k}" ${k === f ? 'selected' : ''}>${t}</option>`).join('')}</select></label></div>
+    ${r.tickets.length ? r.tickets.map((t) => `<a href="#support/${esc(t.id)}" style="display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-bottom:1px solid var(--ln2);text-decoration:none;color:var(--ink);${t.id === ticketId ? 'background:var(--sel)' : ''}"><span class="row" style="justify-content:space-between;flex-wrap:nowrap"><strong style="font-size:14px">${esc(t.subject || '(no subject)')}</strong><span class="sub" style="white-space:nowrap">${ago(t.updatedAt)}</span></span><span class="sub">${esc(t.from)} · ${esc(TK[t.status] || t.status)}</span></a>`).join('') : '<div class="empty" style="padding:14px">No tickets here.</div>'}</nav>`;
+  let thread = '<section class="card pad empty" style="flex:999 1 420px">Pick a ticket.</section>';
+  if (ticketId) {
+    const t = state.ticket = await call('adminTicket', { ticketId });
+    const x = t.ticket;
+    thread = `<section class="card pad" style="flex:999 1 420px;min-width:0;display:flex;flex-direction:column;gap:12px">
+      <div class="row" style="justify-content:space-between"><h2>${esc(x.subject || '(no subject)')}</h2><label class="f" style="flex-direction:row;align-items:center;gap:8px">Status<select class="in" id="ts">${Object.entries(TK).map(([k, v]) => `<option value="${k}" ${k === x.status ? 'selected' : ''}>${v}</option>`).join('')}</select></label></div>
+      <span class="sub">${esc((x.submittedBy && (x.submittedBy.name || '')) || '')} ${esc((x.submittedBy && x.submittedBy.email) || '')} · ${esc(x.category || '')} · opened ${when(x.createdAt)}${t.uid ? ` · <a href="#people/u/${esc(t.uid)}">their account</a>` : ''}</span>
+      ${t.messages.map((m) => `<div class="msg ${m.from === 'admin' ? 'us' : ''}"><span class="sub">${esc(m.from === 'admin' ? (m.adminName || 'ScoreFrame Support') : ((x.submittedBy && (x.submittedBy.name || x.submittedBy.email)) || 'Customer'))} · ${when(m.createdAt)}</span>\n${esc(m.body || '')}</div>`).join('') || `<div class="msg">${esc(x.message || x.body || '')}</div>`}
+      ${x.debugInfo ? `<details><summary class="sub" style="cursor:pointer">Phone details</summary><pre class="mono" style="white-space:pre-wrap;margin:8px 0 0">${esc(typeof x.debugInfo === 'string' ? x.debugInfo : JSON.stringify(x.debugInfo, null, 2))}</pre></details>` : ''}
+      <label class="f">Reply<textarea class="in" id="rb" rows="5"></textarea></label>
+      <div class="row"><button class="btn pri" id="rSend">Send reply</button><button class="btn" id="rSendDone">Send and mark resolved</button><span class="sub">Goes from support@scoreframe.app as ScoreFrame Support; their reply comes back here.</span></div></section>`;
+  }
+  return head(`${r.counts.needs} waiting on you`, 'Support') + `<div class="cols">${list}${thread}</div>`;
+};
+WIRE.support = (ticketId) => {
+  $('tf').onchange = () => { state.tf = $('tf').value; route(); };
+  if (!ticketId) return;
+  $('ts').onchange = () => act('adminTicketStatus', { ticketId, status: $('ts').value });
+  const send = async (status) => {
+    const body = $('rb').value.trim(); if (!body) return toast('Write the reply first.');
+    try { await call('replyToTicket', { ticketId, body, ...(status ? { status } : {}) }); toast('Sent.'); route(); } catch (e) { toast(errText(e), 7000); }
+  };
+  $('rSend').onclick = () => send(null);
+  $('rSendDone').onclick = () => send('resolved');
+};
 
-        const threadHtml = msgs.docs.map((d) => {
-            const m = d.data();
-            const who = m.from === 'admin' ? `${m.adminName || 'Admin'}` : (sub.name || sub.email || 'Customer');
-            const when = m.createdAt ? new Date(m.createdAt).toLocaleString() : '';
-            const safeBody = (m.body || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
-            // Stash the raw body on the button via data attribute. Encode
-            // it for HTML attribute safety; we decode on click before
-            // copying so the clipboard gets the original text (including
-            // any debug bundle footer).
-            const encodedBody = (m.body || '')
-                .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-                .replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            return `<div class="thread-row ${m.from === 'admin' ? 'admin' : 'customer'}">
-                <div class="who">
-                    <span>${who} &middot; ${when}</span>
-                    <button class="copy-btn" onclick="copyMessageBody(this)" data-body="${encodedBody}">Copy</button>
-                </div>
-                <div>${safeBody}</div>
-            </div>`;
-        }).join('');
-
-        // Raw debug bundle (pre-escape) saved on the button so the Copy
-        // action emits the original text. The visible block stays escaped
-        // for safe rendering.
-        const debugRaw = debug
-            ? (typeof debug === 'string' ? debug : JSON.stringify(debug, null, 2))
-            : '';
-        const debugVisible = debugRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-        const debugEncoded = debugRaw
-            .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-            .replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const debugHtml = debug
-            ? `<div class="debug-block">${debugVisible}</div>`
-            : '';
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-backdrop';
-        modal.id = 'ticketModal';
-        modal.dataset.ticketId = ticketId;
-        modal.onclick = (e) => { if (e.target === modal) closeTicketModal(); };
-        modal.innerHTML = `
-            <div class="modal">
-                <div class="modal-header">
-                    <div>
-                        <h2>${ticket.id}: ${(ticket.subject || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</h2>
-                        <div class="meta">
-                            ${(sub.name || '—').replace(/&/g, '&amp;').replace(/</g, '&lt;')}
-                            &middot; <a href="mailto:${sub.email || ''}" style="color: var(--accent);">${sub.email || ''}</a>
-                            &middot; ${ticket.category || '—'}
-                            ${sub.platform ? `&middot; ${sub.platform}${sub.appVersion ? ' v' + sub.appVersion : ''}` : ''}
-                        </div>
-                    </div>
-                    <button class="close-x" onclick="closeTicketModal()">&times;</button>
-                </div>
-
-                <div style="margin-bottom: 16px;">
-                    ${threadHtml}
-                </div>
-
-                ${debug ? `
-                    <details style="margin-bottom: 16px;">
-                        <summary style="cursor:pointer;font-size:12px;color:var(--text-secondary);display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                            <span>Debug info</span>
-                            <button class="copy-btn" onclick="event.preventDefault(); copyDebugInfo(this);" data-body="${debugEncoded}">Copy</button>
-                        </summary>
-                        ${debugHtml}
-                    </details>
-                ` : ''}
-
-                <div style="margin-top: 16px;">
-                    <label>Reply</label>
-                    <textarea id="replyBody" placeholder="Your reply to the customer…" rows="6"></textarea>
-                    <div class="form-row" style="margin-top: 12px; align-items: end;">
-                        <div>
-                            <label>Set status</label>
-                            <select id="replyStatus">
-                                <option value="">No change (auto)</option>
-                                <option value="awaiting_customer">Awaiting customer</option>
-                                <option value="in_progress">In progress</option>
-                                <option value="resolved">Resolved</option>
-                                <option value="closed">Closed</option>
-                            </select>
-                        </div>
-                        <div>
-                            <button class="primary" onclick="sendTicketReply('${ticketId}')">Send reply + email customer</button>
-                        </div>
-                    </div>
-                    <div id="replyStatus_msg"></div>
-                </div>
-            </div>`;
-        document.body.appendChild(modal);
-        // Restore any draft the user was typing before the screen locked.
-        const draftKey = 'ticket_draft_' + ticketId;
-        const saved = sessionStorage.getItem(draftKey);
-        if (saved) $('replyBody').value = saved;
-        // Persist keystrokes so a page-discard on lock can't lose the draft.
-        $('replyBody').addEventListener('input', () => {
-            sessionStorage.setItem(draftKey, $('replyBody').value);
-        });
-    } catch (e) {
-        alert('Failed to open ticket: ' + (e.message || e));
-    }
-}
-
-function closeTicketModal() {
-    const m = $('ticketModal');
-    if (m) m.remove();
-}
-
-/** Copy a message body to the clipboard. The button stores the raw text
- *  in its `data-body` attribute (HTML-decoded by the browser when read
- *  back via .dataset). Flashes "Copied" briefly so the user sees feedback. */
-function copyMessageBody(btn) {
-    const text = btn.getAttribute('data-body') || '';
-    // The data-body attribute holds HTML-encoded text — decode entities
-    // back to the original by routing through a textarea.
-    const decoder = document.createElement('textarea');
-    decoder.innerHTML = text;
-    const decoded = decoder.value;
-    navigator.clipboard.writeText(decoded).then(() => {
-        const original = btn.textContent;
-        btn.textContent = 'Copied';
-        btn.classList.add('copied');
-        setTimeout(() => {
-            btn.textContent = original;
-            btn.classList.remove('copied');
-        }, 1200);
-    }).catch((e) => {
-        console.warn('Copy failed:', e);
-        // Fallback: select the text in the message body div as a last resort.
-        alert('Copy failed: ' + e.message);
-    });
-}
-
-async function sendTicketReply(ticketId) {
-    const body = $('replyBody').value.trim();
-    const status = $('replyStatus').value;
-    const statusMsg = $('replyStatus_msg');
-    if (!body) {
-        statusMsg.className = 'status error';
-        statusMsg.textContent = 'Reply body is required.';
-        return;
-    }
-    statusMsg.className = 'status info';
-    statusMsg.textContent = 'Sending…';
-    try {
-        const result = await replyToTicket({
-            ticketId,
-            body,
-            status: status || undefined,
-            // adminName intentionally not passed — Cloud Function hard-codes
-            // it to "ScoreFrame Support" so we have a single brand voice.
-        });
-        statusMsg.className = 'status success';
-        statusMsg.textContent = `Sent. Status now: ${result.data.status}`;
-        sessionStorage.removeItem('ticket_draft_' + ticketId);
-        // Reopen the ticket to show the appended reply.
-        setTimeout(() => {
-            closeTicketModal();
-            loadTickets();
-            openTicket(ticketId);
-        }, 600);
-    } catch (e) {
-        statusMsg.className = 'status error';
-        statusMsg.textContent = 'Failed: ' + (e.message || e);
-    }
-}
-
-async function loadHealth() {
-    const stats = $('healthStats');
-    const errs = $('errorList');
-    stats.innerHTML = '<div class="empty">Loading…</div>';
-    errs.innerHTML = '';
-    try {
-        const broadcasts = await getDocs(query(collection(db, 'broadcasts'), orderBy('createdAt', 'desc'), limit(50)));
-        let total = 0, sent = 0, errored = 0, active = 0;
-        const now = Date.now();
-        const errors = [];
-        broadcasts.forEach(b => {
-            const x = b.data();
-            total++;
-            if (x.sent) sent++;
-            if (x.error) {
-                errored++;
-                errors.push({ id: b.id, title: x.title, error: x.error, when: x.createdAt });
-            }
-            if (x.expiresAt && now <= x.expiresAt) active++;
-        });
-        stats.innerHTML = `
-            <div class="stat-card"><div class="label">Total (50d)</div><div class="value">${total}</div></div>
-            <div class="stat-card"><div class="label">Active</div><div class="value">${active}</div></div>
-            <div class="stat-card"><div class="label">Sent</div><div class="value">${sent}</div></div>
-            <div class="stat-card"><div class="label">Errors</div><div class="value">${errored}</div></div>
-        `;
-        if (errors.length === 0) {
-            errs.innerHTML = '<div class="empty">No broadcast errors.</div>';
-        } else {
-            const rows = errors.map(e => html`
-                <tr>
-                    <td>${e.title || '—'}</td>
-                    <td><span class="muted">${e.when ? new Date(e.when).toLocaleString() : '—'}</span></td>
-                    <td><span class="badge error">${e.error}</span></td>
-                </tr>`).join('');
-            errs.innerHTML = `<table><thead><tr><th>Title</th><th>When</th><th>Error</th></tr></thead><tbody>${rows}</tbody></table>`;
-        }
-    } catch (e) {
-        stats.innerHTML = `<div class="status error">Failed: ${e.message}</div>`;
-    }
-}
+// ── System and audit ──────────────────────────────────────────────────
+VIEWS.system = async () => {
+  const r = state.system = await call('adminSystem');
+  const errTotal = r.errors.reduce((a, b) => a + b.count, 0);
+  return `${head('Servers, apps, admins', 'System and audit')}
+    <section class="grid">
+      <div class="card tile"><span class="lbl">Server errors, 24 h</span><span class="v">${errTotal}</span><span class="sub">${r.errors.filter((e) => e.count).length} functions</span></div>
+      <div class="card tile"><span class="lbl">Live right now</span><span class="v">${r.liveNow.length}</span><span class="sub">${r.stuck.length} stuck</span></div>
+      <div class="card tile"><span class="lbl">Accounts</span><span class="v">${r.users}</span><span class="sub">${r.bots30} bot-like in 30 days</span></div>
+      <div class="card tile"><span class="lbl">YouTube quota</span><span class="v">${(r.youtubeQuota.grant / 1000).toFixed(0)}k</span><span class="sub">a day · grant ends ${ymdDay(r.youtubeQuota.grantEnds)}</span></div>
+      <div class="card tile"><span class="lbl">Test leftovers</span><span class="v">${r.zz}</span><span class="sub">teams named ZZ…</span></div></section>
+    <div class="cols"><section class="main-col"><div class="card pad" style="display:flex;flex-direction:column;gap:10px"><h2>Server errors, last 24 hours</h2>
+        <div class="scroll"><table><thead><tr><th>Function</th><th>Errors</th><th>Last one</th></tr></thead><tbody>
+        ${r.errors.length ? r.errors.map((e) => `<tr><td class="mono">${esc(e.fn)}</td><td>${e.count ? chip(String(e.count), 'warn') : ''}</td><td class="sub">${esc(e.last)}${e.lastAt ? ` · ${ago(e.lastAt)}` : ''}</td></tr>`).join('') : '<tr><td colspan="3" class="empty">No errors.</td></tr>'}</tbody></table></div></div>
+      <div class="card pad" style="display:flex;flex-direction:column;gap:10px"><h2>Live and stuck</h2>
+        ${[...r.stuck.map((s) => ({ ...s, stuck: true })), ...r.liveNow].map((s) => `<div class="li"><span><a href="#people/t/${esc(s.teamId)}"><strong>${esc(s.name)}</strong></a><br><span class="sub">${s.stuck ? 'stuck: no update since ' : 'live since '}${when(s.updatedAt)}</span></span>${s.stuck ? chip('Stuck', 'bad') : chip('Live', 'ok')}</div>`).join('') || '<div class="empty">Nothing live.</div>'}</div>
+      <div class="card pad" style="display:flex;flex-direction:column;gap:10px"><h2>Audit log</h2><span class="sub">Every admin change with its reason, newest first.</span>
+        <div class="scroll"><table><thead><tr><th>When</th><th>Who</th><th>What</th><th>Reason</th></tr></thead><tbody>
+        ${r.audit.length ? r.audit.map((x) => `<tr><td class="sub" style="white-space:nowrap">${when(x.at)}</td><td>${esc(String(x.by || '').split('@')[0])}@</td><td>${esc(describeAudit(x))}</td><td class="sub">${esc(x.reason || '')}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">Nothing yet.</td></tr>'}</tbody></table></div></div></section>
+    <aside class="side-col"><section class="card pad"><h2>Apps in use</h2><p class="sub" style="margin:6px 0 4px">Versions synced in the last 30 days.</p>
+        ${r.versions.map(([k, n]) => `<div class="li"><span>${esc(k)}</span><strong>${n}</strong></div>`).join('') || '<div class="empty">No data.</div>'}</section>
+      <section class="card pad"><h2>Who can open this page</h2>
+        ${r.admins.map((a) => `<div class="li"><span>${esc(a.email)}<br><span class="sub">signed in ${ago(a.lastSignIn)}</span></span>${a.mfa ? chip(`Authenticator · ${a.backupLeft} backups`, 'ok') : chip('No authenticator yet', 'warn')}</div>`).join('')}
+        <p class="sub" style="margin:10px 0 0;line-height:1.5">Only these two Google sign-ins, plus a Google Authenticator code every 12 hours. The server checks both on every action, not just this page.</p></section>
+      <section class="card pad"><h2>App-wide announcements</h2><p class="sub" style="margin:6px 0 4px">Sending to every user is turned off.</p>
+        ${r.broadcasts.map((b) => `<div class="li"><span>${esc(b.title)}</span><span class="sub">${day(b.createdAt)}</span></div>`).join('') || '<div class="empty">None.</div>'}</section></aside></div>`;
+};
 </script>
 </body>
 </html>
