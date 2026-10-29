@@ -1824,6 +1824,13 @@ async function loadTeam() {
                 } catch (e3) { console.warn('[team.html] teamSearchIndex by hubCode failed:', e3); }
             }
             console.log('[team.html] gate-fallback indexInfo:', indexInfo, 'shell:', !!publicShell);
+            // A club team on "Signed-in ScoreFrame users" (hubIndex.access,
+            // stamped by clubSetPrivacy): a signed-out visitor gets the sign-in
+            // gate, not "Team Not Found" (2026-10-29).
+            if (!indexInfo && (indexDoc.data() || {}).access === 'signed_in') {
+                const ix = indexDoc.data() || {};
+                indexInfo = { teamName: ix.teamName || 'Team', sport: ix.sport || '', visibility: 'signed_in' };
+            }
             if (!indexInfo && publicShell) {
                 indexInfo = {
                     teamName: publicShell.name,
