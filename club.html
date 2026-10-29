@@ -354,7 +354,7 @@ function statusBanner() {
     <div class="row">${c.trialUsed ? '' : '<button class="btn dark" type="button" id="trialBtn">Start free trial</button>'}<button class="btn primary" type="button" data-go="billing">Buy licenses</button></div></div>`;
   if (c.status === 'trialing') return `<div class="banner b-info"><div class="txt"><strong>Free trial:</strong> ${c.seats} teams through ${lastDay(c.licenseUntil)} (${daysLeft(c.licenseUntil)} days left).</div><button class="btn primary" type="button" data-go="billing">Buy licenses</button></div>`;
   if (c.status === 'past_due') return `<div class="banner b-bad"><div class="txt"><strong>Invoice ${esc(unpaid?.stripe?.invoiceNumber || '')} is past due.</strong> Teams stay covered through ${lastDay(c.licenseUntil)}; after that coverage pauses until it's paid.</div>${unpaid?.stripe?.hostedInvoiceUrl ? `<a class="btn dark" href="${esc(unpaid.stripe.hostedInvoiceUrl)}" target="_blank" rel="noopener">Pay the invoice</a>` : ''}</div>`;
-  if (c.status === 'awaiting_payment' && unpaid) return `<div class="banner b-warn"><div class="txt"><strong>Invoice ${esc(unpaid.stripe?.invoiceNumber || '')} sent</strong> to ${esc(c.billing?.email || '')}. Due ${unpaid.dueAt ? lastDay(unpaid.dueAt + DAY) : 'in 30 days'}. Your teams are covered meanwhile.</div>${unpaid.stripe?.hostedInvoiceUrl ? `<a class="btn ghost" href="${esc(unpaid.stripe.hostedInvoiceUrl)}" target="_blank" rel="noopener">View invoice</a>` : ''}</div>`;
+  if (c.status === 'awaiting_payment' && unpaid) return `<div class="banner b-warn"><div class="txt"><strong>Invoice ${esc(unpaid.stripe?.invoiceNumber || '')} sent</strong> to ${esc(c.billing?.email || '')}. Due ${unpaid.dueAt ? lastDay(unpaid.dueAt + DAY) : 'in 30 days'}. ${c.unpaidCapped ? `Up to ${c.seats} teams are covered until it's paid; the rest turn on when it's paid.` : 'Your teams are covered meanwhile.'}</div>${unpaid.stripe?.hostedInvoiceUrl ? `<a class="btn ghost" href="${esc(unpaid.stripe.hostedInvoiceUrl)}" target="_blank" rel="noopener">View invoice</a>` : ''}</div>`;
   if (c.status === 'lapsed') return `<div class="banner b-bad"><div class="txt"><strong>Coverage has ended.</strong> Teams, pages and history are all still here. Renew to turn Pro back on for your coaches.</div><button class="btn primary" type="button" data-go="billing">Renew</button></div>`;
   if (c.status === 'scheduled') return `<div class="banner b-info"><div class="txt"><strong>Coverage starts ${c.nextStart ? fmtYmd(ymdOf(c.nextStart + 12 * 3600 * 1000)) : 'soon'}.</strong></div></div>`;
   if (c.status === 'active' && c.licenseUntil && daysLeft(c.licenseUntil) <= 30) return `<div class="banner b-warn"><div class="txt"><strong>Coverage runs through ${lastDay(c.licenseUntil)}</strong> (${daysLeft(c.licenseUntil)} days left).</div><button class="btn primary" type="button" data-go="billing">Renew or extend</button></div>`;
@@ -422,7 +422,12 @@ function renderTeams() {
       : `<div class="pad muted">No teams yet. <a href="#" id="addTeam2">Add your first team</a>; you'll invite its coaches next.</div>`}
     </section>`;
   wireCommon();
-  $('addTeam').onclick = addTeamDialog;
+  const room = (c.maxSeats || 0) > rows.filter(r => r.t.status !== 'archived').length;
+  $('addTeam').onclick = () => {
+    if (room) return addTeamDialog();
+    toast((c.maxSeats || 0) === 0 ? (c.trialUsed ? 'Buy licenses to add teams.' : 'Start the free trial or buy licenses to add teams.')
+      : c.unpaidCapped ? `${c.maxSeats} teams can be set up until the invoice is paid.` : `All ${c.maxSeats} licenses are in use. Buy more to add a team.`, 6000);
+  };
   const a2 = $('addTeam2'); if (a2) a2.onclick = (e) => { e.preventDefault(); addTeamDialog(); };
   document.querySelectorAll('[data-go2]').forEach(a => a.onclick = (e) => { e.preventDefault(); S.tab = 'billing'; setUrl(); render(); });
   document.querySelectorAll('[data-buy]').forEach(a => a.onclick = (e) => { e.preventDefault(); S.buy.kind = a.dataset.buy === 'addon' ? 'addon' : 'purchase'; S.buy.quote = null; S.buy.start = ''; S.tab = 'billing'; setUrl(); render(); });
@@ -449,7 +454,7 @@ function addTeamDialog() {
       <div class="field"><label for="tC1">Main color</label><input id="tC1" type="color" value="${esc(S.club.color || '#C8102E')}" style="height:44px;padding:4px;"></div>
       <div class="field"><label for="tC2">Second color</label><input id="tC2" type="color" value="#111215" style="height:44px;padding:4px;"></div>
     </div>
-    <p class="muted" style="margin:0;font-size:14px;line-height:1.45;">${(S.club.openSeats || 0) > 0 ? 'This team will use one of your open licenses.' : 'All licenses are in use, so this team starts uncovered. Add a license on the billing page, or move it up the list.'} It gets its own team page right away.</p>
+    <p class="muted" style="margin:0;font-size:14px;line-height:1.45;">${(S.club.openSeats || 0) > 0 ? 'This team uses one of your open licenses.' : 'This team uses a license from your upcoming period.'} It gets its own team page right away.</p>
     <div class="row"><button class="btn primary" value="ok" id="tGo">Add team</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
   </form>`;
   d.showModal();
@@ -598,12 +603,13 @@ function currentBase() {
 function renderBilling() {
   const c = S.club; const B = S.buy; const base = currentBase();
   const active = (c.teamIds || []).filter(id => S.teams[id] && S.teams[id].status !== 'archived').length;
-  if (!B.teams) B.teams = S.wantBuy === 'renew' ? Math.max(2, c.seats || active) : (B.kind === 'addon' ? 1 : Math.max(2, active));
+  const minTeams = (S.pricing && S.pricing.minTeams) || 1;
+  if (!B.teams) B.teams = S.wantBuy === 'renew' ? Math.max(minTeams, c.seats || active) : (B.kind === 'addon' ? 1 : Math.max(minTeams, active));
   if (B.kind === 'addon' && !base) B.kind = 'purchase';
   if (!B.start) B.start = c.licenseUntil && c.licenseUntil > Date.now() && c.status !== 'trialing' ? endYmdOf(c.licenseUntil) : localToday();
   S.wantBuy = null;
   const terms = [[1, '1 month', 'A tournament or short season'], [7, 'Season', '7 months'], [6, '6 months', ''], [12, '12 months', '']];
-  const savePct = (m) => ((S.pricing && S.pricing.discounts) || []).filter(d => m >= d.minMonths).reduce((b, d) => Math.max(b, d.pct), 0);
+  const rate = (m) => { const t = ((S.pricing && S.pricing.tiers) || []).filter(x => m >= x.minMonths); return t.length ? Math.min(...t.map(x => x.cents)) : null; };
   $('main').innerHTML = `
     ${clubHeader()}
     ${statusBanner()}
@@ -615,13 +621,13 @@ function renderBilling() {
           <div class="stepper"><button type="button" id="tMinus" aria-label="One fewer team">−</button><output id="tCount" aria-live="polite">${B.teams}</output><button type="button" id="tPlus" aria-label="One more team">+</button>
           <span class="muted" style="font-size:14px;">${B.kind === 'addon' ? `added to the ${base?.teams || ''} you have, through ${base ? lastDay(base.end) : ''}` : `teams · you have ${active} in the club`}</span></div></div>
         ${B.kind === 'addon' ? '' : `<div class="field"><div class="eyebrow">2 · How long</div>
-          <div class="grid4">${terms.map(([m, label, note]) => `<button type="button" class="choice" aria-pressed="${B.months === m}" data-months="${m}"><b>${label}</b><span>${note}${savePct(m) ? `${note ? ' · ' : ''}save ${savePct(m)}%` : ''}</span></button>`).join('')}</div>
+          <div class="grid4">${terms.map(([m, label, note]) => `<button type="button" class="choice" aria-pressed="${B.months === m}" data-months="${m}"><b>${label}</b><span>${note}${rate(m) ? `${note ? ' · ' : ''}${money(rate(m))} / team / month` : ''}</span></button>`).join('')}</div>
           <div class="row" style="font-size:15px;"><label for="start" style="color:var(--ink);">Starts</label><input id="start" type="date" value="${esc(B.start)}" min="${localToday()}"><label for="moreMonths" style="color:var(--ink);">or</label><select id="moreMonths">${Array.from({ length: 12 }, (_, i) => i + 1).map(m => `<option value="${m}"${m === B.months ? ' selected' : ''}>${m} month${m === 1 ? '' : 's'}</option>`).join('')}</select></div>
         </div>`}
         <div class="field"><div class="eyebrow">${B.kind === 'addon' ? '2' : '3'} · How you pay</div>
           <div class="grid2">
             <button type="button" class="choice" aria-pressed="${B.pay === 'card'}" data-pay="card"><b style="font-size:16px;">Card or bank now</b><span>Teams are covered as soon as it's paid.</span></button>
-            <button type="button" class="choice" aria-pressed="${B.pay === 'invoice'}" data-pay="invoice"><b style="font-size:16px;">Send me an invoice</b><span>For schools and POs. Due in 30 days; teams are covered right away.</span></button>
+            <button type="button" class="choice" aria-pressed="${B.pay === 'invoice'}" data-pay="invoice"><b style="font-size:16px;">Send me an invoice</b><span>For schools and POs. Due in 30 days. ${S.club.invoiceTrusted ? 'Teams are covered right away.' : `Up to ${(S.pricing && S.pricing.invoiceProvisionalTeams) || 3} teams are covered until it's paid; the rest when it's paid.`}</span></button>
           </div>
           ${B.pay === 'invoice' ? `<div class="field" style="max-width:280px;"><label for="po">PO number (optional)</label><input id="po" maxlength="40" value="${esc(B.po)}"></div>` : ''}
         </div>
@@ -650,10 +656,12 @@ function renderBilling() {
       <div class="field"><label for="gMonths">Months</label><input id="gMonths" type="number" min="1" max="24" value="7" style="width:100px;"></div>
       <div class="field" style="flex:1 1 200px;"><label for="gNote">Note</label><input id="gNote" maxlength="200" placeholder="Pilot club"></div></div>
       <div><button class="btn dark" type="button" id="gGo">Grant</button></div>
+      <label style="display:flex;gap:10px;align-items:center;font-size:15px;color:var(--ink);font-weight:500;"><input type="checkbox" id="gTrust" ${c.invoiceTrusted ? 'checked' : ''}> Trusted for invoices (every team covered before payment)</label>
     </section>` : ''}`;
   wireCommon();
-  document.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { B.kind = b.dataset.kind; B.teams = B.kind === 'addon' ? 1 : Math.max(2, active); B.quote = null; render(); });
-  $('tMinus').onclick = () => { B.teams = Math.max(1, B.teams - 1); $('tCount').textContent = B.teams; requote(); };
+  document.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { B.kind = b.dataset.kind; B.teams = B.kind === 'addon' ? 1 : Math.max(minTeams, active); B.quote = null; render(); });
+  const minT = B.kind === 'addon' ? 1 : ((S.pricing && S.pricing.minTeams) || 1);
+  $('tMinus').onclick = () => { B.teams = Math.max(minT, B.teams - 1); $('tCount').textContent = B.teams; requote(); };
   $('tPlus').onclick = () => { B.teams = Math.min(200, B.teams + 1); $('tCount').textContent = B.teams; requote(); };
   document.querySelectorAll('[data-months]').forEach(b => b.onclick = () => { B.months = +b.dataset.months; render(); });
   const mm = $('moreMonths'); if (mm) mm.onchange = () => { B.months = +mm.value; render(); };
@@ -669,6 +677,7 @@ function renderBilling() {
     const reason = prompt('Why void this license? (it stops counting immediately)'); if (!reason) return;
     await call('clubAdminVoid', { clubId: S.clubId, licenseId: b.dataset.void, reason }); toast('Voided.');
   }));
+  const gt = $('gTrust'); if (gt) gt.onchange = () => call('clubAdminSetTrusted', { clubId: S.clubId, trusted: gt.checked }).then(() => toast(gt.checked ? 'Trusted: invoices cover every team.' : 'Invoices cover 3 teams until paid.')).catch(e => { toast(errText(e)); gt.checked = !gt.checked; });
   const g = $('gGo'); if (g) g.onclick = (ev) => busy(ev.currentTarget, async () => {
     const r = await call('clubAdminGrant', { clubId: S.clubId, teams: +$('gTeams').value, startDate: $('gStart').value, months: +$('gMonths').value, note: $('gNote').value });
     toast(`Free license through ${fmtYmd(addDaysYmd(r.endDate, -1))}.`);
@@ -697,7 +706,7 @@ function drawSummary() {
     <div style="color:var(--deep-mu);font-size:14px;">${fmtYmd(q.startDate)} – ${fmtYmd(addDaysYmd(q.endDate, -1))}</div>
     <hr>
     <div class="ln"><span>Per team, per month</span><span>${money(q.perTeamMonthCents, q.currency)}</span></div>
-    <div class="ln"><span>Length discount</span><span style="color:#39D98A;">${q.discountPct ? `−${q.discountPct}%` : 'None'}</span></div>
+    ${q.listCents && q.perTeamMonthCents < q.listCents ? `<div class="ln"><span>You save vs ${money(q.listCents, q.currency)} a month</span><span style="color:#39D98A;">${money((q.listCents - q.perTeamMonthCents) * q.teams * (q.kind === 'addon' ? q.days * 12 / 365 : q.months), q.currency)}</span></div>` : ''}
     <div class="ln"><span>Sales tax</span><span>${B.pay === 'invoice' ? 'On the invoice' : 'At checkout'}</span></div>
     <hr>
     <div class="ln" style="align-items:baseline;"><span style="color:var(--deep-tx);">Total</span><span style="font-size:30px;font-weight:900;">${money(q.subtotalCents, q.currency)}</span></div>
