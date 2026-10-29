@@ -108,7 +108,7 @@ dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; m
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
-import { initializeFirestore, doc, getDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { initializeFirestore, doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword,
   GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, sendPasswordResetEmail }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -146,7 +146,7 @@ function toast(msg, ms = 4000) { const t = $('toast'); t.textContent = msg; t.cl
 async function busy(btn, fn) { const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'Working…'; try { return await fn(); } catch (e) { toast(errText(e), 6000); } finally { btn.disabled = false; btn.innerHTML = old; } }
 
 const params = new URLSearchParams(location.search);
-const S = { user: null, teamId: params.get('team') || '', tab: params.get('tab') === 'people' ? 'people' : 'roster',
+const S = { user: null, teamId: params.get('team') || '', tab: ['people', 'schedule'].includes(params.get('tab')) ? params.get('tab') : 'roster', games: null,
   team: null, data: null, filter: 'all', view: 'person', loading: false };
 function setUrl() { const p = new URLSearchParams(); if (S.teamId) p.set('team', S.teamId); if (S.tab !== 'roster') p.set('tab', S.tab); history.replaceState(null, '', `${location.pathname}?${p}`); }
 
@@ -227,10 +227,11 @@ function render() {
     <nav class="sub" aria-label="Sections">
       <button type="button" data-tab="roster" ${S.tab === 'roster' ? 'aria-current="page"' : ''}>Roster · ${players().length}</button>
       <button type="button" data-tab="people" ${S.tab === 'people' ? 'aria-current="page"' : ''}>People · ${rows().length}${waiting ? `<span class="badge">${waiting}</span>` : ''}</button>
+      <button type="button" data-tab="schedule" ${S.tab === 'schedule' ? 'aria-current="page"' : ''}>Schedule${S.games ? ' · ' + S.games.length : ''}</button>
     </nav>
     <div id="tabBody"></div>`;
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; setUrl(); render(); });
-  if (S.tab === 'people') renderPeople(); else renderRoster();
+  if (S.tab === 'people') renderPeople(); else if (S.tab === 'schedule') renderSchedule(); else renderRoster();
 }
 
 // ── Roster ───────────────────────────────────────────────────────────
@@ -373,6 +374,126 @@ function editPlayer(p) {
   $('eGo').onclick = (ev) => busy(ev.currentTarget, async () => {
     await call('teamRosterSave', { teamId: S.teamId, action: 'update', players: [{ playerId: p.playerId, name: $('eName').value.trim(), number: $('eNum').value.trim(), position: $('ePos').value.trim() }] });
     d.close(); toast('Saved.'); await reload();
+  });
+}
+
+// ── Schedule (club canvas board 5) ───────────────────────────────────
+// Games are the same documents the apps write (teams/{id}/games, status
+// "scheduled"), through teamScheduleSave. Paste or upload a schedule and the
+// app's AI schedule reader finds the games; you check them before they're added.
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const fmtTime = (ms) => new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+const whenOf = (ms) => ({ day: new Date(ms).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), time: fmtTime(ms),
+  formatted: `${new Date(ms).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${fmtTime(ms)}` });
+const toMs = (ymd, hm) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd || '')) return 0; const [y, m, d] = ymd.split('-').map(Number); const [hh, mm] = (hm && /^\d{2}:\d{2}$/.test(hm) ? hm : '12:00').split(':').map(Number); return new Date(y, m - 1, d, hh, mm).getTime(); };
+const ymdLocal = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const hmLocal = (ms) => { const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const gameTitle = (g) => g.opponent ? `${g.homeAway === 'away' ? 'at' : 'vs'} ${g.opponent}` : (g.eventName || 'Game');
+async function loadGames() {
+  const snap = await getDocs(query(collection(db, 'teams', S.teamId, 'games'), where('status', 'in', ['scheduled', 'live', 'postponed'])));
+  const cutoff = Date.now() - 6 * 3600 * 1000;
+  S.games = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => g.status === 'live' || (Number(g.date) || 0) >= cutoff || (Number(g.endDate) || 0) >= cutoff)
+    .sort((a, b) => (a.date || 0) - (b.date || 0));
+}
+async function renderSchedule() {
+  if (!S.games) { $('tabBody').innerHTML = '<div class="loading">Loading the schedule…</div>'; try { await loadGames(); } catch (e) { $('tabBody').innerHTML = `<div class="loading">${esc(errText(e))}</div>`; return; } return render(); }
+  $('tabBody').innerHTML = `<div class="split">
+    <section class="main card" style="overflow:hidden;">
+      <div class="row pad" style="border-bottom:1px solid var(--ln);padding-block:12px;"><h2 style="font-size:17px;font-weight:800;">Coming up</h2><span class="muted" style="font-size:13px;">Past games are on the team page</span>
+        <button class="btn primary sm" type="button" id="gAdd" style="margin-left:auto;">+ Add a game</button></div>
+      ${S.games.length ? S.games.map(g => { const d = new Date(g.date || 0); return `<div class="row" style="padding:12px 20px;border-top:1px solid var(--ln2);flex-wrap:nowrap;">
+        <div style="width:58px;text-align:center;flex-shrink:0;"><div class="muted" style="font-size:12px;font-weight:700;letter-spacing:1px;">${MON[d.getMonth()]}</div><div style="font-size:22px;font-weight:900;">${d.getDate()}</div></div>
+        <div style="flex:1 1 auto;min-width:0;"><div style="font-weight:800;">${esc(gameTitle(g))}${g.status === 'live' ? ' <span class="status s-bad">Live</span>' : g.status === 'postponed' ? ' <span class="status s-warn">Postponed</span>' : ''}</div>
+          <div class="muted" style="font-size:13px;">${esc([`${DOW[d.getDay()]} ${fmtTime(g.date)}`, g.multiGame ? 'Tournament' : '', g.eventName && g.opponent ? g.eventName : '', g.location].filter(Boolean).join(' · '))}</div></div>
+        ${g.status === 'live' ? '' : `<button class="btn link" type="button" data-gedit="${esc(g.id)}">Edit</button><button class="btn link" type="button" data-gcancel="${esc(g.id)}">Cancel</button>`}
+      </div>`; }).join('') : '<div class="pad muted">Nothing scheduled yet. Add games one at a time, or import the whole season.</div>'}
+    </section>
+    <aside class="side">
+      <section class="card pad" style="display:flex;flex-direction:column;gap:10px;border:2px solid var(--orange);">
+        <h2 style="font-size:17px;font-weight:800;">Import a schedule</h2>
+        <div class="muted" style="font-size:14px;line-height:1.5;">Paste the schedule email, or upload a screenshot, photo or PDF. We find the games, dates, times and places; you check them before anything is added.</div>
+        <label for="sPaste">Paste the schedule</label>
+        <textarea id="sPaste" rows="6" placeholder="Sat Nov 7  9:00 AM  vs Omaha Elite 18-1  Lied Rec Center"></textarea>
+        <div class="row"><button class="btn primary" type="button" id="sRead">Find the games</button>
+          <label class="btn ghost" style="font-size:15px;color:var(--ink);" for="sFile">Upload a file</label>
+          <input id="sFile" type="file" accept="image/*,application/pdf" class="hide"></div>
+        <div class="muted" style="font-size:12px;">Read by AI, with the same daily limit as the app's schedule import. Imported games don't send notifications; a game you add by hand does.</div>
+      </section>
+    </aside></div>`;
+  $('gAdd').onclick = () => gameDialog(null);
+  document.querySelectorAll('[data-gedit]').forEach(b => b.onclick = () => gameDialog(S.games.find(g => g.id === b.dataset.gedit)));
+  document.querySelectorAll('[data-gcancel]').forEach(b => b.onclick = () => busy(b, async () => {
+    const g = S.games.find(x => x.id === b.dataset.gcancel);
+    if (!confirm(`Cancel ${gameTitle(g)} on ${whenOf(g.date).formatted}?`)) return;
+    await call('teamScheduleSave', { teamId: S.teamId, action: 'cancel', games: [{ gameId: g.id }] });
+    toast('Canceled.'); S.games = null; render();
+  }));
+  const importWith = async (payload) => {
+    const r = await call('labsScheduleImport', { teamName: S.data.teamName, sport: (S.team && S.team.sport) || '', ...payload });
+    const found = (r.games || []).map(g => ({ ...g, on: true }));
+    if (!found.length) return toast('No games found. Try a clearer photo, or paste the text.');
+    importPreview(found);
+  };
+  $('sRead').onclick = (ev) => busy(ev.currentTarget, async () => { const t = $('sPaste').value.trim(); if (!t) return toast('Paste the schedule first.'); await importWith({ text: t }); });
+  $('sFile').onchange = () => busy($('sRead'), async () => {
+    const f = $('sFile').files[0]; if (!f) return;
+    const b64 = await new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = bad; r.readAsDataURL(f); });
+    $('sFile').value = '';
+    await importWith(f.type === 'application/pdf' ? { dataBase64: b64, mimeType: 'application/pdf' } : { images: [{ dataBase64: b64 }] });
+  });
+}
+function importPreview(found) {
+  const d = $('dlg'); d.className = 'wide';
+  d.innerHTML = `<form method="dialog">
+    <h2 style="font-size:21px;font-weight:900;">Found ${found.length} game${found.length === 1 ? '' : 's'}</h2>
+    <div class="muted" style="font-size:14px;">Untick anything that isn't yours, and fix what's wrong before adding.</div>
+    <div class="scroll" style="border:1px solid var(--ln);border-radius:12px;"><table class="tbl" style="min-width:760px;">
+      <thead><tr><th><span class="hide">Add</span></th><th>Date</th><th>Time</th><th>Opponent or event</th><th>Home/away</th><th>Where</th></tr></thead>
+      <tbody>${found.map((g, i) => `<tr${g.confidence < 0.5 ? ' style="background:#FFF8EF;"' : ''}>
+        <td><input type="checkbox" id="ic${i}" checked aria-label="Add"></td>
+        <td><input type="date" id="id${i}" value="${esc(g.date)}"></td>
+        <td><input type="time" id="it${i}" value="${esc(g.time || '')}"></td>
+        <td><input id="io${i}" value="${esc(g.opponent)}" style="width:100%;">${g.sourceText ? `<div class="muted" style="font-size:11px;">Read: ${esc(g.sourceText)}</div>` : ''}</td>
+        <td><select id="ih${i}"><option value="">Not sure</option><option value="home"${g.homeAway === 'home' ? ' selected' : ''}>Home</option><option value="away"${g.homeAway === 'away' ? ' selected' : ''}>Away</option></select></td>
+        <td><input id="il${i}" value="${esc(g.location || '')}" style="width:100%;"></td></tr>`).join('')}</tbody></table></div>
+    <div class="row"><button class="btn primary" type="button" id="iAdd">Add games</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+  </form>`;
+  d.showModal();
+  $('iAdd').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const games = found.map((g, i) => ({ on: $(`ic${i}`).checked, date: toMs($(`id${i}`).value, $(`it${i}`).value), opponent: $(`io${i}`).value.trim(), homeAway: $(`ih${i}`).value, location: $(`il${i}`).value.trim(), notes: g.notes || '', imported: true }))
+      .filter(g => g.on && g.date && g.opponent);
+    if (!games.length) return toast('Nothing ticked with a date and opponent.');
+    const r = await call('teamScheduleSave', { teamId: S.teamId, action: 'add', games });
+    d.close(); toast(`${r.added} game${r.added === 1 ? '' : 's'} added.`); const ta = $('sPaste'); if (ta) ta.value = ''; S.games = null; render();
+  });
+}
+function gameDialog(g) {
+  const d = $('dlg'); d.className = '';
+  const ms = g ? g.date : Date.now() + 7 * 86400000;
+  d.innerHTML = `<form method="dialog">
+    <h2 style="font-size:20px;font-weight:800;">${g ? 'Edit game' : 'Add a game'}</h2>
+    <div class="row" style="align-items:flex-end;">
+      <div class="field" style="flex:1 1 150px;"><label for="gDate">Date</label><input id="gDate" type="date" value="${ymdLocal(ms)}"></div>
+      <div class="field" style="flex:1 1 120px;"><label for="gTime">Time</label><input id="gTime" type="time" value="${g ? hmLocal(ms) : '09:00'}"></div></div>
+    <div class="row" style="align-items:flex-end;">
+      <div class="field" style="flex:2 1 200px;"><label for="gOpp">Opponent</label><input id="gOpp" value="${esc(g ? g.opponent || '' : '')}" placeholder="Omaha Elite 18-1"></div>
+      <div class="field" style="flex:1 1 120px;"><label for="gHA">Home or away</label><select id="gHA"><option value="">Not set</option><option value="home"${g && g.homeAway === 'home' ? ' selected' : ''}>Home</option><option value="away"${g && g.homeAway === 'away' ? ' selected' : ''}>Away</option></select></div></div>
+    <div class="field"><label for="gEvt">Event name (optional)</label><input id="gEvt" value="${esc(g ? g.eventName || '' : '')}" placeholder="Heartland Classic"></div>
+    <div class="field"><label for="gLoc">Where</label><input id="gLoc" value="${esc(g ? g.location || '' : '')}" placeholder="Lied Rec Center"></div>
+    <div class="field"><label for="gNotes">Notes (optional)</label><input id="gNotes" value="${esc(g ? g.notes || '' : '')}"></div>
+    ${g ? '' : `<label style="display:flex;gap:8px;align-items:center;font-size:14px;color:var(--ink);font-weight:500;"><input type="checkbox" id="gTell" checked> Tell the team's followers</label>`}
+    <div class="row"><button class="btn primary" type="button" id="gGo">${g ? 'Save' : 'Add game'}</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+  </form>`;
+  d.showModal();
+  $('gGo').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const date = toMs($('gDate').value, $('gTime').value);
+    const game = { date, opponent: $('gOpp').value.trim(), homeAway: $('gHA').value, eventName: $('gEvt').value.trim(), location: $('gLoc').value.trim(), notes: $('gNotes').value.trim() };
+    if (!date) return toast('Pick a date.');
+    if (!game.opponent && !game.eventName) return toast('Add the opponent or an event name.');
+    if (g) await call('teamScheduleSave', { teamId: S.teamId, action: 'update', games: [{ gameId: g.id, ...game }] });
+    else await call('teamScheduleSave', { teamId: S.teamId, action: 'add', notify: $('gTell').checked, games: [{ ...game, when: whenOf(date) }] });
+    d.close(); toast(g ? 'Saved.' : 'Game added.'); S.games = null; render();
   });
 }
 
