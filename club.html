@@ -78,6 +78,8 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 64px; display: flex
 .tbl th:first-child, .tbl td:first-child { padding-left: 22px; } .tbl th:last-child, .tbl td:last-child { padding-right: 22px; }
 .scroll { overflow-x: auto; }
 .teamsq { width: 34px; height: 34px; border-radius: 9px; color: #fff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+img.logo { object-fit: contain; background: #fff; border: 1px solid var(--ln); padding: 3px; flex-shrink: 0; }
+.logobox { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .order button { background: none; border: 1px solid var(--ln); border-radius: 7px; width: 32px; height: 32px; color: var(--mu); }
 .order button:disabled { opacity: .3; }
 .split { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
@@ -172,7 +174,25 @@ const endYmdOf = (until) => ymdOf(until - 12 * 3600 * 1000);
 const daysLeft = (until) => Math.max(0, Math.ceil((until - Date.now()) / DAY));
 const money = (cents, cur = 'usd') => new Intl.NumberFormat('en-US', { style: 'currency', currency: cur.toUpperCase() }).format(cents / 100);
 const localToday = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const sameColor = (a, b) => String(a || '').toUpperCase() === String(b || '').toUpperCase();
 const initials = (s) => String(s || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+/** A logo when there is one, otherwise initials on the color. */
+const crest = (url, label, color, px, radius, cls = 'crest', font = '') => url && /^https:\/\//.test(url)
+  ? `<img class="logo" src="${esc(url)}" alt="" style="width:${px}px;height:${px}px;border-radius:${radius}px;">`
+  : `<div class="${cls}" style="width:${px}px;height:${px}px;border-radius:${radius}px;background:${esc(color || '#C8102E')};${font}">${esc(initials(label))}</div>`;
+/** Reads an image file into a PNG (or WebP when large) data URL, at most 512 px. */
+async function logoDataUrl(file) {
+  if (!file) return null;
+  if (!/^image\/(png|jpeg|webp|gif|svg\+xml)$/.test(file.type)) throw new Error('Use a PNG, JPG or WebP image.');
+  const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error("That image couldn't be read.")); i.src = URL.createObjectURL(file); });
+  const k = Math.min(1, 512 / Math.max(img.naturalWidth || 512, img.naturalHeight || 512));
+  const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round((img.naturalWidth || 512) * k)); cv.height = Math.max(1, Math.round((img.naturalHeight || 512) * k));
+  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+  URL.revokeObjectURL(img.src);
+  let url = cv.toDataURL('image/png');
+  if (url.length > 1200000) url = cv.toDataURL('image/webp', 0.9);
+  return url;
+}
 const AUTH_ERR = { 'auth/invalid-credential': 'Wrong email or password.', 'auth/wrong-password': 'Wrong email or password.',
   'auth/user-not-found': 'No account with that email. Create one instead.', 'auth/email-already-in-use': 'That email already has an account. Sign in instead.',
   'auth/weak-password': 'Use at least 6 characters for the password.', 'auth/invalid-email': 'That email doesn\'t look right.',
@@ -332,7 +352,7 @@ function clubHeader(extraBtns = '') {
   const c = S.club; const st = STATUS[c.status] || STATUS.none;
   return `<div class="row" style="align-items:flex-end;">
     <div class="row" style="gap:14px;">
-      <div class="crest" style="width:56px;height:56px;background:${esc(c.color || '#C8102E')};font-size:20px;">${esc(initials(c.name))}</div>
+      ${crest(c.logoUrl, c.name, c.color, 56, 14, 'crest', 'font-size:20px;')}
       <div><h1 style="font-size:28px;font-weight:900;">${esc(c.name)}</h1>
       <div class="muted" style="font-size:15px;margin-top:2px;">${esc(SPORTS[c.sport] || 'Club')}${c.city ? ' · ' + esc(c.city) : ''} · <span class="status ${st[1]}">${st[0]}</span></div></div>
     </div>
@@ -413,7 +433,7 @@ function renderTeams() {
       ${rows.length ? `<div class="scroll"><table class="tbl" style="min-width:640px;">
         <thead><tr><th>Team</th><th>Staff</th><th>Status</th><th>Covered through</th><th><span class="hide">Order</span></th></tr></thead>
         <tbody>${rows.map((r, k) => `<tr class="click" data-team="${esc(r.id)}">
-          <td><div class="row" style="gap:12px;flex-wrap:nowrap;"><div class="teamsq" style="background:${esc(r.t.color || '#555')}">${esc(initials(r.t.ageDivision || r.t.name))}</div><div><div style="font-weight:700;">${esc(r.t.name)}</div><div class="muted" style="font-size:13px;">${esc(SPORTS[r.t.sport] || '')}${r.t.ageDivision ? ' · ' + esc(r.t.ageDivision) : ''}</div></div></div></td>
+          <td><div class="row" style="gap:12px;flex-wrap:nowrap;">${crest(r.t.logoUrl, r.t.ageDivision || r.t.name, r.t.color || '#555', 34, 9, 'teamsq')}<div><div style="font-weight:700;">${esc(r.t.name)}</div><div class="muted" style="font-size:13px;">${esc(SPORTS[r.t.sport] || '')}${r.t.ageDivision ? ' · ' + esc(r.t.ageDivision) : ''}</div></div></div></td>
           <td>${(r.t.managers || []).length}</td>
           <td>${coverPill(r.t)}</td>
           <td>${r.t.club && r.t.club.covered && r.t.club.until ? lastDay(r.t.club.until) : '—'}</td>
@@ -452,8 +472,9 @@ function addTeamDialog() {
     </div>
     <div class="grid2">
       <div class="field"><label for="tC1">Main color</label><input id="tC1" type="color" value="${esc(S.club.color || '#C8102E')}" style="height:44px;padding:4px;"></div>
-      <div class="field"><label for="tC2">Second color</label><input id="tC2" type="color" value="#111215" style="height:44px;padding:4px;"></div>
+      <div class="field"><label for="tC2">Second color</label><input id="tC2" type="color" value="${esc(S.club.color2 || '#FFFFFF')}" style="height:44px;padding:4px;"></div>
     </div>
+    ${S.club.logoUrl ? `<div class="logobox">${crest(S.club.logoUrl, '', '', 40, 10)}<span class="muted" style="font-size:14px;">Uses the club logo. You or its coaches can change it later.</span></div>` : ''}
     <p class="muted" style="margin:0;font-size:14px;line-height:1.45;">${(S.club.openSeats || 0) > 0 ? 'This team uses one of your open licenses.' : 'This team uses a license from your upcoming period.'} It gets its own team page right away.</p>
     <div class="row"><button class="btn primary" value="ok" id="tGo">Add team</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
   </form>`;
@@ -482,7 +503,7 @@ async function renderTeam() {
   $('main').innerHTML = `
     <a href="#" id="backAll" style="font-size:14px;font-weight:600;text-decoration:none;">← All teams</a>
     <div class="hero" style="background:linear-gradient(120deg, ${esc(t.color || '#C8102E')}, ${esc(c2)});">
-      <div class="crest" style="width:64px;height:64px;background:rgba(255,255,255,.16);font-size:22px;">${esc(initials(t.ageDivision || t.name))}</div>
+      ${t.logoUrl ? crest(t.logoUrl, '', '', 64, 14) : `<div class="crest" style="width:64px;height:64px;background:rgba(255,255,255,.16);font-size:22px;">${esc(initials(t.ageDivision || t.name))}</div>`}
       <div style="flex:1 1 280px;"><h1 style="font-size:28px;font-weight:900;">${esc(t.name)}</h1>
         <div style="opacity:.88;font-size:15px;margin-top:4px;">${esc(SPORTS[t.sport] || '')}${t.ageDivision ? ' · ' + esc(t.ageDivision) : ''}</div></div>
       <div class="row">
@@ -506,6 +527,21 @@ async function renderTeam() {
           <p class="muted" style="margin:0;font-size:13px;line-height:1.45;">Coaches and managers can record, score and run the team in the app. A parent who films games should be a manager.</p>
           <button class="btn primary" type="button" id="iGo">Send invite</button>
         </section>
+        <section class="card pad" style="display:flex;flex-direction:column;gap:12px;">
+          <h2 style="font-size:18px;font-weight:800;">Colors and logo</h2>
+          <div class="grid2">
+            <div class="field"><label for="lkC1">Main color</label><input id="lkC1" type="color" value="${esc(t.color || '#C8102E')}" style="height:44px;padding:4px;"></div>
+            <div class="field"><label for="lkC2">Second color</label><input id="lkC2" type="color" value="${esc(t.color2 || '#FFFFFF')}" style="height:44px;padding:4px;"></div>
+          </div>
+          <div class="field"><label for="lkLogo">Logo</label><select id="lkLogo">
+            ${S.club.logoUrl ? `<option value="club"${t.logoUrl === S.club.logoUrl ? ' selected' : ''}>Club logo</option>` : ''}
+            ${t.logoUrl && t.logoUrl !== S.club.logoUrl ? '<option value="keep" selected>Its own logo</option>' : ''}
+            <option value="upload">Upload a logo for this team…</option>
+            <option value="none"${!t.logoUrl ? ' selected' : ''}>No logo</option></select></div>
+          <input id="lkFile" type="file" accept="image/png,image/jpeg,image/webp" class="hide" aria-label="Team logo file">
+          <p class="muted" style="margin:0;font-size:13px;line-height:1.45;">${sameColor(t.color, S.club.color) && (!t.logoUrl || t.logoUrl === S.club.logoUrl) ? 'This team uses the club look, so it changes when the club\'s does.' : 'This team has its own look. Club changes leave it alone.'} Coaches can change these in the app too.</p>
+          <button class="btn dark" type="button" id="lkGo">Save colors and logo</button>
+        </section>
         <section class="card pad" style="display:flex;flex-direction:column;gap:10px;font-size:14px;">
           <h2 style="font-size:16px;font-weight:800;">This team</h2>
           <p class="muted" style="margin:0;line-height:1.45;">Taking a team out of the club never deletes it or its history.</p>
@@ -522,6 +558,16 @@ async function renderTeam() {
     await invite(t, email, role); $('iEm').value = ''; toast(`Invite sent to ${email}.`); loadStaff(t);
   });
   $('rmTeam').onclick = () => removeTeamDialog(t);
+  $('lkLogo').onchange = () => { if ($('lkLogo').value === 'upload') $('lkFile').click(); };
+  $('lkGo').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const v = $('lkLogo').value;
+    let logo;
+    if (v === 'upload') { logo = await logoDataUrl($('lkFile').files[0]); if (!logo) return toast('Choose an image for the logo first.'); }
+    else if (v === 'club' || v === 'none') logo = v;
+    const r = await call('clubSetTeamLook', { clubId: S.clubId, teamId: t.id, color: $('lkC1').value, color2: $('lkC2').value, logo });
+    const s2 = await getDoc(doc(db, 'teams', t.id)); if (s2.exists()) S.teams[t.id] = { id: t.id, ...s2.data() };
+    toast(r.changed ? 'Saved. Phones pick it up within a minute.' : 'Nothing changed.'); render();
+  });
   loadStaff(t);
 }
 
@@ -733,15 +779,53 @@ function renderSettings() {
     <section class="card pad" style="max-width:640px;display:flex;flex-direction:column;gap:14px;">
       <h2 style="font-size:20px;font-weight:800;">Club details</h2>
       <div class="field"><label for="sName">Club name</label><input id="sName" maxlength="80" value="${esc(c.name)}"></div>
-      <div class="grid2"><div class="field"><label for="sCity">City</label><input id="sCity" maxlength="80" value="${esc(c.city || '')}"></div>
-        <div class="field"><label for="sColor">Club color</label><input id="sColor" type="color" value="${esc(c.color || '#C8102E')}" style="height:44px;padding:4px;"></div></div>
+      <div class="field"><label for="sCity">City</label><input id="sCity" maxlength="80" value="${esc(c.city || '')}"></div>
       <div class="field"><label for="sOrg">Name on invoices</label><input id="sOrg" maxlength="120" value="${esc(c.billing?.name || '')}"></div>
       <div class="field"><label for="sBill">Billing email</label><input id="sBill" type="email" maxlength="120" value="${esc(c.billing?.email || '')}"></div>
       <div><button class="btn primary" type="button" id="sGo">Save</button></div>
       <p class="muted" style="margin:0;font-size:13px;line-height:1.45;">Need a second director, or to hand the club to someone else? Email support@scoreframe.app.</p>
+    </section>
+    <section class="card pad" style="max-width:640px;display:flex;flex-direction:column;gap:14px;">
+      <h2 style="font-size:20px;font-weight:800;">Club look</h2>
+      <p class="muted" style="margin:0;line-height:1.5;">Every team starts with the club logo and colors. When you change them here, the teams still using the club look change too. A team whose coach or you picked its own keeps it.</p>
+      <div class="logobox">
+        ${crest(c.logoUrl, c.name, c.color, 72, 16, 'crest', 'font-size:24px;')}
+        <div class="row" style="gap:8px;">
+          <button class="btn ghost" type="button" id="lgPick">${c.logoUrl ? 'Change logo' : 'Upload logo'}</button>
+          ${c.logoUrl ? '<button class="btn link" type="button" id="lgDel">Remove</button>' : ''}
+        </div>
+        <input id="lgFile" type="file" accept="image/png,image/jpeg,image/webp" class="hide" aria-label="Club logo file">
+      </div>
+      <p class="muted" style="margin:0;font-size:13px;">Square works best, at least 256 pixels. A transparent background looks right on every team color.</p>
+      <div class="grid2">
+        <div class="field"><label for="sColor">Main color</label><input id="sColor" type="color" value="${esc(c.color || '#C8102E')}" style="height:44px;padding:4px;"></div>
+        <div class="field"><label for="sColor2">Second color</label><input id="sColor2" type="color" value="${esc(c.color2 || '#FFFFFF')}" style="height:44px;padding:4px;"></div>
+      </div>
+      <div class="row" style="gap:10px;"><button class="btn primary" type="button" id="lkSave">Save colors</button>
+        <button class="btn ghost" type="button" id="lkAll">Use the club look on every team…</button></div>
     </section>`;
+  $('lgPick').onclick = () => $('lgFile').click();
+  $('lgFile').onchange = () => busy($('lgPick'), async () => {
+    const img = await logoDataUrl($('lgFile').files[0]); if (!img) return;
+    const r = await call('clubSetLogo', { clubId: S.clubId, image: img });
+    toast(`Logo saved${r.teamsUpdated ? `; ${r.teamsUpdated} team${r.teamsUpdated === 1 ? '' : 's'} updated` : ''}.`); await loadClubs(); renderWho();
+  });
+  if ($('lgDel')) $('lgDel').onclick = (ev) => busy(ev.currentTarget, async () => {
+    if (!confirm('Remove the club logo? Teams using it go back to no logo; teams with their own keep theirs.')) return;
+    const r = await call('clubSetLogo', { clubId: S.clubId, image: null });
+    toast(`Logo removed${r.teamsUpdated ? ` from ${r.teamsUpdated} team${r.teamsUpdated === 1 ? '' : 's'}` : ''}.`); await loadClubs(); renderWho();
+  });
+  $('lkSave').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const r = await call('clubUpdate', { clubId: S.clubId, color: $('sColor').value, color2: $('sColor2').value });
+    toast(`Colors saved${r.teamsUpdated ? `; ${r.teamsUpdated} team${r.teamsUpdated === 1 ? '' : 's'} updated` : ''}.`);
+  });
+  $('lkAll').onclick = (ev) => busy(ev.currentTarget, async () => {
+    if (!confirm('Put the club logo and colors on every team, including teams that picked their own?')) return;
+    const r = await call('clubApplyLook', { clubId: S.clubId, logo: true, colors: true });
+    await loadTeams(); toast(r.teamsUpdated ? `${r.teamsUpdated} team${r.teamsUpdated === 1 ? '' : 's'} updated.` : 'Every team already uses the club look.');
+  });
   $('sGo').onclick = (ev) => busy(ev.currentTarget, async () => {
-    await call('clubUpdate', { clubId: S.clubId, name: $('sName').value, city: $('sCity').value, color: $('sColor').value, orgName: $('sOrg').value, billingEmail: $('sBill').value });
+    await call('clubUpdate', { clubId: S.clubId, name: $('sName').value, city: $('sCity').value, orgName: $('sOrg').value, billingEmail: $('sBill').value });
     toast('Saved.'); await loadClubs(); renderWho();
   });
 }
