@@ -35,12 +35,12 @@ a { color: var(--orange); }
 h1 { margin: 0; font-size: clamp(26px, 5vw, 36px); font-weight: 900; text-wrap: balance; }
 .sub { opacity: .9; font-size: 16px; margin-top: 4px; }
 main { max-width: 1120px; margin: 0 auto; padding-block: 24px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 16px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .team { text-decoration: none; color: var(--ink); background: var(--card); border: 1px solid var(--ln); border-radius: 14px; padding: 14px; display: flex; gap: 14px; align-items: center; min-width: 0; }
 .team:hover { border-color: var(--orange); }
-.team .sq { width: 48px; height: 48px; border-radius: 12px; color: #fff; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; background: #888; }
+.team .sq { width: 48px; height: 48px; border-radius: 12px; color: #fff; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; background: #888; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
 .team .sq img { width: 100%; height: 100%; object-fit: contain; background: #fff; padding: 3px; }
-.team .nm { font-weight: 800; font-size: 16px; overflow-wrap: anywhere; }
+.team .nm { font-weight: 800; font-size: 16px; overflow-wrap: break-word; }
 .team .meta { font-size: 13px; color: var(--mu); }
 .tag { margin-left: auto; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; background: var(--tag-bg); color: var(--tag); }
 .tag.live { background: var(--live-bg); color: var(--live); }
@@ -73,6 +73,8 @@ getRedirectResult(auth).catch(() => {});
 const $ = (id) => document.getElementById(id);
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const SPORTS = { VOLLEYBALL: 'Volleyball', BASKETBALL: 'Basketball', SOCCER: 'Soccer', BASEBALL: 'Baseball', SOFTBALL: 'Softball', FOOTBALL: 'Football', HOCKEY: 'Hockey', LACROSSE: 'Lacrosse', BOWLING: 'Bowling' };
+/** "18U" → "18"; otherwise the name's initials. */
+const badge = (age, name) => (String(age || '').match(/\d+/) || [])[0] || initials(name);
 const initials = (s) => String(s || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
 const VIS = { private: 'Followers only', invite_only: 'Followers only', signed_in: 'Signed in', link_only: 'Open', public: 'Open' };
 const params = new URLSearchParams(location.search);
@@ -102,7 +104,7 @@ function render(c) {
     <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;"><h2 style="margin:0;font-size:20px;font-weight:800;">Teams</h2><span style="font-size:14px;color:var(--mu);">Tap a team for its schedule, results and live games.</span></div>
     <div class="grid">${teams.map(t => { const tc = /^#[0-9a-f]{6}$/i.test(t.color) ? t.color : '#888';
       return `<a class="team" href="/team.html?code=${encodeURIComponent(t.hubCode)}">
-        <div class="sq" style="background:${esc(tc)};">${t.logoUrl && /^https:\/\//.test(t.logoUrl) ? `<img src="${esc(t.logoUrl)}" alt="">` : esc(initials(t.ageDivision || t.name))}</div>
+        <div class="sq" style="background:${esc(tc)};">${t.logoUrl && /^https:\/\//.test(t.logoUrl) ? `<img src="${esc(t.logoUrl)}" alt="">` : esc(badge(t.ageDivision, t.name))}</div>
         <div style="min-width:0;"><div class="nm">${esc(t.name)}</div><div class="meta">${esc([SPORTS[t.sport] || '', t.ageDivision].filter(Boolean).join(' · '))}</div></div>
         <span class="tag ${t.liveNow ? 'live' : ''}">${t.liveNow ? 'Live now' : esc(VIS[t.visibility] || 'Followers only')}</span></a>`; }).join('')}</div>
     <div class="note">${c.access === 'link' ? 'Open to anyone with the link.' : 'Shown to people signed in to ScoreFrame.'} Each team page has its own setting; "Followers only" teams ask you to follow first. Players appear as first name and last initial.</div>`;

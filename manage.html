@@ -135,6 +135,7 @@ const SPORTS = { VOLLEYBALL: 'Volleyball', BASKETBALL: 'Basketball', SOCCER: 'So
   FOOTBALL: 'Football', HOCKEY: 'Hockey', LACROSSE: 'Lacrosse', BOWLING: 'Bowling', TENNIS: 'Tennis', PICKLEBALL: 'Pickleball', GENERIC: 'Other' };
 const RELS = [['parent', 'Parent'], ['guardian', 'Guardian'], ['grandparent', 'Grandparent'], ['other family', 'Other family'], ['self', 'This is me']];
 const relLabel = (r) => (RELS.find(x => x[0] === r) || [r, r || ''])[1];
+const badge = (age, name) => (String(age || '').match(/\d+/) || [])[0] || initials(name);
 const initials = (s) => String(s || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
 const fmtDay = (ms) => ms ? new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
 const errText = (e) => {
@@ -214,7 +215,7 @@ function render() {
   const waiting = rows().filter(r => r.waiting).length;
   const crest = t.logoUrl && /^https:\/\//.test(t.logoUrl)
     ? `<img class="logo" src="${esc(t.logoUrl)}" alt="" style="width:58px;height:58px;border-radius:14px;">`
-    : `<div class="crest" style="width:58px;height:58px;background:rgba(255,255,255,.16);font-size:20px;">${esc(initials(t.ageDivision || t.name))}</div>`;
+    : `<div class="crest" style="width:58px;height:58px;background:rgba(255,255,255,.16);font-size:20px;">${esc(badge(t.ageDivision, t.name))}</div>`;
   $('main').innerHTML = `
     ${t.club && t.club.clubId ? `<a href="/club.html?club=${encodeURIComponent(t.club.clubId)}&team=${encodeURIComponent(S.teamId)}" style="font-size:14px;font-weight:600;text-decoration:none;">← ${esc(t.club.name || 'Club console')}</a>` : ''}
     <div class="hero" style="background-color:${esc(c1)};background-image:linear-gradient(110deg, ${esc(c1)} 0%, ${esc(c1)} 38%, ${esc(c2)} 100%);">
