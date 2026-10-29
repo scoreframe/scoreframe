@@ -96,6 +96,9 @@ img.logo { object-fit: contain; background: #fff; border: 1px solid var(--ln); p
 .summary { background: var(--deep); color: var(--deep-tx); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 12px; }
 .summary .ln { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; } .summary .ln span:first-child { color: var(--deep-mu); }
 .summary hr { border: 0; border-top: 1px solid #2E3038; margin: 2px 0; width: 100%; }
+.failtoast { position: fixed; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: #B42318; color: #fff; padding: 10px 8px 10px 16px; border-radius: 10px; font-size: 14px; line-height: 1.4; z-index: 21; width: max-content; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.25); display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.failtoast button { background: none; border: 0; color: #fff; font-size: 18px; line-height: 1; padding: 6px 8px; cursor: pointer; border-radius: 6px; }
+.failtoast button:focus-visible { outline: 2px solid #fff; }
 .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 14px; z-index: 20; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
 dialog { border: 0; border-radius: 16px; padding: 0; width: min(520px, calc(100% - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.25); color: var(--ink); }
 dialog::backdrop { background: rgba(17,18,21,.45); }
@@ -132,6 +135,7 @@ dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
 
 <dialog id="dlg"></dialog>
 <div class="toast hide" id="toast" role="status" aria-live="polite"></div>
+<div class="failtoast hide" id="failToast" role="alert"><span id="failMsg"></span><button type="button" id="failX" aria-label="Dismiss">✕</button></div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -202,6 +206,23 @@ const AUTH_ERR = { 'auth/invalid-credential': 'Wrong email or password.', 'auth/
   'auth/too-many-requests': 'Too many tries. Wait a minute and try again.' };
 const errText = (e) => (e && AUTH_ERR[e.code]) || (e && e.message ? String(e.message).replace(/^Firebase: /, '') : 'Something went wrong.');
 function toast(msg, ms = 4000) { const t = $('toast'); t.textContent = msg; t.classList.remove('hide'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hide'), ms); }
+// A save shown as done that then failed (Eric 2026-10-29): it stays on screen
+// until dismissed, and tapping it goes back to what didn't save.
+function failToast(msg, reopen) {
+  const t = $('failToast');
+  $('failMsg').textContent = msg + (reopen ? ' Tap to fix it.' : '');
+  t.classList.remove('hide');
+  t.onclick = (e) => { t.classList.add('hide'); if (e.target.id !== 'failX' && reopen) reopen(); };
+}
+// Instant save, ONLY for picks the server can't reject (a privacy level, the
+// terms box, team order, a channel). Typed entries and billing keep waiting
+// for the server, so an invalid entry can never look saved. apply() changes
+// S and returns its undo; a failure undoes it and leaves a failToast.
+function saveNow(label, apply, run, reopen) {
+  const undo = apply();
+  render();
+  run().catch((e) => { undo(); render(); failToast(`${label} didn't save: ${errText(e)}.`, reopen); });
+}
 async function busy(btn, fn) { const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'Working…'; try { return await fn(); } catch (e) { toast(errText(e), 6000); } finally { btn.disabled = false; btn.innerHTML = old; } }
 
 const STATUS = {
@@ -494,10 +515,18 @@ function privacyDialog() {
   d.addEventListener('close', () => { d.style.width = ''; }, { once: true });
   d.showModal();
   d.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { pick = b.dataset.lv; d.querySelectorAll('[data-lv]').forEach(x => { x.setAttribute('aria-pressed', String(x === b)); x.setAttribute('aria-checked', String(x === b)); }); });
-  $('pvGo').onclick = (ev) => { ev.preventDefault(); busy(ev.currentTarget, async () => {
-    const r = await call('clubSetPrivacy', { clubId: S.clubId, level: pick });
-    d.close(); toast(`Saved: ${PRIVACY[pick].short}${r.teamsChanged ? `. ${r.teamsChanged} team page${r.teamsChanged === 1 ? '' : 's'} updated` : ''}.`);
-  }); };
+  $('pvGo').onclick = (ev) => {
+    ev.preventDefault();
+    const level = pick;
+    d.close(); toast(`Saved: ${PRIVACY[level].short}.`);
+    saveNow('Who can see your teams', () => {
+      const c = S.club, prev = { privacy: c.privacy, privacyConfirmedAt: c.privacyConfirmedAt };
+      c.privacy = level; c.privacyConfirmedAt = c.privacyConfirmedAt || Date.now();
+      return () => Object.assign(S.club, prev);
+    }, () => call('clubSetPrivacy', { clubId: S.clubId, level }).then((r) => {
+      if (r && r.teamsChanged) toast(`${r.teamsChanged} team page${r.teamsChanged === 1 ? '' : 's'} updated to ${PRIVACY[level].short}.`);
+    }), privacyDialog);
+  };
 }
 function termsDialog() {
   const d = $('dlg');
@@ -509,11 +538,16 @@ function termsDialog() {
     <div class="row"><button class="btn primary" value="ok" id="tmGo">Accept</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
   </form>`;
   d.showModal();
-  $('tmGo').onclick = (ev) => { ev.preventDefault(); busy(ev.currentTarget, async () => {
+  $('tmGo').onclick = (ev) => {
+    ev.preventDefault();
     if (!$('tmOk').checked) return toast('Tick the box to accept.');
-    await call('clubAcceptTerms', { clubId: S.clubId, accept: true });
     d.close(); toast('Club Terms accepted.');
-  }); };
+    saveNow('Accepting the Club Terms', () => {
+      const prev = S.club.terms;
+      S.club.terms = { ...(prev || {}), acceptedAt: Date.now() };
+      return () => { S.club.terms = prev; };
+    }, () => call('clubAcceptTerms', { clubId: S.clubId, accept: true }), termsDialog);
+  };
 }
 
 // ── Tournaments (club canvas board 6) ────────────────────────────────
@@ -686,7 +720,11 @@ function renderTeams() {
   const move = (from, to) => {
     const ids = rows.map(r => r.id); const extra = (S.club.teamIds || []).filter(id => !ids.includes(id));
     const [x] = ids.splice(from, 1); ids.splice(to, 0, x);
-    call('clubSetTeamOrder', { clubId: S.clubId, teamIds: [...ids, ...extra] }).catch(err => toast(errText(err)));
+    const next = [...ids, ...extra];
+    saveNow('The team order', () => {
+      const prev = S.club.teamIds; S.club.teamIds = next;
+      return () => { S.club.teamIds = prev; };
+    }, () => call('clubSetTeamOrder', { clubId: S.clubId, teamIds: next }), null);
   };
   document.querySelectorAll('[data-up]').forEach(b => b.onclick = () => move(+b.dataset.up, +b.dataset.up - 1));
   document.querySelectorAll('[data-down]').forEach(b => b.onclick = () => move(+b.dataset.down, +b.dataset.down + 1));
@@ -1069,10 +1107,24 @@ function wireYouTube() {
     await call('clubYouTubeDisconnect', { clubId: S.clubId, channelId: b.dataset.ytdrop });
     toast('Disconnected.');
   }));
-  const def = $('ytDef'); if (def) def.onchange = async () => { try { await call('clubYouTubeSetTeams', { clubId: S.clubId, defaultChannelId: def.value }); toast('Club default saved.'); } catch (e) { toast(errText(e), 6000); } };
-  card.querySelectorAll('[data-ytteam]').forEach(sel => sel.onchange = async () => {
-    try { await call('clubYouTubeSetTeams', { clubId: S.clubId, teamId: sel.dataset.ytteam, channelId: sel.value || null }); toast('Saved.'); } catch (e) { toast(errText(e), 6000); }
-  });
+  // The select already shows the pick: saved now, put back if the server says no.
+  const ytSave = (sel, label, payload) => {
+    const prev = ([...sel.options].find(o => o.defaultSelected) || sel.options[0] || {}).value || '';
+    toast('Saved.');
+    call('clubYouTubeSetTeams', { clubId: S.clubId, ...payload }).then(() => {
+      [...sel.options].forEach(o => { o.defaultSelected = o.selected; });
+    }).catch((e) => {
+      sel.value = prev;
+      const id = sel.id || '', team = sel.dataset.ytteam || '';
+      failToast(`${label} didn't save: ${errText(e)}.`, () => {
+        const el = id ? $(id) : document.querySelector(`[data-ytteam="${team}"]`);
+        if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus(); }
+      });
+    });
+  };
+  const def = $('ytDef'); if (def) def.onchange = () => ytSave(def, 'The club default channel', { defaultChannelId: def.value });
+  card.querySelectorAll('[data-ytteam]').forEach(sel => sel.onchange = () =>
+    ytSave(sel, 'The channel for that team', { teamId: sel.dataset.ytteam, channelId: sel.value || null }));
   // A channel still waiting on YouTube: look again (once per visit, at most every 10 minutes).
   const stale = ytChannels().filter(x => x.status === 'waiting' && (!x.checkedAt || Date.now() - x.checkedAt > 10 * 60e3));
   if (stale.length && !S.ytChecked) { S.ytChecked = true; call('clubYouTubeCheck', { clubId: S.clubId }).catch(() => {}); }
