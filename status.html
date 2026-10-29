@@ -435,11 +435,20 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item">
       <div class="item-head">
+        <span class="item-title">Clubs: Stripe test payments and the club YouTube channel (29 Oct)</span>
+        <span class="chip">tested on the server, in a browser and against Stripe test mode</span>
+      </div>
+      <p class="item-body">
+        Stripe test mode is set up (webhook, billing portal) and a full test purchase passes: card on Stripe's own page, invoice paid, invoice canceled, refunds, portal. The director connects the club's own YouTube channel on the club page; the access stays on the server, each team can get its own channel, and the page shows when YouTube's 24-hour wait is over. Club teams go live on that channel with no YouTube sign-in or switching: Android 1803 on Firebase, iOS in the next TestFlight batch. Not yet tried with a real channel.
+      </p>
+    </div>
+    <div class="item">
+      <div class="item-head">
         <span class="item-title">Clubs: team management, privacy, tournaments, club page (29 Oct, overnight)</span>
         <span class="chip">tested on the server and in a browser</span>
       </div>
       <p class="item-body">
-        Built the approved club canvas (boards 1–2, 4–13). manage.html: roster, the team's address book (invite a list, match families to players, approve), schedule with AI import. Club console: setup checklist, privacy (new "signed-in users" level), Club Terms acceptance, Tournaments from one AES link, public club page. Family links optional and several per person; parents can share a player's highlights. Android 1800–1802 on Firebase; iOS in the next TestFlight batch. YouTube club channel waits on the OAuth secret.
+        Built the approved club canvas (boards 1–2, 4–13). manage.html: roster, the team's address book (invite a list, match families to players, approve), schedule with AI import. Club console: setup checklist, privacy (new "signed-in users" level), Club Terms acceptance, Tournaments from one AES link, public club page. Family links optional and several per person; parents can share a player's highlights. Android 1800–1802 on Firebase; iOS in the next TestFlight batch. YouTube club channel: see 29 Oct.
       </p>
     </div>
     <div class="item">
