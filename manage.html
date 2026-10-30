@@ -289,7 +289,7 @@ function renderRoster() {
     else {
       const b64 = await new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = bad; r.readAsDataURL(f); });
       const isPdf = f.type === 'application/pdf';
-      const res = await call('rosterFromImage', isPdf ? { pdfs: [{ dataBase64: b64 }], teamName: S.data.teamName, sport: S.team.sport } : { images: [{ dataBase64: b64 }], teamName: S.data.teamName, sport: S.team.sport });
+      const res = await call('rosterFromImage', isPdf ? { pdfs: [{ dataBase64: b64 }], teamId: S.teamId, teamName: S.data.teamName, sport: S.team.sport } : { images: [{ dataBase64: b64 }], teamId: S.teamId, teamName: S.data.teamName, sport: S.team.sport });
       list = (res.players || []).map(p => ({ name: String(p.name || '').trim(), number: String(p.number == null ? '' : p.number).trim(), position: String(p.position || '').trim() })).filter(p => p.name);
     }
     $('rFile').value = '';
@@ -430,7 +430,7 @@ async function renderSchedule() {
     toast('Canceled.'); S.games = null; render();
   }));
   const importWith = async (payload) => {
-    const r = await call('labsScheduleImport', { teamName: S.data.teamName, sport: (S.team && S.team.sport) || '', ...payload });
+    const r = await call('labsScheduleImport', { teamId: S.teamId, teamName: S.data.teamName, sport: (S.team && S.team.sport) || '', ...payload });
     const found = (r.games || []).map(g => ({ ...g, on: true }));
     if (!found.length) return toast('No games found. Try a clearer photo, or paste the text.');
     importPreview(found);

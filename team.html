@@ -1105,6 +1105,8 @@ window.sfClubOffline = function (t) {
         <div class="team-emoji" id="teamEmoji"></div>
         <div class="team-name" id="teamName"></div>
         <div class="team-sport" id="teamSport"></div>
+        <!-- A club team: the club that runs it and the club's page of every team (Eric 2026-10-30). -->
+        <div id="teamClub" style="display:none; font-size:13px; color:var(--text-secondary); margin:2px 0 4px;"></div>
         <!-- 2026-06-01 — Active season pill, shown right under the
              sport line so the current season is always visible —
              not buried in the season switcher that only appears for
@@ -2297,6 +2299,19 @@ function renderHeader() {
     const appCtaTitle = $('appCtaTitle');
     if (appCtaTitle && p.teamName) appCtaTitle.textContent = `Follow ${p.teamName} in the app`;
     $('teamSport').textContent = sportName(p.sport);
+    const clubLine = $('teamClub');
+    if (clubLine) {
+        const c = p.club || {};
+        clubLine.textContent = '';
+        if (c.clubId && c.name) {
+            const a = document.createElement('a');
+            a.href = 'clubpage.html?id=' + encodeURIComponent(c.clubId);
+            a.textContent = 'All club teams';
+            a.style.cssText = 'color:var(--accent); font-weight:700; text-decoration:none;';
+            clubLine.append('Part of ' + c.name + ' \u00b7 ', a);
+            clubLine.style.display = '';
+        } else clubLine.style.display = 'none';
+    }
     $('teamCode').textContent = hubCode;
 
     // Share row. navigator.share is absent in a plain desktop browser and in
