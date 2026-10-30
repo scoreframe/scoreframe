@@ -194,6 +194,7 @@ h2.sm { font-size: clamp(26px, 3vw, 36px); line-height: 1.05; font-weight: 900; 
   .fl-main { flex-direction: column; }
   .fl-arrow { flex-basis: auto; flex-direction: row; padding: 2px 0; } .fl-arrow svg { transform: rotate(90deg); }
 }
+.bracket { overflow-x: auto; } .bracket svg { display: block; width: 100%; min-width: 760px; height: auto; font-family: Archivo, -apple-system, Arial, sans-serif; }
 .fanrow { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
 .fanpg { flex: 1 1 300px; max-width: 360px; min-width: 0; background: #fff; border: 1px solid var(--ln); border-radius: 22px; overflow: hidden; box-shadow: 0 10px 26px rgba(28,27,31,.08); }
 .fanbar { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--mu); padding: 9px 14px; border-bottom: 1px solid var(--ln); background: var(--paper); }
@@ -409,10 +410,10 @@ function flowScene() {
     ${person(300, 470, '#5A565F')}${person(250, 470, '#A9A39B')}${person(350, 470, '#A9A39B')}${person(440, 470, '#A9A39B')}
     ${phone(322, 452, 0)}
     ${arrow('M330 432 C 380 380, 520 340, 545 285', '', 0, 0, true)}
-    <text x="380" y="420" font-size="13" font-weight="700" fill="#8B4A12">score taps · Wi-Fi, Bluetooth or internet</text>
+    <text x="372" y="414" font-size="13" font-weight="700" fill="#8B4A12">score taps from any browser,</text><text x="372" y="429" font-size="13" font-weight="700" fill="#8B4A12">or the app by Wi-Fi or Bluetooth</text>
     ${note(48, 50, 1, ['One phone films from one spot', 'The scoreboard is drawn right into the video'])}
-    ${note(48, 568, 2, ['A parent keeps score from the stands', 'on their phone, or in any browser'])}
-    ${note(400, 50, 3, ['Kills, aces and blocks', 'become stats and highlights'])}
+    ${note(48, 568, 2, ['A parent keeps score from the stands', 'in any phone browser. No app to install.'])}
+    ${note(400, 50, 3, ['Kills, aces and blocks become stats', 'and highlights, live or after the game'])}
     ${box(640, 40, 250, 110, 'YouTube', ["Your club's channel", 'Live and full games'], '<g transform="translate(662 70)"><rect width="34" height="24" rx="7" fill="#C62828"/><path d="M13 6l10 6-10 6z" fill="#FFFFFF"/></g>')}
     ${box(640, 215, 250, 120, 'ScoreFrame', ['Scores, stats, schedules', 'Highlights and followers'], '<g transform="translate(662 238)" fill="#1C1B1F"><rect width="34" height="10" rx="3"/><rect y="13" width="34" height="10" rx="3"/><rect y="26" width="34" height="10" rx="3"/><circle cx="28" cy="5" r="2" fill="#39D98A"/><circle cx="28" cy="18" r="2" fill="#39D98A"/><circle cx="28" cy="31" r="2" fill="#39D98A"/></g>')}
     ${box(640, 400, 250, 120, 'scoreframe.app', ['Club, team, game, event', 'and player pages', 'The director console'], '<g transform="translate(662 422)"><rect width="34" height="26" rx="4" fill="none" stroke="#1C1B1F" stroke-width="2.5"/><line x1="0" y1="8" x2="34" y2="8" stroke="#1C1B1F" stroke-width="2.5"/></g>')}
@@ -426,6 +427,32 @@ function flowScene() {
     ${arrow('M894 445 C 920 380, 920 200, 950 120', '', 0, 0)}
     ${arrow('M894 460 L 950 300', '', 0, 0)}
     ${arrow('M952 478 L 896 478', '', 0, 0)}
+    ${arrow('M950 290 L 896 282', '', 0, 0)}<text x="900" y="262" font-size="13" font-weight="700" fill="#8B4A12">feedback</text>
+  </svg></div>`;
+}
+
+// A three-round bracket for the demo: lines show who moves on; club teams are
+// highlighted the way the app highlights your own team.
+function demoBracket() {
+  const W = 236, H = 64, X = [0, 330, 660];
+  const ours = (n) => n.startsWith('Rockets');
+  const match = (x, cy, label, a, b) => {
+    const y = cy - H / 2, club = ours(a[1]) || ours(b[1]);
+    const row = (t, ry) => `<g>${ours(t[1]) ? `<rect x="${x + 1}" y="${ry}" width="${W - 2}" height="24" fill="#FFE7D1"/>` : ''}<text x="${x + 10}" y="${ry + 17}" font-size="13" fill="#5A565F">${t[0]}</text><text x="${x + 36}" y="${ry + 17}" font-size="14" font-weight="${ours(t[1]) ? 900 : 600}" fill="#1C1B1F">${t[1]}</text><text x="${x + W - 12}" y="${ry + 17}" font-size="14" font-weight="800" text-anchor="end" fill="#1C1B1F">${t[2]}</text></g>`;
+    return `<g><text x="${x}" y="${y - 7}" font-size="11" font-weight="700" fill="#5A565F" letter-spacing="0.6">${label}</text><rect x="${x}" y="${y}" width="${W}" height="${H}" rx="10" fill="#FFFFFF" stroke="${club ? '#FF9640' : '#D6D2CC'}" stroke-width="${club ? 2.5 : 1.5}"/><clipPath id="c${x}${cy}"><rect x="${x}" y="${y}" width="${W}" height="${H}" rx="10"/></clipPath><g clip-path="url(#c${x}${cy})">${row(a, y + 6)}${row(b, y + 34)}</g><line x1="${x + 8}" y1="${y + 32}" x2="${x + W - 8}" y2="${y + 32}" stroke="#EFECE7"/></g>`;
+  };
+  const link = (x1, y1, x2, y2) => `<path d="M${x1} ${y1} H${(x1 + x2) / 2} V${y2} H${x2}" fill="none" stroke="#B9B4AC" stroke-width="2"/>`;
+  const qf = [70, 175, 280, 385], sf = [122.5, 332.5], f = 227.5;
+  return `<div class="bracket"><svg viewBox="0 0 900 430" role="img" aria-label="Gold bracket: quarterfinals, semifinals and final, with lines showing who moves on. Rockets teams are highlighted.">
+    ${link(X[0] + W, qf[0], X[1], sf[0] - 12)}${link(X[0] + W, qf[1], X[1], sf[0] + 12)}${link(X[0] + W, qf[2], X[1], sf[1] - 12)}${link(X[0] + W, qf[3], X[1], sf[1] + 12)}
+    ${link(X[1] + W, sf[0], X[2], f - 12)}${link(X[1] + W, sf[1], X[2], f + 12)}
+    ${match(X[0], qf[0], 'QUARTERFINAL · 12:00 · CT 1', ['A1', 'Rockets 16 National', '2'], ['C2', 'Heat 16 Navy', '0'])}
+    ${match(X[0], qf[1], 'QUARTERFINAL · 12:00 · CT 2', ['C1', 'Legacy 16 Elite', '2'], ['A2', 'Mavs 16 Gold', '1'])}
+    ${match(X[0], qf[2], 'QUARTERFINAL · 12:00 · CT 3', ['B1', 'Rockets 16 Select', '2'], ['A3', 'KC Power 16 Black', '1'])}
+    ${match(X[0], qf[3], 'QUARTERFINAL · 12:00 · CT 4', ['B2', 'Dynasty 16 Red', '2'], ['B3', 'Sky High 16', '0'])}
+    ${match(X[1], sf[0], 'SEMIFINAL · 1:00 · CT 1 · LIVE', ['A1', 'Rockets 16 National', '1'], ['C1', 'Legacy 16 Elite', '0'])}
+    ${match(X[1], sf[1], 'SEMIFINAL · 1:00 · CT 2', ['B1', 'Rockets 16 Select', ''], ['B2', 'Dynasty 16 Red', ''])}
+    ${match(X[2], f, 'FINAL · 2:30 · CT 1', ['', 'Winner of semifinal 1', ''], ['', 'Winner of semifinal 2', ''])}
   </svg></div>`;
 }
 
@@ -435,7 +462,9 @@ function flowDiagram() {
   return `<div class="fl" role="img" aria-label="The director sets up teams in the club console; coaches film and score on the free app with Pro on; games stream to the club's YouTube channel; families follow on the club, team, game, event and player pages. After the game, tagged plays become stats, reels and family emails.">
     ${flowScene()}
     <div class="fl-loops">
-      <div class="fl-loop"><div class="fl-who">After the game</div><div>Send a link to anyone who'll tag plays <b>→</b> stats on the box score and player pages <b>→</b> a reel for each player <b>→</b> an email to that player's family.</div></div>
+      <div class="fl-loop"><div class="fl-who">Stats and highlights: live or after</div><div>Tap kills, aces and blocks during the game, or send a link to anyone who'll tag plays after it <b>→</b> stats on the box score and player pages <b>→</b> a reel for each player <b>→</b> an email to that player's family.</div></div>
+      <div class="fl-loop"><div class="fl-who">No app needed to keep score</div><div>The scorekeeper opens a link or scans a code in any phone browser <b>→</b> taps the score <b>→</b> it lands on the camera phone's video and the live pages.</div></div>
+      <div class="fl-loop"><div class="fl-who">Coaches talk back</div><div>Coaches send feedback and feature ideas from the app's Help menu <b>→</b> they reach the ScoreFrame team directly, with the details we need to help.</div></div>
       <div class="fl-loop"><div class="fl-who">During tournaments</div><div>AES results come in every 20 minutes <b>→</b> pools and brackets fill in <b>→</b> your coaches see their next match and press Start.</div></div>
     </div>
   </div>`;
@@ -674,14 +703,10 @@ function demoScreen(tab) {
           <tr><td style="white-space:nowrap;">9:00</td><td>KC Power 16 Black vs Elevation 16-1</td><td class="muted">Work: <b>Rockets</b></td></tr>
           <tr><td style="white-space:nowrap;">10:00</td><td><b>Rockets 16 National</b> vs Elevation 16-1</td><td class="muted">Work: Mavs</td></tr>
           </tbody></table></div>
-        <div class="card pad" style="display:flex;flex-direction:column;gap:10px;"><h3 style="font-size:16px;font-weight:800;">Gold bracket</h3>
-          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:center;font-size:14px;">
-            <div style="display:flex;flex-direction:column;gap:8px;"><div style="border:1px solid var(--ln);border-radius:9px;padding:8px 10px;">A1 vs B2<div class="muted" style="font-size:12px;">Semifinal · 2:00 · Court 1</div></div><div style="border:1px solid var(--ln);border-radius:9px;padding:8px 10px;">B1 vs C1<div class="muted" style="font-size:12px;">Semifinal · 2:00 · Court 2</div></div></div>
-            <div style="border:2px solid var(--orange);border-radius:9px;padding:8px 10px;">Final<div class="muted" style="font-size:12px;">3:30 · Court 1</div></div>
-          </div>
-          <p class="muted" style="font-size:13px;margin:0;">Pool finishes fill the bracket in as scores come in. Every team, family and coach sees the same live board.</p></div>
+
       </div>
-    </div>`;
+    </div>
+    <div class="card pad" style="display:flex;flex-direction:column;gap:10px;"><div class="row"><h3 style="font-size:18px;font-weight:800;">Gold bracket</h3><span class="muted" style="font-size:14px;">Pool finishes fill it in as scores come in. Your club's teams are highlighted.</span></div>${demoBracket()}</div>`;
   if (tab === 'tag') return `
     <div class="banner b-info"><div class="txt"><b>Tag plays after the game.</b> Someone kept score live; now anyone you send the link to watches the game video and says what happened on each point. ScoreFrame pauses on every point and asks.</div></div>
     <div class="split">
