@@ -138,6 +138,7 @@ main.wrap { padding-block: 18px 40px; display: flex; flex-wrap: wrap; gap: 20px;
     <a class="brand" href="/">Score<span>Frame</span></a>
     <div class="title"><b id="hdrTitle">Tag plays</b><small id="hdrSub">Loading…</small></div>
     <div class="progress hide" id="progressBox"><span id="progressTxt" class="num"></span><div class="bar"><i id="progressBar"></i></div></div>
+    <button class="btn primary hide" id="publishBtn" type="button">Publish plays</button>
   </div>
 </header>
 
@@ -191,7 +192,14 @@ main.wrap { padding-block: 18px 40px; display: flex; flex-wrap: wrap; gap: 20px;
 
     <div class="card hide" id="doneCard">
       <b style="font-size:20px">All caught up</b>
-      <p style="margin:0;color:var(--muted)">Every point you're tagging is done. Your tags are saved. Publishing them to stats, YouTube chapters and player reels is the next part we're building.</p>
+      <p style="margin:0;color:var(--muted)">Every point you're tagging has an answer, and your tags are saved. Publish to put the plays on the game page, give each player a reel, and email each player's parents.</p>
+      <button class="btn primary" id="publishBtn2" type="button">Publish plays</button>
+    </div>
+
+    <div class="card hide" id="pubCard" aria-live="polite">
+      <b style="font-size:18px" id="pubTitle">Published</b>
+      <p style="margin:0;color:var(--muted)" id="pubBody"></p>
+      <a class="btn" id="reelLink" href="#" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:var(--text)">See the reels</a>
     </div>
 
     <div class="list">
@@ -229,6 +237,7 @@ setPersistence(auth, browserLocalPersistence).catch(() => {});
 const fns = getFunctions(app);
 const loadFn = httpsCallable(fns, 'tagPlaysLoad');
 const saveFn = httpsCallable(fns, 'tagPlaysSave');
+const publishFn = httpsCallable(fns, 'tagPlaysPublish');
 
 const $ = (id) => document.getElementById(id);
 const qs = new URLSearchParams(location.search);
@@ -615,6 +624,37 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ── Publish ───────────────────────────────────────────────
+const CHAPTER_WHY = {
+  personal: 'Chapters on the YouTube video come from the recording phone; that part is still being built.',
+  no_channel: 'No chapters: the club\u2019s YouTube connection needs the director to reconnect it.',
+  other_channel: 'No chapters: this game was streamed on a different channel than the club\u2019s.',
+  youtube_error: 'YouTube didn\u2019t accept the chapters this time.',
+  error: 'The chapters didn\u2019t go through this time.',
+};
+async function publish() {
+  const mine = S.points.filter((p) => p.ours);
+  const left = mine.filter((p) => !S.tags[p.id]).length;
+  if (left && !confirm(`${left} of your points aren\u2019t tagged yet. Publish what you have? You can tag more and publish again.`)) return;
+  [$('publishBtn'), $('publishBtn2')].forEach((b) => { b.disabled = true; b.textContent = 'Publishing\u2026'; });
+  try {
+    const r = (await publishFn({ teamId: TEAM, gameId: GAME })).data;
+    const parts = [`${r.plays} play${r.plays === 1 ? '' : 's'} for ${r.players} player${r.players === 1 ? '' : 's'} are on the game page, each player with a reel.`];
+    parts.push(r.chapters && r.chapters.done ? 'Chapters were added to the YouTube video.' : (CHAPTER_WHY[r.chapters && r.chapters.skipped] || ''));
+    parts.push(r.emailsSent ? `${r.emailsSent} parent email${r.emailsSent === 1 ? '' : 's'} sent.` : 'No new parent emails (no parents linked yet, or already sent for these players).');
+    $('pubBody').textContent = parts.filter(Boolean).join(' ');
+    $('reelLink').href = `/reel.html?team=${encodeURIComponent(TEAM)}&game=${encodeURIComponent(GAME)}`;
+    $('pubCard').classList.remove('hide');
+    $('pubCard').scrollIntoView({ block: 'nearest' });
+  } catch (e) {
+    toast(`Publishing didn\u2019t work: ${errText(e)} Tap to try again.`, () => publish());
+  } finally {
+    [$('publishBtn'), $('publishBtn2')].forEach((b) => { b.disabled = false; b.textContent = 'Publish plays'; });
+  }
+}
+$('publishBtn').onclick = () => publish();
+$('publishBtn2').onclick = () => publish();
+
 // ── Load ──────────────────────────────────────────────────
 function errText(e) {
   const m = (e && (e.message || e.code)) || 'Something went wrong.';
@@ -659,6 +699,7 @@ async function load() {
   $('msg').classList.add('hide');
   $('app').classList.remove('hide');
   $('progressBox').classList.remove('hide');
+  $('publishBtn').classList.remove('hide');
   rebuildQueue(null);
   S.step = S.queue[S.idx] ? 'start' : 'done';
   syncTheirsBtn();
@@ -666,15 +707,35 @@ async function load() {
   maybeMakePlayer();
 }
 
+// The app hands its sign-in over in #auth=<idToken> (same as game.html).
+let handoffDone = !/[#&]auth=/.test(location.hash);
 const google = new GoogleAuthProvider();
-onAuthStateChanged(auth, (user) => {
-  if (user && !user.isAnonymous) { load(); return; }
-  showMsg('Sign in to tag plays', 'Use the account you use in the ScoreFrame app. Tagging is open to the team’s coaches and managers.', [
+function showSignIn() {
+  showMsg('Sign in to tag plays', 'Use the account you use in the ScoreFrame app. Tagging is open to the team\u2019s coaches and managers.', [
     ['Sign in with Google', async () => {
       try { await signInWithPopup(auth, google); }
-      catch (e) { if (e && /popup/.test(e.code || '')) { try { await signInWithRedirect(auth, google); } catch (_) {} } else toast('Sign-in didn’t work: ' + errText(e)); }
+      catch (e) { if (e && /popup/.test(e.code || '')) { try { await signInWithRedirect(auth, google); } catch (_) {} } else toast('Sign-in didn\u2019t work: ' + errText(e)); }
     }, true],
   ]);
+}
+(async () => {
+  if (handoffDone) return;
+  const m = location.hash.match(/[#&]auth=([^&]+)/);
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+  try {
+    const { signInWithCustomToken } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+    const r = await fetch('https://us-central1-scoreframe-deploy.cloudfunctions.net/mintAuthToken', { method: 'POST', headers: { Authorization: 'Bearer ' + decodeURIComponent(m[1]) } });
+    const j = r.ok ? await r.json() : null;
+    if (j && j.customToken) await signInWithCustomToken(auth, j.customToken);
+  } catch (_) {}
+  handoffDone = true;
+  if (!auth.currentUser || auth.currentUser.isAnonymous) showSignIn();
+})();
+let loadedFor = null;
+onAuthStateChanged(auth, (user) => {
+  if (user && !user.isAnonymous) { if (loadedFor !== user.uid) { loadedFor = user.uid; load(); } return; }
+  loadedFor = null;
+  if (handoffDone) showSignIn();
 });
 </script>
 </body>

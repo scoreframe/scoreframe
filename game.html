@@ -1010,6 +1010,14 @@ body.sf-nospoil #moreFromTeamCard { display: none !important; }
             <div id="scoringSummaryContent"></div>
         </div>
 
+        <!-- 2026-10-30 — Tag plays after the game (docs/TAG_PLAYS_SPEC.md).
+             Each player's reel (reel.html) from the published taggedPlays,
+             and a Tag plays button (tag.html) for the team's staff. -->
+        <div class="card" id="taggedCard" style="display:none;">
+            <div class="label">Player highlights</div>
+            <div id="taggedContent"></div>
+        </div>
+
         <!-- 2026-06-09 — Match Stats card (sport-specific team totals).
              Soccer first: SOG / Corners / Fouls / Offsides / Cards /
              Saves rendered as a side-by-side comparison with team
@@ -1143,9 +1151,12 @@ let currentUser = null;
 // SCOPE: display only for a public team, whose docs are world-readable under
 // canReadTeam. Real protection needs names out of the public document.
 let viewerIsVetted = false;
+// Owner, manager or coach: sees the Tag plays button (tag.html).
+let viewerIsStaff = false;
 
 async function resolveViewerAccess(teamId) {
     viewerIsVetted = false;
+    viewerIsStaff = false;
     if (!currentUser || !teamId) return;
     try {
         const [mgr, coach, sub] = await Promise.all([
@@ -1153,6 +1164,7 @@ async function resolveViewerAccess(teamId) {
             getDoc(doc(db, 'teams', teamId, 'coaches', currentUser.uid)).catch(() => null),
             getDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid)).catch(() => null),
         ]);
+        viewerIsStaff = !!((mgr && mgr.exists()) || (coach && coach.exists()));
         viewerIsVetted = !!(
             (mgr && mgr.exists()) ||
             (coach && coach.exists()) ||
@@ -1581,6 +1593,7 @@ async function load() {
         const team = await retryOnAuthDeny('game.html team', () => getDoc(doc(db, 'teams', teamId)));
         if (!team.exists()) { showNotFound(); return; }
         const t = team.data();
+        if (currentUser && t.ownerUid === currentUser.uid) viewerIsStaff = true;
         hubProfile = {
             teamId,
             teamName: t.name || 'Team',
@@ -2237,6 +2250,7 @@ function renderGame(hub, game) {
     renderBoxScore(hub, game, sport);
     // 2026-06-09 — Per-event scoring summary (Soccer's first user).
     renderScoringSummary(hub, game, sport);
+    renderTaggedPlays(hub, game, sport);
     // 2026-06-09 — Team-level match stats (Soccer first user).
     renderMatchStats(hub, game, sport);
     // 2026-06-09 — PK shootout strip + win-method label.
@@ -2710,6 +2724,7 @@ function applyLiveUpdate(hub, game, sport) {
     renderMeta(game, sport);
     renderBoxScore(hub, game, sport);
     renderScoringSummary(hub, game, sport);
+    renderTaggedPlays(hub, game, sport);
     renderMatchStats(hub, game, sport);
     renderPkShootout(hub, game, sport);
     renderAiRecap(game);
@@ -3636,6 +3651,45 @@ function renderAiRecap(game) {
 // The plays list's view state: player filter, which groups are open, Show all.
 // Kept across the live refreshes so the list doesn't snap back on every point.
 let spState = { key: '', player: '', open: {}, showAll: false };
+// Tag plays after the game (2026-10-30): reels per player + Tag plays for staff.
+function renderTaggedPlays(hub, game, sport) {
+    const card = $('taggedCard'), box = $('taggedContent');
+    if (!card || !box || !hub || !game) return;
+    const plays = Array.isArray(game.taggedPlays) ? game.taggedPlays.filter((p) => p.ours && p.videoId) : [];
+    const canTag = viewerIsStaff && sport === 'VOLLEYBALL' && Array.isArray(game.plays) && game.plays.length > 0;
+    if (!plays.length && !canTag) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    box.textContent = '';
+    const theme = document.body.getAttribute('data-theme');
+    const q = (extra) => `team=${encodeURIComponent(hub.teamId)}&game=${encodeURIComponent(game.id)}${extra || ''}${theme ? '&theme=' + theme : ''}`;
+    const link = (href, text, primary) => {
+        const a = document.createElement('a');
+        a.href = href; a.textContent = text;
+        a.style.cssText = 'display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:999px;font-weight:600;font-size:14px;text-decoration:none;'
+            + (primary ? 'background:var(--accent);color:#1A1A1A;' : 'border:1px solid var(--bg-elevated);color:var(--text-primary);');
+        return a;
+    };
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
+    if (plays.length) {
+        const by = {};
+        plays.forEach((p) => { if (p.pid) { by[p.pid] = by[p.pid] || { name: p.name, number: p.number, n: 0 }; by[p.pid].n++; } });
+        row.appendChild(link(`/reel.html?${q()}`, `Game highlights · ${plays.length}`, true));
+        Object.entries(by).sort((a, b) => b[1].n - a[1].n).forEach(([pid, v]) => {
+            const first = String(v.name || '').split(/\s+/)[0] || 'Player';
+            row.appendChild(link(`/reel.html?${q('&player=' + encodeURIComponent(pid))}`, `${v.number ? '#' + v.number + ' ' : ''}${first} · ${v.n}`));
+        });
+    }
+    if (canTag) row.appendChild(link(`/tag.html?${q()}`, plays.length ? 'Tag more plays' : 'Tag plays', !plays.length));
+    box.appendChild(row);
+    if (!plays.length) {
+        const p = document.createElement('p');
+        p.style.cssText = 'margin:10px 0 0;font-size:14px;color:var(--text-secondary);';
+        p.textContent = 'Tag who made each play to give every player a reel and email their parents.';
+        box.appendChild(p);
+    }
+}
+
 function renderScoringSummary(hub, game, sport) {
     const card = $('scoringSummaryCard');
     if (!card) return;

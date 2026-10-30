@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Highlights · ScoreFrame</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap">
+<!--
+  A player's reel (2026-10-30). Spec: ScoreFrameAndroid/docs/TAG_PLAYS_SPEC.md
+  Plays a player's tagged moments from the full game, one after another, in
+  YouTube's own player (start and end per play; nothing is uploaded and no new
+  video is made). Reads game.taggedPlays, written by tagPlaysPublish.
+  Nothing of ours is drawn over the YouTube player (YouTube policy).
+-->
+<style>
+:root {
+  --bg: #F5F5F2; --surface: #FFFFFF; --card: #FFFFFF; --raised: #ECECE8; --line: #DDDDD6;
+  --text: #1A1A1A; --muted: #555555; --faint: #6B6B6B;
+  --accent: #E47A1F; --accent-ink: #1A1A1A; --accent-soft: rgba(228,122,31,0.13); --accent-text: #A9560F;
+  --player-bg: #111214;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1C1D21; --surface: #23252A; --card: #26282D; --raised: #34373E; --line: #3A3D45;
+    --text: #E6E6E6; --muted: #A8A8A8; --faint: #8F929B;
+    --accent: #FF9640; --accent-ink: #1C1D21; --accent-soft: rgba(255,150,64,0.14); --accent-text: #FFB477;
+    --player-bg: #000000;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1C1D21; --surface: #23252A; --card: #26282D; --raised: #34373E; --line: #3A3D45;
+  --text: #E6E6E6; --muted: #A8A8A8; --faint: #8F929B;
+  --accent: #FF9640; --accent-ink: #1C1D21; --accent-soft: rgba(255,150,64,0.14); --accent-text: #FFB477;
+  --player-bg: #000000;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font-family: Archivo, system-ui, -apple-system, Segoe UI, sans-serif; font-size: 15px; line-height: 1.45; }
+button { font-family: inherit; font-size: inherit; color: inherit; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 16px; }
+.band { color: #FFFFFF; }
+.band .wrap { display: flex; align-items: center; gap: 14px; padding-block: 20px; }
+.badge { width: 52px; height: 52px; flex: none; border-radius: 50%; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; overflow: hidden; }
+.badge img { width: 100%; height: 100%; object-fit: cover; }
+.band h1 { margin: 0; font-size: 22px; line-height: 1.2; }
+.band p { margin: 2px 0 0; font-size: 14px; opacity: .92; }
+main.wrap { padding-block: 16px 40px; display: flex; flex-direction: column; gap: 12px; }
+.player { position: relative; width: 100%; aspect-ratio: 16 / 9; background: var(--player-bg); border-radius: 12px; overflow: hidden; }
+.player #yt, .player iframe { position: absolute; inset: 0; width: 100%; height: 100%; }
+.nowbar { display: flex; align-items: center; gap: 10px; }
+.round { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 1px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.round svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.now { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.now b { font-size: 16px; }
+.now span { font-size: 13px; color: var(--muted); }
+.btn { min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); font-weight: 700; cursor: pointer; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); cursor: pointer; font-size: 14px; font-weight: 600; }
+.chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+.list { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 46px; padding: 4px 14px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; }
+.row:last-child { border-bottom: 0; }
+.row.cur { background: var(--accent-soft); }
+.row .i { width: 20px; color: var(--faint); font-size: 12px; }
+.row .w { width: 120px; font-weight: 700; }
+.row .p { flex: 1; min-width: 0; color: var(--muted); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hint { font-size: 13px; color: var(--faint); }
+.hint a { color: var(--accent-text); }
+.panel { max-width: 520px; margin: 60px auto; padding: 28px 24px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; gap: 14px; }
+.panel h2 { margin: 0; font-size: 21px; }
+.panel p { margin: 0; color: var(--muted); }
+.hide { display: none !important; }
+</style>
+</head>
+<body>
+<div class="band" id="band" style="background:#3A3D45">
+  <div class="wrap">
+    <div class="badge" id="badge" aria-hidden="true"></div>
+    <div><h1 id="title">Highlights</h1><p id="sub"></p></div>
+  </div>
+</div>
+
+<div class="panel hide" id="msg" role="status"><h2 id="msgTitle"></h2><p id="msgBody"></p><div id="msgActions"></div></div>
+
+<main class="wrap hide" id="app">
+  <div class="chips" id="chips" aria-label="Players"></div>
+  <div class="player"><div id="yt"></div></div>
+  <div class="nowbar">
+    <button class="round" id="prevBtn" type="button" aria-label="Previous play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <div class="now"><b id="nowTitle" class="num">Ready</b><span id="nowSub" class="num"></span></div>
+    <button class="round" id="nextBtn" type="button" aria-label="Next play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+  </div>
+  <button class="btn primary" id="playBtn" type="button">Play the reel</button>
+  <div class="list" id="list"></div>
+  <p class="hint" id="foot"></p>
+</main>
+
+<script>
+(function () {
+  var t = new URLSearchParams(location.search).get('theme');
+  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { initializeFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, signInWithCustomToken, GoogleAuthProvider, setPersistence, browserLocalPersistence }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+  authDomain: "scoreframe-deploy.firebaseapp.com",
+  projectId: "scoreframe-deploy",
+  storageBucket: "scoreframe-deploy.firebasestorage.app",
+  messagingSenderId: "728886280072",
+  appId: "1:728886280072:android:0050478669b89fc76b043d"
+});
+// Long polling, not WebChannel: the stream can stall inside an app WebView (game.html, 2026-08-26).
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+const $ = (id) => document.getElementById(id);
+const qs = new URLSearchParams(location.search);
+const TEAM = qs.get('team') || '', GAME = qs.get('game') || '';
+let PLAYER = qs.get('player') || '';
+const WORD = { kills: 'Kill', aces: 'Ace', blocks: 'Block', errors: 'Hitting error', missedServes: 'Serve error', opp_error: 'Great rally', other: 'Great rally' };
+const S = { all: [], plays: [], i: 0, player: null, ytApi: false, ready: false, loaded: null, watch: null, playing: false, game: null };
+
+function word(p) { return p.detail === 'tip' ? 'Tip' : (WORD[p.stat] || 'Play') + (p.star && WORD[p.stat] !== 'Great rally' ? ' · great rally' : ''); }
+function first(n) { return String(n || '').split(/\s+/)[0] || ''; }
+function hex(c) { return typeof c === 'number' ? '#' + ((c >>> 0) & 0xffffff).toString(16).padStart(6, '0') : (/^#?[0-9a-f]{6}$/i.test(c || '') ? '#' + String(c).replace('#', '') : null); }
+
+function showMsg(title, body, actions) {
+  $('app').classList.add('hide'); $('msg').classList.remove('hide');
+  $('msgTitle').textContent = title; $('msgBody').textContent = body;
+  const a = $('msgActions'); a.textContent = '';
+  (actions || []).forEach(([label, fn]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn primary'; b.textContent = label; b.onclick = fn; a.appendChild(b); });
+}
+
+function choose(pid) {
+  PLAYER = pid || '';
+  S.plays = S.all.filter((p) => p.ours && p.videoId && (!PLAYER || p.pid === PLAYER));
+  S.i = 0;
+  const g = S.game;
+  const who = PLAYER ? (S.all.find((p) => p.pid === PLAYER) || {}) : null;
+  $('title').textContent = who ? `${first(who.name) || 'Player'}'s highlights` : 'Game highlights';
+  document.title = `${$('title').textContent} · ScoreFrame`;
+  try { const u = new URL(location.href); if (PLAYER) u.searchParams.set('player', PLAYER); else u.searchParams.delete('player'); history.replaceState(null, '', u); } catch (_) {}
+  renderChips(); renderList(); renderNow();
+}
+function renderChips() {
+  const c = $('chips'); c.textContent = '';
+  const counts = {};
+  S.all.filter((p) => p.ours && p.pid && p.videoId).forEach((p) => { counts[p.pid] = counts[p.pid] || { n: 0, name: p.name, number: p.number }; counts[p.pid].n++; });
+  const mk = (label, pid) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + ((pid || '') === PLAYER ? ' on' : ''); b.textContent = label; b.onclick = () => { stop(); choose(pid); }; return b; };
+  c.appendChild(mk('Everyone', ''));
+  Object.entries(counts).sort((a, b) => b[1].n - a[1].n).forEach(([pid, v]) => c.appendChild(mk(`${v.number ? '#' + v.number + ' ' : ''}${first(v.name)} · ${v.n}`, pid)));
+}
+function renderList() {
+  const l = $('list'); l.textContent = '';
+  S.plays.forEach((p, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'row' + (i === S.i ? ' cur' : '');
+    const n = document.createElement('span'); n.className = 'i num'; n.textContent = i + 1;
+    const w = document.createElement('span'); w.className = 'w'; w.textContent = word(p);
+    const d = document.createElement('span'); d.className = 'p num'; d.textContent = `${PLAYER ? '' : (first(p.name) ? first(p.name) + ' · ' : '')}Set ${p.set} · ${p.score}`;
+    b.append(n, w, d); b.onclick = () => { S.i = i; playCurrent(); };
+    l.appendChild(b);
+  });
+  if (!S.plays.length) { const e = document.createElement('div'); e.className = 'row'; e.textContent = 'No plays with video yet.'; l.appendChild(e); }
+}
+function renderNow() {
+  const p = S.plays[S.i];
+  $('nowTitle').textContent = p ? `Play ${S.i + 1} of ${S.plays.length} · ${word(p)}` : 'No plays';
+  $('nowSub').textContent = p ? `${PLAYER ? '' : (first(p.name) ? first(p.name) + ' · ' : '')}Set ${p.set} · ${p.score}` : '';
+  [...$('list').children].forEach((r, i) => r.classList.toggle('cur', i === S.i));
+}
+
+window.onYouTubeIframeAPIReady = () => { S.ytApi = true; makePlayer(); };
+if (window.YT && window.YT.Player) S.ytApi = true;
+function makePlayer() {
+  if (!S.ytApi || S.player || !S.plays.length) return;
+  const p = S.plays[0];
+  S.player = new YT.Player('yt', {
+    videoId: p.videoId,
+    playerVars: { playsinline: 1, rel: 0, start: Math.floor(p.start) },
+    events: { onReady: () => { S.ready = true; S.loaded = p.videoId; } },
+  });
+}
+function stop() { clearInterval(S.watch); S.playing = false; try { S.player && S.player.pauseVideo(); } catch (_) {} $('playBtn').textContent = 'Play the reel'; }
+function playCurrent() {
+  const p = S.plays[S.i]; if (!p || !S.ready) return;
+  renderNow();
+  S.playing = true; $('playBtn').textContent = 'Pause';
+  if (S.loaded === p.videoId) { S.player.seekTo(p.start, true); S.player.playVideo(); }
+  else { S.player.loadVideoById({ videoId: p.videoId, startSeconds: p.start }); S.loaded = p.videoId; }
+  clearInterval(S.watch);
+  S.watch = setInterval(() => {
+    let t = 0, st = -1;
+    try { t = S.player.getCurrentTime(); st = S.player.getPlayerState(); } catch (_) { return; }
+    if (st === YT.PlayerState.PLAYING && t >= p.end) {
+      clearInterval(S.watch);
+      if (S.i + 1 < S.plays.length) { S.i++; playCurrent(); }
+      else { S.player.pauseVideo(); S.playing = false; $('playBtn').textContent = 'Play again'; S.i = 0; renderNow(); }
+    }
+  }, 150);
+}
+$('playBtn').onclick = () => { if (S.playing) stop(); else playCurrent(); };
+$('prevBtn').onclick = () => { S.i = Math.max(0, S.i - 1); playCurrent(); };
+$('nextBtn').onclick = () => { S.i = Math.min(S.plays.length - 1, S.i + 1); playCurrent(); };
+
+async function load() {
+  if (!TEAM || !GAME) { showMsg('This link is missing the game', 'Open highlights from the game page.'); return; }
+  let g, t;
+  try {
+    [g, t] = await Promise.all([getDoc(doc(db, 'teams', TEAM, 'games', GAME)), getDoc(doc(db, 'teams', TEAM)).catch(() => null)]);
+  } catch (e) {
+    if (e && e.code === 'permission-denied') {
+      if (auth.currentUser && !auth.currentUser.isAnonymous) { showMsg('This team is private', 'Your account doesn’t follow this team yet. Ask the team to approve you.'); return; }
+      showMsg('Sign in to watch', 'This team’s games are for its followers. Sign in with the account you use for ScoreFrame.', [['Sign in with Google', signIn]]);
+      return;
+    }
+    showMsg('Couldn’t load the highlights', 'Check your connection and try again.', [['Try again', load]]); return;
+  }
+  if (!g.exists()) { showMsg('Game not found', 'It may have been deleted.'); return; }
+  const d = g.data();
+  S.game = d;
+  S.all = Array.isArray(d.taggedPlays) ? d.taggedPlays : [];
+  const team = t && t.exists() ? t.data() : {};
+  const ourSide = d.awayTeamId === TEAM && d.homeTeamId !== TEAM ? 'away' : 'home';
+  const us = ourSide === 'home' ? d.homeTeam : d.awayTeam;
+  const them = ourSide === 'home' ? (d.awayTeam || d.opponent) : d.homeTeam;
+  const c1 = hex(team.color) || '#3A3D45', c2 = hex(team.color2) || c1;
+  $('band').style.background = c1 === c2 ? c1 : `linear-gradient(110deg, ${c1} 0%, ${c1} 45%, ${c2} 100%)`;
+  const badge = $('badge'); badge.textContent = '';
+  if (team.logoUrl) { const im = document.createElement('img'); im.src = team.logoUrl; im.alt = ''; badge.appendChild(im); }
+  else { badge.textContent = String(us || team.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 3).toUpperCase(); badge.style.color = c1; }
+  const when = d.date ? new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+  $('sub').textContent = [us && them ? `${us} vs ${them}` : us, when].filter(Boolean).join(' · ');
+  if (!S.all.length) { showMsg('No highlights yet', 'The team hasn’t published tagged plays for this game.'); return; }
+  const vid = (S.all.find((p) => p.videoId) || {}).videoId;
+  $('foot').textContent = '';
+  if (vid) {
+    $('foot').append('Plays from the full game on the team’s YouTube channel. ');
+    const a = document.createElement('a'); a.href = `https://www.youtube.com/watch?v=${vid}`; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Watch the whole game';
+    $('foot').append(a);
+  }
+  $('msg').classList.add('hide'); $('app').classList.remove('hide');
+  choose(PLAYER);
+  makePlayer();
+}
+
+const google = new GoogleAuthProvider();
+async function signIn() {
+  try { await signInWithPopup(auth, google); }
+  catch (e) { if (e && /popup/.test(e.code || '')) { try { await signInWithRedirect(auth, google); } catch (_) {} } }
+}
+// The app hands its sign-in over in #auth=<idToken> (same as game.html).
+async function appHandoff() {
+  const m = (location.hash || '').match(/[#&]auth=([^&]+)/);
+  if (!m) return;
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+  try {
+    const r = await fetch('https://us-central1-scoreframe-deploy.cloudfunctions.net/mintAuthToken', { method: 'POST', headers: { Authorization: 'Bearer ' + decodeURIComponent(m[1]) } });
+    const j = r.ok ? await r.json() : null;
+    if (j && j.customToken) await signInWithCustomToken(auth, j.customToken);
+  } catch (_) {}
+}
+let started = false;
+(async () => {
+  await appHandoff();
+  if (typeof auth.authStateReady === 'function') await auth.authStateReady();
+  started = true; load();
+})();
+onAuthStateChanged(auth, (u) => { if (started && u && !u.isAnonymous && !$('msg').classList.contains('hide')) load(); });
+</script>
+</body>
+</html>
