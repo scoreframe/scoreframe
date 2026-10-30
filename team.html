@@ -374,6 +374,13 @@ html, body {
     border: 1px solid var(--accent);
 }
 .follow-status { font-size: 12px; color: var(--text-secondary); margin-top: 6px; }
+/* Invitation sent to a different email (2026-10-29): the invitee's ask and the staff's confirm. */
+.move-card { margin-top: 12px; padding: 14px 16px; border: 1px solid var(--outline); border-radius: 12px; background: var(--bg-surface); color: var(--text-primary); text-align: left; display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 1.45; }
+.move-card p { margin: 0; color: var(--text-secondary); }
+.move-card .move-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.move-card label { font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.move-card input { font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--sf-outline); background: var(--bg-deep); color: var(--text-primary); width: 100%; box-sizing: border-box; }
+.move-card .follow-status:empty { display: none; }
 
 /* Sections */
 .section { padding: 20px 24px; }
@@ -1900,12 +1907,94 @@ async function handleInviteAcceptance() {
     setTimeout(() => {
         const gate = $('requestBtn');
         const btn = $('acceptInviteBtn') || (gate && gate.style.display !== 'none' && gate.onclick === acceptInvite ? gate : null);
-        if (!btn) return;
+        // No invitation for this account: it may have gone to their other address.
+        if (!btn) { if (!isSubscriber && !isManager && !isCoach) showMoveCard(); return; }
         const box = $('acceptInviteBtn') ? $('followStatus') : $('accessStatus');
         if (box) box.textContent = 'Tap Accept invitation to follow the team.';
         btn.scrollIntoView({ block: 'center', behavior: 'smooth' });
         try { btn.focus({ preventScroll: true }); } catch (_) {}
     }, 300);
+}
+
+// ── Invitation sent to a different email (2026-10-29, functions/invite_move.js) ──
+// The invitee says which address it went to; the team confirms; it moves to
+// this account. The answer is the same whether or not that address was invited.
+async function callFn(name, data) {
+    const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
+    return (await httpsCallable(getFunctions(app), name)(data)).data;
+}
+function showMoveCard() {
+    if ($('moveCard') || !currentUser) return;
+    const gateEl = $('accessGate');
+    const host = gateEl && gateEl.style.display !== 'none' ? gateEl : ($('followStatus') && $('followStatus').parentElement);
+    if (!host) return;
+    const card = document.createElement('div');
+    card.id = 'moveCard'; card.className = 'move-card';
+    card.innerHTML = `<strong>Invitation sent to a different email?</strong>
+        <p>You're signed in as <b>${escapeHtml(currentUser.email || '')}</b>. If the invitation went to another address of yours, the team can move it to this account.</p>
+        <div class="move-row"><button class="follow-btn" id="moveUse" type="button">Use this account</button><button class="sign-out-btn" id="moveSwitch" type="button">Sign in with a different account</button></div>
+        <div id="moveForm" style="display:none;flex-direction:column;gap:8px"><label for="moveEmail">The address the invitation went to</label>
+            <input id="moveEmail" type="email" autocomplete="email" inputmode="email" placeholder="name@example.com">
+            <div class="move-row"><button class="follow-btn" id="moveSend" type="button">Ask the team</button></div></div>
+        <div class="follow-status" id="moveMsg" role="status"></div>`;
+    host.appendChild(card);
+    $('moveUse').onclick = () => { $('moveForm').style.display = 'flex'; $('moveUse').style.display = 'none'; $('moveEmail').focus(); };
+    $('moveSwitch').onclick = async () => {
+        const u = new URL(location.href); u.searchParams.set('accept', '1');
+        await signOut(auth).catch(() => {});
+        location.href = u.toString();
+    };
+    $('moveSend').onclick = async () => {
+        const invitedEmail = $('moveEmail').value.trim();
+        const btn = $('moveSend'); btn.disabled = true; btn.textContent = 'Sending…'; $('moveMsg').textContent = '';
+        try {
+            const r = await callFn('requestInviteMove', { teamId, invitedEmail });
+            $('moveForm').style.display = 'none'; $('moveSwitch').style.display = 'none';
+            $('moveMsg').textContent = `If ${r.teamName} sent an invitation to ${invitedEmail}, we've asked them to confirm it's you. You'll get an email at ${r.toEmail} when they do.`;
+        } catch (e) {
+            btn.disabled = false; btn.textContent = 'Ask the team';
+            $('moveMsg').textContent = (e && e.message) || "That didn't go through. Try again.";
+        }
+    };
+}
+
+/** Staff (and a director arriving from the email): requests to confirm. */
+async function loadInviteMoves() {
+    if (!currentUser || !teamId) return;
+    const wanted = new URLSearchParams(location.search).get('move');
+    if (!isManager && !wanted) return;
+    let moves = [];
+    try { moves = (await callFn('listInviteMoves', { teamId })).moves || []; } catch (_) { return; }
+    const old = $('inviteMoves'); if (old) old.remove();
+    const host = $('followStatus') && $('followStatus').parentElement;
+    if (!host) return;
+    const box = document.createElement('div'); box.id = 'inviteMoves';
+    if (!moves.length) {
+        if (wanted) { box.innerHTML = `<div class="move-card"><p>That request was already answered, or it's for someone who can confirm it.</p></div>`; host.appendChild(box); }
+        return;
+    }
+    box.innerHTML = moves.map((m) => `<div class="move-card" data-move="${escapeHtml(m.id)}">
+        <strong>${escapeHtml(m.toName || m.toEmail)} asked to use a different email</strong>
+        <p>Signed in as <b>${escapeHtml(m.toEmail)}</b>, they say the ${m.role === 'follower' ? 'invitation to follow' : escapeHtml(m.role) + ' invitation'} sent to <b>${escapeHtml(m.fromEmail)}</b> is theirs. Confirming moves it, and any players linked to it, to ${escapeHtml(m.toEmail)}.</p>
+        <div class="move-row"><button class="follow-btn" data-ok="1" type="button">Confirm, use ${escapeHtml(m.toEmail)}</button><button class="sign-out-btn" data-ok="0" type="button">Not them</button></div>
+        <div class="follow-status" role="status"></div></div>`).join('');
+    host.appendChild(box);
+    box.querySelectorAll('[data-move]').forEach((card) => card.querySelectorAll('button').forEach((b) => b.onclick = async () => {
+        const approve = b.dataset.ok === '1';
+        card.querySelectorAll('button').forEach((x) => { x.disabled = true; });
+        const msg = card.querySelector('.follow-status');
+        msg.textContent = approve ? 'Moving it…' : 'Sending…';
+        try {
+            const r = await callFn('decideInviteMove', { id: card.dataset.move, approve });
+            msg.textContent = r.status === 'approved' ? "Done. They're in, and we emailed them." : r.status === 'declined' ? 'Declined. We let them know.' : 'That request was already answered.';
+            card.querySelector('.move-row').style.display = 'none';
+            if (r.status === 'approved') { loadStaff(); }
+        } catch (e) {
+            msg.textContent = (e && e.message) || "That didn't work. Try again.";
+            card.querySelectorAll('button').forEach((x) => { x.disabled = false; });
+        }
+    }));
+    if (wanted) { const c = box.querySelector(`[data-move="${CSS.escape(wanted)}"]`); if (c) c.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
 }
 
 async function checkAccess() {
@@ -2002,6 +2091,7 @@ function showContent() {
         loadPendingRequests();
         loadStaff();
         handleInviteAcceptance();
+        loadInviteMoves();
         consumeJoinedFlag();
     } else if (isManager || isCoach || isSubscriber) {
         // Private hub but user has access. Coaches added 2026-09-28: the
@@ -2017,12 +2107,14 @@ function showContent() {
         listenForLive();
         loadPendingRequests();
         loadStaff();
+        loadInviteMoves();
         consumeJoinedFlag();
     } else {
         // Private hub, no access — show gate. An invitee arriving from the email
         // lands HERE (their follow is pending), so the accept handler has to run
         // on this branch too or the button appears to do nothing.
         handleInviteAcceptance();
+        loadInviteMoves();
         $('teamContent').style.display = 'none';
         $('accessGate').style.display = 'block';
         // Show the public shell's upcoming games alongside the gate, so a

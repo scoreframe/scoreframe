@@ -352,7 +352,7 @@ function describeAudit(x) {
     club_void: `License voided${club}`, club_price: `Club price ${money(d.perTeamMonthCents)} a team until ${d.until}${club}`, club_pause: `${d.paused ? 'Paused' : 'Resumed'}${club}`,
     club_addDirector: `Director added: ${d.email}${club}`, club_removeDirector: `Director removed${club}`, pricing: 'Prices and terms changed',
     user_givePro: `Gave Pro for ${d.days} days · ${d.email}`, user_endPro: `Ended given Pro · ${d.email}`, user_tester: `${d.tester ? 'Made a tester' : 'No longer a tester'} · ${d.email}`,
-    user_signOut: `Signed out everywhere · ${d.email}`, user_resetLink: `Password reset link · ${d.email}`, team_clearLive: `Cleared a stuck live · ${d.team}`,
+    user_moveInvite: `Moved a ${d.role === 'follower' ? 'follow' : d.role} invitation from ${d.from} to ${d.email} · ${d.team}`, user_signOut: `Signed out everywhere · ${d.email}`, user_resetLink: `Password reset link · ${d.email}`, team_clearLive: `Cleared a stuck live · ${d.team}`,
     ticket_status: `Ticket set to ${d.status}`, cleanup_mode: d.mode === 'live' ? 'Turned on account cleanup' : 'Account cleanup back to report only',
     cleanup_report: `Account cleanup report sent (${d.empty} empty)`, cleanup_keep: `Kept out of cleanup · ${d.email}`, cleanup_unkeep: `Back in cleanup · ${d.email}`, mfa_enrolled: 'Set up Google Authenticator', mfa_ok: 'Unlocked with Google Authenticator', mfa_backup_code: 'Unlocked with a backup code' };
   return M[x.action] || x.action;
@@ -580,6 +580,7 @@ async function personView(uid) {
   </div>
   <aside class="side-col"><section class="card pad" style="display:flex;flex-direction:column;gap:10px"><h2>Actions</h2><p class="sub" style="margin:0;line-height:1.5">Each asks for a reason and goes in the audit log.</p>
     <button class="btn" id="uPro">Give Pro…</button>${p.comp ? '<button class="btn" id="uEndPro">End the Pro we gave</button>' : ''}
+    <button class="btn" id="uMove">Move an invitation to this account…</button>
     <button class="btn" id="uTester">${u.tester ? 'Stop being a tester' : 'Make a tester (tier switcher)'}</button>
     <button class="btn" id="uOut">Sign out on every phone</button>
     ${u.providers.includes('password') ? '<button class="btn" id="uReset">Password reset link</button>' : ''}
@@ -611,6 +612,12 @@ WIRE.people = (kind, id) => {
     const u = state.person;
     $('uPro').onclick = async () => { const a = await ask({ title: 'Give Pro', body: 'Pro on every phone they sign in to, on top of anything they pay for. Their phones pick it up at the next app start.', fields: [{ label: 'For', type: 'select', options: [['30', '30 days'], ['90', '90 days'], ['365', '1 year']], value: '30' }], ok: 'Give Pro' }); if (a) act('adminUserAction', { uid: u.uid, action: 'givePro', days: Number(a.vals[0]), reason: a.reason }); };
     if ($('uEndPro')) $('uEndPro').onclick = async () => { const a = await ask({ title: 'End the Pro we gave', ok: 'End it', danger: true }); if (a) act('adminUserAction', { uid: u.uid, action: 'endPro', reason: a.reason }); };
+    $('uMove').onclick = async () => {
+      const a = await ask({ title: 'Move an invitation here', ok: 'Move and accept',
+        body: `For an invitation sent to another of their addresses. It moves to ${esc(u.email || 'this account')} with its role and player links, is accepted, and they get an email.`,
+        fields: [{ label: 'Team share code (or team id)', placeholder: 'EQTZLSJ3' }, { label: 'Address the invitation went to', type: 'email', placeholder: 'name@example.com' }] });
+      if (a) act('adminUserAction', { uid: u.uid, action: 'moveInvite', team: a.vals[0], invitedEmail: a.vals[1], reason: a.reason }, () => toast('Moved and accepted.'));
+    };
     $('uTester').onclick = async () => { const a = await ask({ title: u.tester ? 'Stop being a tester' : 'Make a tester', body: 'Testers get the tier switcher and Labs in the apps.' }); if (a) act('adminUserAction', { uid: u.uid, action: 'tester', on: !u.tester, reason: a.reason }); };
     $('uOut').onclick = async () => { const a = await ask({ title: 'Sign out on every phone', body: 'Their phones and browsers sign out within the hour and ask them to sign in again.', ok: 'Sign them out', danger: true }); if (a) act('adminUserAction', { uid: u.uid, action: 'signOut', reason: a.reason }); };
     if ($('uReset')) $('uReset').onclick = async () => { const a = await ask({ title: 'Password reset link', body: 'Makes a link you can send them. It works once.' }); if (a) act('adminUserAction', { uid: u.uid, action: 'resetLink', reason: a.reason }, (r) => { navigator.clipboard.writeText(r.link).then(() => toast('Link copied.')).catch(() => prompt('Reset link', r.link)); }); };

@@ -597,6 +597,43 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
+// ── Invitation sent to a different email (2026-10-29) ──
+// The invitee says which address it went to; the team confirms; it moves to
+// this account. The answer is the same whether or not that address was invited.
+function showMoveCard(content, teamId) {
+    if ($('moveCard')) return;
+    const btn = 'padding:8px 18px;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;';
+    content.insertAdjacentHTML('afterbegin', `<div class="team-card" id="moveCard" style="border-color:var(--accent);display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.08em;text-transform:uppercase;">INVITATION</div>
+        <div style="font-size:15px;font-weight:700;">No invitation for ${esc(currentUser.email || 'this account')}</div>
+        <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;">If the invitation went to another address of yours, the team can move it to this account. Or sign in with the account it was sent to.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button id="moveUse" type="button" style="${btn}background:var(--accent);color:#1A1A1A;border:none;">Use this account</button>
+            <button id="moveSwitch" type="button" style="${btn}background:transparent;color:var(--text-secondary);border:1px solid var(--text-muted);font-weight:600;">Sign in with a different account</button>
+        </div>
+        <div id="moveForm" style="display:none;flex-direction:column;gap:8px;">
+            <label for="moveEmail" style="font-size:13px;font-weight:700;color:var(--text-secondary);">The address the invitation went to</label>
+            <input id="moveEmail" type="email" autocomplete="email" inputmode="email" placeholder="name@example.com" style="font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;border:1px solid var(--text-muted);background:var(--bg-deep);color:var(--text-primary);">
+            <div><button id="moveSend" type="button" style="${btn}background:var(--accent);color:#1A1A1A;border:none;">Ask the team</button></div>
+        </div>
+        <div id="moveMsg" role="status" style="font-size:13px;color:var(--text-secondary);line-height:1.5;"></div>
+    </div>`);
+    $('moveUse').onclick = () => { $('moveForm').style.display = 'flex'; $('moveUse').style.display = 'none'; $('moveEmail').focus(); };
+    $('moveSwitch').onclick = async () => { const u = location.href; await signOut(auth).catch(() => {}); location.href = u; };
+    $('moveSend').onclick = async () => {
+        const invitedEmail = $('moveEmail').value.trim();
+        const b = $('moveSend'); b.disabled = true; b.textContent = 'Sending…'; $('moveMsg').textContent = '';
+        try {
+            const r = (await httpsCallable(functions, 'requestInviteMove')({ teamId, invitedEmail })).data;
+            $('moveForm').style.display = 'none'; $('moveSwitch').style.display = 'none';
+            $('moveMsg').textContent = `If ${r.teamName} sent an invitation to ${invitedEmail}, we've asked them to confirm it's you. You'll get an email at ${r.toEmail} when they do.`;
+        } catch (e) {
+            b.disabled = false; b.textContent = 'Ask the team';
+            $('moveMsg').textContent = (e && e.message) || "That didn't go through. Try again.";
+        }
+    };
+}
+
 // ── Dashboard ──
 
 async function loadDashboard() {
@@ -983,6 +1020,14 @@ async function loadDashboard() {
         </div>`;
 
         content.innerHTML = html;
+
+        // A coach or manager invitation link with nothing for this account: it may
+        // have gone to their other address (2026-10-29, functions/invite_move.js).
+        const qp = new URLSearchParams(location.search);
+        const invTeam = qp.get('team');
+        if (qp.get('invite') === '1' && invTeam && !pendingInvitations.some((i) => i.teamId === invTeam) && !myTeamIds.includes(invTeam)) {
+            showMoveCard(content, invTeam);
+        }
 
     } catch (e) {
         console.error('Dashboard error:', e);
