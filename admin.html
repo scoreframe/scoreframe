@@ -352,7 +352,8 @@ function describeAudit(x) {
     club_addDirector: `Director added: ${d.email}${club}`, club_removeDirector: `Director removed${club}`, pricing: 'Prices and terms changed',
     user_givePro: `Gave Pro for ${d.days} days · ${d.email}`, user_endPro: `Ended given Pro · ${d.email}`, user_tester: `${d.tester ? 'Made a tester' : 'No longer a tester'} · ${d.email}`,
     user_signOut: `Signed out everywhere · ${d.email}`, user_resetLink: `Password reset link · ${d.email}`, team_clearLive: `Cleared a stuck live · ${d.team}`,
-    ticket_status: `Ticket set to ${d.status}`, mfa_enrolled: 'Set up Google Authenticator', mfa_ok: 'Unlocked with Google Authenticator', mfa_backup_code: 'Unlocked with a backup code' };
+    ticket_status: `Ticket set to ${d.status}`, cleanup_mode: d.mode === 'live' ? 'Turned on account cleanup' : 'Account cleanup back to report only',
+    cleanup_report: `Account cleanup report sent (${d.empty} empty)`, mfa_enrolled: 'Set up Google Authenticator', mfa_ok: 'Unlocked with Google Authenticator', mfa_backup_code: 'Unlocked with a backup code' };
   return M[x.action] || x.action;
 }
 
@@ -654,6 +655,30 @@ WIRE.support = (ticketId) => {
 };
 
 // ── System and audit ──────────────────────────────────────────────────
+function cleanupCard(c) {
+  if (!c) return '';
+  const on = c.mode === 'live', l = c.lastRun || {};
+  return `<section class="card pad" style="display:flex;flex-direction:column;gap:8px"><div class="row" style="justify-content:space-between"><h2>Account cleanup</h2>${on ? chip('On', 'ok') : chip('Report only', 'warn')}</div>
+    <p class="sub" style="margin:0;line-height:1.5">Empty accounts (nothing saved, unused ${c.idleDays} days) get one email, then are closed ${c.warnDays} days later if nobody signs in. Anonymous web-scorer sessions are closed quietly. ${on ? '' : 'Right now nothing is sent or deleted; support@ gets a weekly list.'}</p>
+    <div class="li"><span>Empty right now</span><span>${l.empty ?? '–'}${l.at ? ` <span class="sub">· ${l.bots} bot-like, ${l.anon} anonymous</span>` : ''}</span></div>
+    <div class="li"><span>Warned, waiting</span><strong>${c.waiting}</strong></div>
+    <div class="li"><span>Closed, last 7 days</span><span>${c.closed7d} <span class="sub">+ ${c.anonClosed7d} anonymous</span></span></div>
+    <div class="li"><span>Last run</span><span class="sub">${c.lastRunAt ? ago(c.lastRunAt) : 'not yet'}</span></div>
+    <div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn" id="clReport">Email the list now</button>${on ? '<button class="btn" id="clOff">Back to report only</button>' : '<button class="btn pri" id="clOn">Turn on</button>'}</div></section>`;
+}
+WIRE.system = () => {
+  const rep = $('clReport'), onB = $('clOn'), offB = $('clOff');
+  if (rep) rep.onclick = () => { rep.disabled = true; rep.textContent = 'Sending…'; act('adminCleanup', { action: 'report' }, (r) => toast(`Sent to support@: ${r.empty} empty accounts.`)); };
+  if (onB) onB.onclick = async () => {
+    const a = await ask({ title: 'Turn on account cleanup', ok: 'Turn on', danger: true, code: true,
+      body: 'Empty accounts start getting the warning email tonight, and the ones nobody answers are closed when their time is up. Closed accounts can\'t be restored, but the person can sign up again.' });
+    if (a) act('adminCleanup', { action: 'mode', mode: 'live', reason: a.reason, code: a.code }, () => toast('Account cleanup is on.'));
+  };
+  if (offB) offB.onclick = async () => {
+    const a = await ask({ title: 'Back to report only', ok: 'Switch', body: 'No more warnings or closures. People already warned keep their accounts.' });
+    if (a) act('adminCleanup', { action: 'mode', mode: 'report', reason: a.reason }, () => toast('Report only.'));
+  };
+};
 VIEWS.system = async () => {
   const r = state.system = await call('adminSystem');
   const errTotal = r.errors.reduce((a, b) => a + b.count, 0);
@@ -672,7 +697,7 @@ VIEWS.system = async () => {
       <div class="card pad" style="display:flex;flex-direction:column;gap:10px"><h2>Audit log</h2><span class="sub">Every admin change with its reason, newest first.</span>
         <div class="scroll"><table><thead><tr><th>When</th><th>Who</th><th>What</th><th>Reason</th></tr></thead><tbody>
         ${r.audit.length ? r.audit.map((x) => `<tr><td class="sub" style="white-space:nowrap">${when(x.at)}</td><td>${esc(String(x.by || '').split('@')[0])}@</td><td>${esc(describeAudit(x))}</td><td class="sub">${esc(x.reason || '')}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">Nothing yet.</td></tr>'}</tbody></table></div></div></section>
-    <aside class="side-col"><section class="card pad"><h2>Apps in use</h2><p class="sub" style="margin:6px 0 4px">Versions synced in the last 30 days.</p>
+    <aside class="side-col">${cleanupCard(r.cleanup)}<section class="card pad"><h2>Apps in use</h2><p class="sub" style="margin:6px 0 4px">Versions synced in the last 30 days.</p>
         ${r.versions.map(([k, n]) => `<div class="li"><span>${esc(k)}</span><strong>${n}</strong></div>`).join('') || '<div class="empty">No data.</div>'}</section>
       <section class="card pad"><h2>Who can open this page</h2>
         ${r.admins.map((a) => `<div class="li"><span>${esc(a.email)}<br><span class="sub">signed in ${ago(a.lastSignIn)}</span></span>${a.mfa ? chip(`Authenticator · ${a.backupLeft} backups`, 'ok') : chip('No authenticator yet', 'warn')}</div>`).join('')}
