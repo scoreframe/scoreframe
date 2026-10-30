@@ -64,7 +64,13 @@ header.top .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 10p
 main.wrap { padding-block: 18px 40px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
 .left { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .right { flex: 1 1 360px; max-width: 480px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
-@media (max-width: 900px) { .right { max-width: none; } }
+@media (max-width: 900px) {
+  main.wrap { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+  .left, .right { display: contents; }
+  #scoreRow { order: 1; } .player { order: 2; } #status { order: 3; }
+  #tagCard, #doneCard { order: 4; } #tools1 { order: 5; } #tools2 { order: 6; } .list { order: 7; }
+  #keysHint { display: none; }
+}
 
 .scoreline { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .chip { display: inline-flex; align-items: center; border-radius: 6px; overflow: hidden; font-weight: 700; }
@@ -143,23 +149,23 @@ main.wrap { padding-block: 18px 40px; display: flex; flex-wrap: wrap; gap: 20px;
 
 <main class="wrap hide" id="app">
   <section class="left" aria-label="Game video">
-    <div class="scoreline"><span class="chip num" id="chip"></span><span class="hint" id="timingNote"></span></div>
+    <div class="scoreline" id="scoreRow"><span class="chip num" id="chip"></span><span class="hint" id="timingNote"></span></div>
     <div class="player"><div id="yt"></div></div>
     <div class="status" id="status" aria-live="polite"><span class="dot"></span><b id="statusHead">Ready</b><span class="txt" id="statusTxt">Press Start to play the first rally.</span></div>
-    <div class="tools">
+    <div class="tools" id="tools1">
       <button class="btn" id="prevBtn" type="button">Previous point</button>
       <button class="btn" id="replayBtn" type="button">Replay the rally</button>
       <button class="btn" id="nextBtn" type="button">Next point</button>
       <button class="btn small" id="speedBtn" type="button" aria-pressed="false">Speed 1×</button>
       <button class="btn small on" id="theirsBtn" type="button" aria-pressed="true">Skip their points</button>
     </div>
-    <div class="tools">
+    <div class="tools" id="tools2">
       <span class="hint" style="align-self:center">Paused too early or late?</span>
       <button class="btn small" id="earlierBtn" type="button">Video 1 s earlier</button>
       <button class="btn small" id="laterBtn" type="button">Video 1 s later</button>
       <span class="hint num" id="offsetTxt" style="align-self:center"></span>
     </div>
-    <p class="hint">Keys: Space replay · ← → points · K kill · A ace · B block · T tip · E their error · O other · S skip · G great rally · 1–9 player</p>
+    <p class="hint" id="keysHint">Keys: Space replay · ← → points · K kill · A ace · B block · T tip · E their error · O other · S skip · G great rally · 1–9 player</p>
   </section>
 
   <aside class="right" aria-label="Tag this point">
@@ -510,12 +516,7 @@ function maybeMakePlayer() {
     events: {
       onReady: () => { S.ytReady = true; if (S.pendingVideo) { const p = S.pendingVideo; S.pendingVideo = null; loadWindow(p); } },
       onStateChange: (e) => {
-        // endSeconds stops the player at the point; depending on the browser
-        // that reads as ENDED or as PAUSED at the end of the window.
-        const atEnd = () => { try { return S.curWindow && S.player.getCurrentTime() >= S.curWindow.end - 1; } catch (_) { return false; } };
-        if (S.started && (e.data === YT.PlayerState.ENDED || (e.data === YT.PlayerState.PAUSED && atEnd()))) {
-          setStatus('Paused at the point', S.queue[S.idx] && S.queue[S.idx].ours ? 'Pick what happened.' : 'Tag it if it was our mistake, or skip it.');
-        }
+        if (S.started && e.data === YT.PlayerState.ENDED) setStatus('End of the video', 'The rest of this point wasn\u2019t streamed.');
         if (e.data === YT.PlayerState.PLAYING) {
           try { S.player.setPlaybackRate(S.rate); } catch (_) {}
         }
@@ -526,10 +527,25 @@ function maybeMakePlayer() {
     },
   });
 }
+// We pause the player ourselves at the point. YouTube's own endSeconds
+// jumps to its end-of-video screen, and the tagger needs the last frame.
 function loadWindow(w) {
   S.curWindow = w;
   if (!S.ytReady) { S.pendingVideo = w; return; }
-  S.player.loadVideoById({ videoId: w.videoId, startSeconds: w.start, endSeconds: w.end });
+  if (S.loadedId === w.videoId) { S.player.seekTo(w.start, true); S.player.playVideo(); }
+  else { S.player.loadVideoById({ videoId: w.videoId, startSeconds: w.start }); S.loadedId = w.videoId; }
+  clearInterval(S.watch);
+  S.watch = setInterval(() => {
+    if (!S.player || S.curWindow !== w) { clearInterval(S.watch); return; }
+    let t = 0, st = -1;
+    try { t = S.player.getCurrentTime(); st = S.player.getPlayerState(); } catch (_) { return; }
+    if (st === YT.PlayerState.PLAYING && t >= w.end) {
+      S.player.pauseVideo();
+      clearInterval(S.watch);
+      const pt = S.queue[S.idx];
+      setStatus('Paused at the point', pt && pt.ours ? 'Pick what happened.' : 'Tag it if it was our mistake, or skip it.');
+    }
+  }, 150);
 }
 function playCurrent() {
   const pt = S.queue[S.idx];
