@@ -477,6 +477,13 @@ html, body {
          viewer is entitled to them — see canSeePlayerVideos in
          firestore.rules. A denied read is the normal path for a visitor,
          not an error, so the section simply doesn't appear. -->
+    <!-- Highlight reels from tagged games (2026-10-30): each opens reel.html,
+         which plays this player's moments from the full game on YouTube. -->
+    <div id="reelsSection" style="display:none;">
+        <div class="section-label" style="padding: 14px 16px 4px;">Highlight reels</div>
+        <div id="reelsList" style="padding: 0 16px; display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+
     <div id="videosSection" style="display:none;">
         <div class="section-label" style="padding: 14px 16px 4px;">Videos</div>
         <div id="videosList" style="padding: 0 16px;"></div>
@@ -925,6 +932,7 @@ async function loadPlayer() {
                     id: g.id, ...data,
                     _participant: matched,
                     _hubCode: hubCode || '',
+                    _teamId: teamId || '',
                     _teamName: teamProfile?.name || '',
                 });
             }
@@ -1594,6 +1602,54 @@ function renderEverything() {
     // Fire-and-forget: the videos are an addition to the page, not a gate on
     // it, so nothing else waits for the fetch.
     loadPlayerVideos().then(renderPlayerVideos).then(renderSharing).catch(() => {});
+    renderPlayerReels().catch(() => {});
+}
+
+// ── Highlight reels from tagged games (2026-10-30, tag.html → reel.html) ──
+// A reel plays the player's tagged moments from the full game on YouTube.
+// Same audience as the videos: the player's family and the team's staff, and
+// every follower once a parent shares the player's highlights.
+async function renderPlayerReels() {
+    const section = $('reelsSection'), list = $('reelsList');
+    if (!section || !list || !playerIdParam) return;
+    const games = allGames.filter((g) => Array.isArray(g.taggedPlays) &&
+        g.taggedPlays.some((p) => p.pid === playerIdParam && p.ours && p.videoId))
+        .sort((a, b) => (b.date || 0) - (a.date || 0));
+    if (!games.length || !currentUid || !teamId) { section.style.display = 'none'; return; }
+    const safe = async (p) => { try { return await p; } catch (e) { return null; } };
+    const [claim, team, share, mgr, coach] = await Promise.all([
+        safe(getDoc(doc(db, 'teams', teamId, 'subscribers', currentUid, 'claims', playerIdParam))),
+        safe(getDoc(doc(db, 'teams', teamId))),
+        safe(getDoc(doc(db, 'teams', teamId, 'playerSharing', playerIdParam))),
+        safe(getDoc(doc(db, 'teams', teamId, 'managers', currentUid))),
+        safe(getDoc(doc(db, 'teams', teamId, 'coaches', currentUid))),
+    ]);
+    const c = claim && claim.exists() ? claim.data() : null;
+    const family = !!(c && c.status === 'approved' && [...GUARDIAN_RELS, 'self'].includes(String(c.relationship || '').toLowerCase()));
+    const td = team && team.exists() ? team.data() : {};
+    const staff = td.ownerUid === currentUid || !!(mgr && mgr.exists()) || !!(coach && coach.exists());
+    const shared = !!(share && share.exists() && share.data().highlightsToFollowers === true);
+    if (!family && !staff && !shared) { section.style.display = 'none'; return; }
+    const theme = document.body.getAttribute('data-theme') || document.documentElement.getAttribute('data-theme');
+    list.textContent = '';
+    for (const g of games) {
+        const mine = g.taggedPlays.filter((p) => p.pid === playerIdParam && p.ours && p.videoId);
+        const ourSide = g.awayTeamId === g._teamId && g.homeTeamId !== g._teamId ? 'away' : 'home';
+        const them = ourSide === 'home' ? (g.awayTeam || g.opponent || '') : (g.homeTeam || '');
+        const when = g.date ? new Date(g.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+        const a = document.createElement('a');
+        a.href = `/reel.html?team=${encodeURIComponent(g._teamId || teamId)}&game=${encodeURIComponent(g.id)}&player=${encodeURIComponent(playerIdParam)}${theme ? '&theme=' + theme : ''}`;
+        a.style.cssText = 'display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 14px;border-radius:12px;background:var(--bg-surface);border:1px solid var(--outline, rgba(255,255,255,0.12));color:var(--text-primary);text-decoration:none;';
+        const t = document.createElement('span'); t.style.cssText = 'flex:1;min-width:0;font-weight:700;';
+        t.textContent = them ? `vs ${them}` : 'Game';
+        const m = document.createElement('span'); m.style.cssText = 'color:var(--text-secondary);font-size:14px;white-space:nowrap;';
+        m.textContent = `${when ? when + ' · ' : ''}${mine.length} play${mine.length === 1 ? '' : 's'}`;
+        const w = document.createElement('span'); w.style.cssText = 'color:var(--accent);font-weight:700;font-size:14px;';
+        w.textContent = 'Watch';
+        a.append(t, m, w);
+        list.appendChild(a);
+    }
+    section.style.display = 'block';
 }
 
 // ── Who sees this player's highlight videos (2026-10-29) ─────────────────
