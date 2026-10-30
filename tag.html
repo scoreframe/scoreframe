@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tag Plays · ScoreFrame</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap">
+<!--
+  Tag plays after the game (2026-10-30). Spec: ScoreFrameAndroid/docs/TAG_PLAYS_SPEC.md
+  Eric: "Making the tagger user friendly will be key. We could automatically
+  pause at each point and ask, mark player and stat."
+
+  Guided: play the rally, pause at the point, ask what happened, then who,
+  save, next point. Data comes from tagPlaysLoad (game.plays + YouTube times)
+  and every answer is saved by tagPlaysSave. Nothing of ours is drawn over
+  the YouTube player (YouTube policy): the prompts sit beside or below it.
+-->
+<style>
+:root {
+  --bg: #F5F5F2; --surface: #FFFFFF; --card: #FFFFFF; --raised: #ECECE8; --line: #DDDDD6;
+  --text: #1A1A1A; --muted: #555555; --faint: #6B6B6B;
+  --accent: #E47A1F; --accent-ink: #1A1A1A; --accent-soft: rgba(228,122,31,0.13); --accent-text: #A9560F;
+  --good: #2E7D32; --bad: #C62828; --them: #2F5F8F; --player-bg: #111214;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1C1D21; --surface: #23252A; --card: #26282D; --raised: #34373E; --line: #3A3D45;
+    --text: #E6E6E6; --muted: #A8A8A8; --faint: #8F929B;
+    --accent: #FF9640; --accent-ink: #1C1D21; --accent-soft: rgba(255,150,64,0.14); --accent-text: #FFB477;
+    --good: #7BC47F; --bad: #F2797A; --them: #8FB4DA; --player-bg: #000000;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1C1D21; --surface: #23252A; --card: #26282D; --raised: #34373E; --line: #3A3D45;
+  --text: #E6E6E6; --muted: #A8A8A8; --faint: #8F929B;
+  --accent: #FF9640; --accent-ink: #1C1D21; --accent-soft: rgba(255,150,64,0.14); --accent-text: #FFB477;
+  --good: #7BC47F; --bad: #F2797A; --them: #8FB4DA; --player-bg: #000000;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font-family: Archivo, system-ui, -apple-system, Segoe UI, sans-serif; font-size: 15px; line-height: 1.45; }
+button { font-family: inherit; font-size: inherit; color: inherit; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1400px; margin: 0 auto; padding: 0 16px; }
+
+header.top { background: var(--surface); border-bottom: 1px solid var(--line); }
+header.top .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding-block: 12px; }
+.brand { font-weight: 800; font-size: 19px; letter-spacing: -0.2px; text-decoration: none; color: var(--text); }
+.brand span { color: var(--accent); }
+.title { flex: 1 1 240px; min-width: 0; }
+.title b { display: block; font-size: 16px; }
+.title small { color: var(--muted); font-size: 13px; }
+.progress { width: 200px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--muted); }
+.bar { height: 6px; border-radius: 3px; background: var(--raised); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+
+main.wrap { padding-block: 18px 40px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.left { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.right { flex: 1 1 360px; max-width: 480px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+@media (max-width: 900px) { .right { max-width: none; } }
+
+.scoreline { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.chip { display: inline-flex; align-items: center; border-radius: 6px; overflow: hidden; font-weight: 700; }
+.chip span { padding: 4px 10px; color: #FFFFFF; }
+.chip .set { background: var(--raised); color: var(--text); font-weight: 600; }
+.player { position: relative; width: 100%; aspect-ratio: 16 / 9; background: var(--player-bg); border-radius: 12px; overflow: hidden; }
+.player iframe, .player #yt { position: absolute; inset: 0; width: 100%; height: 100%; }
+.status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 14px; border-radius: 10px; background: var(--accent-soft); }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.status b { color: var(--accent-text); }
+.status .txt { color: var(--muted); flex: 1 1 200px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); font-weight: 600; cursor: pointer; }
+.btn:hover { border-color: var(--faint); }
+.btn.small { min-height: 36px; padding: 0 12px; font-size: 13px; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 800; }
+.btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
+.btn:disabled { opacity: .5; cursor: default; }
+.hint { font-size: 12px; color: var(--faint); }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.card.focus { border-color: var(--accent); }
+.pt-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pt-head b { font-size: 20px; font-weight: 800; }
+.pt-head span { color: var(--muted); font-size: 14px; }
+.q { font-size: 15px; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.q button { border: 0; background: none; color: var(--accent-text); font-weight: 600; cursor: pointer; padding: 6px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.opt { min-height: 54px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 16px; font-weight: 700; cursor: pointer; padding: 6px; }
+.opt:hover { border-color: var(--accent); }
+.opt.live { border-color: var(--accent); background: var(--accent-soft); }
+.opt kbd { display: block; font: 600 11px/1 Archivo, sans-serif; color: var(--faint); margin-top: 4px; }
+.pl { min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.pl .n { font-size: 20px; font-weight: 800; }
+.pl .nm { font-size: 11px; color: var(--muted); font-weight: 500; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row2 { display: flex; gap: 8px; }
+.row2 > * { flex: 1; }
+.saved { font-size: 13px; color: var(--good); min-height: 18px; text-align: center; }
+
+.list { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.list h3 { margin: 0; padding: 10px 14px; font-size: 12px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; }
+.list .rows { max-height: 360px; overflow-y: auto; }
+.pr { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 4px 14px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; }
+.pr:hover { background: var(--accent-soft); }
+.pr.cur { background: var(--accent-soft); }
+.pr .k { width: 34px; color: var(--faint); font-size: 12px; }
+.pr .s { width: 70px; font-size: 13px; }
+.pr .w { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pr .w.them { color: var(--them); }
+.pr .w.todo { color: var(--faint); }
+
+.panel { max-width: 560px; margin: 60px auto; padding: 28px 24px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; gap: 14px; }
+.panel h1 { margin: 0; font-size: 22px; }
+.panel p { margin: 0; color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 10px; background: var(--bad); color: #FFFFFF; font-weight: 600; cursor: pointer; display: none; box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+.hide { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/">Score<span>Frame</span></a>
+    <div class="title"><b id="hdrTitle">Tag plays</b><small id="hdrSub">Loading…</small></div>
+    <div class="progress hide" id="progressBox"><span id="progressTxt" class="num"></span><div class="bar"><i id="progressBar"></i></div></div>
+  </div>
+</header>
+
+<div id="msg" class="panel hide" role="status">
+  <h1 id="msgTitle"></h1>
+  <p id="msgBody"></p>
+  <div class="tools" id="msgActions"></div>
+</div>
+
+<main class="wrap hide" id="app">
+  <section class="left" aria-label="Game video">
+    <div class="scoreline"><span class="chip num" id="chip"></span><span class="hint" id="timingNote"></span></div>
+    <div class="player"><div id="yt"></div></div>
+    <div class="status" id="status" aria-live="polite"><span class="dot"></span><b id="statusHead">Ready</b><span class="txt" id="statusTxt">Press Start to play the first rally.</span></div>
+    <div class="tools">
+      <button class="btn" id="prevBtn" type="button">Previous point</button>
+      <button class="btn" id="replayBtn" type="button">Replay the rally</button>
+      <button class="btn" id="nextBtn" type="button">Next point</button>
+      <button class="btn small" id="speedBtn" type="button" aria-pressed="false">Speed 1×</button>
+      <button class="btn small on" id="theirsBtn" type="button" aria-pressed="true">Skip their points</button>
+    </div>
+    <div class="tools">
+      <span class="hint" style="align-self:center">Paused too early or late?</span>
+      <button class="btn small" id="earlierBtn" type="button">Video 1 s earlier</button>
+      <button class="btn small" id="laterBtn" type="button">Video 1 s later</button>
+      <span class="hint num" id="offsetTxt" style="align-self:center"></span>
+    </div>
+    <p class="hint">Keys: Space replay · ← → points · K kill · A ace · B block · T tip · E their error · O other · S skip · G great rally · 1–9 player</p>
+  </section>
+
+  <aside class="right" aria-label="Tag this point">
+    <div class="card focus" id="tagCard">
+      <div class="pt-head"><b id="ptTitle">Point</b><span id="ptMeta" class="num"></span></div>
+      <div id="startBox">
+        <button class="btn primary" id="startBtn" type="button" style="width:100%">Start tagging</button>
+      </div>
+      <div id="statStep" class="hide">
+        <div class="q"><span id="statQ">What happened?</span></div>
+        <div class="grid3" id="statGrid"></div>
+      </div>
+      <div id="playerStep" class="hide">
+        <div class="q"><span id="playerQ">Who?</span><button type="button" id="changeStat">Change</button></div>
+        <div class="grid4" id="playerGrid"></div>
+      </div>
+      <div class="row2">
+        <button class="btn" id="starBtn" type="button" aria-pressed="false">Great rally</button>
+        <button class="btn" id="skipBtn" type="button">Not sure, skip</button>
+      </div>
+      <div class="saved" id="savedTxt" aria-live="polite"></div>
+    </div>
+
+    <div class="card hide" id="doneCard">
+      <b style="font-size:20px">All caught up</b>
+      <p style="margin:0;color:var(--muted)">Every point you're tagging is done. Your tags are saved. Publishing them to stats, YouTube chapters and player reels is the next part we're building.</p>
+    </div>
+
+    <div class="list">
+      <h3><span>Points</span><span id="listCount" class="num"></span></h3>
+      <div class="rows" id="rows"></div>
+    </div>
+  </aside>
+</main>
+<div class="toast" id="toast" role="alert"></div>
+
+<script>
+// Theme: the app passes ?theme=light|dark; otherwise follow the device.
+(function () {
+  var t = new URLSearchParams(location.search).get('theme');
+  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, setPersistence, browserLocalPersistence }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+  authDomain: "scoreframe-deploy.firebaseapp.com",
+  projectId: "scoreframe-deploy",
+  storageBucket: "scoreframe-deploy.firebasestorage.app",
+  messagingSenderId: "728886280072",
+  appId: "1:728886280072:android:0050478669b89fc76b043d"
+});
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {});
+const fns = getFunctions(app);
+const loadFn = httpsCallable(fns, 'tagPlaysLoad');
+const saveFn = httpsCallable(fns, 'tagPlaysSave');
+
+const $ = (id) => document.getElementById(id);
+const qs = new URLSearchParams(location.search);
+const TEAM = qs.get('team') || '', GAME = qs.get('game') || '';
+
+// ── Messages ──────────────────────────────────────────────
+function showMsg(title, body, actions) {
+  $('app').classList.add('hide');
+  $('msg').classList.remove('hide');
+  $('msgTitle').textContent = title;
+  $('msgBody').textContent = body;
+  const a = $('msgActions'); a.textContent = '';
+  (actions || []).forEach(([label, fn, primary]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn' + (primary ? ' primary' : ''); b.textContent = label; b.onclick = fn;
+    a.appendChild(b);
+  });
+}
+let toastAction = null;
+function toast(text, onClick) {
+  const t = $('toast'); t.textContent = text; t.style.display = 'block';
+  toastAction = onClick || null;
+}
+$('toast').onclick = () => { $('toast').style.display = 'none'; if (toastAction) toastAction(); };
+
+// ── State ─────────────────────────────────────────────────
+const S = {
+  data: null, points: [], queue: [], idx: 0, step: 'start', stat: null, star: false,
+  tags: {}, offsetMs: 0, rate: 1, skipTheirs: true, player: null, ytReady: false, started: false,
+  pendingVideo: null,
+};
+const SCORES_FOR_SIDE = new Set(['kills', 'aces', 'blocks']);
+const SCORES_FOR_OTHER = new Set(['errors', 'missedServes']);
+const STAT_WORD = { kills: 'Kill', aces: 'Ace', blocks: 'Block', opp_error: 'Their error', other: 'Other', skip: 'Skipped', errors: 'Hitting error', missedServes: 'Serve error', _point: 'Point' };
+
+function other(side) { return side === 'home' ? 'away' : 'home'; }
+function pointSideOf(p) {
+  if (p.stat === '_point') return p.side;
+  if (SCORES_FOR_SIDE.has(p.stat)) return p.side;
+  if (SCORES_FOR_OTHER.has(p.stat)) return other(p.side);
+  return null;
+}
+function firstName(name) { return String(name || '').replace(/^ZZ\s+/, '').split(/\s+/)[0] || ''; }
+
+/** Plays -> points, each with its place in the YouTube video. */
+function buildPoints(d) {
+  const plays = (d.plays || []).slice().sort((a, b) => (a.wall || 0) - (b.wall || 0));
+  const pts = [];
+  let prevWall = 0;
+  for (const p of plays) {
+    const side = pointSideOf(p);
+    if (!side) continue;
+    const ours = side === d.game.ourSide;
+    // Pre-fill from what the scorer tapped live.
+    let live = null;
+    if (p.stat !== '_point') live = { stat: SCORES_FOR_OTHER.has(p.stat) ? p.stat : p.stat, pid: p.pid || null, name: p.name || '' };
+    pts.push({ id: p.id, side, ours, set: p.set || 1, score: p.score || '', wall: p.wall || 0, prevWall, live });
+    prevWall = p.wall || prevWall;
+  }
+  pts.forEach((pt, i) => { pt.n = i + 1; });
+  return pts;
+}
+
+function streamFor(wall) {
+  const st = S.data.streams || [];
+  let best = null;
+  for (const s of st) {
+    if (!s.startMs) continue;
+    const end = s.endMs || Infinity;
+    if (wall >= s.startMs - 5000 && wall <= end + 5000) best = s;
+  }
+  return best;
+}
+/** The rally for a point, in seconds of its video. */
+function windowFor(pt) {
+  const s = streamFor(pt.wall);
+  if (!s) return null;
+  const tag = S.tags[pt.id] || {};
+  const endMs = pt.wall + 3000;
+  let startMs = Math.max(pt.prevWall ? pt.prevWall + 3000 : pt.wall - 20000, pt.wall - 45000);
+  if (endMs - startMs < 8000) startMs = endMs - 8000;
+  startMs += Number(tag.startAdjMs) || 0;
+  const toSec = (ms) => Math.max(0, (ms - s.startMs + S.offsetMs) / 1000);
+  return { videoId: s.videoId, start: toSec(startMs), end: toSec(endMs) };
+}
+
+// ── Render ────────────────────────────────────────────────
+function teamNames() {
+  const g = S.data.game;
+  const us = g.ourSide === 'home' ? g.homeName : g.awayName;
+  const them = g.ourSide === 'home' ? g.awayName : g.homeName;
+  return { us, them };
+}
+function describe(pt) {
+  const t = S.tags[pt.id];
+  const { them } = teamNames();
+  if (t) {
+    if (t.stat === 'skip') return { text: 'Skipped', cls: 'todo' };
+    const who = t.pid ? (S.rosterById[t.pid] ? ' · ' + playerLabel(S.rosterById[t.pid]) : '') : '';
+    const word = t.stat === 'opp_error' ? `${them} error` : (t.detail === 'tip' ? 'Tip' : STAT_WORD[t.stat] || t.stat);
+    return { text: word + who + (t.star ? ' · great rally' : ''), cls: '' };
+  }
+  if (!pt.ours) return { text: `${them} point`, cls: 'them' };
+  if (pt.live) return { text: (STAT_WORD[pt.live.stat] || pt.live.stat) + (pt.live.name ? ' · ' + firstName(pt.live.name) : '') + ' (live)', cls: '' };
+  return { text: 'Not tagged', cls: 'todo' };
+}
+function playerLabel(p) { return (p.number ? '#' + p.number + ' ' : '') + firstName(p.name); }
+
+function renderList() {
+  const rows = $('rows'); rows.textContent = '';
+  const cur = S.queue[S.idx];
+  for (const pt of S.points) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'pr' + (cur && cur.id === pt.id ? ' cur' : '');
+    const k = document.createElement('span'); k.className = 'k num'; k.textContent = 'P' + pt.n;
+    const s = document.createElement('span'); s.className = 's num'; s.textContent = `S${pt.set} ${pt.score}`;
+    const d = describe(pt);
+    const w = document.createElement('span'); w.className = 'w ' + d.cls; w.textContent = d.text;
+    b.append(k, s, w);
+    b.onclick = () => jumpTo(pt);
+    rows.appendChild(b);
+  }
+  const mine = S.points.filter((p) => p.ours);
+  const done = mine.filter((p) => S.tags[p.id]).length;
+  $('listCount').textContent = `${done} of ${mine.length} ${teamNames().us} points`;
+  $('progressTxt').textContent = `${done} of ${mine.length} points tagged`;
+  $('progressBar').style.width = mine.length ? Math.round(done / mine.length * 100) + '%' : '0';
+  const curRow = rows.querySelector('.cur');
+  if (curRow) curRow.scrollIntoView({ block: 'nearest' });
+}
+
+function renderChip(pt) {
+  const g = S.data.game;
+  const chip = $('chip'); chip.textContent = '';
+  const [h, a] = String(pt ? pt.score : '').split(/[–-]/);
+  const mk = (txt, bg, cls) => { const s = document.createElement('span'); s.textContent = txt; if (bg) s.style.background = bg; if (cls) s.className = cls; return s; };
+  const ourColor = g.ourColor, theirColor = g.theirColor;
+  const homeColor = g.ourSide === 'home' ? ourColor : theirColor;
+  const awayColor = g.ourSide === 'home' ? theirColor : ourColor;
+  chip.append(mk(`${g.homeName} ${h || 0}`, homeColor), mk(`${a || 0} ${g.awayName}`, awayColor), mk(pt ? `Set ${pt.set}` : '', null, 'set'));
+}
+
+function setStatus(head, txt) { $('statusHead').textContent = head; $('statusTxt').textContent = txt; }
+
+function renderStep() {
+  const pt = S.queue[S.idx];
+  const done = !pt;
+  $('tagCard').classList.toggle('hide', done);
+  $('doneCard').classList.toggle('hide', !done);
+  if (done) { setStatus('Done', 'Every point you are tagging has an answer.'); renderList(); return; }
+  const { us, them } = teamNames();
+  $('ptTitle').textContent = `Point ${pt.n} · ${pt.ours ? us : them}`;
+  $('ptMeta').textContent = `Set ${pt.set} · ${pt.score}`;
+  renderChip(pt);
+  $('startBox').classList.toggle('hide', S.step !== 'start');
+  $('statStep').classList.toggle('hide', S.step !== 'stat');
+  $('playerStep').classList.toggle('hide', S.step !== 'player');
+  $('starBtn').classList.toggle('on', S.star); $('starBtn').setAttribute('aria-pressed', String(S.star));
+  if (S.step === 'stat') renderStats(pt);
+  if (S.step === 'player') renderPlayers(pt);
+  renderList();
+}
+
+function statOptions(pt) {
+  const { them } = teamNames();
+  if (pt.ours) return [
+    ['kills', 'Kill', 'K'], ['aces', 'Ace', 'A'], ['blocks', 'Block', 'B'],
+    ['tip', 'Tip', 'T'], ['opp_error', `${them} error`, 'E'], ['other', 'Other', 'O'],
+  ];
+  return [
+    ['errors', 'Our hitting error', 'H'], ['missedServes', 'Our serve error', 'V'], ['other', `${them} won it`, 'O'],
+  ];
+}
+function renderStats(pt) {
+  const g = $('statGrid'); g.textContent = '';
+  $('statQ').textContent = pt.ours ? 'What happened?' : `${teamNames().them} scored. Was it our mistake?`;
+  for (const [key, label, k] of statOptions(pt)) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'opt';
+    if (pt.live && (pt.live.stat === key)) b.classList.add('live');
+    b.textContent = label;
+    const kb = document.createElement('kbd'); kb.textContent = k; b.appendChild(kb);
+    b.onclick = () => pickStat(key);
+    g.appendChild(b);
+  }
+}
+function renderPlayers(pt) {
+  const g = $('playerGrid'); g.textContent = '';
+  const word = S.stat === 'tip' ? 'tip' : (STAT_WORD[S.stat] || '').toLowerCase();
+  $('playerQ').textContent = `Who got the ${word}?`;
+  S.data.roster.forEach((p, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'opt pl';
+    if (pt.live && pt.live.pid === p.id) b.classList.add('live');
+    const n = document.createElement('span'); n.className = 'n num'; n.textContent = p.number || '–';
+    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = firstName(p.name);
+    b.append(n, nm);
+    if (i < 9) b.title = 'Key ' + (i + 1);
+    b.onclick = () => pickPlayer(p.id);
+    g.appendChild(b);
+  });
+  const u = document.createElement('button');
+  u.type = 'button'; u.className = 'opt pl';
+  const n = document.createElement('span'); n.className = 'n'; n.textContent = '?';
+  const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = 'Not sure';
+  u.append(n, nm); u.onclick = () => pickPlayer(null);
+  g.appendChild(u);
+}
+
+// ── Flow ──────────────────────────────────────────────────
+function rebuildQueue(keepId) {
+  S.queue = S.points.filter((p) => p.ours || !S.skipTheirs);
+  const at = keepId ? S.queue.findIndex((p) => p.id === keepId) : -1;
+  if (at >= 0) S.idx = at;
+  else {
+    const first = S.queue.findIndex((p) => !S.tags[p.id]);
+    S.idx = first >= 0 ? first : S.queue.length;
+  }
+}
+function pickStat(key) {
+  const pt = S.queue[S.idx]; if (!pt) return;
+  if (key === 'tip') { S.stat = 'tip'; S.step = 'player'; renderStep(); return; }
+  if (['kills', 'aces', 'blocks', 'errors', 'missedServes'].includes(key)) { S.stat = key; S.step = 'player'; renderStep(); return; }
+  saveTag(pt, { stat: key, pid: null, star: S.star });
+}
+function pickPlayer(pid) {
+  const pt = S.queue[S.idx]; if (!pt) return;
+  const stat = S.stat === 'tip' ? 'kills' : S.stat;
+  saveTag(pt, { stat, pid, unassigned: !pid, detail: S.stat === 'tip' ? 'tip' : '', star: S.star });
+}
+function skipPoint() {
+  const pt = S.queue[S.idx]; if (!pt) return;
+  saveTag(pt, { stat: 'skip', pid: null, star: false });
+}
+
+async function saveTag(pt, tag) {
+  const prev = S.tags[pt.id];
+  S.tags[pt.id] = { ...tag, startAdjMs: prev ? prev.startAdjMs || 0 : 0 };
+  const label = describe(pt).text;
+  $('savedTxt').style.color = ''; $('savedTxt').textContent = `Saving point ${pt.n}: ${label}…`;
+  advance();
+  try {
+    await saveFn({ teamId: TEAM, gameId: GAME, tags: { [pt.id]: S.tags[pt.id] } });
+    $('savedTxt').textContent = `Saved point ${pt.n}: ${label}`;
+  } catch (e) {
+    if (prev) S.tags[pt.id] = prev; else delete S.tags[pt.id];
+    renderList();
+    $('savedTxt').textContent = '';
+    toast(`Point ${pt.n} didn't save: ${errText(e)} Tap to go back to it.`, () => jumpTo(pt));
+  }
+}
+function advance() {
+  S.star = false; S.stat = null;
+  let i = S.idx + 1;
+  while (i < S.queue.length && S.tags[S.queue[i].id]) i++;
+  S.idx = i;
+  S.step = S.idx < S.queue.length ? 'stat' : 'done';
+  renderStep();
+  playCurrent();
+}
+function jumpTo(pt) {
+  if (!pt.ours && S.skipTheirs) { S.skipTheirs = false; syncTheirsBtn(); }
+  rebuildQueue(pt.id);
+  S.star = !!(S.tags[pt.id] && S.tags[pt.id].star); S.stat = null;
+  S.step = S.started ? 'stat' : 'start';
+  renderStep();
+  if (S.started) playCurrent();
+}
+function step(delta) {
+  const i = Math.max(0, Math.min(S.queue.length - 1, S.idx + delta));
+  if (S.queue[i]) jumpTo(S.queue[i]);
+}
+
+// ── YouTube ───────────────────────────────────────────────
+window.onYouTubeIframeAPIReady = () => { S.ytApi = true; maybeMakePlayer(); };
+// The API script is classic and this module runs later: it may already be ready.
+if (window.YT && window.YT.Player) S.ytApi = true;
+function maybeMakePlayer() {
+  if (!S.ytApi || !S.data || S.player) return;
+  const first = (S.data.streams || []).find((s) => s.startMs) || (S.data.streams || [])[0];
+  if (!first) return;
+  S.player = new YT.Player('yt', {
+    videoId: first.videoId,
+    playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+    events: {
+      onReady: () => { S.ytReady = true; if (S.pendingVideo) { const p = S.pendingVideo; S.pendingVideo = null; loadWindow(p); } },
+      onStateChange: (e) => {
+        // endSeconds stops the player at the point; depending on the browser
+        // that reads as ENDED or as PAUSED at the end of the window.
+        const atEnd = () => { try { return S.curWindow && S.player.getCurrentTime() >= S.curWindow.end - 1; } catch (_) { return false; } };
+        if (S.started && (e.data === YT.PlayerState.ENDED || (e.data === YT.PlayerState.PAUSED && atEnd()))) {
+          setStatus('Paused at the point', S.queue[S.idx] && S.queue[S.idx].ours ? 'Pick what happened.' : 'Tag it if it was our mistake, or skip it.');
+        }
+        if (e.data === YT.PlayerState.PLAYING) {
+          try { S.player.setPlaybackRate(S.rate); } catch (_) {}
+        }
+      },
+      onError: (e) => {
+        setStatus('Video problem', e.data === 101 || e.data === 150 ? 'This video can’t be played here. Its owner has turned off embedding on YouTube.' : 'YouTube couldn’t play this video.');
+      },
+    },
+  });
+}
+function loadWindow(w) {
+  S.curWindow = w;
+  if (!S.ytReady) { S.pendingVideo = w; return; }
+  S.player.loadVideoById({ videoId: w.videoId, startSeconds: w.start, endSeconds: w.end });
+}
+function playCurrent() {
+  const pt = S.queue[S.idx];
+  if (!pt) { try { S.player && S.player.pauseVideo(); } catch (_) {} return; }
+  const w = windowFor(pt);
+  if (!w) { setStatus('No video for this point', 'It happened while the stream was off. Tag it from memory or skip it.'); return; }
+  setStatus('Playing the rally', `Point ${pt.n}, from about the serve to the point.`);
+  loadWindow(w);
+}
+
+// ── Controls ──────────────────────────────────────────────
+function syncTheirsBtn() {
+  const b = $('theirsBtn'); b.classList.toggle('on', S.skipTheirs); b.setAttribute('aria-pressed', String(S.skipTheirs));
+  b.textContent = S.skipTheirs ? 'Skip their points' : 'Tagging their points too';
+}
+$('startBtn').onclick = () => { S.started = true; S.step = 'stat'; renderStep(); playCurrent(); };
+$('replayBtn').onclick = () => playCurrent();
+$('prevBtn').onclick = () => step(-1);
+$('nextBtn').onclick = () => step(1);
+$('changeStat').onclick = () => { S.step = 'stat'; S.stat = null; renderStep(); };
+$('starBtn').onclick = () => { S.star = !S.star; renderStep(); };
+$('skipBtn').onclick = () => skipPoint();
+$('speedBtn').onclick = () => {
+  S.rate = S.rate === 1 ? 1.5 : 1;
+  $('speedBtn').textContent = `Speed ${S.rate === 1 ? '1' : '1.5'}×`;
+  $('speedBtn').classList.toggle('on', S.rate !== 1);
+  try { S.player && S.player.setPlaybackRate(S.rate); } catch (_) {}
+};
+$('theirsBtn').onclick = () => {
+  S.skipTheirs = !S.skipTheirs; syncTheirsBtn();
+  const cur = S.queue[S.idx]; rebuildQueue(cur && (cur.ours || !S.skipTheirs) ? cur.id : null);
+  if (S.started) S.step = S.queue[S.idx] ? 'stat' : 'done';
+  renderStep();
+};
+let offsetTimer = null;
+function nudge(ms) {
+  S.offsetMs += ms;
+  $('offsetTxt').textContent = S.offsetMs ? `Shifted ${(S.offsetMs / 1000).toFixed(0)} s` : '';
+  if (S.started) playCurrent();
+  clearTimeout(offsetTimer);
+  offsetTimer = setTimeout(() => {
+    saveFn({ teamId: TEAM, gameId: GAME, tags: {}, offsetMs: S.offsetMs })
+      .catch((e) => toast(`The timing shift didn't save: ${errText(e)}`));
+  }, 800);
+}
+$('earlierBtn').onclick = () => nudge(-1000);
+$('laterBtn').onclick = () => nudge(1000);
+
+document.addEventListener('keydown', (e) => {
+  if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (!S.data || $('app').classList.contains('hide')) return;
+  const k = e.key.toLowerCase();
+  if (k === ' ') { e.preventDefault(); if (!S.started) $('startBtn').click(); else playCurrent(); return; }
+  if (k === 'arrowleft') { step(-1); return; }
+  if (k === 'arrowright') { step(1); return; }
+  if (!S.started) return;
+  if (k === 'g') { S.star = !S.star; renderStep(); return; }
+  if (k === 's') { skipPoint(); return; }
+  const pt = S.queue[S.idx]; if (!pt) return;
+  if (S.step === 'stat') {
+    const opt = statOptions(pt).find((o) => o[2].toLowerCase() === k);
+    if (opt) pickStat(opt[0]);
+  } else if (S.step === 'player') {
+    if (k === 'backspace') { S.step = 'stat'; renderStep(); return; }
+    const n = parseInt(k, 10);
+    if (n >= 1 && n <= 9 && S.data.roster[n - 1]) pickPlayer(S.data.roster[n - 1].id);
+  }
+});
+
+// ── Load ──────────────────────────────────────────────────
+function errText(e) {
+  const m = (e && (e.message || e.code)) || 'Something went wrong.';
+  return /internal/i.test(m) ? 'The server had a problem.' : m;
+}
+async function load() {
+  if (!TEAM || !GAME) { showMsg('Link is missing the game', 'Open tagging from the game page in ScoreFrame.'); return; }
+  showMsg('Loading the game…', '');
+  let d;
+  try { d = (await loadFn({ teamId: TEAM, gameId: GAME })).data; }
+  catch (e) {
+    const code = e && e.code;
+    if (code === 'functions/permission-denied' || code === 'functions/failed-precondition' || code === 'functions/not-found') {
+      showMsg('Can’t tag this game', errText(e)); return;
+    }
+    showMsg('Couldn’t load the game', errText(e), [['Try again', load, true]]); return;
+  }
+  S.data = d;
+  S.rosterById = Object.fromEntries((d.roster || []).map((p) => [p.id, p]));
+  S.tags = d.tags || {};
+  S.offsetMs = d.offsetMs || 0;
+  S.points = buildPoints(d);
+  const g = d.game;
+  $('hdrTitle').textContent = `Tag plays · ${g.homeName} vs ${g.awayName}`;
+  $('hdrSub').textContent = g.date ? new Date(g.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+  if (!S.points.length) {
+    showMsg('No point times on this game', 'This game was scored before ScoreFrame saved the time of each point. Games scored on Android 1.1.1808 or later, or the next iPhone update, can be tagged.');
+    return;
+  }
+  const playable = (d.streams || []).filter((s) => s.startMs && s.embeddable !== false && s.privacy !== 'private');
+  if (!(d.streams || []).length) { showMsg('No YouTube video on this game', 'Tagging plays the game’s YouTube stream. This game wasn’t streamed.'); return; }
+  if (!playable.length) {
+    const s = d.streams[0];
+    showMsg('The video can’t be played here', s.privacy === 'private'
+      ? 'The game’s YouTube video is private. Set it to Unlisted or Public in YouTube Studio, then reload.'
+      : 'The game’s YouTube video doesn’t allow embedding. Turn on "Allow embedding" in YouTube Studio, then reload.', [['Reload', load, true]]);
+    return;
+  }
+  const timing = playable.every((s) => s.timing === 'youtube') ? '' : 'Timing is approximate on this video; use "Video 1 s earlier/later" if the pause is off.';
+  $('timingNote').textContent = timing;
+  $('offsetTxt').textContent = S.offsetMs ? `Shifted ${(S.offsetMs / 1000).toFixed(0)} s` : '';
+  $('msg').classList.add('hide');
+  $('app').classList.remove('hide');
+  $('progressBox').classList.remove('hide');
+  rebuildQueue(null);
+  S.step = S.queue[S.idx] ? 'start' : 'done';
+  syncTheirsBtn();
+  renderStep();
+  maybeMakePlayer();
+}
+
+const google = new GoogleAuthProvider();
+onAuthStateChanged(auth, (user) => {
+  if (user && !user.isAnonymous) { load(); return; }
+  showMsg('Sign in to tag plays', 'Use the account you use in the ScoreFrame app. Tagging is open to the team’s coaches and managers.', [
+    ['Sign in with Google', async () => {
+      try { await signInWithPopup(auth, google); }
+      catch (e) { if (e && /popup/.test(e.code || '')) { try { await signInWithRedirect(auth, google); } catch (_) {} } else toast('Sign-in didn’t work: ' + errText(e)); }
+    }, true],
+  ]);
+});
+</script>
+</body>
+</html>
