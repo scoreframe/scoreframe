@@ -258,10 +258,11 @@ const ICON = {
   clubs: '<path d="M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7z"></path>',
   billing: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 10h18M7 15h4"></path>',
   people: '<circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.5a3.5 3.5 0 010 7M18 14.8c2 .7 3.2 2.5 3.6 5.2"></path>',
+  accounts: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="9" cy="11" r="2.5"></circle><path d="M5.5 16.5c.6-1.8 1.9-2.7 3.5-2.7s2.9.9 3.5 2.7M14.5 10h4M14.5 13.5h3"></path>',
   support: '<path d="M4 5h16v11H8l-4 4z"></path>',
   system: '<path d="M3 12h4l3-8 4 16 3-8h4"></path>',
 };
-const NAV = [['today', 'Today'], ['clubs', 'Clubs'], ['billing', 'Billing'], ['people', 'People and teams'], ['support', 'Support'], ['system', 'System and audit']];
+const NAV = [['today', 'Today'], ['clubs', 'Clubs'], ['billing', 'Billing'], ['people', 'People and teams'], ['accounts', 'Accounts'], ['support', 'Support'], ['system', 'System and audit']];
 let badges = {};
 function shell() {
   root.innerHTML = `<div class="shell">
@@ -353,7 +354,7 @@ function describeAudit(x) {
     user_givePro: `Gave Pro for ${d.days} days · ${d.email}`, user_endPro: `Ended given Pro · ${d.email}`, user_tester: `${d.tester ? 'Made a tester' : 'No longer a tester'} · ${d.email}`,
     user_signOut: `Signed out everywhere · ${d.email}`, user_resetLink: `Password reset link · ${d.email}`, team_clearLive: `Cleared a stuck live · ${d.team}`,
     ticket_status: `Ticket set to ${d.status}`, cleanup_mode: d.mode === 'live' ? 'Turned on account cleanup' : 'Account cleanup back to report only',
-    cleanup_report: `Account cleanup report sent (${d.empty} empty)`, mfa_enrolled: 'Set up Google Authenticator', mfa_ok: 'Unlocked with Google Authenticator', mfa_backup_code: 'Unlocked with a backup code' };
+    cleanup_report: `Account cleanup report sent (${d.empty} empty)`, cleanup_keep: `Kept out of cleanup · ${d.email}`, cleanup_unkeep: `Back in cleanup · ${d.email}`, mfa_enrolled: 'Set up Google Authenticator', mfa_ok: 'Unlocked with Google Authenticator', mfa_backup_code: 'Unlocked with a backup code' };
   return M[x.action] || x.action;
 }
 
@@ -664,9 +665,11 @@ function cleanupCard(c) {
     <div class="li"><span>Warned, waiting</span><strong>${c.waiting}</strong></div>
     <div class="li"><span>Closed, last 7 days</span><span>${c.closed7d} <span class="sub">+ ${c.anonClosed7d} anonymous</span></span></div>
     <div class="li"><span>Last run</span><span class="sub">${c.lastRunAt ? ago(c.lastRunAt) : 'not yet'}</span></div>
+    ${location.hash.startsWith('#accounts') ? '' : '<a href="#accounts" class="sub">See every account on the Accounts page</a>'}
     <div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn" id="clReport">Email the list now</button>${on ? '<button class="btn" id="clOff">Back to report only</button>' : '<button class="btn pri" id="clOn">Turn on</button>'}</div></section>`;
 }
-WIRE.system = () => {
+WIRE.system = () => wireCleanup();
+function wireCleanup() {
   const rep = $('clReport'), onB = $('clOn'), offB = $('clOff');
   if (rep) rep.onclick = () => { rep.disabled = true; rep.textContent = 'Sending…'; act('adminCleanup', { action: 'report' }, (r) => toast(`Sent to support@: ${r.empty} empty accounts.`)); };
   if (onB) onB.onclick = async () => {
@@ -678,6 +681,52 @@ WIRE.system = () => {
     const a = await ask({ title: 'Back to report only', ok: 'Switch', body: 'No more warnings or closures. People already warned keep their accounts.' });
     if (a) act('adminCleanup', { action: 'mode', mode: 'report', reason: a.reason }, () => toast('Report only.'));
   };
+}
+
+// ── Accounts ───────────────────────────────────────────────────────────
+VIEWS.accounts = async () => {
+  const r = state.accounts = await call('adminAccounts');
+  const c = r.cleanup || {}, live = c.mode === 'live';
+  const PROV = { 'google.com': 'Google', 'apple.com': 'Apple', password: 'Email and password' };
+  const statusOf = (a) => a.status === 'warned' ? chip(`Closes ${dayShort(a.closesAt)}`, 'bad') : a.status === 'next' ? chip('Warning tonight', 'warn') : chip('Would be warned', 'info');
+  const rows = r.empty.list.map((a) => `<tr data-kind="${a.bot ? 'bot' : 'real'}"><td><strong>${esc(a.email)}</strong>${a.name && !a.bot ? `<br><span class="sub">${esc(a.name)}</span>` : ''}${a.bot ? ` ${chip('Bot-like', 'info')}` : ''}</td>
+      <td class="sub" style="white-space:nowrap">${day(a.created)}</td><td class="sub" style="white-space:nowrap">${day(a.lastUsed)}</td><td>${statusOf(a)}</td>
+      <td><button class="btn" data-keep="${esc(a.email)}" style="min-height:32px">Keep</button></td></tr>`).join('');
+  const maxW = Math.max(1, ...r.weeks.map((w) => w.real + w.bot + w.anon));
+  return `${head('Sign-ups, use and cleanup', 'Accounts')}
+    <section class="grid">
+      <div class="card tile"><span class="lbl">People</span><span class="v">${r.kinds.real}</span><span class="sub">${r.active30.real} used it in the last 30 days</span></div>
+      <div class="card tile"><span class="lbl">New this week</span><span class="v">${r.new7.real}</span><span class="sub">${r.new30.real} in 30 days, not counting bots</span></div>
+      <div class="card tile"><span class="lbl">Bot-like</span><span class="v">${r.kinds.bot}</span><span class="sub">${r.new30.bot} in 30 days · no emails sent</span></div>
+      <div class="card tile"><span class="lbl">Web scorers</span><span class="v">${r.kinds.anon}</span><span class="sub">anonymous · ${r.active30.anon} used in 30 days</span></div>
+      <div class="card tile"><span class="lbl">Empty accounts</span><span class="v">${r.empty.total}</span><span class="sub">${r.empty.withEmail} with an email · ${r.empty.anon} anonymous</span></div>
+      <div class="card tile"><span class="lbl">Closed by cleanup</span><span class="v">${r.closed.allTime}</span><span class="sub">${r.closed.last30.length} in the last 30 days</span></div></section>
+    <div class="cols"><section class="main-col">
+      <div class="card pad" style="display:flex;flex-direction:column;gap:10px"><h2>Sign-ups by week</h2><span class="sub">Our own test and staff accounts aren't counted.</span>
+        <div class="scroll"><table><thead><tr><th>Week of</th><th>People</th><th>Bot-like</th><th>Web scorers</th><th style="width:40%"><span class="hide">Share</span></th></tr></thead><tbody>
+        ${r.weeks.slice().reverse().map((w) => `<tr><td style="white-space:nowrap">${dayShort(w.start)}</td><td><strong>${w.real}</strong></td><td class="sub">${w.bot}</td><td class="sub">${w.anon}</td>
+          <td><span style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--ln2)" aria-hidden="true"><span style="width:${(w.real / maxW) * 100}%;background:var(--orange)"></span><span style="width:${(w.bot / maxW) * 100}%;background:#9A938C"></span><span style="width:${(w.anon / maxW) * 100}%;background:#C9C3BC"></span></span></td></tr>`).join('')}</tbody></table></div>
+        <span class="sub">Bar: orange people, dark grey bot-like, light grey web scorers.</span></div>
+      <div class="card pad" style="display:flex;flex-direction:column;gap:10px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2>Empty accounts with an email</h2>
+          <label class="sub" for="accF" style="display:flex;gap:6px;align-items:center">Show <select class="in" id="accF" style="min-height:34px"><option value="all">All</option><option value="real">People only</option><option value="bot">Bot-like only</option></select></label></div>
+        <span class="sub">Nothing saved anywhere and not used for ${c.idleDays || 30} days. ${live ? `Each gets one email, then is closed ${c.warnDays || 14} days later unless someone signs in.` : 'Report only: nobody is emailed or closed until cleanup is turned on.'} Keep takes an address out for good.</span>
+        <div class="scroll"><table><thead><tr><th>Account</th><th>Signed up</th><th>Last used</th><th>Status</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="empty">No empty accounts.</td></tr>'}</tbody></table></div></div></section>
+    <aside class="side-col">${cleanupCard(c)}
+      <section class="card pad"><h2>How people sign in</h2>${Object.entries(r.providers).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<div class="li"><span>${esc(PROV[k] || k)}</span><strong>${n}</strong></div>`).join('')}</section>
+      <section class="card pad"><h2>Never cleaned up</h2><p class="sub" style="margin:6px 0 4px;line-height:1.5">Always skipped: the two admin accounts, testers, @scoreframe.app and @bloomcamp.com, and any account that has saved something.</p>
+        ${r.keepEmails.map((e) => `<div class="li"><span>${esc(e)}</span><button class="btn" data-unkeep="${esc(e)}" style="min-height:32px">Remove</button></div>`).join('') || '<div class="empty">No extra addresses kept.</div>'}</section>
+      <section class="card pad"><h2>Closed, last 30 days</h2><p class="sub" style="margin:6px 0 4px">We keep only the date and the email's domain.</p>
+        ${r.closed.last30.map((x) => `<div class="li"><span>${x.anon ? 'Anonymous web scorer' : esc('@' + (x.domain || '?'))}<br><span class="sub">${when(x.at)}</span></span>${x.bot ? chip('Bot-like', 'info') : x.anon ? '' : chip('Person', 'warn')}</div>`).join('') || '<div class="empty">Nothing closed yet.</div>'}</section></aside></div>`;
+};
+WIRE.accounts = () => {
+  wireCleanup();
+  const f = $('accF');
+  if (f) f.onchange = () => document.querySelectorAll('tr[data-kind]').forEach((tr) => { tr.style.display = f.value === 'all' || tr.dataset.kind === f.value ? '' : 'none'; });
+  document.querySelectorAll('[data-keep]').forEach((b) => b.onclick = async () => {
+    const a = await ask({ title: 'Keep this account', ok: 'Keep', body: `${esc(b.dataset.keep)} won't be warned or closed by the cleanup.` });
+    if (a) act('adminCleanup', { action: 'keep', email: b.dataset.keep, reason: a.reason }, () => toast('Kept.'));
+  });
+  document.querySelectorAll('[data-unkeep]').forEach((b) => b.onclick = () => act('adminCleanup', { action: 'unkeep', email: b.dataset.unkeep, reason: '' }, () => toast('Removed from the keep list.')));
 };
 VIEWS.system = async () => {
   const r = state.system = await call('adminSystem');
