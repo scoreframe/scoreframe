@@ -90,7 +90,15 @@ async function load(user) {
     $('main').innerHTML = '<div class="note">This club page isn\'t open yet, or the link is wrong. Check with your club.</div>';
     return;
   }
-  render(snap.data());
+  const data = snap.data();
+  // Licenses ended long enough ago that hosting is off (club_lifecycle.js).
+  if (data.offline) {
+    document.title = data.name || 'Club Teams';
+    const inApp = !!(window.ScoreFrameApp || (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.scoreFrameShareText));
+    $('main').innerHTML = `<div class="note"><b>${esc(data.name || 'This club')}'s pages are offline.</b> Its ScoreFrame licenses have ended, so its team pages are no longer hosted. Videos on the club's YouTube channel are not affected.${inApp ? '' : ' Run this club? Sign in at <a href="/club.html">scoreframe.app/club</a> to renew or download your data.'}</div>`;
+    return;
+  }
+  render(data);
 }
 function render(c) {
   document.title = c.name || 'Club Teams';

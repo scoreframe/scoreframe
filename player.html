@@ -401,6 +401,26 @@ html, body {
 </script>
 </head>
 <body data-theme="dark">
+<script>
+// A club whose licenses ended over a year ago (club_lifecycle.js sets
+// team.club.access to "offline"): its pages say so instead of showing the team.
+// The club's YouTube videos are its own and stay up. Inside the apps there is
+// no renew link (the apps never point to the club purchase).
+window.sfClubOffline = function (t) {
+  var c = t && t.club;
+  if (!c || c.access !== 'offline') return false;
+  var inApp = !!(window.ScoreFrameApp || (window.webkit && webkit.messageHandlers && webkit.messageHandlers.scoreFrameShareText));
+  var name = String(c.name || 'This club').replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; });
+  document.title = 'Pages offline';
+  document.body.innerHTML = '<main style="max-width:520px;margin:0 auto;padding:72px 20px;line-height:1.5">' +
+    '<h1 style="font-size:24px;margin:0 0 12px">These pages are offline</h1>' +
+    '<p style="margin:0 0 12px;opacity:.8">' + name + '\u2019s ScoreFrame licenses have ended, so its team pages are no longer hosted. Videos on the club\u2019s YouTube channel are not affected.</p>' +
+    (inApp ? '<p style="margin:0;opacity:.8">Ask the club director if you need anything from these pages.</p>'
+           : '<p style="margin:0;opacity:.8">Run this club? Sign in at <a href="/club.html" style="color:#FF9640;font-weight:700">scoreframe.app/club</a> to renew or download your data.</p>') +
+    '</main>';
+  return true;
+};
+</script>
 
 <div class="top-bar">
     <a href="/" class="brand">Score<span class="accent">Frame</span></a>
@@ -854,6 +874,7 @@ async function loadPlayer() {
             console.warn('[player.html] team doc read failed for teamId=' + teamId + ':', err?.code, err?.message);
             return null;
         });
+        if (teamDoc && teamDoc.exists() && window.sfClubOffline(teamDoc.data())) return;
         if (teamDoc && teamDoc.exists()) {
             console.log('[player.html] team doc ok: name=' + (teamDoc.data().name || '?') + ' ownerUid=' + (teamDoc.data().ownerUid || '(missing)') + ' visibility=' + (teamDoc.data().hub?.visibility || '(private)'));
         } else if (teamDoc) {
