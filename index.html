@@ -141,7 +141,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-bet
 <header>
   <div class="wrap bar">
     <a class="mark" href="/" style="text-decoration:none">Score<b>Frame</b></a>
-    <nav onclick="if(event.target.tagName==='A'){const h=this.closest('header');h.classList.remove('open');const b=h.querySelector('.menu-btn');b.textContent='☰';b.setAttribute('aria-expanded','false')}"><a href="#film">Film</a><a href="#two">Two phones</a><a href="#families">Families</a><a href="features.html">Features</a><a href="score.html">Score a game</a><a href="support.html">Support</a><a href="dashboard.html" id="signin">Sign in</a></nav>
+    <nav onclick="if(event.target.tagName==='A'){const h=this.closest('header');h.classList.remove('open');const b=h.querySelector('.menu-btn');b.textContent='☰';b.setAttribute('aria-expanded','false')}"><a href="#film">Film</a><a href="#two">Two phones</a><a href="#families">Families</a><a href="club.html" class="club-link">Clubs</a><a href="features.html">Features</a><a href="score.html">Score a game</a><a href="support.html">Support</a><a href="dashboard.html" id="signin">Sign in</a></nav>
     <span class="bar-right">
       <a class="btn primary small" href="#get-app">Get the app</a>
       <button class="menu-btn" type="button" aria-label="Menu" aria-expanded="false"
@@ -243,6 +243,27 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-bet
       <p style="margin-top:18px"><a href="features.html" style="font-weight:700">Everything Free and Pro include →</a></p>
     </div>
   </section>
+  <section id="clubs" class="club-link">
+    <div class="wrap">
+      <div style="background:var(--deep);color:var(--deep-tx);border-radius:26px;padding:clamp(28px,4vw,44px) clamp(22px,4vw,48px);display:flex;flex-wrap:wrap;gap:28px 36px;align-items:center">
+        <div style="flex:1 1 460px;min-width:0;display:flex;flex-direction:column;gap:14px">
+          <p class="eb" style="color:#FFB477;margin:0">For clubs</p>
+          <h2 style="color:var(--deep-tx)">Running a club? Put every team on ScoreFrame.</h2>
+          <p class="lede" style="color:var(--deep-mu);margin:0;max-width:52ch">Pro for every coach on a club team, one YouTube channel for the club, tournaments, and a director console to set it all up. From $10 per team per month.</p>
+          <p style="display:flex;flex-wrap:wrap;gap:12px;margin:4px 0 0"><a class="btn primary" href="club.html">ScoreFrame for clubs</a><a class="btn" href="club.html#demo" style="border-color:var(--deep-tx);color:var(--deep-tx)">See the director console</a></p>
+        </div>
+        <div style="flex:0 1 300px;min-width:0;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px;background:var(--deep2);border:1px solid #2E3038;border-radius:14px;padding:12px 14px"><span style="width:34px;height:34px;border-radius:10px;background:#17306E;color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center">14S</span><b>14 Select</b><span style="margin-left:auto;font:700 10px 'JetBrains Mono',monospace;letter-spacing:.1em;color:#39D98A">PRO</span></div>
+          <div style="display:flex;align-items:center;gap:12px;background:var(--deep2);border:1px solid #2E3038;border-radius:14px;padding:12px 14px"><span style="width:34px;height:34px;border-radius:10px;background:#17306E;color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center">16N</span><b>16 National</b><span style="margin-left:auto;font:700 10px 'JetBrains Mono',monospace;letter-spacing:.1em;color:#39D98A">PRO</span></div>
+          <div style="display:flex;align-items:center;gap:12px;background:var(--deep2);border:1px solid #2E3038;border-radius:14px;padding:12px 14px"><span style="width:34px;height:34px;border-radius:10px;background:#17306E;color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center">18E</span><b>18 Elite</b><span style="margin-left:auto;font:700 10px 'JetBrains Mono',monospace;letter-spacing:.1em;color:#39D98A">PRO</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <script>
+  // Inside the apps' web views (game pages link home) nothing may lead to the club purchase.
+  if (window.ScoreFrameApp || (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.scoreFrameShareText)) document.querySelectorAll('.club-link').forEach(function (e) { e.style.display = 'none'; });
+  </script>
 </main>
 
 <footer>

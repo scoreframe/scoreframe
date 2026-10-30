@@ -5,13 +5,14 @@
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="ScoreFrame for clubs: Pro for every coach on a club team, the club's own YouTube channel, a director console, tournaments and player highlights. $12 per team per month.">
+<link rel="canonical" href="https://scoreframe.app/club.html">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#111215">
-<title>ScoreFrame Club</title>
+<title>ScoreFrame for Clubs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
 <style>
 /* Club console (2026-10-28, CLUB_BILLING_SPEC.md; mockups approved).
    Light only, like dashboard.html: this page is never shown inside the apps,
@@ -110,6 +111,107 @@ dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
 .signin { max-width: 440px; margin: 40px auto; text-align: center; display: flex; flex-direction: column; gap: 14px; }
 .signin input { width: 100%; }
 .loading { padding: 60px 0; text-align: center; color: var(--mu); }
+
+/* Storefront (signed out). body.store hides the console header; sections run full width. */
+body.store header.top { display: none; }
+body.store main { max-width: none; padding: 0; gap: 0; }
+.s-wrap { max-width: 1160px; margin: 0 auto; padding-inline: 24px; width: 100%; }
+.s-top { border-bottom: 1px solid var(--ln); background: var(--paper); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+.s-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding-block: 14px; }
+.s-mark { font-weight: 900; font-size: 22px; letter-spacing: -.01em; color: var(--ink); text-decoration: none; }
+.s-mark b { color: #E07A1F; } .s-mark span { font: 700 11px "JetBrains Mono", ui-monospace, monospace; letter-spacing: .14em; color: var(--link); margin-left: 6px; }
+.s-nav nav { display: flex; flex-wrap: wrap; gap: 4px 22px; flex: 1 1 auto; font-weight: 700; font-size: 15px; }
+.s-nav nav a { color: var(--ink); text-decoration: none; } .s-nav nav a:hover { color: var(--link); }
+.s-acts { display: flex; gap: 10px; flex-wrap: wrap; }
+.s-btn { height: 42px; padding: 0 18px; border-radius: 12px; border: 0; background: var(--orange); color: var(--on-orange); font-weight: 900; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.s-btn.line { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); font-weight: 700; }
+.s-btn.big { height: 52px; padding: 0 24px; border-radius: 14px; font-size: 17px; }
+.s-btn.ink { background: var(--on-orange); color: #fff; }
+.s-eb { font: 700 12px "JetBrains Mono", ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--link); }
+.s-hero { display: flex; flex-wrap: wrap; gap: 48px; align-items: center; padding-block: 64px 56px; }
+.s-copy { flex: 1 1 460px; min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+.s-copy h1 { font-size: clamp(40px, 5.6vw, 62px); line-height: .98; font-weight: 900; letter-spacing: -.015em; }
+.s-lede { margin: 0; font-size: 19px; color: var(--mu); max-width: 46ch; line-height: 1.5; }
+.s-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.s-fine { font-size: 14px; color: var(--mu); } .s-fine.dark { color: var(--deep-mu); font-size: 13px; }
+.s-club { flex: 1 1 400px; min-width: 0; background: #fff; border: 1px solid var(--ln); border-radius: 22px; box-shadow: 0 18px 40px rgba(28,27,31,.10); overflow: hidden; }
+.s-clubhead { background: linear-gradient(120deg, #17306E, #D9A400); padding: 18px 20px; display: flex; align-items: center; gap: 14px; color: #fff; }
+.s-crest { width: 52px; height: 52px; border-radius: 14px; background: #fff; color: #17306E; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; }
+.s-clubname { font-weight: 900; font-size: 22px; line-height: 1.1; } .s-clubsub { font-size: 13px; opacity: .9; }
+.s-list { padding: 8px 8px 12px; display: flex; flex-direction: column; }
+.s-it { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; } .s-it.live { background: #FFF1F0; }
+.s-it .sq { width: 36px; height: 36px; border-radius: 10px; background: #17306E; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; flex-shrink: 0; }
+.s-tx { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; } .s-tx span { font-size: 13px; color: var(--mu); }
+.s-live { font: 700 11px "JetBrains Mono", monospace; letter-spacing: .1em; background: #C71A1A; color: #fff; padding: 4px 8px; border-radius: 6px; }
+.s-clubfoot { border-top: 1px solid var(--ln); padding: 12px 20px; font-size: 13px; color: var(--mu); }
+.s-band { background: #fff; border-top: 1px solid var(--ln); border-bottom: 1px solid var(--ln); }
+.s-sec { padding-block: 64px; display: flex; flex-direction: column; gap: 28px; }
+.s-head { display: flex; flex-direction: column; gap: 10px; max-width: 680px; }
+.s-sec h2, .s-pcopy h2 { font-size: clamp(30px, 3.6vw, 42px); line-height: 1.02; font-weight: 900; letter-spacing: -.015em; }
+h2.sm { font-size: clamp(26px, 3vw, 36px); line-height: 1.05; font-weight: 900; letter-spacing: -.015em; }
+.s-feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 28px 36px; }
+.s-feat { display: flex; flex-direction: column; gap: 8px; } .s-feat h3 { font-size: 20px; font-weight: 900; } .s-feat p, .s-step p { margin: 0; color: var(--mu); line-height: 1.5; }
+.s-steps { display: flex; flex-wrap: wrap; gap: 20px; }
+.s-step { flex: 1 1 290px; min-width: 0; background: #fff; border: 1px solid var(--ln); border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 8px; }
+.s-step h3 { font-size: 20px; font-weight: 900; } .s-n { font: 700 14px "JetBrains Mono", monospace; color: var(--link); }
+.s-dark { background: var(--deep); color: var(--deep-tx); }
+.s-price { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; padding-block: 64px; }
+.s-pcopy { flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 14px; } .s-pcopy .s-eb { color: #FFB477; }
+.s-pr { display: flex; align-items: baseline; gap: 12px; color: var(--deep-mu); flex-wrap: wrap; }
+.s-pr span { font-size: 52px; font-weight: 900; color: var(--orange); line-height: 1.1; }
+.s-pcopy ul { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; line-height: 1.45; }
+.s-calc { flex: 1 1 400px; min-width: 0; background: var(--deep2); border: 1px solid #2E3038; border-radius: 22px; padding: 26px; display: flex; flex-direction: column; gap: 18px; }
+.s-calct { font-weight: 900; font-size: 20px; }
+.s-calc label { flex: 1 1 140px; display: flex; flex-direction: column; gap: 6px; color: var(--deep-mu); font-size: 14px; }
+.s-calc input { height: 48px; border-radius: 12px; border: 1px solid #3D4048; background: var(--deep); color: var(--deep-tx); font-weight: 900; font-size: 20px; }
+.s-total { border-top: 1px solid #2E3038; padding-top: 16px; display: flex; flex-direction: column; gap: 4px; color: var(--deep-mu); }
+.s-total output { font-size: 44px; font-weight: 900; color: var(--deep-tx); line-height: 1.1; }
+.s-tbl { overflow-x: auto; border: 1px solid var(--ln); border-radius: 18px; background: #fff; }
+.s-tbl table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 15px; }
+.s-tbl th, .s-tbl td { padding: 14px 18px; text-align: left; } .s-tbl th { font-weight: 900; } .s-tbl td:first-child { font-weight: 700; width: 30%; }
+.s-tbl tr + tr td, .s-tbl tbody tr:first-child td { border-top: 1px solid var(--ln2); } .s-tbl .mu { color: var(--mu); font-weight: 400; }
+.s-tbl th.mu { font-weight: 700; }
+.s-faq { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 0 32px; }
+.s-faq details { border-bottom: 1px solid var(--ln); padding: 14px 0; } .s-faq summary { font-weight: 900; font-size: 17px; cursor: pointer; }
+.s-faq p { margin: 8px 0 0; color: var(--mu); line-height: 1.5; }
+.s-cta { background: var(--orange); color: var(--on-orange); } .s-cta a { color: var(--on-orange); font-weight: 900; }
+.s-ctain { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; padding-block: 48px; }
+.s-ctain > div { display: flex; flex-direction: column; gap: 6px; flex: 1 1 420px; font-size: 17px; }
+.s-foot { display: flex; flex-wrap: wrap; gap: 10px 24px; padding-block: 28px 40px; font-size: 14px; color: var(--mu); } .s-foot a { color: var(--mu); }
+.fl { display: flex; flex-direction: column; gap: 16px; }
+.fl-scene { overflow-x: auto; background: #fff; border: 1px solid var(--ln); border-radius: 18px; padding: 12px; }
+.fl-scene svg { display: block; width: 100%; min-width: 760px; height: auto; font-family: Archivo, -apple-system, Arial, sans-serif; }
+.fl-node { flex: 1 1 0; min-width: 0; background: #fff; border: 1px solid var(--ln); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+.fl-who { font: 700 11px "JetBrains Mono", ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--link); }
+.fl-title { font-size: 18px; font-weight: 900; }
+.fl-node ul { margin: 2px 0 0; padding-left: 18px; color: var(--mu); font-size: 14px; line-height: 1.45; display: flex; flex-direction: column; gap: 3px; }
+.fl-arrow { flex: 0 0 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #E07A1F; font-size: 12px; font-weight: 700; }
+.fl-arrow span { color: var(--mu); }
+.fl-loops { display: flex; flex-wrap: wrap; gap: 12px; }
+.fl-loop { flex: 1 1 360px; min-width: 0; background: var(--info-bg); border: 1px dashed #E7B98C; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; font-size: 15px; line-height: 1.5; }
+.fl-loop b { color: #E07A1F; }
+@media (max-width: 900px) {
+  .fl-main { flex-direction: column; }
+  .fl-arrow { flex-basis: auto; flex-direction: row; padding: 2px 0; } .fl-arrow svg { transform: rotate(90deg); }
+}
+.fanrow { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+.fanpg { flex: 1 1 300px; max-width: 360px; min-width: 0; background: #fff; border: 1px solid var(--ln); border-radius: 22px; overflow: hidden; box-shadow: 0 10px 26px rgba(28,27,31,.08); }
+.fanbar { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--mu); padding: 9px 14px; border-bottom: 1px solid var(--ln); background: var(--paper); }
+dialog.demo { width: min(1120px, calc(100% - 24px)); height: min(880px, calc(100% - 24px)); background: var(--paper); display: none; flex-direction: column; overflow: hidden; }
+dialog.demo[open] { display: flex; }
+.demo-top { background: var(--deep); color: var(--deep-tx); padding: 12px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px; }
+.demo-top nav.tabs { margin-left: 4px; }
+.demo-x { margin-left: auto; background: none; border: 1px solid #3A3C44; color: var(--deep-tx); border-radius: 8px; padding: 7px 12px; font-size: 14px; }
+.demo-note { background: var(--info-bg); border-bottom: 1px solid var(--info-ln); padding: 9px 20px; font-size: 14px; }
+.demo-body { flex: 1 1 auto; overflow-y: auto; padding: 22px 20px 28px; display: flex; flex-direction: column; gap: 18px; }
+.demo-foot { border-top: 1px solid var(--ln); background: #fff; padding: 12px 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end; font-weight: 700; }
+@media (max-width: 720px) {
+  .s-hero { padding-block: 40px; gap: 32px; } .s-sec, .s-price { padding-block: 44px; }
+  .s-nav nav { order: 3; width: 100%; } .s-acts { margin-left: auto; }
+  .s-pr span { font-size: 42px; }
+  .demo-top nav.tabs { order: 3; width: 100%; overflow-x: auto; flex-wrap: nowrap; gap: 16px; }
+  .demo-top nav.tabs button { white-space: nowrap; }
+}
 @media (max-width: 720px) {
   .stats3 { grid-template-columns: 1fr; gap: 16px; }
   .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -134,6 +236,7 @@ dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
 <main id="main"><div class="loading">Loading…</div></main>
 
 <dialog id="dlg"></dialog>
+<dialog id="demo" class="demo" aria-label="Director console demo"></dialog>
 <div class="toast hide" id="toast" role="status" aria-live="polite"></div>
 <div class="failtoast hide" id="failToast" role="alert"><span id="failMsg"></span><button type="button" id="failX" aria-label="Dismiss">✕</button></div>
 
@@ -265,33 +368,438 @@ function renderWho() {
   if (pick) pick.onchange = () => { if (pick.value === '__new') { S.clubId = null; S.club = null; renderCreate(); } else openClub(pick.value); };
 }
 
+// ── Signed out: the storefront (Eric 2026-10-30: "the club website to also be
+// a store front that sells and promotes the club level version"). Canvas
+// HuNBKasM2r6NwHUWjHcAuo boards 1-2. Prices mirror app_config/club_pricing,
+// which only signed-in users can read: keep these in step with it.
+const STORE_PRICE = { cents: 1200, longCents: 1000, longMonths: 6, minTeams: 3, maxTeams: 200, trialDays: 14, trialTeams: 3 };
+const ICON = {
+  pro: '<path d="M12 2l3 6 6 .9-4.5 4.3 1 6.3L12 16.8 6.5 19.5l1-6.3L3 8.9 9 8z"/>',
+  console: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  yt: '<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 9l5 3-5 3z"/>',
+  bracket: '<path d="M4 4h5v4H4zM4 16h5v4H4zM15 10h5v4h-5zM9 6h3v12H9M12 12h3"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>',
+  play: '<path d="M5 3l14 9-14 9z"/>',
+};
+const ico = (k) => `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#E07A1F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
+const usd0 = (cents) => '$' + Math.round(cents / 100).toLocaleString('en-US');
+
+// How it all connects: one diagram, on the storefront and in the demo (Eric
+// 2026-10-30: "Maybe show some diagrams of how it all works").
+function flowScene() {
+  const person = (x, y, c) => `<g transform="translate(${x} ${y})"><circle cx="0" cy="-14" r="9" fill="${c}"/><path d="M-14 14c0-12 6-18 14-18s14 6 14 18z" fill="${c}"/></g>`;
+  const phone = (x, y, rot = 0) => `<g transform="translate(${x} ${y}) rotate(${rot})"><rect x="-11" y="-20" width="22" height="40" rx="5" fill="#1C1B1F"/><rect x="-8" y="-16" width="16" height="30" rx="2" fill="#FF9640"/></g>`;
+  const box = (x, y, w, h, title, sub, icon) => `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="16" fill="#FFFFFF" stroke="#E2DFDA" stroke-width="1.5"/>${icon}<text x="${x + 62}" y="${y + 34}" font-size="18" font-weight="900" fill="#1C1B1F">${title}</text>${sub.map((t, i) => `<text x="${x + 62}" y="${y + 56 + i * 19}" font-size="14" fill="#5A565F">${t}</text>`).join('')}</g>`;
+  const arrow = (d, label, lx, ly, dash) => `<path d="${d}" fill="none" stroke="#E07A1F" stroke-width="2.5" ${dash ? 'stroke-dasharray="7 6"' : ''} marker-end="url(#fa)"/>${label ? `<text x="${lx}" y="${ly}" font-size="13" font-weight="700" fill="#8B4A12">${label}</text>` : ''}`;
+  const note = (x, y, n, lines) => `<g><circle cx="${x}" cy="${y}" r="13" fill="#1C1B1F"/><text x="${x}" y="${y + 5}" font-size="14" font-weight="900" fill="#FFFFFF" text-anchor="middle">${n}</text>${lines.map((t, i) => `<text x="${x + 22}" y="${y + 5 + i * 18}" font-size="14" fill="#1C1B1F"${i === 0 ? ' font-weight="700"' : ''}>${t}</text>`).join('')}</g>`;
+  const players = (xs, c) => xs.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="8" fill="${c}" stroke="#FFFFFF" stroke-width="2"/>`).join('');
+  return `<div class="fl-scene"><svg viewBox="0 0 1120 640" role="img" aria-label="Top-down volleyball court. One camera phone on a tripod behind the end line films the game while a parent in the stands keeps score on their own phone. The camera phone streams to the club's YouTube channel and sends every point and stat to ScoreFrame, which updates the club, team, game and player pages that families, coaches and the director use.">
+    <defs><marker id="fa" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#E07A1F"/></marker></defs>
+    <rect x="30" y="110" width="500" height="290" rx="18" fill="#3B6FB6"/>
+    <rect x="80" y="155" width="400" height="200" fill="#E98F4E" stroke="#FFFFFF" stroke-width="4"/>
+    <line x1="213" y1="155" x2="213" y2="355" stroke="#FFFFFF" stroke-width="3"/><line x1="347" y1="155" x2="347" y2="355" stroke="#FFFFFF" stroke-width="3"/>
+    <line x1="280" y1="138" x2="280" y2="372" stroke="#1C1B1F" stroke-width="6"/><circle cx="280" cy="138" r="7" fill="#1C1B1F"/><circle cx="280" cy="372" r="7" fill="#1C1B1F"/>
+    ${players([[150, 190], [150, 255], [150, 320], [240, 190], [240, 255], [240, 320]], '#17306E')}
+    ${players([[320, 190], [320, 255], [320, 320], [410, 190], [410, 255], [410, 320]], '#C62828')}
+    <path d="M552 255 L90 150 L90 360 Z" fill="#FFFFFF" fill-opacity="0.16"/>
+    <g transform="translate(552 255)"><line x1="0" y1="0" x2="16" y2="-14" stroke="#1C1B1F" stroke-width="3"/><line x1="0" y1="0" x2="16" y2="14" stroke="#1C1B1F" stroke-width="3"/><line x1="0" y1="0" x2="-4" y2="0" stroke="#1C1B1F" stroke-width="3"/></g>
+    ${phone(552, 255, 90)}
+    <rect x="40" y="430" width="480" height="70" rx="10" fill="#D8D4CE"/><line x1="40" y1="453" x2="520" y2="453" stroke="#C7C2BB" stroke-width="2"/><line x1="40" y1="477" x2="520" y2="477" stroke="#C7C2BB" stroke-width="2"/>
+    <text x="50" y="522" font-size="12" font-weight="700" fill="#5A565F" letter-spacing="1.5">STANDS</text>
+    ${person(300, 470, '#5A565F')}${person(250, 470, '#A9A39B')}${person(350, 470, '#A9A39B')}${person(440, 470, '#A9A39B')}
+    ${phone(322, 452, 0)}
+    ${arrow('M330 432 C 380 380, 520 340, 545 285', '', 0, 0, true)}
+    <text x="380" y="420" font-size="13" font-weight="700" fill="#8B4A12">score taps · Wi-Fi, Bluetooth or internet</text>
+    ${note(48, 50, 1, ['One phone films from one spot', 'The scoreboard is drawn right into the video'])}
+    ${note(48, 568, 2, ['A parent keeps score from the stands', 'on their phone, or in any browser'])}
+    ${note(400, 50, 3, ['Kills, aces and blocks', 'become stats and highlights'])}
+    ${box(640, 40, 250, 110, 'YouTube', ["Your club's channel", 'Live and full games'], '<g transform="translate(662 70)"><rect width="34" height="24" rx="7" fill="#C62828"/><path d="M13 6l10 6-10 6z" fill="#FFFFFF"/></g>')}
+    ${box(640, 215, 250, 120, 'ScoreFrame', ['Scores, stats, schedules', 'Highlights and followers'], '<g transform="translate(662 238)" fill="#1C1B1F"><rect width="34" height="10" rx="3"/><rect y="13" width="34" height="10" rx="3"/><rect y="26" width="34" height="10" rx="3"/><circle cx="28" cy="5" r="2" fill="#39D98A"/><circle cx="28" cy="18" r="2" fill="#39D98A"/><circle cx="28" cy="31" r="2" fill="#39D98A"/></g>')}
+    ${box(640, 400, 250, 120, 'scoreframe.app', ['Club, team, game, event', 'and player pages', 'The director console'], '<g transform="translate(662 422)"><rect width="34" height="26" rx="4" fill="none" stroke="#1C1B1F" stroke-width="2.5"/><line x1="0" y1="8" x2="34" y2="8" stroke="#1C1B1F" stroke-width="2.5"/></g>')}
+    ${arrow('M575 240 C 600 160, 610 110, 636 100', 'live video', 560, 150)}
+    ${arrow('M578 262 L 636 272', 'points, stats', 566, 300)}
+    ${arrow('M765 338 L 765 396', 'pages update live', 776, 372)}
+    ${person(985, 105, '#17306E')}${person(1015, 112, '#A9A39B')}<text x="955" y="150" font-size="15" font-weight="900" fill="#1C1B1F">Families</text><text x="955" y="168" font-size="13" fill="#5A565F">watch, follow, get reels</text>
+    ${person(985, 300, '#1E7A46')}<text x="955" y="345" font-size="15" font-weight="900" fill="#1C1B1F">Coaches</text><text x="955" y="363" font-size="13" fill="#5A565F">the free app, Pro on</text>
+    ${person(985, 470, '#8B4A12')}<text x="955" y="515" font-size="15" font-weight="900" fill="#1C1B1F">Club director</text><text x="955" y="533" font-size="13" fill="#5A565F">sets up teams, pays</text>
+    ${arrow('M894 95 L 948 98', '', 0, 0)}
+    ${arrow('M894 445 C 920 380, 920 200, 950 120', '', 0, 0)}
+    ${arrow('M894 460 L 950 300', '', 0, 0)}
+    ${arrow('M952 478 L 896 478', '', 0, 0)}
+  </svg></div>`;
+}
+
+function flowDiagram() {
+  const node = (who, title, items) => `<div class="fl-node"><div class="fl-who">${who}</div><div class="fl-title">${title}</div><ul>${items.map(x => `<li>${x}</li>`).join('')}</ul></div>`;
+  const arrow = (label) => `<div class="fl-arrow" aria-hidden="true"><span>${label}</span><svg viewBox="0 0 40 16" width="40" height="16"><path d="M0 8h34M28 2l7 6-7 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
+  return `<div class="fl" role="img" aria-label="The director sets up teams in the club console; coaches film and score on the free app with Pro on; games stream to the club's YouTube channel; families follow on the club, team, game, event and player pages. After the game, tagged plays become stats, reels and family emails.">
+    ${flowScene()}
+    <div class="fl-loops">
+      <div class="fl-loop"><div class="fl-who">After the game</div><div>Send a link to anyone who'll tag plays <b>→</b> stats on the box score and player pages <b>→</b> a reel for each player <b>→</b> an email to that player's family.</div></div>
+      <div class="fl-loop"><div class="fl-who">During tournaments</div><div>AES results come in every 20 minutes <b>→</b> pools and brackets fill in <b>→</b> your coaches see their next match and press Start.</div></div>
+    </div>
+  </div>`;
+}
+
+const IN_APP = !!(window.ScoreFrameApp || (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.scoreFrameShareText));
 function renderSignIn() {
   $('tabs').classList.add('hide');
+  // Inside the apps' web views there is no way to buy anything here (the
+  // apps never link to the club purchase; game pages link home, home links here).
+  if (IN_APP) { document.body.classList.add('store'); $('main').innerHTML = `<section class="s-wrap s-sec"><h1 style="font-size:32px;font-weight:900;">ScoreFrame for clubs</h1><p class="s-lede">Club directors set up their club's teams and coaches on a computer. If your team is part of a club, it shows in the app marked with the club's name.</p></section>`; return; }
+  document.body.classList.add('store');
+  document.title = 'ScoreFrame for Clubs';
+  const feats = [
+    ['pro', 'Pro on every club team', 'Coaches, managers and staff get every Pro feature on club teams: full-length recording and streaming, no watermark, stats and highlights. They download the free app. Nothing for them to buy.'],
+    ['console', 'A console for the director', 'Add teams, invite coaches and families, and build rosters by pasting a list or a photo of one. Set club colors and a logo once and every team starts with them. All from a computer.'],
+    ['yt', 'Your YouTube channel, locked in', 'Connect the club\'s channel once. Club teams stream there, and no coach can switch a club team to a personal account by mistake. Teams can have their own channel too.'],
+    ['bracket', 'Tournaments', 'Build pools and brackets, or paste an AES link and let ScoreFrame keep the results current. Every club team in the event sees the whole board and starts its match from it.'],
+    ['globe', 'A page for the club', 'Every team on one club page with live games, schedules and results. You decide who sees it: anyone with the link, signed-in ScoreFrame users, or approved families only.'],
+    ['play', 'Player highlights for families', 'Tag plays after the game in a browser. Each family gets an email with a link to their player\'s reel, and the plays become stats on the player\'s page.'],
+  ];
+  const faq = [
+    ['Do coaches pay for anything?', 'No. They install the free ScoreFrame app and sign in with the email you invited. Pro is on for their club teams. Any team of their own stays on whatever plan they have.'],
+    ['What happens when the trial ends?', 'Buy licenses and everything carries on. If you don\'t, club teams lose Pro and the club page stops being hosted. Ask us and we\'ll send you a copy of your club\'s data first.'],
+    ['Can we add teams in the middle of a season?', 'Yes. New teams are charged only through your current end date.'],
+    ['Can we pay by invoice?', 'Yes. Three teams turn on while the invoice is open, and the rest turn on when it\'s paid.'],
+    ['Who owns the videos?', 'Your club. Games stream to your club\'s YouTube channel. ScoreFrame doesn\'t host video.'],
+    ['What about players\' privacy?', 'You set who can see the club and team pages, and each team can be stricter. Parents choose whether other families can find their player\'s highlights.'],
+    ['Refunds?', 'Partial refunds, prorated by time and licenses used. The details are in the <a href="club-terms.html">Club Terms</a>.'],
+    ['Which sports?', 'Volleyball has the most built for clubs today: tournaments, AES results and tagged highlights. Every ScoreFrame sport works for filming, scoring and streaming.'],
+  ];
+  const crest = (t) => `<div class="sq">${t}</div>`;
   $('main').innerHTML = `
-  <section class="signin card pad">
-    <h1 style="font-size:26px;font-weight:900;">ScoreFrame for clubs</h1>
-    <p class="muted" style="margin:0;line-height:1.5;">Club directors sign in here to set up teams, invite coaches and manage the club's licenses.</p>
+  <header class="s-top"><div class="s-wrap s-nav">
+    <a class="s-mark" href="/">Score<b>Frame</b> <span>CLUBS</span></a>
+    <nav aria-label="Sections"><a href="#what">What you get</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#faq">Questions</a></nav>
+    <div class="s-acts"><button class="s-btn line" type="button" data-signin="in">Director sign in</button><button class="s-btn" type="button" data-signin="up">Start a free trial</button></div>
+  </div></header>
+
+  <section class="s-wrap s-hero">
+    <div class="s-copy">
+      <div class="s-eb">ScoreFrame for clubs · volleyball first</div>
+      <h1>Every team in your club, filmed, scored and streamed.</h1>
+      <p class="s-lede">One director sets up the teams and coaches. Every coach on a club team gets ScoreFrame Pro on their phone, and every game goes to the club's own YouTube channel.</p>
+      <div class="s-row"><button class="s-btn big" type="button" data-signin="up">Start a ${STORE_PRICE.trialDays}-day trial</button><button class="s-btn big line" type="button" id="demoBtn">See the director console</button></div>
+      <div class="s-fine">Trial: up to ${STORE_PRICE.trialTeams} teams for ${STORE_PRICE.trialDays} days. No card. Coaches use the free ScoreFrame app.</div>
+    </div>
+    <div class="s-club" aria-label="Example club page">
+      <div class="s-clubhead"><div class="s-crest">RV</div><div><div class="s-clubname">Rockets VBC</div><div class="s-clubsub">8 teams · Kansas City</div></div></div>
+      <div class="s-list">
+        <div class="s-it live">${crest('16N')}<div class="s-tx"><b>16 National</b><span>vs KC Power · Set 2 · 18–15</span></div><span class="s-live">LIVE</span></div>
+        <div class="s-it">${crest('14S')}<div class="s-tx"><b>14 Select</b><span>Sat 9:00 · Heartland Classic, court 4</span></div></div>
+        <div class="s-it">${crest('15E')}<div class="s-tx"><b>15 Elite</b><span>Won 2–1 vs Mavs 15 Black</span></div></div>
+        <div class="s-it">${crest('18E')}<div class="s-tx"><b>18 Elite</b><span>12 player reels from Sunday</span></div></div>
+      </div>
+      <div class="s-clubfoot">An example club page, the one families see. Each team has its own page too.</div>
+    </div>
+  </section>
+
+  <section id="what" class="s-band"><div class="s-wrap s-sec">
+    <div class="s-head"><div class="s-eb">What your club gets</div><h2>Set it up once. Every coach is ready on game day.</h2></div>
+    <div class="s-feats">${feats.map(([k, h, p]) => `<div class="s-feat">${ico(k)}<h3>${h}</h3><p>${p}</p></div>`).join('')}</div>
+  </div></section>
+
+  <section id="how" class="s-wrap s-sec">
+    <div class="s-head"><div class="s-eb">How it works</div><h2>Three steps, about an evening's work.</h2></div>
+    <div class="s-steps">
+      <div class="s-step"><div class="s-n">1</div><h3>Create your club</h3><p>Sign in with Google or email, name the club and add your logo. A setup checklist walks you through privacy, the Club Terms and YouTube.</p></div>
+      <div class="s-step"><div class="s-n">2</div><h3>Add teams and invite coaches</h3><p>Each coach gets an email. They sign in on the free app and their team is already there, marked as a club team, with Pro turned on.</p></div>
+      <div class="s-step"><div class="s-n">3</div><h3>Buy licenses for the season</h3><p>Pick how many teams and how many months. Pay by card, or get an invoice. Add teams mid-season and you only pay through your end date.</p></div>
+    </div>
+      <div class="s-head" style="margin-top:20px;"><div class="s-eb">How it fits together</div><h2 class="sm">One setup, and everyone gets what they need.</h2></div>
+    ${flowDiagram()}
+  </section>
+
+  <section id="pricing" class="s-dark"><div class="s-wrap s-price">
+    <div class="s-pcopy">
+      <div class="s-eb">Pricing</div>
+      <h2>One price per team, per month.</h2>
+      <div class="s-pr"><span>${usd0(STORE_PRICE.cents)}</span>per team, per month</div>
+      <div class="s-pr"><span>${usd0(STORE_PRICE.longCents)}</span>per team, per month when you buy ${STORE_PRICE.longMonths} months or more</div>
+      <ul><li>${STORE_PRICE.minTeams} teams minimum, up to ${STORE_PRICE.maxTeams}</li><li>Every coach, manager and staff member on a licensed team is covered</li><li>Families and followers are always free</li><li>US dollars. Card or invoice.</li></ul>
+    </div>
+    <div class="s-calc">
+      <div class="s-calct">Work out your season</div>
+      <div class="s-row">
+        <label for="calcTeams">Teams<input id="calcTeams" type="number" inputmode="numeric" value="12" min="${STORE_PRICE.minTeams}" max="${STORE_PRICE.maxTeams}"></label>
+        <label for="calcMonths">Months<input id="calcMonths" type="number" inputmode="numeric" value="6" min="1" max="12"></label>
+      </div>
+      <div class="s-total"><output id="calcTotal" for="calcTeams calcMonths"></output><div id="calcHow"></div></div>
+      <button class="s-btn big" type="button" data-signin="up">Start a ${STORE_PRICE.trialDays}-day trial</button>
+      <div class="s-fine dark">You choose teams and months again at checkout. Nothing is charged during the trial.</div>
+    </div>
+  </div></section>
+
+  <section class="s-wrap s-sec">
+    <div class="s-head"><div class="s-eb">Club plan or coaches on their own</div><h2 class="sm">What changes when the club runs it</h2></div>
+    <div class="s-tbl"><table>
+      <thead><tr><th></th><th class="mu">Each coach buys Pro</th><th>Club plan</th></tr></thead>
+      <tbody>
+        <tr><td>Who pays</td><td class="mu">Each coach, on their own card</td><td>The club, one bill</td></tr>
+        <tr><td>Where games stream</td><td class="mu">Each coach's own YouTube</td><td>The club's channel, set by the director</td></tr>
+        <tr><td>Setting up teams</td><td class="mu">Each coach, on a phone</td><td>The director, once, on a computer</td></tr>
+        <tr><td>When a coach leaves</td><td class="mu">The team leaves with them</td><td>The team stays with the club</td></tr>
+        <tr><td>Club page and club tournaments</td><td class="mu">Not included</td><td>Included</td></tr>
+      </tbody></table></div>
+  </section>
+
+  <section id="faq" class="s-wrap s-sec">
+    <h2 class="sm">Questions directors ask</h2>
+    <div class="s-faq">${faq.map(([q, a], i) => `<details${i < 2 ? ' open' : ''}><summary>${q}</summary><p>${a}</p></details>`).join('')}</div>
+  </section>
+
+  <section class="s-cta"><div class="s-wrap s-ctain">
+    <div><h2 class="sm">Get your club set up this week.</h2><div>Questions first? Write to <a href="mailto:support@scoreframe.app">support@scoreframe.app</a> and you'll hear back from a person.</div></div>
+    <button class="s-btn big ink" type="button" data-signin="up">Start a ${STORE_PRICE.trialDays}-day trial</button>
+  </div></section>
+
+  <footer class="s-wrap s-foot"><span>© ${new Date().getFullYear()} ScoreFrame</span><a href="/">ScoreFrame app</a><a href="club-terms.html">Club Terms</a><a href="privacy.html">Privacy</a><a href="support.html">Support</a></footer>`;
+
+  const calc = () => {
+    const t = Math.min(STORE_PRICE.maxTeams, Math.max(STORE_PRICE.minTeams, Math.round(+$('calcTeams').value || 0)));
+    const m = Math.min(12, Math.max(1, Math.round(+$('calcMonths').value || 0)));
+    const per = m >= STORE_PRICE.longMonths ? STORE_PRICE.longCents : STORE_PRICE.cents;
+    $('calcTotal').textContent = usd0(per * t * m);
+    $('calcHow').textContent = `${t} teams × ${m} month${m === 1 ? '' : 's'} × ${usd0(per)}. That's ${usd0(per * t)} a month for the whole club.`;
+  };
+  $('calcTeams').oninput = calc; $('calcMonths').oninput = calc; calc();
+  $('main').querySelectorAll('[data-signin]').forEach(b => { b.onclick = () => openSignIn(b.dataset.signin); });
+  $('demoBtn').onclick = openDemo;
+  if (location.hash === '#demo') openDemo();   // home page "See the director console"
+}
+
+// Sign in / create account, in a dialog over the storefront.
+function openSignIn(mode) {
+  const d = $('dlg');
+  const up = mode === 'up';
+  d.innerHTML = `<form method="dialog" class="signin" style="margin:0;max-width:none;">
+    <h2 style="font-size:24px;font-weight:900;">${up ? 'Start your club' : 'Director sign in'}</h2>
+    <p class="muted" style="margin:0;line-height:1.5;">${up ? `Sign in or create an account, then name your club. The ${STORE_PRICE.trialDays}-day trial covers up to ${STORE_PRICE.trialTeams} teams. No card.` : 'Use the same account as the ScoreFrame app.'}</p>
     <button class="btn ghost" type="button" id="gBtn">Continue with Google</button>
     <div class="muted" style="font-size:13px;">or with email</div>
     <input id="em" type="email" autocomplete="email" placeholder="Email" aria-label="Email">
-    <input id="pw" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password">
+    <input id="pw" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" placeholder="Password" aria-label="Password">
     <div class="row" style="justify-content:center;">
-      <button class="btn dark" type="button" id="inBtn">Sign in</button>
-      <button class="btn ghost" type="button" id="upBtn">Create account</button>
+      ${up ? '<button class="btn dark" type="button" id="upBtn">Create account</button><button class="btn ghost" type="button" id="inBtn">Sign in</button>'
+           : '<button class="btn dark" type="button" id="inBtn">Sign in</button><button class="btn ghost" type="button" id="upBtn">Create account</button>'}
     </div>
-    <button class="btn link" type="button" id="forgot">Forgot password?</button>
-    <p class="muted" style="font-size:13px;margin:0;">Use the same account as the ScoreFrame app.</p>
-  </section>`;
+    <div class="row" style="justify-content:space-between;"><button class="btn link" type="button" id="forgot">Forgot password?</button><button class="btn link" value="cancel">Close</button></div>
+  </form>`;
   $('gBtn').onclick = async () => { try { if (useRedirect) return signInWithRedirect(auth, google); await signInWithPopup(auth, google); } catch (e) { if (e.code === 'auth/popup-blocked') signInWithRedirect(auth, google); else toast(errText(e)); } };
   $('inBtn').onclick = (ev) => busy(ev.currentTarget, () => signInWithEmailAndPassword(auth, $('em').value.trim(), $('pw').value));
   $('upBtn').onclick = (ev) => busy(ev.currentTarget, async () => { const r = await createUserWithEmailAndPassword(auth, $('em').value.trim(), $('pw').value); await updateProfile(r.user, { displayName: $('em').value.split('@')[0] }); });
   $('forgot').onclick = async () => { const e = $('em').value.trim(); if (!e) return toast('Type your email first.'); await sendPasswordResetEmail(auth, e).then(() => toast('Password reset email sent.')).catch(err => toast(errText(err))); };
+  d.showModal();
+}
+
+// "See the director console": a click-through of the console with a made-up
+// club. Nothing reads or writes data (Eric 2026-10-30: "These screens don't
+// do anything really").
+const DEMO_TEAMS = [
+  ['14 Select', '14S', 'Coach Dana R.', 'Sat 9:00 · Heartland Classic'], ['15 Elite', '15E', 'Coach Marcus T.', 'Sun 8:00 · Heartland Classic'],
+  ['16 National', '16N', 'Coach Priya S.', 'Live now vs KC Power'], ['16 Select', '16S', 'Coach Jordan L.', 'Nov 8 · KC Kickoff'],
+  ['17 Royal', '17R', 'Invite sent', 'Nov 8 · KC Kickoff'], ['18 Elite', '18E', 'Coach Sam W.', 'Nov 15 · Show Me Classic'],
+];
+const DEMO_TABS = [['flow', 'How it connects'], ['teams', 'Teams'], ['people', 'Coaches and families'], ['tourn', 'Tournaments'], ['tag', 'Highlights and stats'], ['fans', 'What families see'], ['lic', 'Licenses'], ['yt', 'YouTube']];
+function demoScreen(tab) {
+  if (tab === 'flow') return flowDiagram();
+  const sq = (t) => `<div class="teamsq" style="background:#17306E;">${t}</div>`;
+  if (tab === 'teams') return `
+    <div class="card pad"><div class="stats3">
+      <div><div class="eyebrow">Licensed teams</div><div class="big">6 of 8</div><div class="bar" style="margin-top:8px;"><span style="width:75%"></span></div></div>
+      <div><div class="eyebrow">Coaches and staff</div><div class="big">11</div><div class="muted" style="font-size:14px;">1 invite waiting</div></div>
+      <div><div class="eyebrow">Covered through</div><div class="big">May 31</div><div class="muted" style="font-size:14px;">Paid · card</div></div>
+    </div></div>
+    <div class="card"><div class="row pad" style="border-bottom:1px solid var(--ln);padding-block:14px;"><h2 style="font-size:18px;font-weight:800;">Teams</h2><button class="btn primary" type="button" data-demo style="margin-left:auto;">Add a team</button></div>
+    <div class="scroll"><table class="tbl"><thead><tr><th>Team</th><th>Coach</th><th>Next</th><th>Pro</th></tr></thead><tbody>
+    ${DEMO_TEAMS.map(([n, s, c, x]) => `<tr class="click" data-demo-tab="people"><td><div class="row" style="gap:10px;flex-wrap:nowrap;">${sq(s)}<b>${n}</b></div></td><td class="${c === 'Invite sent' ? 'muted' : ''}">${c}</td><td>${x}</td><td><span class="status s-ok">Covered</span></td></tr>`).join('')}
+    </tbody></table></div></div>`;
+  if (tab === 'people') return `
+    <div class="hero" style="background:linear-gradient(120deg,#17306E,#D9A400);"><div class="crest" style="width:58px;height:58px;background:#fff;color:#17306E;font-size:20px;">RV</div><div><h3 style="font-size:24px;font-weight:900;">16 National</h3><div style="opacity:.9;">Volleyball · 12 players · Pro through May 31</div></div></div>
+    <div class="split">
+      <div class="main card"><div class="row pad" style="border-bottom:1px solid var(--ln);padding-block:14px;"><h2 style="font-size:18px;font-weight:800;">Staff</h2><span class="muted" style="font-size:14px;">Everyone here gets Pro on this team</span></div>
+        <div class="person"><div class="avatar">PS</div><div style="flex:1;"><b>Priya S.</b><div class="muted" style="font-size:13px;">Head coach</div></div><span class="status s-ok">Signed in</span></div>
+        <div class="person"><div class="avatar">KM</div><div style="flex:1;"><b>Kelly M.</b><div class="muted" style="font-size:13px;">Manager · runs the camera</div></div><span class="status s-ok">Signed in</span></div>
+        <div class="person"><div class="avatar">AJ</div><div style="flex:1;"><b>Alex J.</b><div class="muted" style="font-size:13px;">Assistant coach</div></div><span class="status s-warn">Invite sent</span></div>
+        <div class="row pad"><h3 style="font-size:16px;font-weight:800;width:100%;">Roster and families</h3>
+          <table class="tbl" style="margin-inline:-22px;width:calc(100% + 44px);"><tbody>
+          <tr><td><b>#4</b> Lillian</td><td class="muted">2 parents linked</td></tr><tr><td><b>#7</b> Avery</td><td class="muted">1 parent linked</td></tr><tr><td><b>#9</b> Maya</td><td class="muted">Waiting for approval</td></tr></tbody></table>
+          <button class="btn ghost" type="button" data-demo>Paste a roster or upload a photo</button></div>
+      </div>
+      <div class="side card pad" style="display:flex;flex-direction:column;gap:12px;"><h2 style="font-size:18px;font-weight:800;">Invite to 16 National</h2>
+        <div class="field"><label for="dEm">Email</label><input id="dEm" placeholder="coach@example.com"></div>
+        <div class="field"><label for="dRole">Role</label><select id="dRole"><option>Coach</option><option>Manager</option><option>Parent</option></select></div>
+        <button class="btn primary" type="button" data-demo>Send invite</button>
+        <p class="muted" style="font-size:13px;margin:0;">Coaches get an email, sign in on the free app, and the team is there with Pro on.</p></div>
+    </div>`;
+  if (tab === 'tourn') return `
+    <div class="card"><div class="row pad" style="border-bottom:1px solid var(--ln);padding-block:14px;"><h2 style="font-size:18px;font-weight:800;">Tournaments</h2><span class="muted" style="font-size:14px;">One event for every club team in it. Build it here, or read it from AES.</span></div>
+      <div class="person"><div style="flex:1;"><b>Heartland Classic</b><div class="muted" style="font-size:13px;">Oct 31 – Nov 1 · Overland Park · 24 teams</div><div style="margin-top:6px;"><span class="status s-mu">14 Select</span> <span class="status s-mu">16 National</span> <span class="status s-mu">18 Elite</span></div></div><span class="status s-ok">Updates from AES</span></div>
+      <div class="person"><div style="flex:1;"><b>Rockets Fall Invite</b><div class="muted" style="font-size:13px;">Nov 15 · Rockets Fieldhouse · 12 teams · hosted by the club</div></div><span class="status s-warn">Setting up</span></div></div>
+    <div class="split">
+      <div class="main" style="display:flex;flex-direction:column;gap:14px;">
+        <div class="card pad" style="display:flex;flex-direction:column;gap:12px;">
+          <div class="eyebrow">1 · The event</div>
+          <div class="grid2"><div class="field"><label for="dtN">Name</label><input id="dtN" value="Rockets Fall Invite"></div><div class="field"><label for="dtV">Where</label><input id="dtV" value="Rockets Fieldhouse, 4 courts"></div></div>
+          <div class="grid2"><div class="field"><label for="dtS">Date</label><input id="dtS" value="Sat, Nov 15"></div><div class="field"><label for="dtDv">Division</label><input id="dtDv" value="16U"></div></div>
+          <div class="row" style="align-items:flex-end;"><div class="field" style="flex:1 1 280px;"><label for="dtA">AES link (if the event is on AES)</label><input id="dtA" placeholder="https://results.advancedeventsystems.com/event/…"></div><button class="btn ghost" type="button" data-demo>Read AES</button></div>
+        </div>
+        <div class="card pad" style="display:flex;flex-direction:column;gap:10px;">
+          <div class="row"><div class="eyebrow">2 · Teams · 12</div><button class="btn link" type="button" data-demo style="margin-left:auto;">Paste a list or upload a PDF</button></div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          ${['Rockets 16 National', 'Rockets 16 Select'].map(n => `<span class="status s-ok">${n} · our club</span>`).join('')}
+          ${['KC Power 16 Black', 'Mavs 16 Gold', 'Dynasty 16 Red', 'Legacy 16 Elite', 'Heat 16 Navy', 'Sky High 16', 'Club K 16', 'Elevation 16-1', 'Topeka 16 Rox', 'Flight 16 Blue'].map(n => `<span class="status s-mu">${n}</span>`).join('')}
+          </div>
+          <p class="muted" style="font-size:13px;margin:0;">Other clubs' teams need no account. Our teams' coaches score from the app; anyone you share a match with can score it on the web.</p>
+        </div>
+        <div class="card pad" style="display:flex;flex-direction:column;gap:12px;">
+          <div class="eyebrow">3 · Format</div>
+          <div class="grid2"><div class="field"><label for="dtF">Pools</label><select id="dtF"><option>3 pools of 4</option><option>4 pools of 3</option><option>2 pools of 6</option></select></div><div class="field"><label for="dtM">Pool matches</label><select id="dtM"><option>2 sets to 25, cap 27</option><option>Best of 3: 25, 25, 15</option></select></div></div>
+          <div class="grid2"><div class="field"><label for="dtB">Then</label><select id="dtB"><option>Gold and silver brackets</option><option>One bracket, top 8</option><option>No bracket</option></select></div><div class="field"><label for="dtT">First serve</label><input id="dtT" value="8:00 AM · 1 hr per match"></div></div>
+          <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--ink);font-weight:500;line-height:1.45;"><input type="checkbox" checked style="margin-top:3px;"><span>Teams in a pool take turns working the down match (keeping score).</span></label>
+          <div class="row"><button class="btn primary" type="button" data-demo>Build pools and schedule</button><button class="btn ghost" type="button" data-demo>Publish to teams</button></div>
+        </div>
+      </div>
+      <div class="side" style="display:flex;flex-direction:column;gap:14px;">
+        <div class="card"><div class="pad" style="padding-bottom:4px;"><div class="eyebrow">Built for you · drag to change</div><h3 style="font-size:16px;font-weight:800;margin-top:4px;">Pools</h3></div>
+          <table class="tbl"><tbody>
+          <tr><td style="white-space:nowrap;"><b>A</b> · Court 1</td><td><b>Rockets 16 National</b>, KC Power 16 Black, Mavs 16 Gold, Elevation 16-1</td></tr>
+          <tr><td style="white-space:nowrap;"><b>B</b> · Court 2</td><td><b>Rockets 16 Select</b>, Dynasty 16 Red, Sky High 16, Club K 16</td></tr>
+          <tr><td style="white-space:nowrap;"><b>C</b> · Court 3</td><td>Legacy 16 Elite, Heat 16 Navy, Topeka 16 Rox, Flight 16 Blue</td></tr>
+          </tbody></table></div>
+        <div class="card"><div class="pad" style="padding-bottom:4px;"><h3 style="font-size:16px;font-weight:800;">Court 1 schedule</h3></div>
+          <table class="tbl"><tbody>
+          <tr><td style="white-space:nowrap;">8:00</td><td><b>Rockets 16 National</b> vs Mavs 16 Gold</td><td class="muted">Work: KC Power</td></tr>
+          <tr><td style="white-space:nowrap;">9:00</td><td>KC Power 16 Black vs Elevation 16-1</td><td class="muted">Work: <b>Rockets</b></td></tr>
+          <tr><td style="white-space:nowrap;">10:00</td><td><b>Rockets 16 National</b> vs Elevation 16-1</td><td class="muted">Work: Mavs</td></tr>
+          </tbody></table></div>
+        <div class="card pad" style="display:flex;flex-direction:column;gap:10px;"><h3 style="font-size:16px;font-weight:800;">Gold bracket</h3>
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:center;font-size:14px;">
+            <div style="display:flex;flex-direction:column;gap:8px;"><div style="border:1px solid var(--ln);border-radius:9px;padding:8px 10px;">A1 vs B2<div class="muted" style="font-size:12px;">Semifinal · 2:00 · Court 1</div></div><div style="border:1px solid var(--ln);border-radius:9px;padding:8px 10px;">B1 vs C1<div class="muted" style="font-size:12px;">Semifinal · 2:00 · Court 2</div></div></div>
+            <div style="border:2px solid var(--orange);border-radius:9px;padding:8px 10px;">Final<div class="muted" style="font-size:12px;">3:30 · Court 1</div></div>
+          </div>
+          <p class="muted" style="font-size:13px;margin:0;">Pool finishes fill the bracket in as scores come in. Every team, family and coach sees the same live board.</p></div>
+      </div>
+    </div>`;
+  if (tab === 'tag') return `
+    <div class="banner b-info"><div class="txt"><b>Tag plays after the game.</b> Someone kept score live; now anyone you send the link to watches the game video and says what happened on each point. ScoreFrame pauses on every point and asks.</div></div>
+    <div class="split">
+      <div class="main card" style="overflow:hidden;">
+        <div style="aspect-ratio:16/9;background:#0C0D10;position:relative;display:flex;align-items:center;justify-content:center;color:#A9ADB6;">
+          <div style="position:absolute;top:12px;left:12px;background:rgba(12,13,16,.85);color:#fff;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700;">Rockets 16N 12 · KC Power 9 · Set 1</div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;"><svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#A9ADB6" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z"/></svg><span style="font-size:14px;">The game video, paused where the point ended</span></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:5px;background:#2E3038;"><span style="display:block;height:100%;width:31%;background:var(--orange);"></span></div>
+        </div>
+        <div class="pad" style="display:flex;flex-direction:column;gap:12px;">
+          <div class="row"><b>Point 14 of 47</b><span class="muted" style="font-size:14px;">Rockets point · 12–9</span><span class="muted" style="font-size:13px;margin-left:auto;">Their points are skipped</span></div>
+          <div style="font-weight:800;">What happened?</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <button class="btn primary" type="button" data-demo>Kill</button><button class="btn ghost" type="button" data-demo>Ace</button><button class="btn ghost" type="button" data-demo>Block</button><button class="btn ghost" type="button" data-demo>Tip</button><button class="btn ghost" type="button" data-demo>KC Power error</button><button class="btn ghost" type="button" data-demo>Other</button>
+          </div>
+          <div style="font-weight:800;">Who?</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${[['4', 'Lillian', true], ['7', 'Avery'], ['9', 'Maya'], ['12', 'Harper'], ['15', 'Nora'], ['21', 'Quinn']].map(([n, f, on]) => `<button class="btn ${on ? 'dark' : 'ghost'}" type="button" data-demo style="min-width:84px;">#${n} ${f}</button>`).join('')}
+          </div>
+          <div class="row" style="font-size:14px;"><label style="display:flex;gap:8px;align-items:center;color:var(--ink);font-weight:600;"><input type="checkbox"> Great rally</label><button class="btn link" type="button" data-demo>Not sure, skip</button><button class="btn link" type="button" data-demo>Replay</button><span class="muted" style="margin-left:auto;">Speed 1.5×</span></div>
+        </div>
+      </div>
+      <div class="side" style="display:flex;flex-direction:column;gap:14px;">
+        <div class="card pad" style="display:flex;flex-direction:column;gap:10px;"><div class="eyebrow">After you press Publish</div><h3 style="font-size:16px;font-weight:800;">A reel for every player</h3>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">${[['4', 'Lillian', 6], ['7', 'Avery', 4], ['12', 'Harper', 3], ['9', 'Maya', 2]].map(([n, f, k]) => `<button class="btn ghost" type="button" data-demo style="min-height:36px;padding:6px 12px;">#${n} ${f} · ${k}</button>`).join('')}</div>
+          <p class="muted" style="font-size:13px;margin:0;">Each reel plays that player's moments from the full game, one after another. The plays are also added to the game video as chapters.</p></div>
+        <div class="card"><div class="pad" style="padding-bottom:4px;"><h3 style="font-size:16px;font-weight:800;">Stats from the tags</h3></div>
+          <table class="tbl"><thead><tr><th>Player</th><th>K</th><th>A</th><th>B</th></tr></thead><tbody>
+          <tr><td>#4 Lillian</td><td>5</td><td>1</td><td>0</td></tr><tr><td>#7 Avery</td><td>2</td><td>0</td><td>2</td></tr><tr><td>#12 Harper</td><td>1</td><td>2</td><td>0</td></tr><tr><td>#9 Maya</td><td>2</td><td>0</td><td>0</td></tr>
+          </tbody></table></div>
+        <div class="card pad" style="display:flex;flex-direction:column;gap:8px;"><div class="eyebrow">The email families get</div>
+          <div style="border:1px solid var(--ln);border-radius:12px;overflow:hidden;"><div style="background:linear-gradient(120deg,#17306E,#D9A400);color:#fff;padding:10px 14px;font-weight:800;">Rockets 16 National</div>
+          <div style="padding:12px 14px;font-size:14px;line-height:1.5;">Lillian had 6 plays worth a look in Saturday's win over KC Power.<div style="margin-top:10px;"><span class="btn primary" style="min-height:36px;padding:6px 12px;font-size:14px;">Watch Lillian's reel</span></div></div></div>
+          <p class="muted" style="font-size:13px;margin:0;">Only to the family linked to that player, once per game.</p></div>
+      </div>
+    </div>`;
+  if (tab === 'fans') {
+    const phone = (title, body) => `<div class="fanpg"><div class="fanbar">${title}</div>${body}</div>`;
+    const head = (t, sub) => `<div style="background:linear-gradient(120deg,#17306E,#D9A400);color:#fff;padding:16px;"><div style="font-size:12px;opacity:.85;">${sub}</div><div style="font-size:20px;font-weight:900;line-height:1.15;margin-top:2px;">${t}</div></div>`;
+    return `<p class="muted" style="margin:0;">Every game, tournament and player gets a page. Families open them from the team page, a text or an email, and see them inside the ScoreFrame app too.</p>
+    <div class="fanrow">
+    ${phone('Game page', `${head('Rockets 16 National 2 · KC Power 16 Black 1', 'Heartland Classic · Pool A · Sat 9:00')}
+      <div style="padding:14px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;gap:8px;font-weight:800;font-variant-numeric:tabular-nums;"><span class="status s-ok">25–21</span><span class="status s-mu">22–25</span><span class="status s-ok">15–11</span></div>
+        <div style="aspect-ratio:16/9;background:#0C0D10;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#A9ADB6;font-size:13px;">Full game video</div>
+        <div><div class="eyebrow">Player highlights</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"><span class="status s-mu">Game highlights</span><span class="status s-mu">#4 Lillian · 6</span><span class="status s-mu">#7 Avery · 4</span><span class="status s-mu">#12 Harper · 3</span></div></div>
+        <table class="tbl" style="font-size:14px;"><thead><tr><th style="padding-left:0;">Player</th><th>K</th><th>A</th><th style="padding-right:0;">B</th></tr></thead><tbody><tr><td style="padding-left:0;">#4 Lillian</td><td>5</td><td>1</td><td style="padding-right:0;">0</td></tr><tr><td style="padding-left:0;">#7 Avery</td><td>2</td><td>0</td><td style="padding-right:0;">2</td></tr></tbody></table>
+      </div>`)}
+    ${phone('Event page', `${head('Heartland Classic · 16 Open', 'Oct 31 – Nov 1 · Overland Park')}
+      <div style="padding:14px;display:flex;flex-direction:column;gap:12px;">
+        <div class="eyebrow">Our matches</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;">
+          <div style="display:flex;gap:8px;align-items:center;"><span class="status s-ok">W 2–1</span><span>vs KC Power 16 Black</span></div>
+          <div style="display:flex;gap:8px;align-items:center;"><span class="status" style="background:#C71A1A;color:#fff;">LIVE</span><span>vs Mavs 16 Gold · Set 2 · 18–15</span></div>
+          <div style="display:flex;gap:8px;align-items:center;"><span class="status s-mu">11:00</span><span>vs Elevation 16-1 · Court 1</span></div>
+        </div>
+        <div class="eyebrow">Pool A</div>
+        <table class="tbl" style="font-size:14px;"><tbody><tr><td style="padding-left:0;"><b>Rockets 16 National</b></td><td style="padding-right:0;text-align:right;">1–0</td></tr><tr><td style="padding-left:0;">KC Power 16 Black</td><td style="padding-right:0;text-align:right;">1–1</td></tr><tr><td style="padding-left:0;">Mavs 16 Gold</td><td style="padding-right:0;text-align:right;">0–1</td></tr></tbody></table>
+        <div class="muted" style="font-size:13px;">Gold bracket at 2:00. It fills in as the pools finish.</div>
+      </div>`)}
+    ${phone('Player page', `${head('#4 Lillian', 'Rockets 16 National · Outside hitter')}
+      <div style="padding:14px;display:flex;flex-direction:column;gap:12px;">
+        <div class="eyebrow">This season</div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;text-align:center;">
+          <div style="border:1px solid var(--ln);border-radius:10px;padding:8px;"><div style="font-size:22px;font-weight:900;">84</div><div class="muted" style="font-size:12px;">Kills</div></div>
+          <div style="border:1px solid var(--ln);border-radius:10px;padding:8px;"><div style="font-size:22px;font-weight:900;">21</div><div class="muted" style="font-size:12px;">Aces</div></div>
+          <div style="border:1px solid var(--ln);border-radius:10px;padding:8px;"><div style="font-size:22px;font-weight:900;">9</div><div class="muted" style="font-size:12px;">Blocks</div></div>
+        </div>
+        <div class="eyebrow">Highlight reels</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;">
+          <div style="display:flex;justify-content:space-between;gap:8px;"><span>vs KC Power 16 Black</span><span class="muted">6 plays</span></div>
+          <div style="display:flex;justify-content:space-between;gap:8px;"><span>vs Dynasty 16 Red</span><span class="muted">4 plays</span></div>
+          <div style="display:flex;justify-content:space-between;gap:8px;"><span>vs Sky High 16</span><span class="muted">5 plays</span></div>
+        </div>
+        <div class="muted" style="font-size:13px;">Her parents choose whether other team families can find these.</div>
+      </div>`)}
+    </div>`;
+  }
+  if (tab === 'lic') return `
+    <div class="split"><div class="main card pad" style="display:flex;flex-direction:column;gap:16px;"><h2 style="font-size:20px;font-weight:800;">Add teams to your current license</h2>
+      <div class="field"><label>Teams to add</label><div class="stepper"><button type="button" data-demo aria-label="Fewer">−</button><output>2</output><button type="button" data-demo aria-label="More">+</button></div></div>
+      <p class="muted" style="margin:0;">Added teams run to your current end date, May 31, so you pay for 7 months, not a full year.</p></div>
+      <div class="side summary"><div class="ln"><span>Now</span><span>6 teams through May 31</span></div><div class="ln"><span>Adding</span><span>2 teams × 7 months × $10</span></div><hr><div class="ln" style="font-size:20px;font-weight:900;"><span>Due today</span><span>$140</span></div><button class="btn primary" type="button" data-demo>Pay by card</button><button class="btn ghost" type="button" data-demo>Email me an invoice</button></div></div>
+    <div class="card pad"><div class="eyebrow">History</div><table class="tbl" style="margin-top:6px;"><tbody><tr><td>Aug 20</td><td>6 teams · 9 months</td><td>$540</td><td><span class="status s-ok">Paid</span></td></tr><tr><td>Aug 6</td><td>Trial · 3 teams · 14 days</td><td>$0</td><td><span class="status s-mu">Ended</span></td></tr></tbody></table></div>`;
+  return `
+    <div class="card pad" style="display:flex;flex-direction:column;gap:14px;"><h2 style="font-size:20px;font-weight:800;">YouTube</h2>
+      <div class="banner b-ok"><div class="txt"><b>Rockets VBC Volleyball</b> · connected by the club director · ready to go live</div><button class="btn ghost" type="button" data-demo>Change</button></div>
+      <p class="muted" style="margin:0;">Club teams stream here. Coaches can't switch a club team to their own account.</p></div>
+    <div class="card"><div class="pad" style="padding-bottom:6px;"><h2 style="font-size:18px;font-weight:800;">Where each team streams</h2></div><div class="scroll"><table class="tbl"><tbody>
+      ${DEMO_TEAMS.slice(0, 4).map(([n, s], i) => `<tr><td><div class="row" style="gap:10px;flex-wrap:nowrap;">${sq(s)}<b>${n}</b></div></td><td>${i === 2 ? 'Rockets 16 National (its own channel)' : 'Rockets VBC Volleyball'}</td></tr>`).join('')}
+    </tbody></table></div></div>`;
+}
+function openDemo() {
+  const d = $('demo');
+  let tab = 'flow';
+  const draw = () => {
+    d.innerHTML = `<div class="demo-top"><div class="brand" style="color:var(--deep-tx);"><img class="tile" src="/apple-touch-icon.png" alt="" width="30" height="30" style="object-fit:cover;"><span class="word">Score<b>Frame</b></span></div><span class="pill-club">DEMO CLUB</span>
+      <nav class="tabs" aria-label="Demo sections">${DEMO_TABS.map(([k, l]) => `<button type="button" data-t="${k}"${k === tab ? ' aria-current="page"' : ''}>${l}</button>`).join('')}</nav>
+      <button type="button" class="demo-x" id="demoX">Close demo</button></div>
+      <div class="demo-note">A walk through the director console with a made-up club. Nothing here saves.</div>
+      <div class="demo-body">${demoScreen(tab)}</div>
+      <div class="demo-foot"><span>Like what you see?</span><button class="btn primary" type="button" id="demoGo">Start a ${STORE_PRICE.trialDays}-day trial</button></div>`;
+    d.querySelectorAll('[data-t]').forEach(b => { b.onclick = () => { tab = b.dataset.t; draw(); }; });
+    d.querySelectorAll('[data-demo-tab]').forEach(r => { r.onclick = () => { tab = r.dataset.demoTab; draw(); }; });
+    d.querySelectorAll('[data-demo]').forEach(b => { b.onclick = () => toast('This is a demo. Start a trial to set up your own club.'); });
+    const cur = d.querySelector('[data-t][aria-current]'); if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'center' });
+    $('demoX').onclick = () => d.close();
+    $('demoGo').onclick = () => { d.close(); openSignIn('up'); };
+  };
+  draw(); d.showModal();
 }
 
 onAuthStateChanged(auth, async (u) => {
   S.unsub.forEach(f => f()); S.unsub = [];
   S.user = u && !u.isAnonymous ? u : null;
   if (!S.user) { renderWho(); renderSignIn(); return; }
+  document.body.classList.remove('store'); document.title = 'ScoreFrame Club';
+  if ($('dlg').open) $('dlg').close(); if ($('demo').open) $('demo').close();
   // Admin = the two ScoreFrame admin Google accounts (rules isAdmin(), functions/lib/admin.js), not every super user.
   try { const tok = await u.getIdTokenResult(); S.superUser = ['support@scoreframe.app', 'eric@bloomcamp.com'].includes(String(u.email || '').toLowerCase()) && u.emailVerified && tok.signInProvider === 'google.com'; } catch (_) { S.superUser = false; }
   await loadClubs();
