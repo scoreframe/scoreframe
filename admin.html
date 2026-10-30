@@ -700,7 +700,40 @@ function cleanupCard(c) {
     ${location.hash.startsWith('#accounts') ? '' : '<a href="#accounts" class="sub">See every account on the Accounts page</a>'}
     <div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn" id="clReport">Email the list now</button>${on ? '<button class="btn" id="clOff">Back to report only</button>' : '<button class="btn pri" id="clOn">Turn on</button>'}</div></section>`;
 }
-WIRE.system = () => wireCleanup();
+WIRE.system = () => { wireCleanup(); loadLifecycle(); };
+
+// ── Club data after licenses end (club_lifecycle.js) ──────────────────
+function lifecycleCard(r) {
+  const on = r.mode === 'live';
+  const stage = { readonly: 'Read-only', offline: 'Pages offline', delete: 'Delete due' };
+  const rows = r.clubs.map((c) => { const l = c.lifecycle || {};
+    return `<div class="li" style="align-items:flex-start"><span><strong>${esc(c.name)}</strong><br><span class="sub">${l.kind || '?'} · ${stage[l.stage] || 'lapsed'}${l.deleteAt ? ' · delete ' + day(l.deleteAt) : ''}${c.warnedAt ? '' : ' · not warned yet'}</span></span>
+      <button class="btn" data-lchold="${esc(c.id)}" data-on="${c.hold ? '' : '1'}">${c.hold ? 'Release hold' : 'Hold'}</button></div>`; }).join('');
+  return `<section class="card pad" style="display:flex;flex-direction:column;gap:8px"><div class="row" style="justify-content:space-between"><h2>Club data after licenses end</h2>${on ? chip('On', 'ok') : chip('Report only', 'warn')}</div>
+    <p class="sub" style="margin:0;line-height:1.5">Paid clubs: read-only ${r.paidHostingDays} days, then pages offline and data kept ${r.paidRetentionDays} days, then deleted. Trial-only clubs: kept ${r.trialRetentionDays} days, then deleted. Never deleted sooner than 14 days after the first email. ${on ? '' : 'Right now nothing is emailed or changed; support@ gets a daily list of what would happen.'}</p>
+    ${rows || '<div class="empty">No lapsed clubs.</div>'}
+    ${r.deleted.length ? `<details><summary class="sub" style="cursor:pointer">Deleted clubs (${r.deleted.length})</summary>${r.deleted.map((d) => `<div class="li"><span>${esc(d.name)}</span><span class="sub">${day(d.deletedAt)} · ${d.teams} teams</span></div>`).join('')}</details>` : ''}
+    <div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn" id="lcRun">Run today's step now</button>${on ? '<button class="btn" id="lcOff">Back to report only</button>' : '<button class="btn pri" id="lcOn">Turn on</button>'}</div></section>`;
+}
+async function loadLifecycle(r) {
+  const box = $('lcCard'); if (!box) return;
+  try { r = r || await call('adminClubLifecycle', { action: 'status' }); } catch (e) { box.innerHTML = `<section class="card pad"><h2>Club data after licenses end</h2><p class="sub">${esc(errText(e))}</p></section>`; return; }
+  box.innerHTML = lifecycleCard(r);
+  const go = async (data, msg) => { try { const x = await call('adminClubLifecycle', data); toast(msg(x)); loadLifecycle(x); } catch (e) { toast(errText(e), 7000); } };
+  $('lcRun').onclick = () => { $('lcRun').disabled = true; $('lcRun').textContent = 'Running…'; go({ action: 'run' }, (x) => `Done: ${x.ran.length} club${x.ran.length === 1 ? '' : 's'} with something to do.`); };
+  const onB = $('lcOn'), offB = $('lcOff');
+  if (onB) onB.onclick = async () => {
+    const a = await ask({ title: 'Turn on club data lifecycle', ok: 'Turn on', danger: true, code: true,
+      body: 'Lapsed clubs start getting emails tomorrow morning, their teams turn read-only (or offline), and clubs past their date are deleted once they have had at least 14 days of warning. Deleted clubs can\'t be restored.' });
+    if (a) go({ action: 'mode', mode: 'live', reason: a.reason, code: a.code }, () => 'Club data lifecycle is on.');
+  };
+  if (offB) offB.onclick = async () => { const a = await ask({ title: 'Back to report only', ok: 'Switch', body: 'No more emails, changes or deletions. Teams already read-only stay that way until the next run puts them back.' }); if (a) go({ action: 'mode', mode: 'report', reason: a.reason }, () => 'Report only.'); };
+  document.querySelectorAll('[data-lchold]').forEach((b) => b.onclick = async () => {
+    const hold = b.dataset.on === '1';
+    const a = await ask({ title: hold ? 'Hold this club' : 'Release the hold', body: hold ? 'No emails, changes or deletion for this club until you release it.' : 'It goes back on the normal schedule at the next run.' });
+    if (a) go({ action: 'hold', clubId: b.dataset.lchold, on: hold, reason: a.reason }, () => (hold ? 'Held.' : 'Released.'));
+  });
+}
 function wireCleanup() {
   const rep = $('clReport'), onB = $('clOn'), offB = $('clOff');
   if (rep) rep.onclick = () => { rep.disabled = true; rep.textContent = 'Sending…'; act('adminCleanup', { action: 'report' }, (r) => toast(`Sent to support@: ${r.empty} empty accounts.`)); };
@@ -778,7 +811,7 @@ VIEWS.system = async () => {
       <div class="card pad" style="display:flex;flex-direction:column;gap:10px"><h2>Audit log</h2><span class="sub">Every admin change with its reason, newest first.</span>
         <div class="scroll"><table><thead><tr><th>When</th><th>Who</th><th>What</th><th>Reason</th></tr></thead><tbody>
         ${r.audit.length ? r.audit.map((x) => `<tr><td class="sub" style="white-space:nowrap">${when(x.at)}</td><td>${esc(String(x.by || '').split('@')[0])}@</td><td>${esc(describeAudit(x))}</td><td class="sub">${esc(x.reason || '')}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">Nothing yet.</td></tr>'}</tbody></table></div></div></section>
-    <aside class="side-col">${cleanupCard(r.cleanup)}<section class="card pad"><h2>Apps in use</h2><p class="sub" style="margin:6px 0 4px">Versions synced in the last 30 days.</p>
+    <aside class="side-col">${cleanupCard(r.cleanup)}<div id="lcCard"><section class="card pad"><h2>Club data after licenses end</h2><p class="sub">Loading…</p></section></div><section class="card pad"><h2>Apps in use</h2><p class="sub" style="margin:6px 0 4px">Versions synced in the last 30 days.</p>
         ${r.versions.map(([k, n]) => `<div class="li"><span>${esc(k)}</span><strong>${n}</strong></div>`).join('') || '<div class="empty">No data.</div>'}</section>
       <section class="card pad"><h2>Who can open this page</h2>
         ${r.admins.map((a) => `<div class="li"><span>${esc(a.email)}<br><span class="sub">signed in ${ago(a.lastSignIn)}</span></span>${a.mfa ? chip(`Authenticator · ${a.backupLeft} backups`, 'ok') : chip('No authenticator yet', 'warn')}</div>`).join('')}

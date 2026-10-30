@@ -344,6 +344,8 @@ const S = { user: null, superUser: false, clubs: [], clubId: params.get('club') 
   tab: params.get('tab') || 'teams', teamId: null, unsub: [], buy: { kind: 'purchase', teams: 0, months: 7, start: '', pay: 'card', po: '', quote: null, qerr: '' },
   pricing: null, paidWatch: params.get('paid'), canceled: params.get('canceled'), wantBuy: params.get('buy'), openedAt: Date.now(), paidAt: 0 };
 if (S.wantBuy) S.tab = 'billing';
+// Lifecycle emails link to ?tab=data: Club details, scrolled to the download.
+if (S.tab === 'data') { S.tab = 'settings'; S.dataFocus = true; }
 // Back from Google's YouTube sign-in (clubYouTubeAuthUrl sends it here). Take the
 // code off the address bar at once so a reload can't reuse it.
 const ytReturn = params.get('state') && (params.get('code') || params.get('error'))
@@ -488,7 +490,8 @@ function renderSignIn() {
   ];
   const faq = [
     ['Do coaches pay for anything?', 'No. They install the free ScoreFrame app and sign in with the email you invited. Pro is on for their club teams. Any team of their own stays on whatever plan they have.'],
-    ['What happens when the trial ends?', 'Buy licenses and everything carries on. If you don\'t, club teams lose Pro and the club page stops being hosted. Ask us and we\'ll send you a copy of your club\'s data first.'],
+    ['What happens when the trial ends?', 'Buy licenses and everything carries on. If you don\'t, coaches can\'t add new games, and your club\'s data is kept for 60 days so you can download it. After that it\'s deleted. Your videos stay on your YouTube channel.'],
+    ['What happens when a paid license ends?', 'Your club and team pages stay up for a year, but coaches can\'t add new games, scores or rosters. Then the pages go offline and we keep your data six more months so you can download it, and then it\'s deleted. We email you well before each date, and renewing any time before then picks up right where you left off.'],
     ['Can we add teams in the middle of a season?', 'Yes. New teams are charged only through your current end date.'],
     ['Can we pay by invoice?', 'Yes. Three teams turn on while the invoice is open, and the rest turn on when it\'s paid.'],
     ['Who owns the videos?', 'Your club. Games stream to your club\'s YouTube channel. ScoreFrame doesn\'t host video.'],
@@ -951,7 +954,15 @@ function statusBanner() {
   if (c.status === 'trialing') return `<div class="banner b-info"><div class="txt"><strong>Free trial:</strong> ${c.seats} teams through ${lastDay(c.licenseUntil)} (${daysLeft(c.licenseUntil)} days left).</div><button class="btn primary" type="button" data-go="billing">Buy licenses</button></div>`;
   if (c.status === 'past_due') return `<div class="banner b-bad"><div class="txt"><strong>Invoice ${esc(unpaid?.stripe?.invoiceNumber || '')} is past due.</strong> Teams stay covered through ${lastDay(c.licenseUntil)}; after that coverage pauses until it's paid.</div>${unpaid?.stripe?.hostedInvoiceUrl ? `<a class="btn dark" href="${esc(unpaid.stripe.hostedInvoiceUrl)}" target="_blank" rel="noopener">Pay the invoice</a>` : ''}</div>`;
   if (c.status === 'awaiting_payment' && unpaid) return `<div class="banner b-warn"><div class="txt"><strong>Invoice ${esc(unpaid.stripe?.invoiceNumber || '')} sent</strong> to ${esc(c.billing?.email || '')}. Due ${unpaid.dueAt ? lastDay(unpaid.dueAt + DAY) : 'in 30 days'}. ${c.unpaidCapped ? `Up to ${c.seats} teams are covered until it's paid; the rest turn on when it's paid.` : 'Your teams are covered meanwhile.'}</div>${unpaid.stripe?.hostedInvoiceUrl ? `<a class="btn ghost" href="${esc(unpaid.stripe.hostedInvoiceUrl)}" target="_blank" rel="noopener">View invoice</a>` : ''}</div>`;
-  if (c.status === 'lapsed') return `<div class="banner b-bad"><div class="txt"><strong>Coverage has ended.</strong> Teams, pages and history are all still here. Renew to turn Pro back on for your coaches.</div><button class="btn primary" type="button" data-go="billing">Renew</button></div>`;
+  if (c.status === 'lapsed') {
+    // After the licenses end (club_lifecycle.js). Dates show once that job is on (club.access).
+    const lc = c.lifecycle; const on = c.access === 'readonly' || c.access === 'offline';
+    const txt = !(lc && on) ? 'Teams, pages and history are all still here. Renew to turn Pro back on for your coaches.'
+      : lc.kind === 'trial' ? `Coaches can't add new games. Your club's data is kept until ${lastDay(lc.deleteAt)}; download it or buy licenses before then.`
+      : lc.stage === 'readonly' ? `Pages stay up until ${lastDay(lc.hostingOffAt)}, but coaches can't add new games. Your data is kept until ${lastDay(lc.deleteAt)}.`
+      : `Pages are offline. Your data is kept until ${lastDay(lc.deleteAt)}; download it or renew before then.`;
+    return `<div class="banner b-bad"><div class="txt"><strong>${lc && on && lc.kind === 'trial' ? 'The trial has ended.' : 'Coverage has ended.'}</strong> ${txt}</div><div class="row">${lc && on ? '<button class="btn ghost" type="button" data-datago="1">Download data</button>' : ''}<button class="btn primary" type="button" data-go="billing">${lc && lc.kind === 'trial' ? 'Buy licenses' : 'Renew'}</button></div></div>`;
+  }
   if (c.status === 'scheduled') return `<div class="banner b-info"><div class="txt"><strong>Coverage starts ${c.nextStart ? fmtYmd(ymdOf(c.nextStart + 12 * 3600 * 1000)) : 'soon'}.</strong></div></div>`;
   if (c.status === 'active' && c.licenseUntil && daysLeft(c.licenseUntil) <= 30) return `<div class="banner b-warn"><div class="txt"><strong>Coverage runs through ${lastDay(c.licenseUntil)}</strong> (${daysLeft(c.licenseUntil)} days left).</div><button class="btn primary" type="button" data-go="billing">Renew or extend</button></div>`;
   return '';
@@ -959,6 +970,7 @@ function statusBanner() {
 
 function wireCommon() {
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { S.tab = b.dataset.go; S.teamId = null; setUrl(); render(); });
+  document.querySelectorAll('[data-datago]').forEach(b => b.onclick = () => { S.tab = 'settings'; S.teamId = null; S.dataFocus = true; setUrl(); render(); });
   const tb = $('trialBtn'); if (tb) tb.onclick = (ev) => busy(ev.currentTarget, async () => { const r = await call('clubStartTrial', { clubId: S.clubId, today: localToday() }); toast(`Trial started: 3 teams through ${fmtYmd(addDaysYmd(r.endDate, -1))}.`); });
 }
 
@@ -1733,6 +1745,11 @@ function renderSettings() {
       <div><button class="btn primary" type="button" id="sGo">Save</button></div>
       <p class="muted" style="margin:0;font-size:13px;line-height:1.45;">Need a second director, or to hand the club to someone else? Email support@scoreframe.app.</p>
     </section>
+    <section class="card pad" id="dataCard" style="max-width:640px;display:flex;flex-direction:column;gap:12px;">
+      <h2 style="font-size:20px;font-weight:800;">Your club's data</h2>
+      <p class="muted" style="margin:0;line-height:1.5;">Download everything as one file: every team's roster, staff, schedule and games, with links to the videos, as spreadsheets plus a complete copy. It's yours to keep any time, and after a license ends it's kept for a while so you can download it (see the <a href="club-terms.html">Club Terms</a>).</p>
+      <div><button class="btn dark" type="button" id="dataBtn">Download your club's data</button></div>
+    </section>
     <section class="card pad" style="max-width:640px;display:flex;flex-direction:column;gap:12px;">
       <h2 style="font-size:20px;font-weight:800;">Privacy and terms</h2>
       <div class="row"><div style="flex:1 1 260px;"><div style="font-weight:700;">Who can see your teams</div><div class="muted" style="font-size:14px;">${c.privacyConfirmedAt ? esc(PRIVACY[c.privacy || 'signed_in'].short) : 'Not chosen yet'}</div></div><button class="btn ghost" type="button" id="pvOpen">${c.privacyConfirmedAt ? 'Change' : 'Choose'}</button></div>
@@ -1781,6 +1798,12 @@ function renderSettings() {
     const r = await call('clubApplyLook', { clubId: S.clubId, logo: true, colors: true });
     await loadTeams(); toast(r.teamsUpdated ? `${r.teamsUpdated} team${r.teamsUpdated === 1 ? '' : 's'} updated.` : 'Every team already uses the club look.');
   });
+  $('dataBtn').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const r = await call('clubExport', { clubId: S.clubId });
+    toast(`Downloading ${r.teams} team${r.teams === 1 ? '' : 's'} and ${r.games} game${r.games === 1 ? '' : 's'}.`, 6000);
+    location.href = r.url;
+  });
+  if (S.dataFocus) { S.dataFocus = false; setTimeout(() => $('dataCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50); }
   $('sGo').onclick = (ev) => busy(ev.currentTarget, async () => {
     await call('clubUpdate', { clubId: S.clubId, name: $('sName').value, city: $('sCity').value, orgName: $('sOrg').value, billingEmail: $('sBill').value });
     toast('Saved.'); await loadClubs(); renderWho();
