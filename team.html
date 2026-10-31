@@ -674,6 +674,8 @@ button.player-family-pill:hover { border-color: var(--accent); color: var(--acce
 }
 .auth-tab:hover { color: var(--text-primary); }
 .auth-tab.active { background: var(--accent); color: #1A1A1A; }
+.auth-legal { font-size: 12px; line-height: 1.45; color: var(--text-secondary); text-align: center; margin: 10px 0 0; }
+.auth-legal a { color: var(--accent); font-weight: 700; text-decoration: none; }
 .auth-divider {
     display: flex; align-items: center; gap: 12px; margin: 16px 0;
     font-size: 12px; color: var(--text-muted);
@@ -1236,6 +1238,9 @@ window.sfClubOffline = function (t) {
             Continue with Google
         </button>
 
+        <div class="auth-legal">By continuing, you agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a>
+            and <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</div>
+
         <div class="auth-divider">or</div>
 
         <div id="emailForm">
@@ -1309,6 +1314,7 @@ window.sfClubOffline = function (t) {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { noticeShown as legalNoticeShown, onSignedIn as legalSignedIn } from '/legal-consent.js';
 import { initializeFirestore, getFirestore, doc, getDoc, collection, getDocs, query, orderBy, where, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, limit as fbLimit }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getDatabase, ref, onValue }
@@ -1655,6 +1661,8 @@ if (!hubCode || hubCode.length < 4) {
             // need to be able to click that button voluntarily"). An invitation
             // shows "Accept invitation"; only that tap accepts it.
         }
+        // Record a fresh sign-in as agreeing, or ask about updated terms (legal-consent.js).
+        if (currentUser) legalSignedIn(app, currentUser);
         // Repaint the account bar on EVERY auth event.
         //
         // Eric 2026-08-17: after clicking a player's Stats and pressing Back,
@@ -2432,6 +2440,7 @@ window.doSignIn = function(createMode) {
         return;
     }
     $('authOverlay').classList.add('show');
+    legalNoticeShown();   // the box says "By continuing, you agree…" (legal-consent.js)
     setAuthMode(createMode === true);
 };
 
