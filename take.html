@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Take over this game · ScoreFrame</title>
+<meta name="description" content="A coach is giving you a game to stream and score in the ScoreFrame app.">
+<link rel="canonical" href="https://scoreframe.app/take.html">
+<link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=JetBrains+Mono:wght@700&display=swap">
+<!--
+  Game pass (docs/GAME_PASS_SPEC.md, Eric 2026-10-30). The coach's QR code is
+  this page: https://scoreframe.app/take.html?c=CODE. With the app installed
+  the link opens it straight onto "Take over this game?" (Android app link,
+  iPhone universal link); this page is for a phone without it, and for a
+  browser that didn't hand the link over. It only looks the code up
+  (gamePassPeek); taking the game happens in the app.
+-->
+<style>
+:root {
+  --bg: #F5F5F2; --s1: #FFFFFF; --s2: #EDECEA; --ln: #DDDBD8; --tx: #1C1B1F; --mu: #49454F;
+  --ac: #FF9640; --on: #1A1004; --act: #8B5000; --ok: #1E8E4E; --red: #C62828;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1C1D21; --s1: #26282D; --s2: #30333A; --ln: #3D4048; --tx: #F5F3EF; --mu: #B4B8C0;
+    --act: #FFB477; --ok: #39D98A; --red: #FF5B4F; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1C1D21; --s1: #26282D; --s2: #30333A; --ln: #3D4048; --tx: #F5F3EF; --mu: #B4B8C0;
+  --act: #FFB477; --ok: #39D98A; --red: #FF5B4F; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--tx); font: 16px/1.45 Archivo, -apple-system, Roboto, system-ui, sans-serif;
+  padding: max(20px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom)); }
+main { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.logo { font-weight: 900; font-size: 20px; } .logo b { color: var(--ac); font-weight: 900; }
+.eb { font: 700 11px 'JetBrains Mono', ui-monospace, Menlo, monospace; letter-spacing: 1.3px; text-transform: uppercase; color: var(--act); }
+h1 { margin: 0; font-size: 26px; line-height: 1.2; font-weight: 900; text-wrap: balance; }
+.game { border-radius: 22px; padding: 18px; color: #fff; display: flex; flex-direction: column; gap: 6px;
+  background: linear-gradient(135deg, var(--c1, #C8102E) 0%, color-mix(in srgb, var(--c1, #C8102E) 70%, #000) 60%, var(--s1) 100%); }
+.game .m { font-size: 22px; font-weight: 900; line-height: 1.2; }
+.game .d { font-size: 14px; opacity: .92; }
+.card { background: var(--s1); border: 1px solid var(--ln); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.li { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+.ck { flex: none; width: 20px; height: 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); font-size: 12px; font-weight: 900; margin-top: 1px; }
+.mu { color: var(--mu); font-size: 14px; }
+.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.btn { display: flex; align-items: center; justify-content: center; min-height: 54px; border-radius: 16px; font-weight: 900; font-size: 17px;
+  text-decoration: none; border: 0; cursor: pointer; }
+.btn.primary { background: var(--ac); color: var(--on); }
+.btn.plain { background: transparent; color: var(--tx); border: 1px solid var(--ln); font-size: 15px; }
+.btn:focus-visible { outline: 3px solid var(--act); outline-offset: 2px; }
+.stores { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.code { font: 800 22px 'JetBrains Mono', ui-monospace, Menlo, monospace; letter-spacing: 5px; color: var(--act); }
+.err { color: var(--red); font-size: 15px; }
+.small { font-size: 12px; color: var(--mu); text-align: center; }
+.small a { color: var(--act); font-weight: 700; text-decoration: none; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="logo">Score<b>Frame</b></div>
+  <div id="loading" class="mu">Looking up the game…</div>
+  <div id="bad" class="card" hidden><div class="err" id="badText"></div><div class="mu">Ask the coach for a new code.</div></div>
+  <section id="game" hidden style="display:flex;flex-direction:column;gap:16px">
+    <div class="eb" id="from"></div>
+    <div class="game" id="card"><div class="m" id="matchup"></div><div class="d" id="detail"></div></div>
+    <h1>Take over this game?</h1>
+    <div class="mu" style="font-size:15px;color:var(--tx)">You stream it live and keep score in the ScoreFrame app. Pro is on for this game.</div>
+    <div class="card">
+      <div class="li"><span class="ck">✓</span><span id="streamLine">The live stream is already set up</span></div>
+      <div class="li"><span class="ck">✓</span><span>Stats and highlights for the players</span></div>
+      <div class="li"><span class="ck">✓</span><span>The roster and team colors, just for this game</span></div>
+      <div class="li"><span class="ck">✓</span><span>No account needed. Nothing is saved on your phone.</span></div>
+    </div>
+    <a class="btn primary" id="open" href="#">Open in ScoreFrame</a>
+    <div class="card">
+      <div style="font-weight:900">Don't have the app?</div>
+      <ol class="steps">
+        <li>Get ScoreFrame (free).</li>
+        <li>Scan the coach's code again, or come back to this page and tap Open in ScoreFrame.</li>
+      </ol>
+      <div class="stores">
+        <a class="btn plain" href="https://apps.apple.com/us/app/scoreframe/id6762281454">App Store</a>
+        <a class="btn plain" href="https://play.google.com/store/apps/details?id=com.scoreframe.android">Google Play</a>
+      </div>
+      <div class="mu">Code <span class="code" id="code"></span></div>
+    </div>
+    <div class="small">Taking a game means you agree to the <a href="/terms.html">Terms of Service</a> and <a href="/privacy.html">Privacy Policy</a>.</div>
+  </section>
+</main>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
+const app = initializeApp({
+  apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU", authDomain: "scoreframe-deploy.firebaseapp.com",
+  projectId: "scoreframe-deploy", storageBucket: "scoreframe-deploy.firebasestorage.app",
+  messagingSenderId: "728886280072", appId: "1:728886280072:android:0050478669b89fc76b043d",
+});
+const $ = (id) => document.getElementById(id);
+const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const raw = (new URLSearchParams(location.search).get('c') || '').toUpperCase().replace(/[\s-]/g, '');
+const code = raw.length === 6 && [...raw].every((ch) => ALPHA.includes(ch)) ? raw : '';
+const bad = (t) => { $('loading').hidden = true; $('badText').textContent = t; $('bad').hidden = false; };
+const color = (v) => typeof v === 'number' ? '#' + ((v >>> 0) & 0xFFFFFF).toString(16).padStart(6, '0') : (typeof v === 'string' && /^#?[0-9a-f]{6}$/i.test(v) ? (v[0] === '#' ? v : '#' + v) : null);
+
+if (!code) bad("That isn't a game code. Codes are 6 letters and numbers.");
+else {
+  const link = `https://scoreframe.app/take.html?c=${code}`;
+  // Android: hand the link to the app by package when the browser kept it.
+  const android = /Android/i.test(navigator.userAgent);
+  $('open').href = android ? `intent://scoreframe.app/take.html?c=${code}#Intent;scheme=https;package=com.scoreframe.android;S.browser_fallback_url=${encodeURIComponent('https://play.google.com/store/apps/details?id=com.scoreframe.android')};end` : link;
+  $('code').textContent = code.slice(0, 3) + ' ' + code.slice(3);
+  try {
+    const r = (await httpsCallable(getFunctions(app), 'gamePassPeek')({ code })).data;
+    const d = r.display || {};
+    if (!r.open) bad(r.status === 'taken' ? 'Another phone already took this game.' : r.status === 'expired' ? 'This code has run out.' : "This code isn't open any more.");
+    else {
+      $('loading').hidden = true;
+      $('from').textContent = `${r.ownerName || 'A coach'} is giving you this game`;
+      $('matchup').textContent = [d.teamName, d.opponent].filter(Boolean).join(' vs ');
+      const sport = d.sport ? d.sport.charAt(0) + d.sport.slice(1).toLowerCase() : '';
+      const when = d.date ? new Date(d.date).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+      $('detail').textContent = [sport, when, d.location].filter(Boolean).join(' · ');
+      const c1 = color(d.color);
+      if (c1) $('card').style.setProperty('--c1', c1);
+      $('streamLine').textContent = r.kind === 'club' ? `Live stream to ${d.club || d.teamName}'s channel, set up for you` : `Live stream to ${r.ownerName || "the coach"}'s YouTube channel, already set up`;
+      $('game').hidden = false;
+    }
+  } catch (e) {
+    bad(/No game has that code/.test(e.message || '') ? 'No game has that code. Check it with the coach.' : "Couldn't look the code up. Check your connection and reload.");
+  }
+}
+</script>
+</body>
+</html>
