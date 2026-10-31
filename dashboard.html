@@ -1094,12 +1094,11 @@ function teamCard(team, role) {
 
     let actions = '';
     if (role === 'owner' || role === 'manager') {
-        // Owners/managers get an "Invite Followers" action
-        if (team.hubCode) {
-            actions = `<div style="display:flex;gap:8px;margin-top:6px;">
-                <button onclick="event.preventDefault();window._inviteFollower('${team.id}')" style="padding:4px 10px;background:var(--accent);color:#1A1A1A;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">✉ Invite Follower</button>
-            </div>`;
-        }
+        // Owners/managers: the full team editor on the web (2026-10-31), and invites.
+        actions = `<div style="display:flex;gap:8px;margin-top:6px;">
+            <button onclick="event.preventDefault();location.href='manage.html?team=${encodeURIComponent(team.id)}&tab=team'" style="padding:4px 10px;background:var(--accent);color:#1A1A1A;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Edit team</button>
+            ${team.hubCode ? `<button onclick="event.preventDefault();window._inviteFollower('${team.id}')" style="padding:4px 10px;background:transparent;color:var(--text-secondary);border:1px solid var(--text-muted);border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Invite follower</button>` : ''}
+        </div>`;
     } else {
         const followBtn = team.isFollowing
             ? `<button onclick="event.preventDefault();window._unfollow('${team.id}','${team.hubCode}')" style="padding:4px 10px;background:transparent;color:var(--text-muted);border:1px solid var(--text-muted);border-radius:4px;font-size:11px;cursor:pointer;">Unfollow</button>`

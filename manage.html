@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#111215">
-<title>Team Roster and People</title>
+<title>Team Editor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -108,7 +108,8 @@ dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; m
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
-import { initializeFirestore, doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { initializeFirestore, doc, getDoc, updateDoc, deleteDoc, setDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getStorage, ref as sref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword,
   GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, sendPasswordResetEmail }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -146,7 +147,7 @@ function toast(msg, ms = 4000) { const t = $('toast'); t.textContent = msg; t.cl
 async function busy(btn, fn) { const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'Working…'; try { return await fn(); } catch (e) { toast(errText(e), 6000); } finally { btn.disabled = false; btn.innerHTML = old; } }
 
 const params = new URLSearchParams(location.search);
-const S = { user: null, teamId: params.get('team') || '', tab: ['people', 'schedule'].includes(params.get('tab')) ? params.get('tab') : 'roster', games: null,
+const S = { user: null, teamId: params.get('team') || '', tab: ['team', 'people', 'schedule', 'seasons', 'opponents'].includes(params.get('tab')) ? params.get('tab') : 'roster', games: null,
   team: null, data: null, filter: 'all', view: 'person', loading: false };
 function setUrl() { const p = new URLSearchParams(); if (S.teamId) p.set('team', S.teamId); if (S.tab !== 'roster') p.set('tab', S.tab); history.replaceState(null, '', `${location.pathname}?${p}`); }
 
@@ -225,13 +226,18 @@ function render() {
       ${t.hub && t.hub.hubCode ? `<a class="btn" style="background:rgba(255,255,255,.16);color:#fff;" href="/team.html?code=${encodeURIComponent(t.hub.hubCode)}" target="_blank" rel="noopener">Open team page</a>` : ''}
     </div>
     <nav class="sub" aria-label="Sections">
+      <button type="button" data-tab="team" ${S.tab === 'team' ? 'aria-current="page"' : ''}>Team</button>
       <button type="button" data-tab="roster" ${S.tab === 'roster' ? 'aria-current="page"' : ''}>Roster · ${players().length}</button>
       <button type="button" data-tab="people" ${S.tab === 'people' ? 'aria-current="page"' : ''}>People · ${rows().length}${waiting ? `<span class="badge">${waiting}</span>` : ''}</button>
       <button type="button" data-tab="schedule" ${S.tab === 'schedule' ? 'aria-current="page"' : ''}>Schedule${S.games ? ' · ' + S.games.length : ''}</button>
+      <button type="button" data-tab="seasons" ${S.tab === 'seasons' ? 'aria-current="page"' : ''}>Seasons</button>
+      <button type="button" data-tab="opponents" ${S.tab === 'opponents' ? 'aria-current="page"' : ''}>Opponents</button>
     </nav>
     <div id="tabBody"></div>`;
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; setUrl(); render(); });
-  if (S.tab === 'people') renderPeople(); else if (S.tab === 'schedule') renderSchedule(); else renderRoster();
+  if (S.tab === 'people') renderPeople(); else if (S.tab === 'schedule') renderSchedule();
+  else if (S.tab === 'team') renderTeamTab(); else if (S.tab === 'seasons') renderSeasons();
+  else if (S.tab === 'opponents') renderOpponents(); else renderRoster();
 }
 
 // ── Roster ───────────────────────────────────────────────────────────
@@ -701,6 +707,268 @@ function editPerson(r) {
     if (!confirm(`Cancel the invitation to ${r.email}?`)) return;
     await call('teamPeopleSave', { teamId: S.teamId, email: r.email, action: 'remove' }); d.close(); toast('Invitation canceled.'); await reload();
   });
+}
+
+// ── Team, Seasons, Opponents (Eric 2026-10-31: "Everything the app has") ──
+// The app's Edit menu on the web: team info, logo and colors, who sees the team
+// page, tournaments, archive or delete; seasons; opponents. Same fields and
+// formats the apps write (TeamManager / SeasonManager / OpponentManager), merge
+// updates only. A club team's name, colors and logo are the club director's
+// (club console), as in the apps. Deleting goes through purgeTeam, like the apps.
+const storage = getStorage(app);
+const VIS = [['invite_only', 'Anyone with the code or link', 'Searchable; you approve each follower.'],
+  ['public', 'Public', 'Listed in Find a team; you approve followers.'], ['private', 'Private', 'Not searchable; follow only with the team code.']];
+const hexOf = (v, fb) => {
+  if (typeof v === 'number' && isFinite(v)) return '#' + ((v >>> 0) & 0xFFFFFF).toString(16).padStart(6, '0').toUpperCase();
+  const m = String(v || '').replace('#', '').match(/^(?:[0-9a-fA-F]{2})?([0-9a-fA-F]{6})$/);
+  return m ? '#' + m[1].toUpperCase() : fb;
+};
+const argbOf = (hex) => (0xFF000000 | parseInt(hex.replace('#', ''), 16)) | 0;   // Android's color int (opponents)
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2));
+const clubName = () => (S.team && S.team.club && S.team.club.clubId) ? (S.team.club.name || 'your club') : null;
+const isOwner = () => !!(S.user && S.team && S.team.ownerUid === S.user.uid);
+
+function renderTeamTab() {
+  const t = S.team || {}; const can = !!S.data.canEdit; const club = clubName();
+  const lock = club ? `<div class="muted" style="font-size:13px;">Set by ${esc(club)}. The club director changes it in the club console.</div>` : '';
+  const ro = (!can || club) ? 'disabled' : '';
+  const vis = (t.hub && t.hub.visibility) || '';
+  const archived = t.status === 'archived';
+  $('tabBody').innerHTML = `<div class="split">
+    <section class="main card pad" style="display:flex;flex-direction:column;gap:14px;">
+      <h2 style="font-size:18px;font-weight:800;">Team info</h2>
+      <div class="field"><label for="tName">Team name</label><input id="tName" value="${esc(t.name || '')}" maxlength="60" ${ro}>${lock}</div>
+      <div class="field"><label for="tSb">Scoreboard name (optional)</label><input id="tSb" value="${esc(t.scoreboardName || '')}" maxlength="12" placeholder="Shown on the video, e.g. UMIC" ${can ? '' : 'disabled'}></div>
+      <div class="split" style="gap:10px;">
+        <div class="field" style="flex:1 1 200px;"><label for="tCity">City</label><input id="tCity" value="${esc(t.city || '')}" maxlength="60" ${can ? '' : 'disabled'}></div>
+        <div class="field" style="flex:1 1 200px;"><label for="tRegion">State or region</label><input id="tRegion" value="${esc(t.region || '')}" maxlength="60" ${can ? '' : 'disabled'}></div>
+        <div class="field" style="flex:1 1 120px;"><label for="tAge">Age group</label><input id="tAge" value="${esc(t.ageDivision || '')}" maxlength="20" placeholder="e.g. 14U" ${can ? '' : 'disabled'}></div>
+      </div>
+      <div class="field"><label>Sport</label><div style="font-weight:700;">${esc(SPORTS[t.sport] || t.sport || '')}</div>
+        <div class="muted" style="font-size:13px;">The sport is set when a team is made; its page, schedule and stats are built around it.</div></div>
+      <label style="display:flex;gap:10px;align-items:center;font-size:15px;color:var(--ink);font-weight:500;">
+        <input type="checkbox" id="tStats" ${t.defaultCountTowardStats === false ? '' : 'checked'} ${can ? '' : 'disabled'}> New games count toward players' career stats</label>
+      ${can ? '<div class="row"><button class="btn primary" type="button" id="tSave">Save team info</button></div>' : '<div class="muted">Only the owner and managers can change the team. Coaches can view it.</div>'}
+    </section>
+    <aside class="side">
+      <section class="card pad" style="display:flex;flex-direction:column;gap:12px;">
+        <h2 style="font-size:17px;font-weight:800;">Logo and colors</h2>
+        <div class="row">${t.logoUrl && /^https:\/\//.test(t.logoUrl) ? `<img class="logo" src="${esc(t.logoUrl)}" alt="Team logo" style="width:64px;height:64px;border-radius:14px;">` : `<div class="crest" style="width:64px;height:64px;background:${esc(hexOf(t.color, '#C8102E'))};font-size:20px;">${esc(badge(t.ageDivision, t.name))}</div>`}
+          ${ro ? '' : `<label class="btn ghost sm" for="tLogo" style="cursor:pointer;">Upload logo</label><input type="file" id="tLogo" accept="image/*" class="hide">
+          ${t.logoUrl ? '<button class="btn link" type="button" id="tLogoRm">Remove</button>' : ''}`}</div>
+        <div class="split" style="gap:10px;">
+          <div class="field" style="flex:1 1 100px;"><label for="tC1">Main color</label><input id="tC1" type="color" value="${esc(hexOf(t.color, '#C8102E'))}" style="height:44px;padding:4px;" ${ro}></div>
+          <div class="field" style="flex:1 1 100px;"><label for="tC2">Second color</label><input id="tC2" type="color" value="${esc(hexOf(t.color2, '#FFFFFF'))}" style="height:44px;padding:4px;" ${ro}></div>
+        </div>
+        ${lock}${ro ? '' : '<button class="btn dark sm" type="button" id="tColors">Save colors</button>'}
+      </section>
+      <section class="card pad" style="display:flex;flex-direction:column;gap:10px;">
+        <h2 style="font-size:17px;font-weight:800;">Team page</h2>
+        ${t.hub && t.hub.hubCode ? `<div style="font-size:14px;">Code <strong>${esc(t.hub.hubCode)}</strong> · <a href="/team.html?code=${encodeURIComponent(t.hub.hubCode)}" target="_blank" rel="noopener">Open team page</a></div>` : '<div class="muted" style="font-size:14px;">This team has no page yet. Turn it on in the app: Edit › Sharing and people.</div>'}
+        ${t.hub && t.hub.hubCode ? (club ? `<div class="muted" style="font-size:13px;">Who can see it follows ${esc(club)}'s privacy setting in the club console.</div>` : `
+          <div class="field"><label for="tVis">Who can see it</label><select id="tVis" ${can ? '' : 'disabled'}>${VIS.map(v => `<option value="${v[0]}" ${vis === v[0] ? 'selected' : ''}>${esc(v[1])}</option>`).join('')}</select>
+          <div class="muted" style="font-size:13px;" id="tVisHint">${esc((VIS.find(v => v[0] === vis) || VIS[0])[2])}</div></div>`) : ''}
+      </section>
+      <section class="card pad" style="display:flex;flex-direction:column;gap:8px;" id="tEvents">
+        <h2 style="font-size:17px;font-weight:800;">Tournaments</h2><div class="muted" style="font-size:14px;">Loading…</div>
+      </section>
+      ${can && !club ? `<section class="card pad" style="display:flex;flex-direction:column;gap:10px;">
+        <h2 style="font-size:17px;font-weight:800;">Archive or delete</h2>
+        <div class="muted" style="font-size:14px;line-height:1.45;">${archived ? 'This team is archived: off your lists, nothing deleted.' : 'Archive hides the team from your lists and keeps everything. You can bring it back any time.'}</div>
+        <button class="btn ghost sm" type="button" id="tArch">${archived ? 'Bring back' : 'Archive team'}</button>
+        ${isOwner() ? `<div class="muted" style="font-size:13px;line-height:1.45;margin-top:6px;">Delete removes the team, its games, stats and followers for good.</div>
+        <button class="btn sm" type="button" id="tDel" style="position:relative;overflow:hidden;background:var(--bad-bg);color:var(--bad);border-color:#F1C4C4;">
+          <span id="tDelFill" style="position:absolute;left:0;top:0;bottom:0;width:0;background:var(--bad);opacity:.25;"></span><span style="position:relative;">Hold to delete</span></button>` : ''}
+      </section>` : ''}
+    </aside></div>`;
+  if ($('tSave')) $('tSave').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const name = $('tName').value.trim();
+    if (!club && !name) return toast('Give the team a name first.');
+    const patch = { scoreboardName: $('tSb').value.trim(), city: $('tCity').value.trim(), region: $('tRegion').value.trim(),
+      ageDivision: $('tAge').value.trim(), defaultCountTowardStats: $('tStats').checked, updatedAt: Date.now() };
+    if (!club) patch.name = name;
+    await updateDoc(doc(db, 'teams', S.teamId), patch);
+    Object.assign(S.team, patch); toast('Saved. The apps pick it up on their next sync.'); render();
+  });
+  if ($('tColors')) $('tColors').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const patch = { color: $('tC1').value.toUpperCase(), color2: $('tC2').value.toUpperCase(), updatedAt: Date.now() };
+    await updateDoc(doc(db, 'teams', S.teamId), patch); Object.assign(S.team, patch); toast('Colors saved.'); render();
+  });
+  if ($('tLogo')) $('tLogo').onchange = async (ev) => {
+    const f = ev.target.files && ev.target.files[0]; if (!f) return;
+    try {
+      toast('Uploading the logo…', 20000);
+      const png = await squarePng(f, 512);
+      const r = sref(storage, `users/${S.user.uid}/logos/${S.teamId}.png`);
+      await uploadBytes(r, png, { contentType: 'image/png' });
+      const url = await getDownloadURL(r);
+      await updateDoc(doc(db, 'teams', S.teamId), { logoUrl: url, updatedAt: Date.now() });
+      S.team.logoUrl = url; toast('Logo saved.'); render();
+    } catch (e) { toast(errText(e), 6000); }
+  };
+  if ($('tLogoRm')) $('tLogoRm').onclick = (ev) => busy(ev.currentTarget, async () => {
+    if (!confirm('Remove the team logo?')) return;
+    await updateDoc(doc(db, 'teams', S.teamId), { logoUrl: '', _allowShrink: true, updatedAt: Date.now() });
+    S.team.logoUrl = ''; toast('Logo removed.'); render();
+  });
+  if ($('tVis')) $('tVis').onchange = async (ev) => {
+    const v = ev.target.value; $('tVisHint').textContent = (VIS.find(x => x[0] === v) || VIS[0])[2];
+    try { await updateDoc(doc(db, 'teams', S.teamId), { 'hub.visibility': v, updatedAt: Date.now() }); S.team.hub.visibility = v; toast('Saved.'); }
+    catch (e) { toast(errText(e), 6000); }
+  };
+  if ($('tArch')) $('tArch').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const patch = archived ? { status: 'active', updatedAt: Date.now() } : { status: 'archived', archivedAt: Date.now(), updatedAt: Date.now() };
+    await updateDoc(doc(db, 'teams', S.teamId), patch); Object.assign(S.team, patch);
+    toast(archived ? 'The team is back.' : 'Archived. Bring it back here or in the app.'); render();
+  });
+  if ($('tDel')) holdToDelete($('tDel'), $('tDelFill'), async () => {
+    toast('Deleting…', 20000);
+    try { await call('purgeTeam', { teamId: S.teamId }); $('main').innerHTML = '<div class="loading">The team was deleted.</div>'; toast('Deleted.'); }
+    catch (e) { toast(errText(e), 6000); }
+  });
+  loadEvents();
+}
+
+/** Hold about 1.8 s to delete, like the apps. Letting go early cancels. */
+function holdToDelete(btn, fill, go) {
+  let t0 = 0, raf = 0;
+  const stop = () => { cancelAnimationFrame(raf); t0 = 0; fill.style.width = '0'; };
+  const tick = () => { const p = Math.min(1, (performance.now() - t0) / 1800); fill.style.width = (p * 100) + '%';
+    if (p >= 1) { stop(); go(); } else raf = requestAnimationFrame(tick); };
+  btn.addEventListener('pointerdown', (e) => { e.preventDefault(); t0 = performance.now(); raf = requestAnimationFrame(tick); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(k => btn.addEventListener(k, stop));
+  btn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && confirm('Delete this team for good?')) go(); });
+}
+
+/** The picked image as a square PNG (centered, contained), the size the apps use. */
+function squarePng(file, size) {
+  return new Promise((res, rej) => {
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = c.height = size;
+      const k = Math.min(size / img.width, size / img.height); const w = img.width * k, h = img.height * k;
+      c.getContext('2d').drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      URL.revokeObjectURL(url); c.toBlob(b => b ? res(b) : rej(new Error("Couldn't read that image.")), 'image/png');
+    };
+    img.onerror = () => rej(new Error("Couldn't read that image."));
+    img.src = url;
+  });
+}
+
+async function loadEvents() {
+  const box = $('tEvents'); if (!box) return;
+  try {
+    const snap = await getDocs(collection(db, 'teams', S.teamId, 'events'));
+    const evs = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.startDate || b.date || 0) - (a.startDate || a.date || 0)).slice(0, 12);
+    const code = S.team.hub && S.team.hub.hubCode;
+    box.innerHTML = `<h2 style="font-size:17px;font-weight:800;">Tournaments</h2>` + (evs.length
+      ? evs.map(e => `<div class="row" style="justify-content:space-between;font-size:14px;"><span><strong>${esc(e.name || 'Tournament')}</strong> <span class="muted">${esc(fmtDay(e.startDate || e.date))}</span></span>
+          ${code ? `<a href="/event.html?team=${encodeURIComponent(code)}&id=${encodeURIComponent(e.id)}" target="_blank" rel="noopener">Open</a>` : ''}</div>`).join('')
+      : '<div class="muted" style="font-size:14px;">None yet. Set one up in the app (Edit › Tournaments)' + (clubName() ? ' or in the club console.' : '.') + '</div>');
+  } catch (_) { box.innerHTML = '<h2 style="font-size:17px;font-weight:800;">Tournaments</h2><div class="muted" style="font-size:14px;">Couldn\'t load tournaments.</div>'; }
+}
+
+// ── Seasons (Android SeasonDetailActivity / iPhone SeasonDetailScreen) ──
+async function renderSeasons() {
+  const can = !!S.data.canEdit;
+  $('tabBody').innerHTML = '<div class="loading">Loading seasons…</div>';
+  let seasons = [];
+  try { seasons = (await getDocs(collection(db, 'teams', S.teamId, 'seasons'))).docs.map(d => ({ id: d.id, ...d.data() })); }
+  catch (e) { $('tabBody').innerHTML = `<div class="loading">${esc(errText(e))}</div>`; return; }
+  seasons.sort((a, b) => (b.startDate || 0) - (a.startDate || 0));
+  const running = seasons.filter(s => !s.endDate);
+  const day = (ms) => ms ? new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  $('tabBody').innerHTML = `<div class="split"><section class="main card" style="overflow:hidden;">
+    <div class="scroll"><table class="tbl" style="min-width:520px;"><thead><tr><th>Season</th><th>Dates</th><th>Status</th><th><span class="hide">Actions</span></th></tr></thead><tbody>
+    ${seasons.map(s => `<tr><td style="font-weight:700;">${esc(s.name || 'Untitled season')}</td><td class="muted">${esc(day(s.startDate))} – ${s.endDate ? esc(day(s.endDate)) : 'now'}</td>
+      <td>${!s.endDate && s.isActive ? '<span class="status s-ok">Running</span>' : s.endDate ? '<span class="status s-mu">Ended</span>' : '<span class="status s-mu">Not running</span>'}</td>
+      <td>${can ? `<button class="btn link" type="button" data-sren="${esc(s.id)}">Rename</button>${!s.endDate ? `<button class="btn link" type="button" data-send="${esc(s.id)}">End</button>` : ''}<button class="btn link" type="button" data-sdel="${esc(s.id)}">Delete</button>` : ''}</td></tr>`).join('')
+      || '<tr><td colspan="4" class="muted" style="text-align:left;white-space:normal;">No seasons yet. The app makes the first one when the team is created.</td></tr>'}
+    </tbody></table></div></section>
+    <aside class="side"><section class="card pad" style="display:flex;flex-direction:column;gap:10px;">
+      <h2 style="font-size:17px;font-weight:800;">New season</h2>
+      <div class="muted" style="font-size:14px;line-height:1.45;">Ends the running season and starts a fresh one. Games stay in the season they were played in; new games go into the new one.</div>
+      ${can ? '<input id="sNew" placeholder="e.g. Spring 2027" maxlength="60" aria-label="New season name"><button class="btn primary" type="button" id="sStart">Start new season</button>' : '<div class="muted">Only the owner and managers can change seasons.</div>'}
+      <div class="muted" style="font-size:13px;line-height:1.45;">Deleting a season never deletes games: it's refused while any game is still in it.</div>
+    </section></aside></div>`;
+  const now = () => Date.now();
+  const sDoc = (id) => doc(db, 'teams', S.teamId, 'seasons', id);
+  document.querySelectorAll('[data-sren]').forEach(b => b.onclick = () => busy(b, async () => {
+    const s = seasons.find(x => x.id === b.dataset.sren); const name = (prompt('Season name', s.name || '') || '').trim(); if (!name) return;
+    await updateDoc(sDoc(s.id), { name, updatedAt: now() }); toast('Renamed.'); renderSeasons();
+  }));
+  document.querySelectorAll('[data-send]').forEach(b => b.onclick = () => busy(b, async () => {
+    if (running.length <= 1) return toast('This is the only running season. Start the next one first, so new games always have a season.', 7000);
+    const s = seasons.find(x => x.id === b.dataset.send); if (!confirm(`End “${s.name}”? Its games stay in it.`)) return;
+    await updateDoc(sDoc(s.id), { isActive: false, endDate: now(), updatedAt: now() }); toast('Season ended.'); renderSeasons();
+  }));
+  document.querySelectorAll('[data-sdel]').forEach(b => b.onclick = () => busy(b, async () => {
+    const s = seasons.find(x => x.id === b.dataset.sdel);
+    const n = (await getDocs(query(collection(db, 'teams', S.teamId, 'games'), where('seasonId', '==', s.id)))).size;
+    if (n > 0) return toast(`“${s.name}” still has ${n} game${n === 1 ? '' : 's'}. Move them to another season first (open a game › Edit › Season).`, 8000);
+    if (!confirm(`Delete “${s.name}”? It has no games; nothing else changes.`)) return;
+    await deleteDoc(sDoc(s.id)); toast('Season deleted.'); renderSeasons();
+  }));
+  if ($('sStart')) $('sStart').onclick = (ev) => busy(ev.currentTarget, async () => {
+    const name = $('sNew').value.trim() || 'Untitled season'; const t = now();
+    for (const s of running) await updateDoc(sDoc(s.id), { isActive: false, endDate: t, updatedAt: t });
+    const id = uuid(); const code = (S.team.hub && S.team.hub.hubCode) || '';
+    const fresh = { id, teamId: S.teamId, name, sport: S.team.sport || '', startDate: t, endDate: null, isActive: true,
+      shareCode: code, visibility: (running[0] && running[0].visibility) || 'public', createdAt: t, updatedAt: t };
+    await setDoc(sDoc(id), fresh, { merge: true });
+    if (code) setDoc(doc(db, 'seasonIndex', code), { teamId: S.teamId, seasonId: id, name, sport: fresh.sport }, { merge: true }).catch(() => {});
+    toast(`Started ${name}.`); renderSeasons();
+  });
+}
+
+// ── Opponents (Android OpponentManager; colors are the apps' color ints) ──
+async function renderOpponents() {
+  const can = !!S.data.canEdit || S.data.role === 'coach';
+  $('tabBody').innerHTML = '<div class="loading">Loading opponents…</div>';
+  let opps = [];
+  try { opps = (await getDocs(collection(db, 'teams', S.teamId, 'opponents'))).docs.map(d => ({ id: d.id, ...d.data() })); }
+  catch (e) { $('tabBody').innerHTML = `<div class="loading">${esc(errText(e))}</div>`; return; }
+  opps.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+  const sw = (o) => o.logoCloudUrl ? `<img class="logo" src="${esc(o.logoCloudUrl)}" alt="" style="width:34px;height:34px;border-radius:9px;">`
+    : `<span class="crest" style="width:34px;height:34px;font-size:12px;background:${esc(hexOf(o.color, '#C62828'))};color:#fff;">${esc(initials(o.name))}</span>`;
+  $('tabBody').innerHTML = `<div class="split"><section class="main card" style="overflow:hidden;">
+    <div class="scroll"><table class="tbl" style="min-width:520px;"><thead><tr><th>Opponent</th><th>On the scoreboard</th><th>Division</th><th><span class="hide">Actions</span></th></tr></thead><tbody>
+    ${opps.map(o => `<tr><td><div class="row" style="gap:10px;flex-wrap:nowrap;">${sw(o)}<strong>${esc(o.name || 'Opponent')}</strong></div></td><td class="muted">${esc(o.scoreboardName || '')}</td><td class="muted">${esc(o.division || '')}</td>
+      <td>${can ? `<button class="btn link" type="button" data-oed="${esc(o.id)}">Edit</button><button class="btn link" type="button" data-orm="${esc(o.id)}">Delete</button>` : ''}</td></tr>`).join('')
+      || '<tr><td colspan="4" class="muted" style="text-align:left;white-space:normal;">No opponents yet. Add the teams you play so their names and colors are ready at game time.</td></tr>'}
+    </tbody></table></div></section>
+    <aside class="side"><section class="card pad" style="display:flex;flex-direction:column;gap:10px;">
+      <h2 style="font-size:17px;font-weight:800;">Opponents</h2>
+      <div class="muted" style="font-size:14px;line-height:1.45;">Teams you play, with their colors. They're offered in game setup on both apps. Logos are added in the app.</div>
+      ${can ? '<button class="btn primary" type="button" id="oAdd">Add an opponent</button>' : ''}
+    </section></aside></div>`;
+  const edit = (o) => {
+    const d = $('dlg'); const isNew = !o; o = o || {};
+    d.innerHTML = `<form method="dialog"><h2 style="font-size:20px;font-weight:800;">${isNew ? 'Add an opponent' : 'Edit opponent'}</h2>
+      <div class="field"><label for="oName">Name</label><input id="oName" value="${esc(o.name || '')}" maxlength="60" required></div>
+      <div class="split" style="gap:10px;"><div class="field" style="flex:1 1 160px;"><label for="oSb">Scoreboard name (optional)</label><input id="oSb" value="${esc(o.scoreboardName || '')}" maxlength="12"></div>
+        <div class="field" style="flex:1 1 160px;"><label for="oDiv">Division (optional)</label><input id="oDiv" value="${esc(o.division || '')}" maxlength="30"></div></div>
+      <div class="split" style="gap:10px;"><div class="field" style="flex:1 1 100px;"><label for="oC1">Main color</label><input id="oC1" type="color" value="${esc(hexOf(o.color, '#C62828'))}" style="height:44px;padding:4px;"></div>
+        <div class="field" style="flex:1 1 100px;"><label for="oC2">Second color</label><input id="oC2" type="color" value="${esc(hexOf(o.color2, '#FFFFFF'))}" style="height:44px;padding:4px;"></div></div>
+      <div class="row" style="justify-content:flex-end;"><button class="btn ghost" value="cancel">Cancel</button><button class="btn primary" type="button" id="oSave">Save</button></div></form>`;
+    d.showModal();
+    $('oSave').onclick = (ev) => busy(ev.currentTarget, async () => {
+      const name = $('oName').value.trim(); if (!name) return toast('Give the opponent a name.');
+      const id = o.id || uuid(); const t = Date.now();
+      const data = { id, teamId: o.teamId || S.teamId, teamIds: o.teamIds && o.teamIds.length ? o.teamIds : [S.teamId], name,
+        scoreboardName: $('oSb').value.trim(), division: $('oDiv').value.trim(), color: argbOf($('oC1').value), color2: argbOf($('oC2').value),
+        sports: o.sports && o.sports.length ? o.sports : [S.team.sport || ''], updatedAt: t };
+      if (isNew) data.createdAt = t;
+      await setDoc(doc(db, 'teams', S.teamId, 'opponents', id), data, { merge: true });
+      d.close(); toast('Saved.'); renderOpponents();
+    });
+  };
+  if ($('oAdd')) $('oAdd').onclick = () => edit(null);
+  document.querySelectorAll('[data-oed]').forEach(b => b.onclick = () => edit(opps.find(x => x.id === b.dataset.oed)));
+  document.querySelectorAll('[data-orm]').forEach(b => b.onclick = () => busy(b, async () => {
+    const o = opps.find(x => x.id === b.dataset.orm); if (!confirm(`Delete ${o.name}? Games already played against them keep their names.`)) return;
+    await deleteDoc(doc(db, 'teams', S.teamId, 'opponents', o.id)); toast('Deleted.'); renderOpponents();
+  }));
 }
 </script>
 </body>
