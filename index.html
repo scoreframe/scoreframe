@@ -133,10 +133,19 @@ section{padding-block:72px}
 footer{border-top:1px solid var(--ln);padding-block:32px;color:var(--mu);font-size:14px}
 footer .wrap{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-between}
 .note{max-width:1160px;margin:24px auto 0;padding:14px 18px;border-radius:12px;background:#FFF3E6;color:#6B3D10;font-size:14px;border:1px solid #F3D3B0}
+.club-strip{display:block;background:var(--deep);color:var(--deep-tx);text-decoration:none;font-size:15px}
+.club-strip .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px 10px;padding-block:10px;text-align:center}
+.club-strip b{font-weight:900}
+.club-strip span{color:var(--deep-mu)}
+.club-strip em{font-style:normal;font-weight:900;color:var(--orange);white-space:nowrap}
+.club-strip:hover em{text-decoration:underline}
+@media(max-width:640px){.club-strip span{display:none}}
 </style>
 </head>
 <body>
 
+
+<a class="club-strip club-link" href="club.html#pricing"><div class="wrap"><b>Run a club?</b><span>One license for every team, from $10 per team per month.</span><em>See club plans</em></div></a>
 
 <header>
   <div class="wrap bar">
@@ -170,6 +179,23 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-bet
     </div>
   </div>
 
+  <section id="clubs" class="club-link">
+    <div class="wrap">
+      <div style="background:var(--deep);color:var(--deep-tx);border-radius:26px;padding:clamp(28px,4vw,44px) clamp(22px,4vw,48px);display:flex;flex-wrap:wrap;gap:28px 36px;align-items:center">
+        <div style="flex:1 1 460px;min-width:0;display:flex;flex-direction:column;gap:14px">
+          <p class="eb" style="color:#FFB477;margin:0">For clubs</p>
+          <h2 style="color:var(--deep-tx)">Running a club? Put every team on ScoreFrame.</h2>
+          <p class="lede" style="color:var(--deep-mu);margin:0;max-width:52ch">Pro for every coach on a club team, one YouTube channel for the club, tournaments, and a director console to set it all up. From $10 per team per month, with a 14-day free trial for up to 3 teams.</p>
+          <p style="display:flex;flex-wrap:wrap;gap:12px;margin:4px 0 0"><a class="btn primary" href="club.html">ScoreFrame for clubs</a><a class="btn" href="club.html#demo" style="border-color:var(--deep-tx);color:var(--deep-tx)">See the director console</a></p>
+        </div>
+        <div style="flex:0 1 300px;min-width:0;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px;background:var(--deep2);border:1px solid #2E3038;border-radius:14px;padding:12px 14px"><span style="width:34px;height:34px;border-radius:10px;background:#17306E;color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center">14S</span><b>14 Select</b><span style="margin-left:auto;font:700 10px 'JetBrains Mono',monospace;letter-spacing:.1em;color:#39D98A">PRO</span></div>
+          <div style="display:flex;align-items:center;gap:12px;background:var(--deep2);border:1px solid #2E3038;border-radius:14px;padding:12px 14px"><span style="width:34px;height:34px;border-radius:10px;background:#17306E;color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center">16N</span><b>16 National</b><span style="margin-left:auto;font:700 10px 'JetBrains Mono',monospace;letter-spacing:.1em;color:#39D98A">PRO</span></div>
+          <div style="display:flex;align-items:center;gap:12px;background:var(--deep2);border:1px solid #2E3038;border-radius:14px;padding:12px 14px"><span style="width:34px;height:34px;border-radius:10px;background:#17306E;color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center">18E</span><b>18 Elite</b><span style="margin-left:auto;font:700 10px 'JetBrains Mono',monospace;letter-spacing:.1em;color:#39D98A">PRO</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
   <section class="deep court" id="film">
     <div class="wrap split">
       <div class="copy">
@@ -241,23 +267,6 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-bet
         <div class="plan pro"><h3>Pro</h3><p class="lede">4K, no watermark, unlimited highlights and streaming, player highlight reels, the baseball scorebook. Try it free first.</p></div>
       </div>
       <p style="margin-top:18px"><a href="features.html" style="font-weight:700">Everything Free and Pro include →</a></p>
-    </div>
-  </section>
-  <section id="clubs" class="club-link">
-    <div class="wrap">
-      <div style="background:var(--deep);color:var(--deep-tx);border-radius:26px;padding:clamp(28px,4vw,44px) clamp(22px,4vw,48px);display:flex;flex-wrap:wrap;gap:28px 36px;align-items:center">
-        <div style="flex:1 1 460px;min-width:0;display:flex;flex-direction:column;gap:14px">
-          <p class="eb" style="color:#FFB477;margin:0">For clubs</p>
-          <h2 style="color:var(--deep-tx)">Running a club? Put every team on ScoreFrame.</h2>
-          <p class="lede" style="color:var(--deep-mu);margin:0;max-width:52ch">Pro for every coach on a club team, one YouTube channel for the club, tournaments, and a director console to set it all up. From $10 per team per month.</p>
-          <p style="display:flex;flex-wrap:wrap;gap:12px;margin:4px 0 0"><a class="btn primary" href="club.html">ScoreFrame for clubs</a><a class="btn" href="club.html#demo" style="border-color:var(--deep-tx);color:var(--deep-tx)">See the director console</a></p>
-        </div>
-        <div style="flex:0 1 300px;min-width:0;display:flex;flex-direction:column;gap:10px">
-          <div style="display:flex;align-items:center;gap:12px;background:var(--deep2);border:1px solid #2E3038;border-radius:14px;padding:12px 14px"><span style="width:34px;height:34px;border-radius:10px;background:#17306E;color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center">14S</span><b>14 Select</b><span style="margin-left:auto;font:700 10px 'JetBrains Mono',monospace;letter-spacing:.1em;color:#39D98A">PRO</span></div>
-          <div style="display:flex;align-items:center;gap:12px;background:var(--deep2);border:1px solid #2E3038;border-radius:14px;padding:12px 14px"><span style="width:34px;height:34px;border-radius:10px;background:#17306E;color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center">16N</span><b>16 National</b><span style="margin-left:auto;font:700 10px 'JetBrains Mono',monospace;letter-spacing:.1em;color:#39D98A">PRO</span></div>
-          <div style="display:flex;align-items:center;gap:12px;background:var(--deep2);border:1px solid #2E3038;border-radius:14px;padding:12px 14px"><span style="width:34px;height:34px;border-radius:10px;background:#17306E;color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center">18E</span><b>18 Elite</b><span style="margin-left:auto;font:700 10px 'JetBrains Mono',monospace;letter-spacing:.1em;color:#39D98A">PRO</span></div>
-        </div>
-      </div>
     </div>
   </section>
   <script>

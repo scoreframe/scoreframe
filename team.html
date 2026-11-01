@@ -848,7 +848,25 @@ html, body { font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe U
 #teamContent { display: flex !important; flex-direction: column; gap: 22px; padding: 18px 0 40px; }
 #teamContent[style*="display: none"], #teamContent[style*="display:none"] { display: none !important; }
 .tp-col { display: contents; }
-#tpNow { order: 1; } #seasonBlock { order: 2; } #scheduleRailSection { order: 3; }
+#tpNow { order: 1; } #seasonBlock { order: 2; } #scheduleRailSection { order: 3; } #practicesSection { order: 3; }
+.tp-practices { margin: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.tp-practices .head { display: flex; align-items: center; gap: 8px; }
+.tp-practices h2 { margin: 0; font-size: 19px; font-weight: 900; flex: 1 1 auto; }
+.tp-practices .lock { font-size: 12px; font-weight: 700; color: var(--muted); }
+.tp-practices .list { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.tp-practice { border-top: 1px solid var(--border); }
+.tp-practice:first-child { border-top: 0; }
+.tp-practice > button { display: block; width: 100%; padding: 12px 14px; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.tp-practice .when { font-size: 15px; font-weight: 900; display: flex; gap: 10px; justify-content: space-between; }
+.tp-practice .where { font-size: 14px; color: var(--muted); margin-top: 2px; }
+.tp-practice.off .when span:first-child { color: var(--muted); text-decoration: line-through; }
+.tp-practice .off-tag { font-size: 13px; font-weight: 900; color: #C62828; white-space: nowrap; }
+.tp-practice .more { padding: 0 14px 12px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+.tp-practice .more a { color: var(--accent); font-weight: 700; }
+.tp-player { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tp-player b { flex: 1 1 120px; }
+.tp-player button { min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: none; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
+.tp-player button.go { background: var(--accent); border-color: var(--accent); color: #1A1004; font-weight: 900; }
 #resultsSection { order: 4; } #rosterSection { order: 5; } #staffSection { order: 6; }
 #pendingRequestsSection { order: 7; } #teamShareCard { order: 8; } #unfollowArea { order: 9; }
 .tp-block { display: flex; flex-direction: column; gap: 12px; }
@@ -1203,6 +1221,10 @@ window.sfClubOffline = function (t) {
             <div class="tp-railhead"><span class="l" id="scheduleRailLabel">Schedule</span></div>
             <div class="tp-rail" id="scheduleRail"></div>
         </div>
+        <section id="practicesSection" class="tp-practices" style="display:none;" aria-label="Practices">
+            <div class="head"><h2>Practices</h2><span class="lock">Team only</span></div>
+            <div class="list" id="practicesList"></div>
+        </section>
         <div class="section" id="staffSection" style="display:none;">
             <div class="section-title">Coaches &amp; managers</div>
             <div id="staffList"></div>
@@ -2101,7 +2123,102 @@ async function acceptInvite() {
     }
 }
 
+// ── Practices (Eric 2026-11-01) ──
+// Shown by who's looking, not by the team's privacy setting: only signed-in
+// staff and approved followers, on any team. firestore.rules enforces the same.
+const practiceTime = (ms) => new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+const practiceDay = (ms) => new Date(ms).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+async function loadPractices() {
+    const box = $('practicesSection');
+    if (!box) return;
+    box.style.display = 'none';
+    if (!currentUser || currentUser.isAnonymous || !teamId || !(isSubscriber || isManager || isCoach)) return;
+    let list = [];
+    try {
+        const snap = await getDocs(query(collection(db, 'teams', teamId, 'practices'), where('endMs', '>', Date.now()), orderBy('endMs'), fbLimit(6)));
+        list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    } catch (_) { return; }
+    if (!list.length) return;
+    const host = $('practicesList');
+    host.replaceChildren(...list.map((p) => {
+        const off = p.status === 'cancelled';
+        const row = document.createElement('div');
+        row.className = 'tp-practice' + (off ? ' off' : '');
+        const b = document.createElement('button');
+        b.type = 'button'; b.setAttribute('aria-expanded', 'false');
+        const when = document.createElement('div'); when.className = 'when';
+        const line = document.createElement('span');
+        line.textContent = `${practiceDay(p.dateMs)} · ${practiceTime(p.dateMs)}\u2013${practiceTime(p.endMs)}`;
+        when.append(line);
+        if (off) { const t = document.createElement('span'); t.className = 'off-tag'; t.textContent = 'Cancelled'; when.append(t); }
+        b.append(when);
+        if (p.location) { const w = document.createElement('div'); w.className = 'where'; w.textContent = p.location; b.append(w); }
+        row.append(b);
+        b.onclick = () => togglePractice(row, b, p);
+        return row;
+    }));
+    box.style.display = '';
+}
+function togglePractice(row, b, p) {
+    const open = row.querySelector('.more');
+    b.setAttribute('aria-expanded', open ? 'false' : 'true');
+    if (open) { open.remove(); return; }
+    const more = document.createElement('div');
+    more.className = 'more';
+    row.append(more);
+    fillPractice(more, p);
+}
+async function fillPractice(more, p) {
+    more.textContent = 'Loading…';
+    let d;
+    try { d = await callFn('practiceApi', { op: 'detail', teamId, practiceId: p.id }); }
+    catch (e) { more.textContent = e.message || 'That didn\'t load. Try again.'; return; }
+    more.replaceChildren();
+    if (p.location) {
+        const a = document.createElement('a');
+        a.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.location);
+        a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Open in maps';
+        more.append(a);
+    }
+    if (d.practice.status === 'cancelled') {
+        if (d.practice.cancelReason) { const r = document.createElement('div'); r.textContent = d.practice.cancelReason; more.append(r); }
+        return;
+    }
+    for (const pl of d.players || []) {
+        const line = document.createElement('div'); line.className = 'tp-player';
+        const name = document.createElement('b');
+        name.textContent = pl.name + (pl.status === 'out' ? ': can\'t make it' : pl.status === 'in' ? ': will be there' : '');
+        line.append(name);
+        const btn = (label, status, go) => {
+            const x = document.createElement('button');
+            x.type = 'button'; x.textContent = label; if (go) x.className = 'go';
+            x.onclick = async () => {
+                line.querySelectorAll('button').forEach((y) => { y.disabled = true; });
+                x.textContent = 'Saving…';
+                try { await callFn('practiceApi', { op: 'mark', teamId, practiceId: p.id, playerId: pl.id, status, note: '' }); fillPractice(more, p); }
+                catch (e) { x.textContent = label; line.querySelectorAll('button').forEach((y) => { y.disabled = false; }); more.append(e.message || 'That didn\'t save.'); }
+            };
+            return x;
+        };
+        if (pl.status === 'none') { line.append(btn('Can\'t make it', 'out', true), btn('I\'ll be there', 'in', false)); }
+        else line.append(btn('Undo', 'none', false));
+        more.append(line);
+    }
+    if ((d.players || []).length) {
+        const n = document.createElement('div'); n.className = 'where';
+        n.textContent = 'You only need to tap if a player can\'t come. Only coaches see who\'s out.';
+        more.append(n);
+    }
+    if (d.attendance) {
+        const a = d.attendance;
+        const s = document.createElement('div');
+        s.textContent = `${a.expected} expected, ${a.out.length} can't make it` + (a.out.length ? `: ${a.out.map((o) => o.name + (o.note ? ` (${o.note})` : '')).join(', ')}` : '');
+        more.append(s);
+    }
+}
+
 function showContent() {
+    loadPractices();
     const isPublic = isOpenToViewer(hubProfile.visibility);
 
     // Show manager badge if user is a manager

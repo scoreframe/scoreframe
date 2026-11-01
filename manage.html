@@ -108,7 +108,7 @@ dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; m
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
-import { initializeFirestore, doc, getDoc, updateDoc, deleteDoc, setDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { initializeFirestore, doc, getDoc, updateDoc, deleteDoc, setDoc, collection, query, where, getDocs, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getStorage, ref as sref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword,
   GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, sendPasswordResetEmail }
@@ -230,6 +230,7 @@ function render() {
       <button type="button" data-tab="roster" ${S.tab === 'roster' ? 'aria-current="page"' : ''}>Roster · ${players().length}</button>
       <button type="button" data-tab="people" ${S.tab === 'people' ? 'aria-current="page"' : ''}>People · ${rows().length}${waiting ? `<span class="badge">${waiting}</span>` : ''}</button>
       <button type="button" data-tab="schedule" ${S.tab === 'schedule' ? 'aria-current="page"' : ''}>Schedule${S.games ? ' · ' + S.games.length : ''}</button>
+      <button type="button" data-tab="practices" ${S.tab === 'practices' ? 'aria-current="page"' : ''}>Practices</button>
       <button type="button" data-tab="seasons" ${S.tab === 'seasons' ? 'aria-current="page"' : ''}>Seasons</button>
       <button type="button" data-tab="opponents" ${S.tab === 'opponents' ? 'aria-current="page"' : ''}>Opponents</button>
     </nav>
@@ -237,6 +238,7 @@ function render() {
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; setUrl(); render(); });
   if (S.tab === 'people') renderPeople(); else if (S.tab === 'schedule') renderSchedule();
   else if (S.tab === 'team') renderTeamTab(); else if (S.tab === 'seasons') renderSeasons();
+  else if (S.tab === 'practices') renderPractices();
   else if (S.tab === 'opponents') renderOpponents(); else renderRoster();
 }
 
@@ -866,6 +868,87 @@ async function loadEvents() {
           ${code ? `<a href="/event.html?team=${encodeURIComponent(code)}&id=${encodeURIComponent(e.id)}" target="_blank" rel="noopener">Open</a>` : ''}</div>`).join('')
       : '<div class="muted" style="font-size:14px;">None yet. Set one up in the app (Edit › Tournaments)' + (clubName() ? ' or in the club console.' : '.') + '</div>');
   } catch (_) { box.innerHTML = '<h2 style="font-size:17px;font-weight:800;">Tournaments</h2><div class="muted" style="font-size:14px;">Couldn\'t load tournaments.</div>'; }
+}
+
+// ── Practices (the apps' Edit team › Practices; rules in functions/lib/practices.js) ──
+const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const hhmm = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+const toMin = (v) => { const [h, m] = String(v || '').split(':').map(Number); return h * 60 + m; };
+const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+async function renderPractices() {
+  const can = !!S.data.canEdit;
+  $('tabBody').innerHTML = '<div class="loading">Loading practices…</div>';
+  let plan = null, list = [];
+  try {
+    if (can) plan = (await call('practiceApi', { op: 'planGet', teamId: S.teamId })).plan;
+    list = (await getDocs(query(collection(db, 'teams', S.teamId, 'practices'), where('endMs', '>', Date.now()), orderBy('endMs'), limit(30)))).docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) { $('tabBody').innerHTML = `<div class="loading">${esc(errText(e))}</div>`; return; }
+  const today = new Date();
+  const P = plan ? { ...plan, rows: plan.rows.map(r => ({ ...r })) } : { tz: '', firstDate: isoDate(today),
+    untilDate: isoDate(new Date(Date.now() + 90 * 86400000)), rows: [{ days: [], startMin: 1080, endMin: 1170, location: '' }] };
+  const day = (ms) => new Date(ms).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const time = (ms) => new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const draw = () => {
+    $('tabBody').innerHTML = `<div class="split"><section class="main card pad" style="display:flex;flex-direction:column;gap:12px;">
+      <h2 style="font-size:17px;font-weight:800;">Every week</h2>
+      ${P.rows.map((r, i) => `<div style="border:1px solid var(--ln);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;">
+        <div class="row" style="gap:6px;">${DAY_LETTERS.map((l, d) => `<button type="button" class="btn ${r.days.includes(d + 1) ? 'primary' : 'ghost'}" style="min-width:42px;padding:8px 0;" data-day="${i}:${d + 1}" aria-pressed="${r.days.includes(d + 1)}" aria-label="${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][d]}" ${can ? '' : 'disabled'}>${l}</button>`).join('')}</div>
+        <div class="row" style="gap:10px;flex-wrap:wrap;">
+          <label style="display:flex;flex-direction:column;gap:4px;">Starts<input type="time" data-start="${i}" value="${hhmm(r.startMin)}" ${can ? '' : 'disabled'}></label>
+          <label style="display:flex;flex-direction:column;gap:4px;">Ends<input type="time" data-end="${i}" value="${hhmm(r.endMin)}" ${can ? '' : 'disabled'}></label>
+          <label style="display:flex;flex-direction:column;gap:4px;flex:1 1 200px;">Location<input data-loc="${i}" value="${esc(r.location || '')}" maxlength="120" placeholder="Gym, field or address" ${can ? '' : 'disabled'}></label>
+        </div>
+        ${can && P.rows.length > 1 ? `<button type="button" class="btn link" style="align-self:flex-start;color:#B3261E;" data-del="${i}">Remove this row</button>` : ''}
+      </div>`).join('')}
+      ${can ? '<button type="button" class="btn ghost" id="prAdd">+ Add another day or place</button>' : ''}
+      <div class="row" style="gap:10px;flex-wrap:wrap;">
+        <label style="display:flex;flex-direction:column;gap:4px;">First week<input type="date" id="prFirst" value="${esc(P.firstDate)}" ${can ? '' : 'disabled'}></label>
+        <label style="display:flex;flex-direction:column;gap:4px;">Runs until<input type="date" id="prUntil" value="${esc(P.untilDate)}" ${can ? '' : 'disabled'}></label>
+      </div>
+      <div class="muted" style="font-size:13px;">Only the team's staff and approved followers see practices. They stay off public pages.</div>
+      ${can ? `<div class="row" style="gap:10px;"><button type="button" class="btn primary" id="prSave">Save practices</button>${plan ? '<button type="button" class="btn link" id="prDelete" style="color:#B3261E;">Remove all practices</button>' : ''}</div>` : ''}
+    </section>
+    <aside class="side"><section class="card pad" style="display:flex;flex-direction:column;gap:8px;">
+      <h2 style="font-size:17px;font-weight:800;">Coming up</h2>
+      ${list.length ? list.map(p => `<div style="border-top:1px solid var(--ln2);padding-top:8px;display:flex;flex-direction:column;gap:3px;">
+        <div style="font-weight:700;${p.status === 'cancelled' ? 'text-decoration:line-through;color:var(--mu);' : ''}">${esc(day(p.dateMs))} · ${esc(time(p.dateMs))}</div>
+        <div class="muted" style="font-size:13px;">${esc(p.location || '')}${p.outCount ? ` · ${p.outCount} out` : ''}</div>
+        ${can ? (p.status === 'cancelled' ? `<button type="button" class="btn link" style="align-self:flex-start;" data-restore="${esc(p.id)}">Put back on</button>` : `<button type="button" class="btn link" style="align-self:flex-start;color:#B3261E;" data-cancel="${esc(p.id)}">Cancel</button>`) : ''}
+      </div>`).join('') : '<div class="muted" style="font-size:14px;">Nothing yet. Save a plan and practices show here.</div>'}
+    </section></aside></div>`;
+    const keep = () => {
+      document.querySelectorAll('[data-start]').forEach(x => { P.rows[+x.dataset.start].startMin = toMin(x.value); });
+      document.querySelectorAll('[data-end]').forEach(x => { P.rows[+x.dataset.end].endMin = toMin(x.value); });
+      document.querySelectorAll('[data-loc]').forEach(x => { P.rows[+x.dataset.loc].location = x.value; });
+      P.firstDate = $('prFirst').value; P.untilDate = $('prUntil').value;
+    };
+    document.querySelectorAll('[data-day]').forEach(b => b.onclick = () => {
+      keep(); const [i, d] = b.dataset.day.split(':').map(Number); const r = P.rows[i];
+      r.days = r.days.includes(d) ? r.days.filter(x => x !== d) : [...r.days, d]; draw();
+    });
+    document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { keep(); P.rows.splice(+b.dataset.del, 1); draw(); });
+    if ($('prAdd')) $('prAdd').onclick = () => { keep(); const last = P.rows[P.rows.length - 1]; P.rows.push({ days: [], startMin: last.startMin, endMin: last.endMin, location: '' }); draw(); };
+    if ($('prSave')) $('prSave').onclick = () => busy($('prSave'), async () => {
+      keep();
+      await call('practiceApi', { op: 'planSave', teamId: S.teamId, plan: { tz: Intl.DateTimeFormat().resolvedOptions().timeZone, firstDate: P.firstDate, untilDate: P.untilDate, rows: P.rows } });
+      toast('Practices saved.'); renderPractices();
+    });
+    if ($('prDelete')) $('prDelete').onclick = () => busy($('prDelete'), async () => {
+      if (!confirm('Remove every practice still to come, with any attendance marked for it?')) return;
+      await call('practiceApi', { op: 'planDelete', teamId: S.teamId }); toast('Practices removed.'); renderPractices();
+    });
+    document.querySelectorAll('[data-cancel]').forEach(b => b.onclick = () => busy(b, async () => {
+      const reason = prompt('Cancel this practice? Followers get an alert and an email right away. Reason (optional):', '');
+      if (reason === null) return;
+      await call('practiceApi', { op: 'change', teamId: S.teamId, practiceId: b.dataset.cancel, action: 'cancel', scope: 'one', reason });
+      toast('Practice cancelled.'); renderPractices();
+    }));
+    document.querySelectorAll('[data-restore]').forEach(b => b.onclick = () => busy(b, async () => {
+      await call('practiceApi', { op: 'change', teamId: S.teamId, practiceId: b.dataset.restore, action: 'restore' });
+      toast('Practice is back on.'); renderPractices();
+    }));
+  };
+  draw();
 }
 
 // ── Seasons (Android SeasonDetailActivity / iPhone SeasonDetailScreen) ──
