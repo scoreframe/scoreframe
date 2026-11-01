@@ -860,6 +860,10 @@ html, body { font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe U
 .tp-practice .when { font-size: 15px; font-weight: 900; display: flex; gap: 10px; justify-content: space-between; }
 .tp-practice .where { font-size: 14px; color: var(--muted); margin-top: 2px; }
 .tp-practice.off .when span:first-child { color: var(--muted); text-decoration: line-through; }
+.tp-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.tp-pills span { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+.tp-pills .out { color: #C62828; background: rgba(198,40,40,.13); }
+.tp-pills .in { color: #1E8E4E; background: rgba(30,142,78,.13); }
 .tp-practice .off-tag { font-size: 13px; font-weight: 900; color: #C62828; white-space: nowrap; }
 .tp-practice .more { padding: 0 14px 12px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
 .tp-practice .more a { color: var(--accent); font-weight: 700; }
@@ -2139,6 +2143,14 @@ async function loadPractices() {
         list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     } catch (_) { return; }
     if (!list.length) return;
+    // Who's in and out: staff only, and the rule enforces it.
+    const names = {};
+    if (isManager || isCoach) {
+        try {
+            const s = await getDocs(query(collection(db, 'teams', teamId, 'attendance'), where('dateMs', '>', Date.now() - 86400000)));
+            s.docs.forEach((d) => { names[d.id] = d.data(); });
+        } catch (_) { /* no pills */ }
+    }
     const host = $('practicesList');
     host.replaceChildren(...list.map((p) => {
         const off = p.status === 'cancelled';
@@ -2152,7 +2164,16 @@ async function loadPractices() {
         when.append(line);
         if (off) { const t = document.createElement('span'); t.className = 'off-tag'; t.textContent = 'Cancelled'; when.append(t); }
         b.append(when);
-        if (p.location) { const w = document.createElement('div'); w.className = 'where'; w.textContent = p.location; b.append(w); }
+        const sub = [p.label, p.location].filter(Boolean).join(' · ');
+        if (sub) { const w = document.createElement('div'); w.className = 'where'; w.textContent = sub; b.append(w); }
+        const n = names['practice_' + p.id];
+        if (n && !off && ((n.out || []).length || (n.in || []).length)) {
+            const w = document.createElement('div'); w.className = 'tp-pills';
+            for (const [list2, cls] of [[n.out || [], 'out'], [n.in || [], 'in']]) for (const name of list2) {
+                const s = document.createElement('span'); s.className = cls; s.textContent = name; w.append(s);
+            }
+            b.append(w);
+        }
         row.append(b);
         b.onclick = () => togglePractice(row, b, p);
         return row;

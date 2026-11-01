@@ -1896,6 +1896,7 @@ function renderUpcomingGame(hub, game) {
     // isn't happening at that time.
     if (!isCancelled && !isPostponed) {
         mountAddToCalendarButton(hub, game);
+        mountGameAttendance(hub, game);
     }
 
     renderMeta(game, sport);
@@ -1906,6 +1907,64 @@ function renderUpcomingGame(hub, game) {
 
     $('loadingState').style.display = 'none';
     $('gameView').style.display = 'block';
+}
+
+// ── Attendance (Eric 2026-11-01): a player's family says they can't make it;
+// staff see who's in and out. Nothing shows for anyone else. The server decides.
+async function mountGameAttendance(hub, game) {
+    const old = $('gameAttendance'); if (old) old.remove();
+    if (!currentUser || !hub.teamId || game.status !== 'scheduled') return;
+    let d;
+    const call = async (data) => {
+        const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
+        return (await httpsCallable(getFunctions(app), 'practiceApi')(data)).data;
+    };
+    try { d = await call({ op: 'gameDetail', teamId: hub.teamId, gameId }); } catch (_) { return; }
+    if (!(d.players || []).length && !d.attendance) return;
+    const box = document.createElement('section');
+    box.id = 'gameAttendance';
+    box.setAttribute('aria-label', 'Attendance');
+    box.style.cssText = 'margin:14px 0;padding:14px;border:1px solid var(--border,rgba(128,128,128,.3));border-radius:14px;display:flex;flex-direction:column;gap:10px;font-size:15px;';
+    const pills = (label, names, bad) => {
+        if (!names.length) return;
+        const h = document.createElement('div'); h.textContent = label; h.style.cssText = 'font-size:12px;font-weight:800;';
+        const w = document.createElement('div'); w.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
+        for (const n of names) {
+            const p = document.createElement('span'); p.textContent = n;
+            p.style.cssText = `font-size:13px;font-weight:700;padding:3px 9px;border-radius:99px;background:${bad ? 'rgba(198,40,40,.14)' : 'rgba(30,142,78,.14)'};color:${bad ? '#C62828' : '#1E8E4E'};`;
+            w.append(p);
+        }
+        box.append(h, w);
+    };
+    for (const p of d.players || []) {
+        const row = document.createElement('div'); row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;';
+        const name = document.createElement('b'); name.style.flex = '1 1 120px';
+        name.textContent = p.name + (p.status === 'out' ? ': can\'t make it' : p.status === 'in' ? ': will be there' : '');
+        row.append(name);
+        const btn = (label, status, go) => {
+            const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+            b.style.cssText = `min-height:40px;padding:0 12px;border-radius:10px;font:inherit;font-weight:800;cursor:pointer;border:1px solid ${go ? '#FF9640' : 'rgba(128,128,128,.4)'};background:${go ? '#FF9640' : 'none'};color:${go ? '#1A1004' : 'inherit'};`;
+            b.onclick = async () => {
+                row.querySelectorAll('button').forEach((x) => { x.disabled = true; }); b.textContent = 'Saving…';
+                try { await call({ op: 'markGame', teamId: hub.teamId, gameId, playerId: p.id, status, tz: Intl.DateTimeFormat().resolvedOptions().timeZone }); mountGameAttendance(hub, game); }
+                catch (e) { b.textContent = label; row.querySelectorAll('button').forEach((x) => { x.disabled = false; }); alert(e.message || 'That didn\'t save.'); }
+            };
+            return b;
+        };
+        if (p.status === 'none') row.append(btn('Can\'t make it', 'out', true), btn('I\'ll be there', 'in', false));
+        else row.append(btn('Undo', 'none', false));
+        box.append(row);
+    }
+    if ((d.players || []).length) {
+        const n = document.createElement('div'); n.textContent = 'You only need to tap if a player can\'t come. The coach gets an email.';
+        n.style.cssText = 'font-size:13px;opacity:.75;'; box.append(n);
+    }
+    if (d.attendance) {
+        pills('Can\'t make it', d.attendance.out.map((o) => o.name + (o.note ? ` (${o.note})` : '')), true);
+        pills('Will be there', d.attendance.in.map((o) => o.name), false);
+    }
+    const slot = document.getElementById('playerSlot');
+    if (slot) slot.append(box);
 }
 
 // 2026-06-17 — Add to Calendar UX for the pre-game card. Builds an

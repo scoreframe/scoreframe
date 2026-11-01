@@ -908,6 +908,7 @@ async function renderPractices() {
           <label style="display:flex;flex-direction:column;gap:4px;">Starts<input type="time" data-start="${i}" value="${hhmm(r.startMin)}" ${can ? '' : 'disabled'}></label>
           <label style="display:flex;flex-direction:column;gap:4px;">Ends<input type="time" data-end="${i}" value="${hhmm(r.endMin)}" ${can ? '' : 'disabled'}></label>
           <label style="display:flex;flex-direction:column;gap:4px;flex:1 1 200px;">Location<input data-loc="${i}" value="${esc(r.location || '')}" maxlength="120" placeholder="Gym, field or address" ${can ? '' : 'disabled'}></label>
+          <label style="display:flex;flex-direction:column;gap:4px;flex:1 1 200px;">Description (optional)<input data-label="${i}" value="${esc(r.label || '')}" maxlength="60" placeholder="Skills, scrimmage, training" ${can ? '' : 'disabled'}></label>
         </div>
         ${can && P.rows.length > 1 ? `<button type="button" class="btn link" style="align-self:flex-start;color:#B3261E;" data-del="${i}">Remove this row</button>` : ''}
       </div>`).join('')}
@@ -916,7 +917,7 @@ async function renderPractices() {
         <label style="display:flex;flex-direction:column;gap:4px;">First week<input type="date" id="prFirst" value="${esc(P.firstDate)}" ${can ? '' : 'disabled'}></label>
         <label style="display:flex;flex-direction:column;gap:4px;">Runs until<input type="date" id="prUntil" value="${esc(P.untilDate)}" ${can ? '' : 'disabled'}></label>
       </div>
-      <div class="muted" style="font-size:13px;">Only the team's staff and approved followers see practices. They stay off public pages.</div>
+      <div class="muted" style="font-size:13px;">Only the team's staff and players' parents and guardians see practices. They stay off public pages.</div>
       ${imported ? `<div class="muted" style="font-size:13px;">${imported} practice${imported === 1 ? '' : 's'} from an imported schedule. They stay as they are when you save.</div>` : ''}
       ${can ? `<div class="row" style="gap:10px;"><button type="button" class="btn primary" id="prSave">Save practices</button>${plan || imported ? '<button type="button" class="btn link" id="prDelete" style="color:#B3261E;">Remove all practices</button>' : ''}</div>` : ''}
     </section>
@@ -924,7 +925,7 @@ async function renderPractices() {
       <h2 style="font-size:17px;font-weight:800;">Coming up</h2>
       ${list.length ? list.map(p => `<div style="border-top:1px solid var(--ln2);padding-top:8px;display:flex;flex-direction:column;gap:3px;">
         <div style="font-weight:700;${p.status === 'cancelled' ? 'text-decoration:line-through;color:var(--mu);' : ''}">${esc(day(p.dateMs))} · ${esc(time(p.dateMs))}</div>
-        <div class="muted" style="font-size:13px;">${esc(p.location || '')}${p.outCount ? ` · ${p.outCount} out` : ''}</div>
+        <div class="muted" style="font-size:13px;">${esc([p.label, p.location].filter(Boolean).join(' · '))}${p.outCount ? ` · ${p.outCount} out` : ''}</div>
         ${can ? (p.status === 'cancelled' ? `<button type="button" class="btn link" style="align-self:flex-start;" data-restore="${esc(p.id)}">Put back on</button>` : `<button type="button" class="btn link" style="align-self:flex-start;color:#B3261E;" data-cancel="${esc(p.id)}">Cancel</button>`) : ''}
       </div>`).join('') : '<div class="muted" style="font-size:14px;">Nothing yet. Save a plan and practices show here.</div>'}
     </section></aside></div>`;
@@ -932,6 +933,7 @@ async function renderPractices() {
       document.querySelectorAll('[data-start]').forEach(x => { P.rows[+x.dataset.start].startMin = toMin(x.value); });
       document.querySelectorAll('[data-end]').forEach(x => { P.rows[+x.dataset.end].endMin = toMin(x.value); });
       document.querySelectorAll('[data-loc]').forEach(x => { P.rows[+x.dataset.loc].location = x.value; });
+      document.querySelectorAll('[data-label]').forEach(x => { P.rows[+x.dataset.label].label = x.value; });
       P.firstDate = $('prFirst').value; P.untilDate = $('prUntil').value;
     };
     document.querySelectorAll('[data-day]').forEach(b => b.onclick = () => {
