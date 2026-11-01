@@ -344,41 +344,36 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">12 Oct 2026 · iOS 1.2.372 live · Delete tournament · deletes stay deleted</span>
+    <span class="stamp">1 Nov 2026 · Practices, attendance, reminders · Android 1.1.1838 · iOS 1.2.396</span>
   </div>
   <p class="lede">
-    Android <strong>1.1.1571</strong> is in Google's production review and
-    <strong>1.1.1578</strong> is with testers. iOS <strong>1.2.372</strong> is live on the
-    App Store; the next iOS build carries the same fixes as Android 1573–1578 and has not
-    been built yet. The testing record further down is from the August automated runs.
+    Android <strong>1.1.1831</strong> is on Play and <strong>1.1.1838</strong> is with testers.
+    iOS <strong>1.2.388</strong> is live, <strong>1.2.395</strong> is in App Review and
+    <strong>1.2.396</strong> is on TestFlight. Reminders are built and off until the store
+    apps carry the switch. The testing record further down is from the August automated runs.
   </p>
 
   <h2>Where the code is</h2>
   <div class="channels">
     <div class="ch live">
       <span class="ch-name">Play production</span>
-      <span class="ch-ver">1.1.1571</span>
-      <span class="ch-note">in Google review · one Pro across platforms · reels-only uploads · logos</span>
+      <span class="ch-ver">1.1.1831</span>
+      <span class="ch-note">no ads</span>
     </div>
     <div class="ch live">
       <span class="ch-name">App Store</span>
-      <span class="ch-ver">1.2.372 (847)</span>
-      <span class="ch-note">live · rejections (3.1.2c, ATT, 2.3.10) resolved</span>
+      <span class="ch-ver">1.2.388</span>
+      <span class="ch-note">live · 1.2.395 (890) waiting for review, release on approval</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1578</span>
-      <span class="ch-note">Android 10+ · Delete tournament · widget fixes · deleted games stay deleted</span>
+      <span class="ch-ver">1.1.1838</span>
+      <span class="ch-note">practices · attendance · reminders switch · phone calendar · home run effect</span>
     </div>
     <div class="ch">
-      <span class="ch-name">iOS next</span>
-      <span class="ch-ver">not built</span>
-      <span class="ch-note">committed: Delete tournament, widget filter, fan schedule, fake-tournament guard</span>
-    </div>
-    <div class="ch">
-      <span class="ch-name">Admin app</span>
-      <span class="ch-ver">0.0.30</span>
-      <span class="ch-note">unchanged</span>
+      <span class="ch-name">iOS TestFlight</span>
+      <span class="ch-ver">1.2.396 (891)</span>
+      <span class="ch-note">same features · past-games Schedule fix waits for the next batch</span>
     </div>
   </div>
 
@@ -386,48 +381,31 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Push Android 1.1.1578 to production when ready</span>
+        <span class="item-title">Send 1.1.1838 and 1.2.396 to the stores</span>
         <span class="chip">over to you</span>
       </div>
-      <p class="item-body">
-        1.1.1571 is still in Google review. 1578 adds the Android 10 minimum, Delete tournament, the widget fixes and the deleted-games fixes.
-      </p>
+      <p class="item-body">Reminders stay off until this release is out, because the off switch is in it.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Daniel's 4K60 reply (SF-VEH26U)</span>
+        <span class="item-title">Privacy policy</span>
         <span class="chip">over to you</span>
       </div>
-      <p class="item-body">
-        iOS is approved, so it can go whenever you say send.
-      </p>
+      <p class="item-body">It still mentions ads and needs the calendar and attendance added. Publishing it asks every user to agree again.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Games stuck on LIVE</span>
-        <span class="chip">decision</span>
-      </div>
-      <p class="item-body">
-        Nine tournament entries (Lan's four Destiny Takeoff Classic, Pirates JV, ECVBA, AČI) have every game final but still show LIVE. The server now clears this when a tournament's last game finishes, going forward. Reset the existing nine? Four single games are also stuck (Flyers, TNT and two others): sweep them or leave them? Widgets already ignore all of them.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Empty and returning game records</span>
-        <span class="chip">decision</span>
-      </div>
-      <p class="item-body">
-        Safe fixes are in 1.1.1577. Still your call: stop iOS adding followed teams' games to your own history (changes career stats); skip saving a 0–0 game with no video or players at End Game; team-level delete records; clear the 484 empty records in the cloud after a list.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Other decisions</span>
+        <span class="item-title">Held replies</span>
         <span class="chip">over to you</span>
       </div>
-      <p class="item-body">
-        Tournament: live only once recording starts, placeholder times, no champion callout. Home/away for basketball, hockey, lacrosse and generic. Security left: verified-email checks, email and push tokens readable by id. OAuth verification video. Trademark response due 26 Dec.
-      </p>
+      <p class="item-body">The home run customer, Lan, and the Wi-Fi Direct ticket.</p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Dated jobs</span>
+        <span class="chip">over to you</span>
+      </div>
+      <p class="item-body">App Store App Privacy after 1.2.395 is live; OAuth inactive clients before about Nov 28; club data cleanup before December.</p>
     </div>
   </div>
 
