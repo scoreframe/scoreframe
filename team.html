@@ -2209,7 +2209,7 @@ async function fillPractice(more, p) {
         n.textContent = 'You only need to tap if a player can\'t come. Only coaches see who\'s out.';
         more.append(n);
     }
-    if (d.attendance) {
+    if (d.attendance && d.attendance.expected + d.attendance.out.length > 0) {
         const a = d.attendance;
         const s = document.createElement('div');
         s.textContent = `${a.expected} expected, ${a.out.length} can't make it` + (a.out.length ? `: ${a.out.map((o) => o.name + (o.note ? ` (${o.note})` : '')).join(', ')}` : '');
