@@ -440,8 +440,9 @@ async function renderSchedule() {
   const importWith = async (payload) => {
     const r = await call('labsScheduleImport', { teamId: S.teamId, teamName: S.data.teamName, sport: (S.team && S.team.sport) || '', ...payload });
     const found = (r.games || []).map(g => ({ ...g, on: true }));
-    if (!found.length) return toast('No games found. Try a clearer photo, or paste the text.');
-    importPreview(found);
+    const practices = r.practices || [];
+    if (!found.length && !practices.some(p => p.start)) return toast('No games or practices found. Try a clearer photo, or paste the text.');
+    importPreview(found, practices);
   };
   $('sRead').onclick = (ev) => busy(ev.currentTarget, async () => { const t = $('sPaste').value.trim(); if (!t) return toast('Paste the schedule first.'); await importWith({ text: t }); });
   $('sFile').onchange = () => busy($('sRead'), async () => {
@@ -451,12 +452,17 @@ async function renderSchedule() {
     await importWith(f.type === 'application/pdf' ? { dataBase64: b64, mimeType: 'application/pdf' } : { images: [{ dataBase64: b64 }] });
   });
 }
-function importPreview(found) {
+function importPreview(found, practices = []) {
   const d = $('dlg'); d.className = 'wide';
+  const timed = practices.filter(p => p.start);
+  const dates = timed.map(p => p.date).sort();
+  const nice = (s) => new Date(s + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   d.innerHTML = `<form method="dialog">
-    <h2 style="font-size:21px;font-weight:900;">Found ${found.length} game${found.length === 1 ? '' : 's'}</h2>
+    <h2 style="font-size:21px;font-weight:900;">Found ${found.length} game${found.length === 1 ? '' : 's'}${timed.length ? ` and ${timed.length} practice${timed.length === 1 ? '' : 's'}` : ''}</h2>
     <div class="muted" style="font-size:14px;">Untick anything that isn't yours, and fix what's wrong before adding.</div>
-    <div class="scroll" style="border:1px solid var(--ln);border-radius:12px;"><table class="tbl" style="min-width:760px;">
+    ${timed.length ? `<label style="display:flex;gap:10px;align-items:center;font-size:15px;font-weight:700;color:var(--ink);"><input type="checkbox" id="iPr" checked style="width:20px;height:20px;">Add ${timed.length} practice${timed.length === 1 ? '' : 's'}, ${esc(nice(dates[0]))} to ${esc(nice(dates[dates.length - 1]))}</label>
+    ${practices.length > timed.length ? `<div class="muted" style="font-size:13px;">${practices.length - timed.length} had no time and will be left out.</div>` : ''}` : ''}
+    ${found.length ? `<div class="scroll" style="border:1px solid var(--ln);border-radius:12px;"><table class="tbl" style="min-width:760px;">
       <thead><tr><th><span class="hide">Add</span></th><th>Date</th><th>Time</th><th>Opponent or event</th><th>Home/away</th><th>Where</th></tr></thead>
       <tbody>${found.map((g, i) => `<tr${g.confidence < 0.5 ? ' style="background:#FFF8EF;"' : ''}>
         <td><input type="checkbox" id="ic${i}" checked aria-label="Add"></td>
@@ -464,16 +470,21 @@ function importPreview(found) {
         <td><input type="time" id="it${i}" value="${esc(g.time || '')}"></td>
         <td><input id="io${i}" value="${esc(g.opponent)}" style="width:100%;">${g.sourceText ? `<div class="muted" style="font-size:11px;">Read: ${esc(g.sourceText)}</div>` : ''}</td>
         <td><select id="ih${i}"><option value="">Not sure</option><option value="home"${g.homeAway === 'home' ? ' selected' : ''}>Home</option><option value="away"${g.homeAway === 'away' ? ' selected' : ''}>Away</option></select></td>
-        <td><input id="il${i}" value="${esc(g.location || '')}" style="width:100%;"></td></tr>`).join('')}</tbody></table></div>
-    <div class="row"><button class="btn primary" type="button" id="iAdd">Add games</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
+        <td><input id="il${i}" value="${esc(g.location || '')}" style="width:100%;"></td></tr>`).join('')}</tbody></table></div>` : ''}
+    <div class="row"><button class="btn primary" type="button" id="iAdd">Add</button><button class="btn ghost" value="cancel" formnovalidate>Cancel</button></div>
   </form>`;
   d.showModal();
   $('iAdd').onclick = (ev) => busy(ev.currentTarget, async () => {
     const games = found.map((g, i) => ({ on: $(`ic${i}`).checked, date: toMs($(`id${i}`).value, $(`it${i}`).value), opponent: $(`io${i}`).value.trim(), homeAway: $(`ih${i}`).value, location: $(`il${i}`).value.trim(), notes: g.notes || '', imported: true }))
       .filter(g => g.on && g.date && g.opponent);
-    if (!games.length) return toast('Nothing ticked with a date and opponent.');
-    const r = await call('teamScheduleSave', { teamId: S.teamId, action: 'add', games });
-    d.close(); toast(`${r.added} game${r.added === 1 ? '' : 's'} added.`); const ta = $('sPaste'); if (ta) ta.value = ''; S.games = null; render();
+    const withPractices = !!($('iPr') && $('iPr').checked);
+    if (!games.length && !withPractices) return toast('Nothing ticked with a date and opponent.');
+    let added = 0, pAdded = 0;
+    if (games.length) added = (await call('teamScheduleSave', { teamId: S.teamId, action: 'add', games })).added;
+    if (withPractices) pAdded = (await call('practiceApi', { op: 'addDates', teamId: S.teamId, tz: Intl.DateTimeFormat().resolvedOptions().timeZone, practices })).added;
+    d.close();
+    toast([added ? `${added} game${added === 1 ? '' : 's'}` : '', pAdded ? `${pAdded} practice${pAdded === 1 ? '' : 's'}` : ''].filter(Boolean).join(' and ') + ' added.');
+    const ta = $('sPaste'); if (ta) ta.value = ''; S.games = null; render();
   });
 }
 function gameDialog(g) {
@@ -878,9 +889,9 @@ const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2
 async function renderPractices() {
   const can = !!S.data.canEdit;
   $('tabBody').innerHTML = '<div class="loading">Loading practices…</div>';
-  let plan = null, list = [];
+  let plan = null, list = [], imported = 0;
   try {
-    if (can) plan = (await call('practiceApi', { op: 'planGet', teamId: S.teamId })).plan;
+    if (can) { const got = await call('practiceApi', { op: 'planGet', teamId: S.teamId }); plan = got.plan; imported = got.imported || 0; }
     list = (await getDocs(query(collection(db, 'teams', S.teamId, 'practices'), where('endMs', '>', Date.now()), orderBy('endMs'), limit(30)))).docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (e) { $('tabBody').innerHTML = `<div class="loading">${esc(errText(e))}</div>`; return; }
   const today = new Date();
@@ -906,7 +917,8 @@ async function renderPractices() {
         <label style="display:flex;flex-direction:column;gap:4px;">Runs until<input type="date" id="prUntil" value="${esc(P.untilDate)}" ${can ? '' : 'disabled'}></label>
       </div>
       <div class="muted" style="font-size:13px;">Only the team's staff and approved followers see practices. They stay off public pages.</div>
-      ${can ? `<div class="row" style="gap:10px;"><button type="button" class="btn primary" id="prSave">Save practices</button>${plan ? '<button type="button" class="btn link" id="prDelete" style="color:#B3261E;">Remove all practices</button>' : ''}</div>` : ''}
+      ${imported ? `<div class="muted" style="font-size:13px;">${imported} practice${imported === 1 ? '' : 's'} from an imported schedule. They stay as they are when you save.</div>` : ''}
+      ${can ? `<div class="row" style="gap:10px;"><button type="button" class="btn primary" id="prSave">Save practices</button>${plan || imported ? '<button type="button" class="btn link" id="prDelete" style="color:#B3261E;">Remove all practices</button>' : ''}</div>` : ''}
     </section>
     <aside class="side"><section class="card pad" style="display:flex;flex-direction:column;gap:8px;">
       <h2 style="font-size:17px;font-weight:800;">Coming up</h2>
