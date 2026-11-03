@@ -711,9 +711,14 @@ VIEWS.agreements = async () => {
   state.agRows = r.rows;
   const vers = Object.entries(r.versions).map(([k, v]) => `<div class="li"><span><a href="${esc(r.urls[k])}" target="_blank" rel="noopener">${esc(DOCN[k] || k)}</a></span><strong>${esc(v)}</strong></div>`).join('');
   const c = r.counts;
-  const counts = `<div class="li"><span>Accounts on the current Terms</span><strong>${c.accountsCurrent ?? '—'}</strong></div>
-    <div class="li"><span>Accounts with any agreement recorded</span><strong>${c.accountsRecorded ?? '—'}</strong></div>
-    <div class="li"><span>Agreements in the last 30 days</span><strong>${c.consents30 ?? '—'}</strong></div>`;
+  const n = (v) => (v == null ? '—' : v);
+  const counts = `<div class="li"><span>Signed-in accounts</span><strong>${n(c.accounts)}</strong></div>
+    <div class="li"><span>Agreed to the current Terms and Privacy Policy</span><strong>${n(c.current)}</strong></div>
+    <div class="li"><span>Agreed to an older version only</span><strong>${n(c.older)}</strong></div>
+    <div class="li"><span>Never agreed</span><strong>${n(c.never)}</strong></div>
+    <div class="li"><span>Used the app in the last 30 days, not on the current versions</span><strong>${c.active30 == null ? '—' : `${c.active30Behind} of ${c.active30}`}</strong></div>
+    <div class="li"><span>Agreements in the last 30 days</span><strong>${n(c.consents30)}</strong></div>
+    <div class="sub">People are asked the next time they open an app or web page that has the agreement. Guests without an account agree when they take a game, so they aren't counted here.</div>`;
   const clubs = r.clubs.map((x) => `<div class="li"><span>${esc(x.name)}<br><span class="sub">${x.terms ? `v${esc(x.terms.version)} · ${day(x.terms.acceptedAt)} · ${esc(x.terms.acceptedByEmail || '')}${x.terms.parentalPermission ? ' · parents\' permission confirmed' : ''}` : 'Not accepted yet'}</span></span>${x.terms && x.terms.version === r.versions.clubTerms ? chip('Current', 'ok') : chip(x.terms ? 'Older version' : 'Not accepted', 'warn')}</div>`).join('');
   const rows = r.rows.map((x) => `<tr>
       <td>${new Date(x.at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
