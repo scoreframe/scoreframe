@@ -216,12 +216,17 @@ async function enrollGate() {
   $('gGo').onclick = () => verify($('gCode').value, true);
 }
 function codeGate() {
-  gate(`<h2>Enter your code</h2>
-    <p style="margin:0;line-height:1.5">Open Google Authenticator and enter the 6-digit code for <strong>ScoreFrame Admin</strong>. Lost your phone? Enter one of your backup codes.</p>
+  const b = bioReady();
+  gate(`<h2>${b ? 'Unlock' : 'Enter your code'}</h2>
+    ${b ? `<button class="btn pri" id="gBio">Unlock with fingerprint</button><p class="sub" style="margin:0">Or enter a code from Google Authenticator.</p>`
+      : `<p style="margin:0;line-height:1.5">Open Google Authenticator and enter the 6-digit code for <strong>ScoreFrame Admin</strong>. Lost your phone? Enter one of your backup codes.</p>`}
     <label class="f">Code<input class="in codebox" id="gCode" inputmode="numeric" autocomplete="one-time-code" maxlength="11"></label>
-    <div class="err hide" id="gErr"></div><button class="btn pri" id="gGo">Unlock for 12 hours</button>
+    <div class="err hide" id="gErr"></div><button class="btn ${b ? '' : 'pri'}" id="gGo">Unlock for 12 hours</button>
     <button class="btn" id="gOut">Sign out</button>`);
-  $('gCode').focus();
+  if (b) {
+    $('gBio').onclick = () => bioUnlock(b);
+    if (bioAuto) { bioAuto = false; bioUnlock(b); }
+  } else $('gCode').focus();
   $('gCode').onkeydown = (e) => { if (e.key === 'Enter') verify($('gCode').value, false); };
   $('gGo').onclick = () => verify($('gCode').value, false);
   $('gOut').onclick = () => signOut(auth);
@@ -241,12 +246,82 @@ async function verify(code, enrolling) {
       return;
     }
     if (r.usedBackup) toast(`Backup code used. ${r.backupLeft} left.`, 6000);
+    if (bioOffer()) return;
     shell();
   } catch (e) {
     btn.disabled = false;
     const box = $('gErr'); box.textContent = errText(e); box.classList.remove('hide');
   }
 }
+// ── Fingerprint unlock (admin app only) ─────────────────────────────────
+// The app keeps a private key in the phone's secure hardware that signs only
+// after a fingerprint (a passkey); the server keeps the public key and checks
+// the signature (functions/admin_console.js adminDevice*). It stands in for the
+// 6-digit code on that phone. Google sign-in is still needed first.
+let bioAuto = true;
+function bioState() {
+  if (!APP || !APP.biometricState || !auth.currentUser) return null;
+  try { return JSON.parse(APP.biometricState(auth.currentUser.uid)); } catch (_) { return null; }
+}
+/** This phone can unlock with a fingerprint: it has a key the server still knows. */
+function bioReady() {
+  const b = bioState();
+  if (!b || !b.available || !b.deviceId) return null;
+  if (ME && Array.isArray(ME.devices) && !ME.devices.some((d) => d.id === b.deviceId)) { APP.biometricForget(auth.currentUser.uid); return null; }
+  return b;
+}
+const bioCall = (start, ok) => new Promise((res, rej) => {
+  window[ok] = res;
+  window.sfAdminBioFailed = (m) => rej(Object.assign(new Error(m || 'Cancelled'), { bio: m || 'CANCELLED' }));
+  start();
+});
+async function bioUnlock(b) {
+  const btn = $('gBio'); if (btn) btn.disabled = true;
+  const uid = auth.currentUser.uid;
+  try {
+    const { challenge } = await httpsCallable(fns, 'adminDeviceChallenge')({ deviceId: b.deviceId }).then((x) => x.data);
+    const signature = await bioCall(() => APP.biometricSign(uid, challenge), 'sfAdminBioSigned');
+    await httpsCallable(fns, 'adminDeviceVerify')({ deviceId: b.deviceId, signature });
+    await auth.currentUser.getIdToken(true);
+    ME = await call('adminMe');
+    shell();
+  } catch (e) {
+    if (btn) btn.disabled = false;
+    if (e.bio === 'CANCELLED') return;
+    if (e.bio === 'INVALIDATED' || e.bio === 'NO_KEY' || /DEVICE_GONE/.test(e.message || '')) {
+      APP.biometricForget(uid);
+      toast(e.bio === 'INVALIDATED' ? 'The fingerprints on this phone changed, so fingerprint unlock turned off. Enter your code, then turn it on again.'
+        : 'Fingerprint unlock is off for this phone. Enter your code.', 8000);
+      return codeGate();
+    }
+    const box = $('gErr'); if (box) { box.textContent = errText(e); box.classList.remove('hide'); }
+  }
+}
+/** Turn it on for this phone. `code` is only needed when no code was typed in the last 5 minutes. */
+async function bioEnroll(code = '') {
+  const uid = auth.currentUser.uid, b = bioState();
+  const publicKey = await bioCall(() => APP.biometricEnroll(uid), 'sfAdminBioKey');
+  const r = await call('adminDeviceAdd', { publicKey, name: (b && b.name) || 'Phone', code });
+  APP.biometricSaved(uid, r.deviceId);
+  ME = await call('adminMe');
+}
+function bioOffer() {
+  const b = bioState(), uid = auth.currentUser && auth.currentUser.uid;
+  if (!b || !b.available || bioReady()) return false;
+  try { if (localStorage.getItem('sf_bio_skip_' + uid) === '1') return false; } catch (_) {}
+  gate(`<h2>Use your fingerprint next time?</h2>
+    <p style="margin:0;line-height:1.5">On this phone, your fingerprint can stand in for the 6-digit code. You still sign in with Google, and big actions like pausing a club still ask for a code. You can turn it off under System.</p>
+    <div class="err hide" id="gErr"></div>
+    <button class="btn pri" id="gBioOn">Turn on fingerprint unlock</button><button class="btn" id="gBioNo">Not now</button>`);
+  $('gBioOn').onclick = async () => {
+    $('gBioOn').disabled = true;
+    try { await bioEnroll(); toast('Fingerprint unlock is on for this phone.'); shell(); }
+    catch (e) { $('gBioOn').disabled = false; const box = $('gErr'); box.textContent = errText(e); box.classList.remove('hide'); }
+  };
+  $('gBioNo').onclick = () => { try { localStorage.setItem('sf_bio_skip_' + uid, '1'); } catch (_) {} shell(); };
+  return true;
+}
+
 onAuthStateChanged(auth, async (u) => {
   if (!u) { if (APP) APP.signedOut(); return signInGate(); }
   const tok = await u.getIdTokenResult().catch(() => null);
@@ -366,7 +441,9 @@ function describeAudit(x) {
     user_givePro: `Gave Pro for ${d.days} days · ${d.email}`, user_endPro: `Ended given Pro · ${d.email}`, user_tester: `${d.tester ? 'Made a tester' : 'No longer a tester'} · ${d.email}`,
     user_moveInvite: `Moved a ${d.role === 'follower' ? 'follow' : d.role} invitation from ${d.from} to ${d.email} · ${d.team}`, user_signOut: `Signed out everywhere · ${d.email}`, user_resetLink: `Password reset link · ${d.email}`, team_clearLive: `Cleared a stuck live · ${d.team}`,
     ticket_status: `Ticket set to ${d.status}`, cleanup_mode: d.mode === 'live' ? 'Turned on account cleanup' : 'Account cleanup back to report only',
-    cleanup_report: `Account cleanup report sent (${d.empty} empty)`, cleanup_keep: `Kept out of cleanup · ${d.email}`, cleanup_unkeep: `Back in cleanup · ${d.email}`, mfa_enrolled: 'Set up Google Authenticator', mfa_ok: 'Unlocked with Google Authenticator', mfa_backup_code: 'Unlocked with a backup code' };
+    cleanup_report: `Account cleanup report sent (${d.empty} empty)`, cleanup_keep: `Kept out of cleanup · ${d.email}`, cleanup_unkeep: `Back in cleanup · ${d.email}`, mfa_enrolled: 'Set up Google Authenticator', mfa_ok: 'Unlocked with Google Authenticator', mfa_backup_code: 'Unlocked with a backup code',
+    mfa_fingerprint: `Unlocked with a fingerprint${d.device ? ' · ' + d.device : ''}`, mfa_device_added: `Turned on fingerprint unlock${d.device ? ' · ' + d.device : ''}`,
+    mfa_device_removed: `Removed fingerprint unlock${d.device ? ' · ' + d.device : ''}` };
   return M[x.action] || x.action;
 }
 
@@ -763,7 +840,21 @@ function cleanupCard(c) {
     ${location.hash.startsWith('#accounts') ? '' : '<a href="#accounts" class="sub">See every account on the Accounts page</a>'}
     <div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn" id="clReport">Email the list now</button>${on ? '<button class="btn" id="clOff">Back to report only</button>' : '<button class="btn pri" id="clOn">Turn on</button>'}</div></section>`;
 }
-WIRE.system = () => { wireCleanup(); loadLifecycle(); };
+WIRE.system = () => {
+  wireCleanup(); loadLifecycle();
+  document.querySelectorAll('[data-bio-rm]').forEach((btn) => { btn.onclick = async () => {
+    const id = btn.dataset.bioRm, b = bioState();
+    btn.disabled = true;
+    try { await call('adminDeviceRemove', { deviceId: id }); if (b && b.deviceId === id) APP.biometricForget(auth.currentUser.uid); ME = await call('adminMe'); toast('Removed.'); route(); }
+    catch (e) { btn.disabled = false; toast(errText(e), 7000); }
+  }; });
+  const on = $('bioOn');
+  if (on) on.onclick = async () => {
+    const a = await ask({ title: 'Turn on fingerprint unlock', body: 'For this phone. Enter a current code to confirm.', reason: false, code: true, ok: 'Turn on' });
+    if (!a) return;
+    try { await bioEnroll(a.code); toast('Fingerprint unlock is on for this phone.'); route(); } catch (e) { if (e.bio !== 'CANCELLED') toast(errText(e), 7000); }
+  };
+};
 
 // ── Club data after licenses end (club_lifecycle.js) ──────────────────
 function lifecycleCard(r) {
@@ -878,7 +969,11 @@ VIEWS.system = async () => {
         ${r.versions.map(([k, n]) => `<div class="li"><span>${esc(k)}</span><strong>${n}</strong></div>`).join('') || '<div class="empty">No data.</div>'}</section>
       <section class="card pad"><h2>Who can open this page</h2>
         ${r.admins.map((a) => `<div class="li"><span>${esc(a.email)}<br><span class="sub">signed in ${ago(a.lastSignIn)}</span></span>${a.mfa ? chip(`Authenticator · ${a.backupLeft} backups`, 'ok') : chip('No authenticator yet', 'warn')}</div>`).join('')}
-        <p class="sub" style="margin:10px 0 0;line-height:1.5">Only these two Google sign-ins, plus a Google Authenticator code every 12 hours. The server checks both on every action, not just this page.</p></section>
+        <p class="sub" style="margin:10px 0 0;line-height:1.5">Only these two Google sign-ins, plus a Google Authenticator code (or a fingerprint on a phone set up for it) every 12 hours. The server checks both on every action, not just this page.</p></section>
+      <section class="card pad" style="display:flex;flex-direction:column;gap:6px"><h2>Fingerprint unlock</h2>
+        <span class="sub">Phones where ${esc((ME && ME.email) || 'you')} can unlock with a fingerprint instead of a code. Only the ScoreFrame Admin app can do this.</span>
+        ${((ME && ME.devices) || []).map((d) => `<div class="li"><span>${esc(d.name || 'Phone')}${bioState() && bioState().deviceId === d.id ? ' <span class="sub">(this phone)</span>' : ''}<br><span class="sub">added ${day(d.addedAt)}${d.lastUsedAt ? ' · last used ' + ago(d.lastUsedAt) : ''}</span></span><button class="btn" data-bio-rm="${esc(d.id)}">Remove</button></div>`).join('') || '<div class="empty">No phones yet.</div>'}
+        ${bioState() && bioState().available && !bioReady() ? '<button class="btn pri" id="bioOn">Turn on for this phone</button>' : ''}</section>
       <section class="card pad"><h2>App-wide announcements</h2><p class="sub" style="margin:6px 0 4px">Sending to every user is turned off.</p>
         ${r.broadcasts.map((b) => `<div class="li"><span>${esc(b.title)}</span><span class="sub">${day(b.createdAt)}</span></div>`).join('') || '<div class="empty">None.</div>'}</section></aside></div>`;
 };
