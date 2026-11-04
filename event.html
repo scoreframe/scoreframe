@@ -765,6 +765,14 @@ function bwFrames(ev) {
     for (const [partId, gid] of Object.entries(ev.partGames || {})) {
         const g = V.games && V.games.get(gid); if (!g) continue;
         const st = g.sportSpecificStats || {}, m = {};
+        // A Baker part is one team line, the frames game's first bowler (BowlingEvent.bakerScores).
+        const part = (ev.parts || []).find(x => x.id === partId);
+        if (part && part.format === 'baker') {
+            const sc = (((st.bowlers || [])[0] || {}).gameScores || []).map(v => v > 0 ? v : null);
+            if (sc.some(v => v != null)) m.__team = sc;
+            out[partId] = m;
+            continue;
+        }
         for (const b of [...(st.bowlers || []), ...(st.untrackedBowlers || [])]) {
             const name = String(b.name || '').trim(), pid = b.savedPlayerId || '';
             const l = (ev.lineup || []).find(x => (pid && x.key === pid) || x.name.toLowerCase() === name.toLowerCase()
@@ -786,6 +794,8 @@ function bwBowlers(ev, frames, partId) {
     return out;
 }
 function bwGame(ev, frames, p, s, g) {
+    // Baker scored with frames: the team line's game (2026-11-04: a finished Baker part showed "Not bowled yet").
+    if (s.us && p.format === 'baker') { const t = bwBowlers(ev, frames, p.id).__team; if (t && t[g] != null) return t[g]; }
     if (s.us) {
         const sc = Object.values(bwBowlers(ev, frames, p.id)).map(l => l[g]).filter(v => v != null);
         if (p.format !== 'baker' && sc.length) {
