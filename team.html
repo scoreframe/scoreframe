@@ -4503,7 +4503,7 @@ async function showJoinSheet() {
         <button type="button" class="join-more" style="background:none;border:1px dashed var(--outline,#555);color:var(--accent);border-radius:10px;padding:9px;font:inherit;font-weight:700;cursor:pointer;width:100%;margin-bottom:14px;">+ Add another player</button>
         <div class="family-modal-actions" style="flex-wrap:wrap;">
           <button class="family-cancel">${mine.length ? 'Done' : 'Just follow the team'}</button>
-          <button class="family-submit">Send to the team</button>
+          <button class="family-submit">Confirm</button>
         </div>
         <div class="family-modal-msg"></div>
       </div>`;
@@ -4525,7 +4525,7 @@ async function showJoinSheet() {
         const msg = wrap.querySelector('.family-modal-msg');
         if (!links.length) { msg.textContent = 'Pick a player, or tap "' + (mine.length ? 'Done' : 'Just follow the team') + '".'; return; }
         const btn = wrap.querySelector('.family-submit');
-        btn.disabled = true; btn.textContent = 'Sending…';
+        btn.disabled = true; btn.textContent = 'Saving…';
         try {
             const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
             const res = await httpsCallable(getFunctions(app), 'requestPlayerLinks')({ teamId, links });
@@ -4535,7 +4535,7 @@ async function showJoinSheet() {
             const box = $('followStatus');
             if (box) box.textContent = approved === links.length ? 'Linked. You will get updates about your player.' : 'Sent. A team manager will confirm it.';
         } catch (e) {
-            btn.disabled = false; btn.textContent = 'Send to the team';
+            btn.disabled = false; btn.textContent = 'Confirm';
             msg.textContent = (e && e.message) ? String(e.message).replace(/^Firebase: /, '') : 'Could not send that. Please try again.';
         }
     });
