@@ -344,36 +344,35 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">1 Nov 2026 · Practices, attendance, reminders · Android 1.1.1838 · iOS 1.2.396</span>
+    <span class="stamp">4 Nov 2026 · Needs you bell, every server button shows it's working · Android 1.1.1859 · iOS 1.2.403</span>
   </div>
   <p class="lede">
-    Android <strong>1.1.1831</strong> is on Play and <strong>1.1.1838</strong> is with testers.
-    iOS <strong>1.2.388</strong> is live, <strong>1.2.395</strong> is in App Review and
-    <strong>1.2.396</strong> is on TestFlight. Reminders are built and off until the store
-    apps carry the switch. The testing record further down is from the August automated runs.
+    Both apps went to the stores on 4 Nov. Android <strong>1.1.1859</strong> is in Play production (Google review, everyone at once).
+    iOS <strong>1.2.401</strong> is live and <strong>1.2.403 (898)</strong> is waiting for App Review, releasing on approval.
+    The testing record further down is from the August automated runs.
   </p>
 
   <h2>Where the code is</h2>
   <div class="channels">
     <div class="ch live">
       <span class="ch-name">Play production</span>
-      <span class="ch-ver">1.1.1831</span>
-      <span class="ch-note">no ads</span>
+      <span class="ch-ver">1.1.1859</span>
+      <span class="ch-note">in Google review, replaces 1856</span>
     </div>
     <div class="ch live">
       <span class="ch-name">App Store</span>
-      <span class="ch-ver">1.2.395</span>
-      <span class="ch-note">live</span>
+      <span class="ch-ver">1.2.401</span>
+      <span class="ch-note">live · 1.2.403 (898) waiting for review, release on approval</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1853</span>
-      <span class="ch-note">game menu switches · Phones block and sheet · green Phones on the record bar · What's new for this update</span>
+      <span class="ch-ver">1.1.1859</span>
+      <span class="ch-note">same build as production</span>
     </div>
     <div class="ch">
       <span class="ch-name">iOS TestFlight</span>
-      <span class="ch-ver">1.2.398 (893)</span>
-      <span class="ch-note">1.2.399 (894) with the new menu, Phones and What's new is committed; it uploads with the store batch</span>
+      <span class="ch-ver">1.2.403 (898)</span>
+      <span class="ch-note">same build as in review</span>
     </div>
   </div>
 
@@ -381,38 +380,38 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Pick the store date for the new builds</span>
+        <span class="item-title">Try the bell and the buttons on a phone</span>
         <span class="chip">over to you</span>
       </div>
-      <p class="item-body">Probably tomorrow. Reminders stay off until this release is out, because the off switch is in it.</p>
+      <p class="item-body">1859 and 1.2.403 were compiled and opened on the emulator, not used on a real phone. The bell turns orange and rings when a request is waiting; server buttons say Accepting…, Saving… and show a line when a call fails.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Privacy policy</span>
+        <span class="item-title">Facebook cover</span>
         <span class="chip">over to you</span>
       </div>
-      <p class="item-body">The draft is ready and goes out with the store release. Publishing it asks every user to agree again.</p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Held replies</span>
-        <span class="chip">over to you</span>
-      </div>
-      <p class="item-body">David Fisher's Wi-Fi Direct reply is in Gmail drafts. Lan and the home run customer are already answered.</p>
+      <p class="item-body">Pick A, B or C on the cover canvas; a plain logo version is already sent.</p>
     </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">Dated jobs</span>
         <span class="chip">over to you</span>
       </div>
-      <p class="item-body">App Store App Privacy now that 1.2.395 is live; OAuth inactive clients before about Nov 28; club data cleanup before December.</p>
+      <p class="item-body">App Store App Privacy; OAuth inactive clients before about Nov 28; club data cleanup before December.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">One test game on the SE</span>
+        <span class="item-title">Small setup</span>
         <span class="chip">over to you</span>
       </div>
-      <p class="item-body">Discard the paused volleyball game, HOME vs AWAY. It came from the menu test.</p>
+      <p class="item-body">Gmail forward of Google notices from eric@ to support@ so the watch sees them; admin app 0.0.33 with fingerprint unlock.</p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Held replies</span>
+        <span class="chip">over to you</span>
+      </div>
+      <p class="item-body">Spencer's reply and David Fisher's Wi-Fi Direct reply are drafts, not sent.</p>
     </div>
   </div>
 
@@ -420,207 +419,49 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Celebrations, the game menu and Season (1 Nov)</span>
-        <span class="chip">tested on the emulators and simulator</span>
+        <span class="item-title">Needs you bell (3–4 Nov)</span>
+        <span class="chip">both apps · server deployed</span>
       </div>
-      <p class="item-body">New 3D celebrations for every sport, turned on from inside a game. Quick settings is gone: its controls moved to Video and camera, Scoreboard and Phone health. Season's filters stay at the top, and a deleted game leaves the list right away. Practice emails show what changed, and team logos stay whole in emails.</p>
+      <p class="item-body">Follow requests, family links and invites land in the bell the moment they arrive, from a live list the server keeps (users/{uid}/actions), and leave it once anyone answers. When something waits on you the bell button turns orange and rings and counts only those; otherwise a plain bell with a grey count.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Clubs: Stripe test payments and the club YouTube channel (29 Oct)</span>
-        <span class="chip">tested on the server, in a browser and against Stripe test mode</span>
+        <span class="item-title">Every server button shows it's working (4 Nov)</span>
+        <span class="chip">compiled both · emulator opened</span>
       </div>
-      <p class="item-body">
-        Stripe test mode is set up (webhook, billing portal) and a full test purchase passes: card on Stripe's own page, invoice paid, invoice canceled, refunds, portal. The director connects the club's own YouTube channel on the club page; the access stays on the server, each team can get its own channel, and the page shows when YouTube's 24-hour wait is over. Club teams go live on that channel with no YouTube sign-in or switching: Android 1803 on Firebase, iOS in the next TestFlight batch. Not yet tried with a real channel.
-      </p>
+      <p class="item-body">About 100 buttons: the pressed one greys out with Saving…/Accepting…, a second tap is ignored, failures show on screen, and sheets that save keep what you typed. Android Delete account names teams that failed to delete. iPhone Restore purchase says what it found.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Clubs: team management, privacy, tournaments, club page (29 Oct, overnight)</span>
-        <span class="chip">tested on the server and in a browser</span>
+        <span class="item-title">Invites, Your teams, Season colours (3 Nov)</span>
+        <span class="chip">both apps</span>
       </div>
-      <p class="item-body">
-        Built the approved club canvas (boards 1–2, 4–13). manage.html: roster, the team's address book (invite a list, match families to players, approve), schedule with AI import. Club console: setup checklist, privacy (new "signed-in users" level), Club Terms acceptance, Tournaments from one AES link, public club page. Family links optional and several per person; parents can share a player's highlights. Android 1800–1802 on Firebase; iOS in the next TestFlight batch. YouTube club channel: see 29 Oct.
-      </p>
+      <p class="item-body">Invites show without leaving the app. A follower-only Team tab has a Your teams heading. iPhone Season draws a coach's wins gold and losses red.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Delete tournament — 12 Oct</span>
-        <span class="chip">tested on the server</span>
+        <span class="item-title">iPhone camera (3 Nov)</span>
+        <span class="chip">TestFlight</span>
       </div>
-      <p class="item-body">
-        Tournament → ⚙ Setup → Delete tournament, or Delete on its Schedule entry. The bracket, its schedule entry and unplayed matches go; played matches stay as regular games. Deleting one match used to come straight back, because the server gives every match of ours a game. Both platforms; tested end to end on a throwaway tournament.
-      </p>
+      <p class="item-body">Zoom glides instead of jumping. Switch to score only? closes when the phone turns sideways, even with Portrait Orientation Lock on. 0.5x ultra-wide confirmed on an iPhone 17.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Deleted games stay deleted — 12 Oct</span>
-        <span class="chip">Android 380/380 · iOS 239/239</span>
+        <span class="item-title">Email logo, team page, security (3 Nov)</span>
+        <span class="chip">live</span>
       </div>
-      <p class="item-body">
-        A third sync path and Restore ignored deletes and pulled games back after a refresh. Deletes are now remembered on the phone the moment you make them. Tournament entries are no longer imported as games. A tournament match no longer becomes a second, fake tournament.
-      </p>
+      <p class="item-body">Team logos in emails read the image straight from storage (a re-upload had broken the saved link). Team page button says Confirm. iPhone Firebase SDK 12.19.3 for Google's certificate notice is live in 1.2.401. The watch reads the support@ inbox too.</p>
     </div>
+  </div>
+
+  <h2>Known and open</h2>
+  <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Widget, Android 10, fan mode, security — 10–12 Oct</span>
-        <span class="chip">emulator + rules tests</span>
+        <span class="item-title">Not fixed yet</span>
+        <span class="chip">open</span>
       </div>
-      <p class="item-body">
-        Widget drops past games and games stuck live. Android 8/9 dropped (recording crashed there; one user). Fan-mode upcoming games open the game page. Shirt orders checked against the store; the shirt counter can't be forged; team delete removes everything; anonymous schedule imports blocked; daily email limits. Schedule import works again (the model was spending its budget thinking).
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">One-tap intermission, summary check, fire default — 30 Sep</span>
-        <span class="chip">Simulator UI test + emulator</span>
-      </div>
-      <p class="item-body">
-        While live, an &ldquo;⏸ Intermission&rdquo; pill sits on the video; tapping a chip starts the break and closes the popup. The thumbnail keeps its size and gains a ✕ and a timer. Wrap-up now shows a green check with when the game summary was sent, plus Resend (which confirms). The volleyball fire icon is on for new games once enabled in Experimental. Both platforms.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Manage Recordings overhaul — 30 Sep</span>
-        <span class="chip">Emulator + simulator UI test</span>
-      </div>
-      <p class="item-body">
-        Each recording shows whether it's on YouTube (with the link) and where it lives. Filters, long-press to select many, Save to Photos, Clean up uploaded, and a notification offering to free space after an upload. Both platforms.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Overnight security pass — 30 Sep</span>
-        <span class="chip">Emulator + live probes</span>
-      </div>
-      <p class="item-body">
-        User and player lists are no longer readable by any signed-in or anonymous session. A follower
-        can't fake an invitation to get into a private team. Staff pushes can't carry links. Maintenance
-        endpoints need a super-user sign-in instead of keys. Hub codes are checked before emailing or
-        pushing a team's followers, and user-typed text is escaped in emails.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Move the scoreboard (Pro) — 29 Sep</span>
-        <span class="chip">Emulator + simulator verified</span>
-      </div>
-      <p class="item-body">
-        Game ▾ → Move scoreboard. Drag it anywhere on the video; it snaps to the edges, the
-        centre, and just above YouTube's controls. Size 50–200%, saved per team and sport. Your
-        logo and the free watermark step out of its way. Football, baseball and bowling keep
-        their wide starting position and mostly slide up and down until shrunk.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Broadcasting to every user is off — 29 Sep</span>
-        <span class="chip">Verified: 403 as super user</span>
-      </div>
-      <p class="item-body">
-        The database refuses new broadcasts from anyone, admins included; the server function
-        refuses and expires anything written another way. The send form is gone from the web
-        admin and the admin app, and broadcast.py exits.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Invitations you can act on without the email</span>
-        <span class="chip">Verified in a browser</span>
-      </div>
-      <p class="item-body">
-        Inviting a ScoreFrame user used to make them a follower on the spot. It now
-        creates a pending follow and the invitation waits on their dashboard with
-        Accept / No thanks — checked by signing in as the invited account and reading
-        the rendered page, which shows "You've been invited to follow PVA 14-1 Select".
-        The email is a nudge; the dashboard is the durable surface.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Roster order, and who runs the team</span>
-      </div>
-      <p class="item-body">
-        The web roster now appears in the order you set it in the app. It had been
-        sorted by document id — UUIDs — because the records the page reads carried no
-        order field at all. Confirmed live as #1 Maebry through #10 Arya.
-        <br><br>
-        Followers can also now see the owner, managers and coaches. Names and roles
-        only: no email, no photo. Knowing who runs your kid's team is reasonable;
-        a contact directory for those people is not, and they never agreed to one.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Housekeeping you asked for</span>
-      </div>
-      <p class="item-body">
-        Carter J removed. Micha left alone for you to add to ONW. The husk inventory
-        emailed in full — 11 teams, 34 leftover documents, 15 game records with dates,
-        sports and scores — with nothing deleted.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Editing a player didn't reach anything</span>
-      </div>
-      <p class="item-body">
-        Add a player as "Audrey", add the surname later, and the roster kept showing "Audrey" —
-        the roster stored its own copy at add time and nothing refreshed it. The player now owns
-        their name; number and position stay per-team, because the same kid really does wear 7
-        here and 12 there. Then the same staleness turned up in the cloud, so the web page still
-        showed the old name: renaming now pushes to every team they're on, and your existing
-        teams have been repaired.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Removing a player from a roster</span>
-      </div>
-      <p class="item-body">
-        The ✕ deleted immediately and permanently, on a screen with a Save button. It now asks,
-        says what it costs, and waits for Save — marked rows stay visible, struck through, with
-        undo. Removing the <em>last</em> player also never reached the cloud at all: the sweep
-        that infers removals is guarded against stale caches, so deliberate removal now names
-        the player instead of being inferred.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">"Anonymous" followers</span>
-      </div>
-      <p class="item-body">
-        The email invite looked the person up by address and then never saved their name.
-        Fixed at the invite, fixed when reading, and your existing followers repaired.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Web: unreadable box, signed-out top bar, mobile layout on desktop</span>
-      </div>
-      <p class="item-body">
-        The Find Teams description used a variable that doesn't exist, so it fell through to the
-        browser's visited-link purple — and even corrected, that grey measured 2.5:1 against the
-        panel, so it changed colour as well. The account bar showed "Sign In" after a Back
-        because the repaint only ran once the team document had loaded; it now repaints on every
-        auth event and on a bfcache restore. And above 900px the pages are a centred 760px
-        column instead of stretching edge to edge.
-      </p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Verified, not assumed</span>
-        <span class="chip">17/17 · 88 · 9/9</span>
-      </div>
-      <p class="item-body">
-        The privacy rules were tested as <em>real signed-in users</em> through the REST API,
-        because the admin SDK bypasses rules and proves nothing: 17/17, including that an
-        approved follower of a public team is denied surnames. 88 unit tests, zero failures.
-        Android driven end to end on the emulator as a brand-new user — which found three bugs
-        in my own roster work that no test could reach. Web pages are now driven with a real
-        signed-in browser, which is how the layout numbers above were measured rather than
-        guessed.
-      </p>
+      <p class="item-body">PVA 14-1 Select's saved logo link is still the old one and something writes it back. The bell's Waiting on others section isn't built. Tournament builder loses its setup when a build fails. Offline, a Working… cover waits for the connection. Android shows Sharing failures as a toast (iPhone: a red line); Android Delete account deletes teams from the phone (iPhone: the server).</p>
     </div>
   </div>
 
