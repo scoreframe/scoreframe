@@ -344,11 +344,11 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">4 Nov 2026 · Needs you bell, every server button shows it's working · Android 1.1.1859 · iOS 1.2.403</span>
+    <span class="stamp">5 Nov 2026 · Crash fixes, the open bug list, store screenshots · Android 1.1.1867 · iOS 1.2.405</span>
   </div>
   <p class="lede">
-    Both apps went to the stores on 4 Nov. Android <strong>1.1.1859</strong> is in Play production (Google review, everyone at once).
-    iOS <strong>1.2.401</strong> is live and <strong>1.2.403 (898)</strong> is waiting for App Review, releasing on approval.
+    Both apps went to the stores again on 5 Nov. Android <strong>1.1.1867</strong> is in Play production review (everyone at once).
+    iOS <strong>1.2.403</strong> is live and <strong>1.2.405 (900)</strong> goes to App Review, releasing on approval.
     The testing record further down is from the August automated runs.
   </p>
 
@@ -356,22 +356,22 @@ onAuthStateChanged(auth, async (user) => {
   <div class="channels">
     <div class="ch live">
       <span class="ch-name">Play production</span>
-      <span class="ch-ver">1.1.1859</span>
-      <span class="ch-note">in Google review, replaces 1856</span>
+      <span class="ch-ver">1.1.1867</span>
+      <span class="ch-note">in Google review, replaces 1859</span>
     </div>
     <div class="ch live">
       <span class="ch-name">App Store</span>
-      <span class="ch-ver">1.2.401</span>
-      <span class="ch-note">live · 1.2.403 (898) waiting for review, release on approval</span>
+      <span class="ch-ver">1.2.403</span>
+      <span class="ch-note">live · 1.2.405 (900) to App Review, release on approval</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1859</span>
+      <span class="ch-ver">1.1.1867</span>
       <span class="ch-note">same build as production</span>
     </div>
     <div class="ch">
       <span class="ch-name">iOS TestFlight</span>
-      <span class="ch-ver">1.2.403 (898)</span>
+      <span class="ch-ver">1.2.405 (900)</span>
       <span class="ch-note">same build as in review</span>
     </div>
   </div>
@@ -380,17 +380,17 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Try the bell and the buttons on a phone</span>
+        <span class="item-title">PC for the ad renders</span>
         <span class="chip">over to you</span>
       </div>
-      <p class="item-body">1859 and 1.2.403 were compiled and opened on the emulator, not used on a real phone. The bell turns orange and rings when a request is waiting; server buttons say Accepting…, Saving… and show a line when a call fails.</p>
+      <p class="item-body">Turn on SSH on the PC (three PowerShell steps, sent 5 Nov) and send the Windows user name; then the ad v3 changes and the landscape version render there.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Facebook cover</span>
+        <span class="item-title">Try 1.1.1867 / 1.2.405 on a phone</span>
         <span class="chip">over to you</span>
       </div>
-      <p class="item-body">Pick A, B or C on the cover canvas; a plain logo version is already sent.</p>
+      <p class="item-body">Rejoin a game from Today's Join card as the scorer, the bell's Waiting on others, and a tournament build. Checked on the emulators, not on a real phone.</p>
     </div>
     <div class="item">
       <div class="item-head">
@@ -398,13 +398,6 @@ onAuthStateChanged(auth, async (user) => {
         <span class="chip">over to you</span>
       </div>
       <p class="item-body">App Store App Privacy; OAuth inactive clients before about Nov 28; club data cleanup before December.</p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Small setup</span>
-        <span class="chip">over to you</span>
-      </div>
-      <p class="item-body">Gmail forward of Google notices from eric@ to support@ so the watch sees them; admin app 0.0.33 with fingerprint unlock.</p>
     </div>
     <div class="item">
       <div class="item-head">
@@ -419,38 +412,38 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Needs you bell (3–4 Nov)</span>
-        <span class="chip">both apps · server deployed</span>
-      </div>
-      <p class="item-body">Follow requests, family links and invites land in the bell the moment they arrive, from a live list the server keeps (users/{uid}/actions), and leave it once anyone answers. When something waits on you the bell button turns orange and rings and counts only those; otherwise a plain bell with a grey count.</p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Every server button shows it's working (4 Nov)</span>
-        <span class="chip">compiled both · emulator opened</span>
-      </div>
-      <p class="item-body">About 100 buttons: the pressed one greys out with Saving…/Accepting…, a second tap is ignored, failures show on screen, and sheets that save keep what you typed. Android Delete account names teams that failed to delete. iPhone Restore purchase says what it found.</p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Invites, Your teams, Season colours (3 Nov)</span>
+        <span class="item-title">Crashes from Crashlytics (5 Nov)</span>
         <span class="chip">both apps</span>
       </div>
-      <p class="item-body">Invites show without leaving the app. A follower-only Team tab has a Your teams heading. iPhone Season draws a coach's wins gold and losses red.</p>
+      <p class="item-body">Android: highlights, uploads and combines that Android refused to start in the background now start the next time the app opens (they crashed it); the share card closing early; first launch; Enter in a text box on Samsung. iPhone: a screen shown over an open pop-up crashed when the pop-up closed (a new user right after sign-up); everything now waits for pop-ups.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">iPhone camera (3 Nov)</span>
-        <span class="chip">TestFlight</span>
+        <span class="item-title">The open bug list (5 Nov)</span>
+        <span class="chip">both apps · server deployed</span>
       </div>
-      <p class="item-body">Zoom glides instead of jumping. Switch to score only? closes when the phone turns sideways, even with Portrait Orientation Lock on. 0.5x ultra-wide confirmed on an iPhone 17.</p>
+      <p class="item-body">Scorer rejoin from Today shows the full score panel. Tournament builder keeps the setup when a build fails. Offline, a Saving… box says so and can be closed. Team logo links stay right after a re-upload (server repairs them too; PVA fixed). The bell lists your own requests under Waiting on others.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Email logo, team page, security (3 Nov)</span>
+        <span class="item-title">Found on the way (5 Nov)</span>
+        <span class="chip">Android</span>
+      </div>
+      <p class="item-body">Joining or leaving a camera's game wiped or replaced the scoring phone's own paused game. The paused-game card's pulse kept running after the card was gone and redrew Today about 36 times a second.</p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Store screenshots, bowling recap (5 Nov)</span>
         <span class="chip">live</span>
       </div>
-      <p class="item-body">Team logos in emails read the image straight from storage (a re-upload had broken the saved link). Team page button says Confirm. iPhone Firebase SDK 12.19.3 for Google's certificate notice is live in 1.2.401. The watch reads the support@ inbox too.</p>
+      <p class="item-body">The court picture in the Play and App Store screenshots is 6 v 6 now (two extra players removed, as in the ad). Bowling recap emails are on; the Unified Bowling Meet recap went to 9 people.</p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Phone calendar, trader status (4 Nov)</span>
+        <span class="chip">both apps</span>
+      </div>
+      <p class="item-body">Schedule changes reach the phone calendar at once; one-day meets show at their time. EU trader status declared in Play Console.</p>
     </div>
   </div>
 
@@ -461,7 +454,7 @@ onAuthStateChanged(auth, async (user) => {
         <span class="item-title">Not fixed yet</span>
         <span class="chip">open</span>
       </div>
-      <p class="item-body">PVA 14-1 Select's saved logo link is still the old one and something writes it back. The bell's Waiting on others section isn't built. Tournament builder loses its setup when a build fails. Offline, a Working… cover waits for the connection. Android shows Sharing failures as a toast (iPhone: a red line); Android Delete account deletes teams from the phone (iPhone: the server).</p>
+      <p class="item-body">A scorer's Disconnect isn't told to the camera, which shows Reconnecting… as if the link dropped (needs a message on both apps). Android shows Sharing failures as a toast (iPhone: a red line); Android Delete account deletes teams from the phone (iPhone: the server).</p>
     </div>
   </div>
 
