@@ -2143,6 +2143,9 @@ async function loadPractices() {
         list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     } catch (_) { return; }
     if (!list.length) return;
+    // One-time dates (picture day, a banquet; kind "other") live with the practices (Eric 2026-11-05).
+    const head = box.querySelector('.head h2');
+    if (head) head.textContent = list.some((x) => x.kind === 'other') ? 'Practices & more' : 'Practices';
     // Who's in and out: staff only, and the rule enforces it.
     const names = {};
     if (isManager || isCoach) {
@@ -2160,11 +2163,12 @@ async function loadPractices() {
         b.type = 'button'; b.setAttribute('aria-expanded', 'false');
         const when = document.createElement('div'); when.className = 'when';
         const line = document.createElement('span');
-        line.textContent = `${practiceDay(p.dateMs)} · ${practiceTime(p.dateMs)}\u2013${practiceTime(p.endMs)}`;
+        const other = p.kind === 'other';
+        line.textContent = `${other ? '\u{1F4C5} ' + (p.label || 'Team date') + ' · ' : ''}${practiceDay(p.dateMs)} · ${practiceTime(p.dateMs)}\u2013${practiceTime(p.endMs)}`;
         when.append(line);
         if (off) { const t = document.createElement('span'); t.className = 'off-tag'; t.textContent = 'Cancelled'; when.append(t); }
         b.append(when);
-        const sub = [p.label, p.location].filter(Boolean).join(' · ');
+        const sub = [other ? '' : p.label, p.location].filter(Boolean).join(' · ');
         if (sub) { const w = document.createElement('div'); w.className = 'where'; w.textContent = sub; b.append(w); }
         const n = names['practice_' + p.id];
         if (n && !off && ((n.out || []).length || (n.in || []).length)) {
