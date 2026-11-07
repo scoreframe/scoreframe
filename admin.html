@@ -347,8 +347,9 @@ const ICON = {
   feedback: '<path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.4l6-.8z"></path>',
   agreements: '<path d="M6 3h9l4 4v14H6z"></path><path d="M9 12l2 2 4-4"></path>',
   system: '<path d="M3 12h4l3-8 4 16 3-8h4"></path>',
+  taps: '<path d="M9 11V5.5a1.5 1.5 0 013 0V11M12 10V8.5a1.5 1.5 0 013 0V11M15 10.5a1.5 1.5 0 013 0V15a6 6 0 01-6 6h-.5a6 6 0 01-5.2-3L4 13.6a1.5 1.5 0 012.5-1.6L9 15"></path>',
 };
-const NAV = [['today', 'Today'], ['clubs', 'Clubs'], ['billing', 'Billing'], ['people', 'People and teams'], ['accounts', 'Accounts'], ['support', 'Support'], ['feedback', 'Feedback'], ['agreements', 'Agreements'], ['system', 'System and audit']];
+const NAV = [['today', 'Today'], ['clubs', 'Clubs'], ['billing', 'Billing'], ['people', 'People and teams'], ['accounts', 'Accounts'], ['support', 'Support'], ['feedback', 'Feedback'], ['agreements', 'Agreements'], ['taps', 'What people tap'], ['system', 'System and audit']];
 let badges = {};
 function shell() {
   if (APP) APP.unlocked(); // the app subscribes to ticket pushes
@@ -901,6 +902,55 @@ function wireCleanup() {
     if (a) act('adminCleanup', { action: 'mode', mode: 'report', reason: a.reason }, () => toast('Report only.'));
   };
 }
+
+// ── What people tap (Hick's law idea 2, 2026-11-07) ──────────────────────
+// Counts only, from both apps (functions/ui_taps.js): which game menu and
+// setup choices get used, so the next cut rests on numbers.
+const TAP_NAMES = {
+  menu: 'Game menu', menu_camera: 'Camera and video page', menu_scorer: 'Scoring phone menu', setup: 'Game setup', setup_result: 'New games were set to',
+};
+const TAP_ITEMS = {
+  open: 'Opened', setup: 'Game setup', history: 'Set history', plays: 'Game log', roster: 'Edit roster', rows_roster: 'Roster and numbers', numbers: 'Player numbers',
+  reset: 'Reset…', health: 'Phone health', plan: 'After the game', settings: 'All settings', end: 'End game', handoff: 'Send this game', remote: 'Add a phone',
+  phones: 'Phones block', camera_video: 'Camera and video', sw_mic: 'Microphone', mic: 'Microphone', scoreonly: 'Score only', sw_screen_dim: 'Dim screen',
+  intermission: 'Intermission', followball: 'Follow the ball', sw_stabilization: 'Stabilize', sw_hdr: 'HDR', sw_sharpening: 'Sharpen', sw_auto_save: 'Save to gallery',
+  sw_logo_overlay: 'Logo on video', sw_floating: 'Floating buttons', sw_celebrations: 'Celebrations', sw_scoreboard: 'Scoreboard', rows_scoreboard: 'Scoreboard options',
+  rows_celebrations: 'Celebration options', rows_video: 'Video quality', final: 'Mark Final', sbstyle: 'Scoreboard style', sbstats: 'Stats on scoreboard',
+  change_team: 'Change (your team)', change_game: 'Change (this game)', opp_new: '+ New opponent', opp_all: 'All opponents', event_chip: 'An event chip',
+  event_type: '+ Type one (event)', start_short: 'Start game, short page', start_full: 'Start game, full page', save_midgame: 'Save, mid-game',
+  games: 'New games', start_not_0: 'Start at more than 0', event_named: 'An event named', opp_color_today: "Opponent's color changed",
+  capture_ask: 'Capture: ask when recording', capture_full: 'Capture: full game', capture_highlights: 'Capture: highlights only',
+};
+const tapName = (k) => TAP_ITEMS[k] || (k.startsWith('opp_chip_') ? `Opponent chip ${k.slice(9)}` : k.startsWith('format_') ? `Format: ${k.slice(7) === '1' ? 'pool play' : 'best of ' + k.slice(7)}`
+  : k.startsWith('target_') ? `Points: ${k.slice(7)}` : k.startsWith('mode_') ? `Scoring: ${k.slice(5)}` : k.replace(/_/g, ' '));
+VIEWS.taps = async () => {
+  const days = state.tapDays || 21;
+  const r = await call('adminUiTaps', { days });
+  const card = (sc) => {
+    const opened = (sc.items.find((i) => i.item === 'open') || {}).count || 0;
+    const items = sc.items.filter((i) => i.item !== 'open');
+    const sum = sc.screen === 'setup_result' ? ((sc.items.find((i) => i.item === 'games') || {}).count || 0) : items.reduce((a, b) => a + b.count, 0);
+    const list = sc.screen === 'setup_result' ? items.filter((i) => i.item !== 'games') : items;
+    const pct = (n) => (sum ? Math.round((n / sum) * 1000) / 10 : 0);
+    return `<div class="card pad" style="display:flex;flex-direction:column;gap:10px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <h2>${esc(TAP_NAMES[sc.screen] || sc.screen)}</h2><span class="sub">${sc.screen === 'setup_result' ? `${sum} new games` : `${sum} taps${opened ? ` · opened ${opened} times` : ''}`}</span></div>
+      <div class="scroll"><table><thead><tr><th>${sc.screen === 'setup_result' ? 'Set to' : 'Item'}</th><th style="text-align:right">Count</th><th style="text-align:right">${sc.screen === 'setup_result' ? 'Of games' : 'Share'}</th><th style="width:38%"><span class="hide">Bar</span></th></tr></thead><tbody>
+      ${list.map((i) => `<tr><td>${esc(tapName(i.item))}${sc.screen !== 'setup_result' && sum >= 50 && pct(i.count) < 2 ? ' ' + chip('under 2%', 'warn') : ''}</td><td style="text-align:right;font-variant-numeric:tabular-nums">${i.count}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums" class="sub">${pct(i.count)}%</td>
+        <td><span style="display:block;height:10px;border-radius:5px;background:var(--ln2);overflow:hidden" aria-hidden="true"><span style="display:block;height:100%;width:${Math.min(100, pct(i.count))}%;background:var(--orange)"></span></span></td></tr>`).join('') || '<tr><td colspan="4" class="empty">Nothing yet.</td></tr>'}
+      </tbody></table></div></div>`;
+  };
+  const order = ['menu', 'menu_camera', 'setup', 'setup_result', 'menu_scorer'];
+  const screens = r.screens.slice().sort((a, b) => (order.indexOf(a.screen) + 1 || 99) - (order.indexOf(b.screen) + 1 || 99));
+  return `${head('Counts only, from both apps', 'What people tap', `<label class="sub" for="tapDays" style="display:flex;gap:6px;align-items:center">Last <select class="in" id="tapDays" style="min-height:34px">${[7, 21, 60].map((n) => `<option value="${n}"${n === days ? ' selected' : ''}>${n} days</option>`).join('')}</select></label>`)}
+    <section class="grid">
+      <div class="card tile"><span class="lbl">Days with taps</span><span class="v">${r.daysWithData}</span><span class="sub">of the last ${r.days}</span></div>
+      <div class="card tile"><span class="lbl">Sends from phones</span><span class="v">${r.calls}</span><span class="sub">each phone sends a few times a day</span></div>
+      <div class="card tile"><span class="lbl">Android · iPhone</span><span class="v">${r.android} · ${r.ios}</span><span class="sub">sends by platform</span></div></section>
+    <p class="sub" style="margin:0;line-height:1.5">Anything under about 2% of a screen's taps, once a screen has 50 or more, is a candidate to move behind a More row. The apps send the screen, the item and a count, never names, teams, players, email or location, and nothing about who sent it.</p>
+    ${screens.length ? screens.map(card).join('') : '<div class="card pad empty">No taps yet. The apps that count them are Android 1.1.1873 and the next iPhone build; counts start once people use them.</div>'}`;
+};
+WIRE.taps = () => { $('tapDays').onchange = () => { state.tapDays = Number($('tapDays').value); route(); }; };
 
 // ── Accounts ───────────────────────────────────────────────────────────
 VIEWS.accounts = async () => {
