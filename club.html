@@ -273,6 +273,9 @@ const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '
 const DAY = 86400000;
 const SPORTS = { VOLLEYBALL: 'Volleyball', BASKETBALL: 'Basketball', SOCCER: 'Soccer', BASEBALL: 'Baseball', SOFTBALL: 'Softball',
   FOOTBALL: 'Football', HOCKEY: 'Hockey', LACROSSE: 'Lacrosse', BOWLING: 'Bowling', TENNIS: 'Tennis', PICKLEBALL: 'Pickleball', GENERIC: 'Other' };
+// Every list of all the sports shows each one's icon (Eric 2026-11-07); the apps' icons.
+const SPORT_ICON = { VOLLEYBALL: '🏐', BASKETBALL: '🏀', SOCCER: '⚽', BASEBALL: '⚾', SOFTBALL: '🥎', FOOTBALL: '🏈',
+  HOCKEY: '🏒', LACROSSE: '🥍', BOWLING: '🎳', TENNIS: '🎾', PICKLEBALL: '🏓', GENERIC: '🎯' };
 const fmtYmd = (ymd) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }); };
 const ymdOf = (ms) => new Date(ms).toISOString().slice(0, 10);
 const addDaysYmd = (ymd, n) => { const [y, m, d] = ymd.split('-').map(Number); return ymdOf(Date.UTC(y, m - 1, d) + n * DAY); };
@@ -911,7 +914,7 @@ function renderCreate() {
     <p class="muted" style="line-height:1.5;margin:8px 0 0;">You'll add teams and invite their coaches next. Every coach and manager on a licensed team gets ScoreFrame Pro on that team, paid by the club. Start with a free 14-day trial for up to 3 teams.</p></div>
     <div class="field"><label for="cName">Club name</label><input id="cName" placeholder="Rockets Volleyball Club" maxlength="80"></div>
     <div class="grid2">
-      <div class="field"><label for="cSport">Sport</label><select id="cSport">${Object.entries(SPORTS).map(([k, v]) => `<option value="${k}"${k === 'VOLLEYBALL' ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div class="field"><label for="cSport">Sport</label><select id="cSport">${Object.entries(SPORTS).map(([k, v]) => `<option value="${k}"${k === 'VOLLEYBALL' ? ' selected' : ''}>${SPORT_ICON[k]} ${v}</option>`).join('')}</select></div>
       <div class="field"><label for="cCity">City</label><input id="cCity" placeholder="Omaha, NE" maxlength="80"></div>
     </div>
     <div class="field"><label for="cOrg">Name on invoices</label><input id="cOrg" placeholder="Rockets Volleyball Club Inc." maxlength="120"></div>
@@ -1336,7 +1339,7 @@ function addTeamDialog() {
     <div class="field"><label for="tName">Team name</label><input id="tName" maxlength="60" placeholder="18 Elite" required></div>
     <div class="grid2">
       <div class="field"><label for="tAge">Age group</label><input id="tAge" maxlength="30" placeholder="18U"></div>
-      <div class="field"><label for="tSport">Sport</label><select id="tSport">${Object.entries(SPORTS).map(([k, v]) => `<option value="${k}"${k === S.club.sport ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div class="field"><label for="tSport">Sport</label><select id="tSport">${Object.entries(SPORTS).map(([k, v]) => `<option value="${k}"${k === S.club.sport ? ' selected' : ''}>${SPORT_ICON[k]} ${v}</option>`).join('')}</select></div>
     </div>
     <div class="grid2">
       <div class="field"><label for="tC1">Main color</label><input id="tC1" type="color" value="${esc(S.club.color || '#C8102E')}" style="height:44px;padding:4px;"></div>
