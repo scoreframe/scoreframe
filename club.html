@@ -354,6 +354,25 @@ if (S.tab === 'data') { S.tab = 'settings'; S.dataFocus = true; }
 const ytReturn = params.get('state') && (params.get('code') || params.get('error'))
   ? { state: params.get('state'), code: params.get('code'), error: params.get('error') } : null;
 if (ytReturn) { ['state', 'code', 'error', 'scope', 'authuser', 'prompt', 'hd'].forEach(k => params.delete(k)); history.replaceState(null, '', location.pathname); }
+// A team's own channel (team_youtube.js, connected by its owner in the app) comes
+// back here too: Google returns only to this registered address. Its state starts
+// with "t" and names the owner and team, so it finishes without a sign-in.
+const teamYt = ytReturn && /^t[0-9a-f]{48}$/.test(ytReturn.state) ? ytReturn : null;
+async function finishTeamYt() {
+  document.title = 'YouTube channel · ScoreFrame';
+  document.querySelector('.pill-club')?.classList.add('hide');
+  const box = (title, body) => { $('main').innerHTML = `<div class="card pad" style="max-width:520px;margin:40px auto;display:flex;flex-direction:column;gap:12px;">
+    <h2 style="font-size:20px;font-weight:800;margin:0;">${title}</h2>${body}</div>`; };
+  const back = '<p class="muted" style="margin:0;line-height:1.5;">Go back to the ScoreFrame app. The team page there shows the channel.</p>';
+  if (teamYt.error) { box('YouTube wasn\'t connected', `<p style="margin:0;line-height:1.5;">${teamYt.error === 'access_denied' ? 'Google\'s screen was closed before it finished. You can connect again from the team in ScoreFrame.' : esc('Google said: ' + teamYt.error)}</p>${back}`); return; }
+  $('main').innerHTML = '<div class="loading">Connecting the team\'s YouTube channel…</div>';
+  try {
+    const r = await call('teamYouTubeConnect', { state: teamYt.state, code: teamYt.code });
+    box(`${esc(r.title)} is connected`, `<p style="margin:0;line-height:1.5;">${r.status === 'ready'
+      ? `Every live stream for ${esc(r.teamName || 'the team')} now goes to this channel, whoever records it.`
+      : `YouTube still has to turn on live streaming for this channel. That can take up to 24 hours after it's turned on at youtube.com/features. After that, every live stream for ${esc(r.teamName || 'the team')} goes here.`}</p>${back}`);
+  } catch (e) { box('YouTube wasn\'t connected', `<p style="margin:0;line-height:1.5;">${esc(errText(e))}</p>${back}`); }
+}
 function setUrl() {
   const p = new URLSearchParams();
   if (S.clubId) p.set('club', S.clubId);
@@ -825,7 +844,9 @@ function openDemo() {
   draw(); d.showModal();
 }
 
+if (teamYt) finishTeamYt();
 onAuthStateChanged(auth, async (u) => {
+  if (teamYt) return;   // a team channel connection, not the club console
   S.unsub.forEach(f => f()); S.unsub = [];
   S.user = u && !u.isAnonymous ? u : null;
   if (!S.user) { renderWho(); renderSignIn(); if (params.get('director') && typeof openSignIn === 'function') openSignIn(); return; }
