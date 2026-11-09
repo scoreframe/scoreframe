@@ -344,12 +344,12 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">9 Nov 2026 · Game radio, watch apps · Android 1.1.1885 · iOS 1.2.407</span>
+    <span class="stamp">9 Nov 2026 · Live game, Game radio · Android 1.1.1886 · iOS 1.2.408</span>
   </div>
   <p class="lede">
-    New this weekend: <strong>Game radio</strong> for volleyball (hear a live game called without watching) is on Android testers in <strong>1.1.1885</strong>;
-    the iPhone side goes in today's TestFlight upload. Android <strong>1.1.1884</strong> and the first <strong>Wear OS watch app</strong> are in Google's production review.
-    iOS <strong>1.2.406</strong> is live; <strong>1.2.407 (902)</strong> on TestFlight carries the Apple Watch app.
+    New today: the <strong>live game</strong> for volleyball. Game radio, the game page and Today now follow a game from one feed: listen, watch with the play-by-play in step with the video, or follow the score with no video at all.
+    Android <strong>1.1.1886</strong> on testers; iOS <strong>1.2.408 (903)</strong> on TestFlight with Game radio and the live game.
+    Android <strong>1.1.1884</strong> and the first <strong>Wear OS watch app</strong> are in Google's production review; iOS <strong>1.2.406</strong> is live.
   </p>
 
   <h2>Where the code is</h2>
@@ -366,13 +366,13 @@ onAuthStateChanged(auth, async (user) => {
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1885</span>
-      <span class="ch-note">Game radio</span>
+      <span class="ch-ver">1.1.1886</span>
+      <span class="ch-note">Live game + Game radio</span>
     </div>
     <div class="ch">
       <span class="ch-name">iOS TestFlight</span>
-      <span class="ch-ver">1.2.407 (902)</span>
-      <span class="ch-note">Apple Watch app · Game radio in the next upload</span>
+      <span class="ch-ver">1.2.408 (903)</span>
+      <span class="ch-note">Live game + Game radio · Apple Watch app</span>
     </div>
   </div>
 
@@ -380,10 +380,10 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Listen to a game (1.1.1885)</span>
-        <span class="chip">Android</span>
+        <span class="item-title">Try a live game (1.1.1886 · 1.2.408)</span>
+        <span class="chip">both phones</span>
       </div>
-      <p class="item-body">On a live volleyball game, Today shows 🎧 Listen next to Watch. Check the voice, the calls, and that it keeps going with the screen off. Tested on the emulator and an iPhone simulator, not on a real phone.</p>
+      <p class="item-body">On a real volleyball game: Listen with the screen off (iPhone especially), the game page's score and play-by-play with and without the stream, and Today's score line. Tested on the emulator, an iPhone simulator and in Chrome, not on a real phone.</p>
     </div>
     <div class="item">
       <div class="item-head">
@@ -417,6 +417,13 @@ onAuthStateChanged(auth, async (user) => {
 
   <h2>Built the last few days</h2>
   <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Live game, one feed (9 Nov)</span>
+        <span class="chip">Android 1.1.1886 · iOS 1.2.408</span>
+      </div>
+      <p class="item-body">Game radio's list is now the one live feed of a game. The game page shows the live score, who's serving, set by set, play-by-play and a live box score; while the stream plays on the page, each play waits until the video gets there (Show latest jumps ahead). A finished game lists every play next to its video, tap to watch. Today's live cards show the score and last play; the listening screen shows the same rows. The Labs video-synced page and its per-point writes are gone. Not built: the announcer timed to the video, which YouTube's rules forbid (no alternate audio tracks).</p>
+    </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">Game radio, volleyball (9 Nov)</span>

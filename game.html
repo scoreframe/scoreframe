@@ -2780,13 +2780,16 @@ function lvRender(force) {
     card.style.display = '';
     document.body.classList.toggle('lv-live', LV.live);
     document.body.classList.toggle('lv-novideo', LV.live && !hasVideo && playlistStreams.length === 0);
+    lvRenderBox();
 }
 
 function lvRenderBox() {
     const card = $('liveBoxCard');
     if (!card) return;
     const b = LV.box;
-    if (!LV.live || !b) { card.style.display = 'none'; return; }
+    // The saved box score takes over once the game is saved (a page left open through End Game).
+    const saved = $('boxScoreCard') && $('boxScoreCard').style.display !== 'none';
+    if (!LV.live || !b || saved) { card.style.display = 'none'; return; }
     const cols = boxScoreColumnsForSport('VOLLEYBALL');
     const g = LV.game || {}, hub = LV.hub || {};
     const mk = (side) => (Array.isArray(b[side]) ? b[side] : []).map(p => ({
