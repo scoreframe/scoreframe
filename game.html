@@ -1174,7 +1174,7 @@ window.sfClubOffline = function (t) {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v51</span>
+    <span class="page-version">game.html v52</span>
 </div>
 
 <script type="module">
@@ -1814,16 +1814,32 @@ async function load() {
         // POSTPONED / CANCELLED pill + explanation card.
         const status = (game.status || '').toLowerCase();
         const isStateless = status === 'postponed' || status === 'cancelled';
-        if (isStateless || (game.date || 0) > Date.now()) {
+        // A LIVE game is live whatever its start time says. The first point
+        // (or recording) marks a scheduled game live, and starting early left
+        // `date` in the future, so the page showed the countdown with no live
+        // score (Eric 2026-11-09, VB Test started 18 minutes early).
+        if (status !== 'live' && (isStateless || (game.date || 0) > Date.now())) {
             renderUpcomingGame(hubProfile, game);
+            if (status === 'scheduled') reloadWhenLive(teamId, gameId);
             return;
         }
+        if (status === 'scheduled') reloadWhenLive(teamId, gameId);
     }
 
     renderGame(hubProfile, game);
     // v20 — Live-sync completed-game edits from the app's Manage overlay.
     // Data cards only; never remounts the player (see attachLiveSync).
     attachLiveSync(hubProfile, game, (game.sport || hubProfile.sport || 'GENERIC').toUpperCase(), teamId, gameId);
+}
+
+// A page opened before the game starts: reload into the live game the moment
+// the scoring phone marks it live (its first point, recording or stream).
+function reloadWhenLive(teamId, gameId) {
+    try {
+        const unsub = onSnapshot(doc(db, 'teams', teamId, 'games', gameId), (snap) => {
+            if (snap.exists() && (snap.data().status || '') === 'live') { unsub(); location.reload(); }
+        }, () => {});
+    } catch (_) { /* the page still works; it just won't switch by itself */ }
 }
 
 // Pre-game render path. Shows the team header + a countdown card in the
