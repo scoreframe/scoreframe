@@ -344,35 +344,35 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">5 Nov 2026 · Crash fixes, the open bug list, store screenshots · Android 1.1.1867 · iOS 1.2.405</span>
+    <span class="stamp">9 Nov 2026 · Game radio, watch apps · Android 1.1.1885 · iOS 1.2.407</span>
   </div>
   <p class="lede">
-    Both apps went to the stores again on 5 Nov. Android <strong>1.1.1867</strong> is in Play production review (everyone at once).
-    iOS <strong>1.2.403</strong> is live and <strong>1.2.405 (900)</strong> goes to App Review, releasing on approval.
-    The testing record further down is from the August automated runs.
+    New this weekend: <strong>Game radio</strong> for volleyball (hear a live game called without watching) is on Android testers in <strong>1.1.1885</strong>;
+    the iPhone side goes in today's TestFlight upload. Android <strong>1.1.1884</strong> and the first <strong>Wear OS watch app</strong> are in Google's production review.
+    iOS <strong>1.2.406</strong> is live; <strong>1.2.407 (902)</strong> on TestFlight carries the Apple Watch app.
   </p>
 
   <h2>Where the code is</h2>
   <div class="channels">
     <div class="ch live">
       <span class="ch-name">Play production</span>
-      <span class="ch-ver">1.1.1867</span>
-      <span class="ch-note">in Google review, replaces 1859</span>
+      <span class="ch-ver">1.1.1884</span>
+      <span class="ch-note">in Google review with Wear OS 1.0.1, replaces 1877</span>
     </div>
     <div class="ch live">
       <span class="ch-name">App Store</span>
-      <span class="ch-ver">1.2.403</span>
-      <span class="ch-note">live · 1.2.405 (900) to App Review, release on approval</span>
+      <span class="ch-ver">1.2.406</span>
+      <span class="ch-note">live</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1867</span>
-      <span class="ch-note">same build as production</span>
+      <span class="ch-ver">1.1.1885</span>
+      <span class="ch-note">Game radio</span>
     </div>
     <div class="ch">
       <span class="ch-name">iOS TestFlight</span>
-      <span class="ch-ver">1.2.405 (900)</span>
-      <span class="ch-note">same build as in review</span>
+      <span class="ch-ver">1.2.407 (902)</span>
+      <span class="ch-note">Apple Watch app · Game radio in the next upload</span>
     </div>
   </div>
 
@@ -380,70 +380,70 @@ onAuthStateChanged(auth, async (user) => {
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">PC for the ad renders</span>
-        <span class="chip">over to you</span>
+        <span class="item-title">Listen to a game (1.1.1885)</span>
+        <span class="chip">Android</span>
       </div>
-      <p class="item-body">Turn on SSH on the PC (three PowerShell steps, sent 5 Nov) and send the Windows user name; then the ad v3 changes and the landscape version render there.</p>
+      <p class="item-body">On a live volleyball game, Today shows 🎧 Listen next to Watch. Check the voice, the calls, and that it keeps going with the screen off. Tested on the emulator and an iPhone simulator, not on a real phone.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Try 1.1.1867 / 1.2.405 on a phone</span>
-        <span class="chip">over to you</span>
+        <span class="item-title">Apple Watch on a real watch</span>
+        <span class="chip">iOS 1.2.407</span>
       </div>
-      <p class="item-body">Rejoin a game from Today's Join card as the scorer, the bell's Waiting on others, and a tournament build. Checked on the emulators, not on a real phone.</p>
+      <p class="item-body">The watch app has only run on simulators. A live game's score on the watch and taps scoring from it are the first things to check.</p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Club outreach</span>
+        <span class="chip">waiting on you</span>
+      </div>
+      <p class="item-body">20 small Midwest clubs picked for the first batch ($10/team locked for a year). Nothing is sent until the PO box, clubs@scoreframe.app and your OK on the email text.</p>
     </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">Dated jobs</span>
-        <span class="chip">over to you</span>
+        <span class="chip">soon</span>
       </div>
       <p class="item-body">App Store App Privacy; OAuth inactive clients before about Nov 28; club data cleanup before December.</p>
     </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">Held replies</span>
-        <span class="chip">over to you</span>
+        <span class="chip">drafts</span>
       </div>
       <p class="item-body">Spencer's reply and David Fisher's Wi-Fi Direct reply are drafts, not sent.</p>
     </div>
   </div>
 
-  <h2>Fixed the last two days</h2>
+  <h2>Built the last few days</h2>
   <div class="items">
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Crashes from Crashlytics (5 Nov)</span>
-        <span class="chip">both apps</span>
+        <span class="item-title">Game radio, volleyball (9 Nov)</span>
+        <span class="chip">Android 1.1.1885 · iOS next upload</span>
       </div>
-      <p class="item-body">Android: highlights, uploads and combines that Android refused to start in the background now start the next time the app opens (they crashed it); the share card closing early; first launch; Enter in a text box on Samsung. iPhone: a screen shown over an open pop-up crashed when the pop-up closed (a new user right after sign-up); everything now waits for pop-ups.</p>
+      <p class="item-body">A follower hears the game called live in the Puck voice: points, side outs, runs, set and match point, sets, with jersey numbers on kills, aces and blocks. Free for every follower; coaches choose who can listen and numbers or first names (Team › Game radio). Lock-screen play/pause with the score. The 603-clip voice pack was checked clip by clip with speech-to-text. Only games followers already see live (scheduled or streamed).</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">The open bug list (5 Nov)</span>
-        <span class="chip">both apps · server deployed</span>
+        <span class="item-title">Found while testing radio (9 Nov)</span>
+        <span class="chip">fixed</span>
       </div>
-      <p class="item-body">Scorer rejoin from Today shows the full score panel. Tournament builder keeps the setup when a build fails. Offline, a Saving… box says so and can be closed. Team logo links stay right after a re-upload (server repairs them too; PVA fixed). The bell lists your own requests under Waiting on others.</p>
+      <p class="item-body">Android's player froze at the first call (no audio) and had no lock-screen player; the iPhone cut a call off mid-sentence when points came fast; "match point" was said after the match was already won.</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Found on the way (5 Nov)</span>
-        <span class="chip">Android</span>
+        <span class="item-title">Watch apps (8 Nov)</span>
+        <span class="chip">Wear OS in review · Apple Watch on TestFlight</span>
       </div>
-      <p class="item-body">Joining or leaving a camera's game wiped or replaced the scoring phone's own paused game. The paused-game card's pulse kept running after the card was gone and redrew Today about 36 times a second.</p>
+      <p class="item-body">Wear OS 1.0.1 went to production review with phone 1.1.1884 after you scored a game from your Galaxy Watch7. The Apple Watch app and its Smart Stack card are in iOS 1.2.407 (902).</p>
     </div>
     <div class="item">
       <div class="item-head">
-        <span class="item-title">Store screenshots, bowling recap (5 Nov)</span>
-        <span class="chip">live</span>
+        <span class="item-title">Simpler setup and game menu (7 Nov)</span>
+        <span class="chip">both apps · live on iOS</span>
       </div>
-      <p class="item-body">The court picture in the Play and App Store screenshots is 6 v 6 now (two extra players removed, as in the ad). Bowling recap emails are on; the Unified Bowling Meet recap went to 9 people.</p>
-    </div>
-    <div class="item">
-      <div class="item-head">
-        <span class="item-title">Phone calendar, trader status (4 Nov)</span>
-        <span class="chip">both apps</span>
-      </div>
-      <p class="item-body">Schedule changes reach the phone calendar at once; one-day meets show at their time. EU trader status declared in Play Console.</p>
+      <p class="item-body">Short new-game page, schedule straight to the camera, a slimmer game menu, sport icons wherever sports are listed. In Android 1.1.1877 and iOS 1.2.406.</p>
     </div>
   </div>
 
