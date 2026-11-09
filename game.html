@@ -206,7 +206,8 @@ html, body {
 body.sf-nospoil #heroResult, body.sf-nospoil #scoreCard, body.sf-nospoil #boxScoreCard,
 body.sf-nospoil #scoringSummaryCard, body.sf-nospoil #matchStatsCard, body.sf-nospoil #pkShootoutCard,
 body.sf-nospoil #aiRecapCard, body.sf-nospoil #coachNotesCard, body.sf-nospoil #highlightsCard,
-body.sf-nospoil #moreFromTeamCard { display: none !important; }
+body.sf-nospoil #moreFromTeamCard, body.sf-nospoil #liveBoxCard,
+body.sf-nospoil #liveCard.lv-spoils { display: none !important; }
 .spoiler-banner {
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
     padding: 14px 16px; margin-bottom: 14px; border-radius: 14px;
@@ -797,6 +798,65 @@ body.sf-nospoil #moreFromTeamCard { display: none !important; }
     color: var(--muted); font-size: 20px; line-height: 1; padding: 0 2px;
     font-family: inherit;
 }
+/* Live game (2026-11-09): the score, the plays and the box score from the
+   live feed (lvRender). Under the video, never over it. */
+body.lv-live #scoreCard { display: none !important; }
+body.lv-novideo .stage { display: none !important; }
+.lv-top { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+.lv-chip { display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; }
+.lv-chip.live { background: #C71A1A; color: #FFFFFF; }
+.lv-chip.scoring { background: var(--accent-dim); color: var(--accent); }
+.lv-chip.final { background: var(--bg-elevated); color: var(--text-primary); }
+.lv-score { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.lv-team { display: flex; flex-direction: column; gap: 5px; width: 30%; min-width: 0; }
+.lv-team.away { align-items: flex-end; text-align: right; }
+.lv-bar { width: 30px; height: 4px; border-radius: 2px; }
+.lv-tname { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; overflow-wrap: anywhere; }
+.lv-serve { display: inline-flex; align-items: center; gap: 5px; color: var(--accent); font-size: 11px; font-weight: 700; }
+.lv-serve::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.lv-serve-gap { height: 14px; }
+.lv-nums { display: flex; align-items: center; gap: 8px; font-weight: 900; font-variant-numeric: tabular-nums;
+    font-size: 44px; line-height: 1; white-space: nowrap; }
+.lv.big .lv-nums { font-size: 60px; }
+.lv-nums .dash { font-size: 0.5em; color: var(--text-muted); }
+.lv-nums .trail { color: var(--text-secondary); }
+.lv-setline { text-align: center; color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    margin-top: 10px; text-transform: uppercase; }
+.lv-sync { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; margin-top: 12px; font-size: 12px; color: var(--text-secondary); }
+.lv-sync button { margin-left: auto; padding: 8px 0; background: none; border: 0; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; }
+.lv-listen { width: 100%; height: 48px; margin-top: 12px; border: 0; border-radius: 12px; background: var(--accent); color: #1A1004;
+    font: inherit; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.lv-sets { display: grid; margin-top: 14px; border: 1px solid var(--bg-elevated); border-radius: 10px; overflow: hidden;
+    font-variant-numeric: tabular-nums; }
+.lv-sets > span { padding: 7px 4px; text-align: center; font-size: 15px; font-weight: 800; border-top: 1px solid var(--bg-elevated); }
+.lv-sets > span.h { border-top: 0; background: var(--bg-deep); color: var(--text-secondary); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.lv-sets > span.t { text-align: left; padding-left: 10px; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lv-sets > span.cur { background: var(--accent-dim); }
+.lv-sets > span.h.cur { color: var(--accent); }
+.lv-sets > span.win { color: var(--accent); }
+.lv-sets > span.e { color: var(--text-muted); font-weight: 600; }
+.lv-plays-head { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 6px; }
+.lv-plays-head .label { margin: 0; }
+.lv-plays-head .sub { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.lv-row { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 10px; border-bottom: 1px solid var(--bg-elevated); font-size: 14px; }
+.lv-row.now { background: var(--accent-dim); border-bottom-color: transparent; border-radius: 10px; font-weight: 700; }
+.lv-row .sc { width: 46px; flex: none; display: inline-flex; font-weight: 800; font-variant-numeric: tabular-nums; }
+.lv-row .tx { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.lv-row .tg { flex: none; padding: 3px 8px; border-radius: 6px; background: var(--bg-elevated); color: var(--text-secondary);
+    font-size: 10px; font-weight: 800; letter-spacing: 0.08em; }
+.lv-row .tg.us { background: var(--accent-dim); color: var(--accent); }
+.lv-row.now .tg.us { background: var(--accent); color: #1A1004; }
+.lv-row .tg.alert { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+.lv-row .at { flex: none; font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.lv-row button.at { padding: 10px 0; background: none; border: 0; color: var(--accent); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.lv-row.run .sc, .lv-row.run .tx { color: var(--accent); font-weight: 600; }
+.lv-row.fix .tx { color: var(--text-secondary); }
+.lv-div { display: flex; align-items: center; gap: 10px; min-height: 34px; color: var(--text-secondary);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.lv-div::before, .lv-div::after { content: ''; flex: 1; height: 1px; background: var(--bg-elevated); }
+.lv-more { width: 100%; margin-top: 8px; padding: 10px; border: 1px solid var(--bg-elevated); border-radius: 10px;
+    background: transparent; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; }
+.lv-note { margin-top: 10px; font-size: 12px; color: var(--text-muted); }
 </style>
 <script>
 // v14 — App-injected theme override. GamePageActivity (Android) and
@@ -989,6 +1049,14 @@ window.sfClubOffline = function (t) {
             <div class="local-banner-title">📱 This game is only on your device</div>
             <div class="local-banner-sub">It isn’t shared, so there’s no link others can open. To give it a live link anyone can watch, add it to a team you’ve shared. You can still send <b>📸 Game Card</b> below — that shares a picture of the result, not a link to the game.</div>
         </div>
+        <!-- 2026-11-09 — The live game: score, set by set and play-by-play from
+             the live feed (lvRender); during the game also its box score. -->
+        <div class="card lv" id="liveCard" style="display:none;"></div>
+        <div class="card" id="liveBoxCard" style="display:none;">
+            <div class="label">Box score · live</div>
+            <div id="liveBoxContent"></div>
+        </div>
+
         <!-- Final score / scoreline -->
         <div class="card" id="scoreCard" style="display:none;">
             <div class="label">Final</div>
@@ -1106,7 +1174,7 @@ window.sfClubOffline = function (t) {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v50</span>
+    <span class="page-version">game.html v51</span>
 </div>
 
 <script type="module">
@@ -2460,8 +2528,303 @@ function renderGame(hub, game) {
         $('streamsCard').style.display = '';
     }
 
+    // The live game: score, plays and box score from the live feed.
+    lvAttach(hub, game, sport);
+
     $('loadingState').style.display = 'none';
     $('gameView').style.display = 'block';
+}
+
+// ── Live game (2026-11-09) ────────────────────────────────────────────
+// One live feed for listening, watching and following (boards
+// claude.ai/artifact/A6TGc7S8N33xSX6cbBsQTn). The phone keeping score writes
+// each play once to teams/{t}/games/{g}/radio (GameRadioPublisher.kt /
+// GameRadio.swift): its written line, the score after it and, while it
+// streams, `vt` (ms since its stream began). Game radio speaks the same list.
+// While a YouTube video plays here, each play waits until the video reaches
+// it, so the page never gets ahead of what the viewer sees; with no video the
+// plays show the moment they're tapped. Nothing is drawn over the player
+// (YouTube rules; same as tag plays). `radio/box` is the live box score.
+// Replaces the Labs copy of this page (labs/game.html), which read an events
+// array on the game doc.
+const LV = { on: false, live: false, hub: null, game: null, events: [], meta: {}, box: null,
+             latest: false, showAll: false, filter: 'all', timer: null, sig: '', metaSig: '', ourSide: 'home' };
+
+function lvColor(c, fallback) {
+    const n = Number(c);
+    if (!Number.isFinite(n) || n === 0) return fallback;
+    return '#' + ((n >>> 0) & 0xFFFFFF).toString(16).padStart(6, '0');
+}
+function lvName(side) {
+    const m = LV.meta || {}, g = LV.game || {};
+    return side === 'home' ? (m.homeCall || m.homeName || g.homeTeam || 'Home')
+                           : (m.awayCall || m.awayName || g.awayTeam || 'Away');
+}
+function lvText(t) {
+    return escapeHtml(String(t || '').replace(/\{home\}/g, lvName('home')).replace(/\{away\}/g, lvName('away')));
+}
+/** The line for an entry an older app wrote (before lines existed). */
+function lvFallback(ev) {
+    const side = ev.side === 'away' ? 'away' : 'home';
+    const stat = ev.stat ? ev.stat[0].toUpperCase() + ev.stat.slice(1) : '';
+    const hi = (a, b) => `${Math.max(a, b)}–${Math.min(a, b)}`;
+    switch (ev.k) {
+        case 'point': return stat ? (ev.num ? `${stat}, #${ev.num}` : `${stat} · Point {${side}}`) : `Point {${side}}`;
+        case 'set': { const fs = Array.isArray(ev.fs) ? ev.fs : [ev.hs || 0, ev.as || 0];
+                      return `Set ${(ev.hSets || 0) + (ev.aSets || 0)} · {${side}} ${hi(fs[0] || 0, fs[1] || 0)}`; }
+        case 'match': return `Match · {${side}} win ${hi(ev.hSets || 0, ev.aSets || 0)}`;
+        case 'undo': return `Correction · ${ev.hs || 0}–${ev.as || 0}`;
+        case 'fix': return `Score corrected · ${ev.hs || 0}–${ev.as || 0}`;
+        default: return '';
+    }
+}
+
+/** The mounted video, when this game's plays can follow it: YouTube, with the time it began. */
+function lvStream() {
+    const s = playlistStreams[playlistIndex];
+    if (!s || detectPlatform(s.url) !== 'youtube') return null;
+    const start = Number(s.startedAt);
+    return start > 0 ? { start } : null;
+}
+/** Where in that video [ev] happened (ms), or -1 when it came before the video began. */
+function lvVideoMs(ev, start) {
+    const at = Number(ev.at) || 0;
+    // vt is the scoring phone's own stream clock: exact, when it's this stream.
+    if (ev.vt != null && Number.isFinite(Number(ev.vt)) && Math.abs((at - Number(ev.vt)) - start) < 120000) return Number(ev.vt);
+    return at >= start ? at - start : -1;
+}
+/**
+ * How the plays line up right now:
+ *   video   — the player is playing or paused part-way: plays wait for it
+ *   waiting — there's a video to follow but nothing has been watched yet
+ *   instant — no video to follow (or "Show latest"): plays as they're tapped
+ */
+function lvClock() {
+    const st = lvStream();
+    if (!st) return { mode: 'instant' };
+    if (LV.latest) return { mode: 'instant', st };
+    if (!ytPlayer || !ytPlayerReady) return { mode: 'waiting', st };
+    let cur = 0, state = -1;
+    try { cur = (ytPlayer.getCurrentTime() || 0) * 1000; state = ytPlayer.getPlayerState(); }
+    catch (_) { return { mode: 'waiting', st }; }
+    if (state === -1 || state === 5 || cur <= 0) return { mode: 'waiting', st };
+    const behind = Date.now() - st.start - cur;
+    // A live video can't be ahead of the gym, and hours behind means the clocks don't match.
+    if (LV.live && (behind < -60000 || behind > 3 * 3600 * 1000)) return { mode: 'instant', st };
+    return { mode: 'video', st, cur, behind };
+}
+function lvVisible(clock) {
+    if (clock.mode !== 'video') return LV.events;
+    return LV.events.filter(ev => { const v = lvVideoMs(ev, clock.st.start); return v < 0 || v <= clock.cur; });
+}
+function lvClockText(ms) {
+    const t = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+    return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+}
+function lvAgo(at) {
+    const s = Math.max(0, (Date.now() - Number(at)) / 1000);
+    return s < 45 ? 'now' : `${Math.max(1, Math.round(s / 60))} min`;
+}
+function lvBehind(ms) {
+    const s = Math.round(ms / 1000);
+    return s < 90 ? `${Math.max(0, s)} s` : `${Math.round(s / 60)} min`;
+}
+const LV_ICON_HEADPHONES = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3z"></path><path d="M3 19a2 2 0 0 0 2 2h1v-6H3z"></path></svg>';
+const LV_ICON_RUN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg>';
+const LV_ICON_CLOCK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>';
+
+function lvCanListen() {
+    return !!((window.ScoreFrameApp && typeof window.ScoreFrameApp.listenToGame === 'function') ||
+              (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.scoreFrameListen));
+}
+window.lvListen = () => {
+    const t = LV.hub && LV.hub.teamId, g = LV.game && LV.game.id;
+    if (!t || !g) return;
+    try { if (window.ScoreFrameApp && typeof window.ScoreFrameApp.listenToGame === 'function') { window.ScoreFrameApp.listenToGame(t, g); return; } } catch (_) {}
+    try { const h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.scoreFrameListen; if (h) h.postMessage({ teamId: t, gameId: g }); } catch (_) {}
+};
+window.lvToggleLatest = () => { LV.latest = !LV.latest; lvRender(true); };
+window.lvShowAll = () => { LV.showAll = !LV.showAll; lvRender(true); };
+window.lvFilter = (f) => { LV.filter = f; lvRender(true); };
+window.lvSeek = (ms) => {
+    if (!ytPlayer || !ytPlayerReady) return;
+    // The play is tapped at the end of the rally: start a little before it.
+    try { ytPlayer.seekTo(Math.max(0, ms / 1000 - 10), true); ytPlayer.playVideo(); } catch (_) {}
+    setTimeout(() => lvRender(true), 600);
+};
+
+/** The sets so far: [{h, a}] by set number (1-based), from what's visible. */
+function lvSets(vis) {
+    const sets = {};
+    for (const ev of vis) {
+        if ((ev.k === 'set' || ev.k === 'match') && Array.isArray(ev.fs)) {
+            const n = ev.k === 'set' ? (ev.hSets || 0) + (ev.aSets || 0) : (ev.set || 1);
+            sets[n] = { h: ev.fs[0] || 0, a: ev.fs[1] || 0, done: true };
+        } else if (ev.set && !(sets[ev.set] && sets[ev.set].done)) {
+            sets[ev.set] = { h: ev.hs || 0, a: ev.as || 0, done: false };
+        }
+    }
+    return sets;
+}
+
+function lvRows(vis, replay, clock) {
+    const rows = [];
+    for (const ev of vis) {
+        if (ev.k === 'start') continue;
+        const line = lvText(ev.line || lvFallback(ev));
+        if (!line) continue;
+        let at = '';
+        if (replay && clock.st) {
+            const v = lvVideoMs(ev, clock.st.start);
+            if (v >= 0) at = `<button type="button" class="at" onclick="lvSeek(${v})" aria-label="Watch this play">▶ ${lvClockText(v)}</button>`;
+        } else if (LV.live && clock.mode !== 'video') {
+            at = `<span class="at">${lvAgo(ev.at)}</span>`;
+        }
+        if (ev.k === 'set' || ev.k === 'match') { rows.push({ kind: 'div', html: `<div class="lv-div">${line}</div>` }); continue; }
+        const score = `${ev.hs || 0}–${ev.as || 0}`;
+        const tagUs = ev.side === LV.ourSide ? ' us' : '';
+        const tag = ev.tag ? `<span class="tg${tagUs}">${escapeHtml(ev.tag)}</span>` : '';
+        const alert = ev.alert ? `<span class="tg alert">${escapeHtml(ev.alert)}</span>` : '';
+        const fix = ev.k === 'undo' || ev.k === 'fix';
+        rows.push({ kind: fix ? 'fix' : 'play', tag: ev.tag || '',
+            html: `<div class="lv-row${fix ? ' fix' : ''}"><span class="sc">${score}</span><span class="tx">${line}</span>${tag}${alert}${at}</div>` });
+        if (ev.runLine) rows.push({ kind: 'run', html: `<div class="lv-row run"><span class="sc">${LV_ICON_RUN}</span><span class="tx">${lvText(ev.runLine)}</span></div>` });
+    }
+    return rows.reverse();
+}
+
+function lvRender(force) {
+    if (!LV.on) return;
+    const card = $('liveCard');
+    if (!card) return;
+    const clock = lvClock();
+    const vis = lvVisible(clock);
+    const replay = !LV.live;
+    const sig = [clock.mode, vis.length, LV.events.length, LV.filter, LV.showAll, LV.latest, LV.metaSig,
+        clock.mode === 'video' ? Math.round(clock.behind / 5000) : 0, LV.live && clock.mode !== 'video' ? Math.floor(Date.now() / 30000) : 0].join('|');
+    if (!force && sig === LV.sig) return;
+    LV.sig = sig;
+    if (!LV.events.length) { card.style.display = 'none'; document.body.classList.remove('lv-live', 'lv-novideo'); return; }
+
+    const hasVideo = !!lvStream();
+    const last = vis.length ? vis[vis.length - 1] : { hs: 0, as: 0, set: 1, hSets: 0, aSets: 0, serve: '', target: 25 };
+    const done = !!last.done || last.k === 'match';
+    const homeC = lvColor(LV.meta.homeColor, LV.game.homeColor || '#2F6BFF');
+    const awayC = lvColor(LV.meta.awayColor, LV.game.awayColor || '#1F9D55');
+    const hs = last.hs || 0, as = last.as || 0, hSets = last.hSets || 0, aSets = last.aSets || 0;
+    let html = '';
+    if (!replay) {
+        const chip = done ? '<span class="lv-chip final">FINAL</span>'
+            : hasVideo ? '<span class="lv-chip live">LIVE</span>' : '<span class="lv-chip scoring">SCORING LIVE · NO VIDEO</span>';
+        const lead = hSets > aSets ? ` ${lvName('home')}` : aSets > hSets ? ` ${lvName('away')}` : '';
+        const setLine = done ? `Final · sets ${hSets}–${aSets}${lead}`
+            : `Set ${last.set || 1} · to ${last.target || 25} · sets ${hSets}–${aSets}${lead}`;
+        const serve = (side) => !done && last.serve === side ? '<span class="lv-serve">Serving</span>' : '<span class="lv-serve-gap"></span>';
+        html += `<div class="lv-top">${chip}</div>
+            <div class="lv-score">
+                <div class="lv-team"><span class="lv-bar" style="background:${homeC}"></span><span class="lv-tname">${escapeHtml(lvName('home'))}</span>${serve('home')}</div>
+                <div class="lv-nums"><span class="${hs < as ? 'trail' : ''}">${hs}</span><span class="dash">–</span><span class="${as < hs ? 'trail' : ''}">${as}</span></div>
+                <div class="lv-team away"><span class="lv-bar" style="background:${awayC}"></span><span class="lv-tname">${escapeHtml(lvName('away'))}</span>${serve('away')}</div>
+            </div>
+            <div class="lv-setline">${escapeHtml(setLine)}</div>`;
+        if (clock.mode === 'video') {
+            html += `<div class="lv-sync">${LV_ICON_CLOCK}<span>In step with the video · ${lvBehind(clock.behind)} behind the gym</span><button type="button" onclick="lvToggleLatest()">Show latest</button></div>`;
+        } else if (clock.st && LV.latest) {
+            html += `<div class="lv-sync">${LV_ICON_CLOCK}<span>The latest, ahead of the video</span><button type="button" onclick="lvToggleLatest()">Back in step with the video</button></div>`;
+        } else if (clock.mode === 'waiting') {
+            html += `<div class="lv-sync">${LV_ICON_CLOCK}<span>Press play and the score follows the video</span></div>`;
+        }
+        if (!done && lvCanListen()) {
+            html += `<button type="button" class="lv-listen" onclick="lvListen()">${LV_ICON_HEADPHONES}Listen to the game</button>`;
+        }
+    }
+    // Set by set.
+    const sets = lvSets(vis);
+    const bestOf = Math.min(5, Math.max(Number(last.bestOf) || Number(LV.meta.bestOf) || 3, ...Object.keys(sets).map(Number)));
+    const curSet = done ? 0 : (last.set || 1);
+    let grid = `<span class="h t">Team</span>`;
+    for (let n = 1; n <= bestOf; n++) grid += `<span class="h${n === curSet ? ' cur' : ''}">Set ${n}</span>`;
+    for (const side of ['home', 'away']) {
+        grid += `<span class="t">${escapeHtml(lvName(side))}</span>`;
+        for (let n = 1; n <= bestOf; n++) {
+            const r = sets[n];
+            if (!r) { grid += `<span class="e">–</span>`; continue; }
+            const mine = side === 'home' ? r.h : r.a, theirs = side === 'home' ? r.a : r.h;
+            grid += `<span class="${n === curSet ? 'cur' : ''}${r.done && mine > theirs ? ' win' : ''}">${mine}</span>`;
+        }
+    }
+    html += `<div class="lv-sets" style="grid-template-columns: 1.7fr repeat(${bestOf}, 1fr)">${grid}</div>`;
+
+    // The plays.
+    let rows = lvRows(vis, replay, clock);
+    if (replay && LV.filter !== 'all') rows = rows.filter(r => r.kind === 'div' || (r.kind === 'play' && r.tag === LV.filter));
+    const head = replay ? 'Play-by-play' : 'Play-by-play';
+    const sub = replay ? (clock.mode === 'video' ? 'follows the video' : 'tap a play to watch it') : 'newest first';
+    html += `<div class="lv-plays-head"><div class="label">${head}</div><span class="sub">${sub}</span></div>`;
+    if (replay) {
+        const f = (k, label) => `<button type="button" class="sp-chip${LV.filter === k ? ' on' : ''}" onclick="lvFilter('${k}')">${label}</button>`;
+        html += `<div class="sp-chips">${f('all', 'All')}${f('KILL', 'Kills')}${f('ACE', 'Aces')}${f('BLOCK', 'Blocks')}</div>`;
+    }
+    const shown = LV.showAll ? rows : rows.slice(0, 8);
+    const filterName = { KILL: 'kills', ACE: 'aces', BLOCK: 'blocks' }[LV.filter];
+    if (!shown.length) html += `<div class="lv-note">${filterName ? `No ${filterName} yet${clock.mode === 'video' ? ' at this point in the video' : ''}.`
+        : replay && clock.mode === 'video' ? 'The first play shows when the video reaches it.' : 'No plays yet.'}</div>`;
+    html += `<div class="lv-plays">${shown.map((r, i) => i === 0 && r.kind === 'play' ? r.html.replace('class="lv-row', 'class="lv-row now') : r.html).join('')}</div>`;
+    if (rows.length > 8) html += `<button type="button" class="lv-more" onclick="lvShowAll()">${LV.showAll ? 'Show fewer plays' : `Show all ${rows.length} plays`}</button>`;
+    if (!LV.live && clock.mode !== 'video') html += `<div class="lv-note">Press play and the list follows the video.</div>`;
+
+    card.innerHTML = html;
+    card.classList.toggle('big', !replay && !hasVideo);
+    // Results the viewer hasn't watched to yet stay hidden for No spoilers.
+    card.classList.toggle('lv-spoils', clock.mode !== 'video' && !(LV.live && !hasVideo));
+    card.style.display = '';
+    document.body.classList.toggle('lv-live', LV.live);
+    document.body.classList.toggle('lv-novideo', LV.live && !hasVideo && playlistStreams.length === 0);
+}
+
+function lvRenderBox() {
+    const card = $('liveBoxCard');
+    if (!card) return;
+    const b = LV.box;
+    if (!LV.live || !b) { card.style.display = 'none'; return; }
+    const cols = boxScoreColumnsForSport('VOLLEYBALL');
+    const g = LV.game || {}, hub = LV.hub || {};
+    const mk = (side) => (Array.isArray(b[side]) ? b[side] : []).map(p => ({
+        side, name: p.name || '', number: p.num || '', playerId: p.id || '', stats: p }));
+    const secs = [];
+    const home = mk('home'), away = mk('away');
+    if (home.length) secs.push(renderBoxSide(LV.meta.homeName || g.homeTeam || 'Home', lvColor(LV.meta.homeColor, g.homeColor || hub.color || '#1565C0'), home, cols, 'VOLLEYBALL'));
+    if (away.length) secs.push(renderBoxSide(LV.meta.awayName || g.awayTeam || 'Away', lvColor(LV.meta.awayColor, g.awayColor || '#C62828'), away, cols, 'VOLLEYBALL'));
+    if (!secs.length) { card.style.display = 'none'; return; }
+    $('liveBoxContent').innerHTML = secs.join('');
+    card.style.display = '';
+}
+
+/** Volleyball for now (the only sport with a feed). A finished game shows its plays only next to its video. */
+function lvAttach(hub, game, sport) {
+    if (sport !== 'VOLLEYBALL' || !hub || !hub.teamId || !game || !game.id || LV.on) return;
+    const live = String(game.status || '').toLowerCase() === 'live';
+    const followable = playlistStreams.some(s => detectPlatform(s.url) === 'youtube' && Number(s.startedAt) > 0);
+    if (!live && !followable) return;
+    LV.on = true; LV.live = live; LV.hub = hub; LV.game = game;
+    LV.ourSide = game.awayTeamId && game.awayTeamId === hub.teamId ? 'away' : 'home';
+    const ref = collection(db, 'teams', hub.teamId, 'games', game.id, 'radio');
+    const take = (snap) => {
+        LV.events = snap.docs.map(d => d.data()).filter(e => e && Number(e.at) > 0 && e.k)
+            .sort((a, b) => Number(a.at) - Number(b.at));
+        lvRender(true);
+    };
+    const meta = (s) => { LV.meta = s && s.exists() ? s.data() : {}; LV.metaSig = JSON.stringify([LV.meta.homeCall, LV.meta.awayCall, LV.meta.homeName, LV.meta.awayName]); };
+    if (live) {
+        onSnapshot(query(ref, orderBy('at')), take, (e) => console.warn('[live] feed', e && e.code));
+        onSnapshot(doc(ref, 'meta'), (s) => { meta(s); lvRender(true); lvRenderBox(); }, () => {});
+        onSnapshot(doc(ref, 'box'), (s) => { LV.box = s.exists() ? s.data() : null; lvRenderBox(); }, () => {});
+    } else {
+        Promise.all([getDocs(query(ref, orderBy('at'))), getDoc(doc(ref, 'meta'))])
+            .then(([q, m]) => { meta(m); take(q); })
+            .catch((e) => console.warn('[live] replay feed', e && e.code));
+    }
+    if (!LV.timer) LV.timer = setInterval(() => { if (LV.events.length) lvRender(false); }, 500);
 }
 
 // Holds the active YouTube IFrame API player so highlight chips can call
