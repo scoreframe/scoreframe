@@ -1174,7 +1174,7 @@ window.sfClubOffline = function (t) {
 
 <div class="footer">
     Powered by <a href="https://scoreframe.app">ScoreFrame</a>
-    <span class="page-version">game.html v52</span>
+    <span class="page-version">game.html v53</span>
 </div>
 
 <script type="module">
@@ -2571,10 +2571,12 @@ function lvColor(c, fallback) {
     if (!Number.isFinite(n) || n === 0) return fallback;
     return '#' + ((n >>> 0) & 0xFFFFFF).toString(16).padStart(6, '0');
 }
+// The name as the scorer typed it. The announcer's spoken name (homeCall) can
+// drop words ("VB Test" was called "Test"), which reads wrong in writing.
 function lvName(side) {
     const m = LV.meta || {}, g = LV.game || {};
-    return side === 'home' ? (m.homeCall || m.homeName || g.homeTeam || 'Home')
-                           : (m.awayCall || m.awayName || g.awayTeam || 'Away');
+    return side === 'home' ? (m.homeName || m.homeCall || g.homeTeam || 'Home')
+                           : (m.awayName || m.awayCall || g.awayTeam || 'Away');
 }
 function lvText(t) {
     return escapeHtml(String(t || '').replace(/\{home\}/g, lvName('home')).replace(/\{away\}/g, lvName('away')));
