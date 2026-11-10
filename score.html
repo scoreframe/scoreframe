@@ -748,6 +748,12 @@ let scorerListener = null;
 let undoStack = [];
 let connected = false;
 let recordingAllowed = false;
+// The scorer's name for the camera phone ("Sam is keeping score"). A family member who said
+// yes to the team's ask arrives with ?name= (functions/scorer_seat.js); anyone else is "Web Scorer".
+const SCORER_NAME = (() => {
+    const n = (new URLSearchParams(location.search).get('name') || '').trim().replace(/[<>]/g, '').slice(0, 40);
+    return n || 'Web Scorer';
+})();
 let isRecording = false;
 let isPaused = false;
 let isBufferMode = false;
@@ -1115,7 +1121,7 @@ window.joinGame = async function() {
         // Write scorer request
         await set(ref(db, `sessions/${code}/scorerRequest`), {
             uid: uid,
-            displayName: 'Web Scorer',
+            displayName: SCORER_NAME,
             status: 'pending',
             requestedAt: Date.now()
         });
@@ -1505,7 +1511,7 @@ async function rejoinAfterDrop() {
         const snap = await get(ref(db, `sessions/${j.code}/scorerRequest`));
         if (!snap.exists()) {
             await set(ref(db, `sessions/${j.code}/scorerRequest`), {
-                uid: j.uid, displayName: 'Web Scorer', status: 'pending', requestedAt: Date.now()
+                uid: j.uid, displayName: SCORER_NAME, status: 'pending', requestedAt: Date.now()
             });
         }
         armScorerPresence(j.code);
