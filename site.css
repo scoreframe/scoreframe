@@ -146,3 +146,5 @@ main h1, .wrap h1, .container h1, header.hero h1 {
 .month-label { border-bottom: 2px solid #1C1B1F !important; padding-bottom: 10px !important; margin-bottom: 18px !important; }
 .entry { background: #FFFFFF !important; border: 1px solid #E2DFDA !important; color: #1C1B1F; }
 .entry-title { font-weight: 900 !important; font-size: 17px !important; }
+/* A heading inside a card (Support's form) stays card-sized. */
+.card h1 { font-size: clamp(24px, 3vw, 30px) !important; line-height: 1.1 !important; }
