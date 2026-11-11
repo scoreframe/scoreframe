@@ -515,40 +515,51 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
 .count-dot.strike.active { background: var(--error); border-color: var(--error); }
 .count-dot.out.active { background: var(--warning); border-color: var(--warning); }
 
-/* Bowling specific */
-.bowling-scorecard {
-    background: var(--bg-surface); border-radius: 10px; overflow: hidden;
-    font-size: 12px;
-}
-.bowling-scorecard table { width: 100%; border-collapse: collapse; }
-.bowling-scorecard th, .bowling-scorecard td {
-    border: 1px solid var(--bg-elevated); padding: 4px 2px; text-align: center;
-}
-.bowling-scorecard th { background: var(--bg-deep); font-size: 10px; color: var(--text-muted); }
-.bowling-scorecard .frame-rolls { display: flex; justify-content: center; gap: 2px; min-height: 18px; }
-.bowling-scorecard .roll-box {
-    width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 600; border-radius: 3px;
-}
-.bowling-scorecard .roll-box.strike { color: var(--error); }
-.bowling-scorecard .roll-box.spare { color: var(--accent); }
-.bowling-scorecard .frame-score { font-size: 14px; font-weight: 700; color: var(--text-primary); min-height: 20px; }
-.bowling-scorecard .frame-num { font-size: 9px; color: var(--text-muted); }
-.bowling-scorecard .total-cell { font-size: 16px; font-weight: 800; color: var(--accent); }
-.bowling-pin-grid {
-    display: grid; grid-template-columns: repeat(5, 1fr);
-    gap: 6px; max-width: 260px; margin: 0 auto; padding: 8px 0;
-}
-.bowling-pin-btn {
-    min-height: 48px; border: none; border-radius: 8px;
-    background: var(--bg-surface); color: var(--text-primary);
-    font-size: 18px; font-weight: 700; cursor: pointer;
-    transition: transform 0.08s;
-}
-.bowling-pin-btn:active { transform: scale(0.92); }
-.bowling-pin-btn.strike-btn { background: var(--accent); color: #1A1A1A; grid-column: span 2; }
-.bowling-pin-btn.spare-btn { background: var(--accent-dim); color: var(--accent); grid-column: span 2; }
-.bowling-pin-btn.miss-btn { background: var(--bg-elevated); }
+/* Bowling (2026-11-10): the app's layout. A ten-frame strip that fits a phone,
+   who bowls each frame under it, the 1-9 / - X / keypad with Fault and Split. */
+.bw-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px 4px; background: var(--bg-deep); }
+.bw-name { font-size: 20px; font-weight: 900; color: var(--accent); text-transform: uppercase;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.bw-total { font-size: 26px; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; }
+.bw-side { font: 700 10px/1.25 ui-monospace, Menlo, monospace; color: var(--text-muted); white-space: nowrap; }
+.bw-where { padding: 0 14px 8px; font-size: 13px; font-weight: 700; color: var(--text-secondary); background: var(--bg-deep); }
+.bw-chips { display: flex; gap: 6px; overflow-x: auto; padding: 8px 14px 0; background: var(--bg-deep); }
+.bw-chip { flex: none; padding: 6px 10px; border-radius: 14px; font-size: 12px; font-weight: 800;
+    background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--bg-hover); }
+.bw-chip.on { background: var(--accent); border-color: var(--accent); color: #1A1A1A; }
+.bw-strip { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)) minmax(0, 1.35fr); gap: 3px; padding: 6px 0 2px; }
+.bw-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+.bw-num { font: 700 9px/1 ui-monospace, Menlo, monospace; color: var(--text-muted); }
+.bw-box { width: 100%; height: 42px; border-radius: 7px; background: var(--bg-surface);
+    border: 1px solid var(--bg-hover); display: flex; flex-direction: column; overflow: hidden; }
+.bw-rolls { display: flex; height: 17px; }
+.bw-roll { flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0;
+    font: 900 11px/1 ui-monospace, Menlo, monospace; color: var(--text-primary); }
+.bw-roll + .bw-roll { flex: 0 0 13px; border-left: 1px solid var(--bg-hover); border-bottom: 1px solid var(--bg-hover); }
+.bw-roll.mark { color: #1E8E4E; }
+.bw-roll.foul { color: var(--error); }
+.bw-roll.split span { border: 1.5px solid var(--error); border-radius: 50%; width: 14px; height: 14px;
+    display: flex; align-items: center; justify-content: center; color: var(--error); font-size: 9px; }
+.bw-sum { flex: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; }
+.bw-who { width: 100%; text-align: center; font-size: 8.5px; letter-spacing: -.2px; font-weight: 700; color: var(--text-muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bw-cell.cur .bw-box { border: 2px solid var(--accent); background: var(--accent-dim); }
+.bw-cell.cur .bw-num, .bw-cell.cur .bw-who { color: var(--accent); font-weight: 900; }
+.bw-pad { display: flex; gap: 6px; padding: 8px 0; }
+.bw-keys { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.bw-sidekeys { width: 84px; display: grid; grid-template-rows: repeat(4, 1fr); gap: 6px; }
+.bw-key { min-height: 52px; border-radius: 10px; border: 1px solid var(--bg-hover); background: var(--bg-surface);
+    color: var(--text-primary); font-size: 22px; font-weight: 900; cursor: pointer; transition: transform .08s; }
+.bw-key:active { transform: scale(.94); }
+.bw-key.x { background: var(--accent); border-color: var(--accent); color: #1A1A1A; }
+.bw-key.sp { background: var(--bg-elevated); }
+.bw-key.small { font-size: 14px; min-height: 0; }
+.bw-key.lit { background: #FFE2E0; border-color: var(--error); color: #8E1B1B; }
+.bw-key:disabled { opacity: .3; cursor: default; }
+.bw-key:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bw-done { text-align: center; padding: 18px 8px; font-size: 16px; font-weight: 700; color: var(--accent); }
+.bw-done small { display: block; margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
 
 /* Tennis score display */
 .tennis-score-grid {
@@ -2480,84 +2491,124 @@ window.soccerStatDecrement = (ev, side, statKey) => {
 // ══════════════════════════════════════════════════════════════════════
 function renderBowling() {
     const s = currentState;
-    // Find current frame/roll
-    let curFrame = -1, curRoll = 0;
     const frames = s.frames || [];
+    const f = i => frames[i] || {roll1:'',roll2:'',roll3:'',score:0};
+    // The next roll: the first frame that isn't finished.
+    let curFrame = -1, curRoll = 0;
     for (let i = 0; i < 10; i++) {
-        const f = frames[i] || {roll1:'',roll2:'',roll3:''};
+        const x = f(i);
         if (i < 9) {
-            if (f.roll1 === '') { curFrame = i; curRoll = 1; break; }
-            if (f.roll1 !== 'X' && f.roll2 === '') { curFrame = i; curRoll = 2; break; }
+            if (x.roll1 === '') { curFrame = i; curRoll = 1; break; }
+            if (x.roll1 !== 'X' && x.roll2 === '') { curFrame = i; curRoll = 2; break; }
         } else {
-            if (f.roll1 === '') { curFrame = 9; curRoll = 1; break; }
-            if (f.roll2 === '') { curFrame = 9; curRoll = 2; break; }
-            if ((f.roll1 === 'X' || f.roll2 === '/') && f.roll3 === '') { curFrame = 9; curRoll = 3; break; }
+            if (x.roll1 === '') { curFrame = 9; curRoll = 1; break; }
+            if (x.roll2 === '') { curFrame = 9; curRoll = 2; break; }
+            if ((x.roll1 === 'X' || x.roll2 === '/') && x.roll3 === '') { curFrame = 9; curRoll = 3; break; }
         }
     }
     const gameOver = curFrame === -1;
+    // Baker: who bowls each frame (a frame's own name, else the lineup's turn). Same rule as the apps.
+    const lineup = Array.isArray(s.bakerLineup) ? s.bakerLineup.filter(n => n) : [];
+    const firstName = n => String(n || '').trim().split(/\s+/)[0] || '';
+    const who = i => lineup.length ? firstName(f(i).bowledBy || lineup[i % lineup.length]) : '';
+    // Several bowlers: their names as chips, the one up lit. Read only; the camera changes the order.
+    const roster = (Array.isArray(s.bowlers) && s.bowlers.length > 1 ? s.bowlers : (Array.isArray(s.allBowlers) ? s.allBowlers : []))
+        .map(b => b.name || '');
+    const active = s.activeBowlerIndex | 0;
 
-    // Scorecard
-    let cardHtml = '<table><tr>';
-    for (let i = 0; i < 10; i++) cardHtml += `<th>${i+1}</th>`;
-    cardHtml += '<th>TOT</th></tr><tr>';
-    for (let i = 0; i < 10; i++) {
-        const f = frames[i] || {roll1:'',roll2:'',roll3:'',score:0};
-        const r1cls = f.roll1 === 'X' ? ' strike' : '';
-        const r2cls = f.roll2 === '/' ? ' spare' : (f.roll2 === 'X' ? ' strike' : '');
-        const r3cls = f.roll3 === 'X' ? ' strike' : (f.roll3 === '/' ? ' spare' : '');
-        const hi = (i === curFrame) ? 'background:var(--accent-dim);' : '';
-        if (i < 9) {
-            cardHtml += `<td style="${hi}"><div class="frame-rolls">
-                <span class="roll-box${r1cls}">${f.roll1}</span>
-                <span class="roll-box${r2cls}">${f.roll2}</span>
-            </div><div class="frame-score">${f.score||''}</div></td>`;
-        } else {
-            cardHtml += `<td style="${hi}"><div class="frame-rolls">
-                <span class="roll-box${r1cls}">${f.roll1}</span>
-                <span class="roll-box${r2cls}">${f.roll2}</span>
-                <span class="roll-box${r3cls}">${f.roll3}</span>
-            </div><div class="frame-score">${f.score||''}</div></td>`;
-        }
-    }
-    const total = s.totalScore || (frames[9] && frames[9].score ? frames[9].score : 0);
-    cardHtml += `<td class="total-cell">${total}</td></tr></table>`;
-
-    // Valid pins
-    const validOptions = gameOver ? [] : getValidOptions(curFrame, curRoll, frames);
-
-    // Score display
+    const total = s.totalScore || [...frames].reverse().find(x => x && x.score > 0)?.score || 0;
+    const series = (s.seriesTotal || 0) + total;
+    const max = bowlingMaxPossible(frames);
+    const where = gameOver ? `Game ${s.currentGame || 1} done`
+        : `Game ${s.currentGame || 1} · Frame ${curFrame + 1} · Ball ${curRoll}` + (lineup.length ? ` · ${esc(who(curFrame))} is up` : '');
     $('scoreDisplay').innerHTML = `
-        <div class="score-display" style="flex-direction:column;align-items:center;padding:8px 16px;">
-            <div style="font-size:13px;color:var(--text-secondary);">${esc(s.playerName||'PLAYER')} | Game ${s.currentGame}</div>
-            <div style="font-size:42px;font-weight:800;color:var(--accent);">${total}</div>
-            ${s.seriesTotal ? `<div style="font-size:12px;color:var(--text-muted);">Series: ${s.seriesTotal + total}</div>` : ''}
+        ${roster.length > 1 ? `<div class="bw-chips">${roster.map((n, i) => `<span class="bw-chip${i === active ? ' on' : ''}">${esc(firstName(n))}</span>`).join('')}</div>` : ''}
+        <div class="bw-head">
+            <div class="bw-name">${esc(s.playerName || 'Bowler')}</div>
+            <div class="bw-total">${total}</div>
+            <div class="bw-side">SERIES ${series}<br>MAX ${max}</div>
+        </div>
+        <div class="bw-where">${where}</div>`;
+
+    const roll = (v, i, n) => {
+        const x = f(i);
+        const split = x.isSplit && ((n === 1 && x.roll1 !== 'X') || (i === 9 && n === 2 && x.roll1 === 'X'));
+        const cls = v === 'X' || v === '/' ? ' mark' : (v === 'F' ? ' foul' : '') + (split && v ? ' split' : '');
+        const txt = v === '-' ? '–' : esc(v || '');
+        return `<div class="bw-roll${cls}">${split && v ? `<span>${txt}</span>` : txt}</div>`;
+    };
+    const all = Array.from({length: 10}, (_, i) => f(i));
+    const scored = i => { try { return canScoreFrame(i, all); } catch (_) { return false; } };
+    let strip = '<div class="bw-strip">';
+    for (let i = 0; i < 10; i++) {
+        const x = f(i);
+        strip += `<div class="bw-cell${i === curFrame ? ' cur' : ''}">
+            <div class="bw-num">${i + 1}</div>
+            <div class="bw-box"><div class="bw-rolls">${roll(x.roll1, i, 1)}${roll(x.roll2, i, 2)}${i === 9 ? roll(x.roll3, i, 3) : ''}</div>
+            <div class="bw-sum">${scored(i) ? (x.score || 0) : ''}</div></div>
+            ${lineup.length ? `<div class="bw-who">${esc(who(i))}</div>` : ''}
         </div>`;
-
-    let pinsHtml = '';
-    if (!gameOver) {
-        pinsHtml = '<div class="section-label">Frame ' + (curFrame+1) + ' | Roll ' + curRoll + '</div><div class="bowling-pin-grid">';
-        for (const opt of validOptions) {
-            let cls = '', label = opt;
-            if (opt === 'X') { cls = 'strike-btn'; label = 'X Strike'; }
-            else if (opt === '/') { cls = 'spare-btn'; label = '/ Spare'; }
-            else if (opt === '-') { cls = 'miss-btn'; label = '- Miss'; }
-            else if (opt === 'F') { cls = 'miss-btn'; label = 'F Foul'; }
-            pinsHtml += `<button class="bowling-pin-btn ${cls}" onclick="bowlRoll('${opt}')">${label}</button>`;
-        }
-        pinsHtml += '</div>';
-    } else {
-        pinsHtml = '<div style="text-align:center;padding:16px;font-size:16px;font-weight:600;color:var(--accent);">Game Complete!</div>';
     }
+    strip += '</div>';
 
-    $('scoringPanel').innerHTML = `
-        <div class="bowling-scorecard">${cardHtml}</div>
-        ${pinsHtml}`;
+    let pad;
+    if (gameOver) {
+        pad = `<div class="bw-done">Game complete<small>The camera phone starts the next game.</small></div>`;
+    } else {
+        const valid = getValidOptions(curFrame, curRoll, frames);
+        const key = (k, cls = '') => `<button type="button" class="bw-key ${cls}" ${valid.includes(k) ? '' : 'disabled'}
+            onclick="bowlRoll('${k}')" aria-label="${k === '-' ? 'Miss' : k === 'X' ? 'Strike' : k === '/' ? 'Spare' : k + ' pins'}">${k === '-' ? '–' : k}</button>`;
+        const x = f(curFrame);
+        const splitOk = bowlingSplitEnabled(curFrame, frames);
+        pad = `<div class="bw-pad">
+            <div class="bw-keys">${['1','2','3','4','5','6','7','8','9'].map(k => key(k)).join('')}${key('-', 'sp')}${key('X', 'x')}${key('/', 'sp')}</div>
+            <div class="bw-sidekeys">
+                <button type="button" class="bw-key small" ${valid.includes('F') ? '' : 'disabled'} onclick="bowlRoll('F')">Fault</button>
+                <button type="button" class="bw-key small${x.isSplit ? ' lit' : ''}" ${splitOk ? '' : 'disabled'} onclick="bowlSplit()">${x.isSplit ? 'Split ✓' : 'Split'}</button>
+            </div>
+        </div>`;
+    }
+    $('scoringPanel').innerHTML = strip + pad;
 }
+
+/** Highest score still possible: every open ball a strike (app BowlingScorer.calculateMaxPossible). */
+function bowlingMaxPossible(frames) {
+    const m = [];
+    for (let i = 0; i < 10; i++) {
+        const x = {...(frames[i] || {roll1:'',roll2:'',roll3:''})};
+        if (i < 9) {
+            if (x.roll1 === '') x.roll1 = 'X';
+            else if (x.roll1 !== 'X' && x.roll2 === '') x.roll2 = '/';
+        } else if (x.roll1 === '') { x.roll1 = 'X'; x.roll2 = 'X'; x.roll3 = 'X'; }
+        else if (x.roll2 === '') { if (x.roll1 === 'X') { x.roll2 = 'X'; x.roll3 = 'X'; } else { x.roll2 = '/'; x.roll3 = 'X'; } }
+        else if (x.roll3 === '' && (x.roll1 === 'X' || x.roll2 === '/')) x.roll3 = (x.roll2 === 'X' || x.roll2 === '/') ? 'X' : '/';
+        m.push(x);
+    }
+    const scored = calculateBowlingScores(m);
+    return scored[9] ? scored[9].score : 0;
+}
+
+/** A split can be marked on a first ball that left pins (or the 10th's ball after a strike). App rule. */
+function bowlingSplitEnabled(fi, frames) {
+    const x = frames[fi]; if (!x) return false;
+    const r1 = x.roll1, r2 = x.roll2;
+    const left = r => r !== '' && r !== 'X' && r !== '-' && r !== 'F' && r !== '/';
+    if (fi < 9) return left(r1) && r2 === '';
+    return (left(r1) && r2 === '') || (r1 === 'X' && left(r2) && x.roll3 === '');
+}
+
+/** Mark or clear the split on the frame being bowled; the camera plays it and keeps it. */
+window.bowlSplit = () => updateAndSend(s => {
+    const frames = s.frames || [];
+    for (let i = 0; i < 10; i++) {
+        if (bowlingSplitEnabled(i, frames)) { frames[i].isSplit = !frames[i].isSplit; break; }
+    }
+});
 
 function getValidOptions(frameIndex, rollNum, frames) {
     const f = frames[frameIndex] || {roll1:'',roll2:'',roll3:''};
     if (frameIndex < 9) {
-        if (rollNum === 1) return ['0','1','2','3','4','5','6','7','8','9','X','-','F'];
+        if (rollNum === 1) return ['1','2','3','4','5','6','7','8','9','X','-','F'];
         if (rollNum === 2) {
             if (f.roll1 === 'X') return [];
             const v = rollVal(f.roll1);
@@ -2572,9 +2623,9 @@ function getValidOptions(frameIndex, rollNum, frames) {
         return [];
     }
     // 10th frame
-    if (rollNum === 1) return ['0','1','2','3','4','5','6','7','8','9','X','-','F'];
+    if (rollNum === 1) return ['1','2','3','4','5','6','7','8','9','X','-','F'];
     if (rollNum === 2) {
-        if (f.roll1 === 'X') return ['0','1','2','3','4','5','6','7','8','9','X','-','F'];
+        if (f.roll1 === 'X') return ['1','2','3','4','5','6','7','8','9','X','-','F'];
         const v = rollVal(f.roll1);
         const remaining = 10 - v;
         const opts = ['-','F'];
@@ -2583,8 +2634,8 @@ function getValidOptions(frameIndex, rollNum, frames) {
     }
     if (rollNum === 3) {
         if (f.roll1 !== 'X' && f.roll2 !== '/') return [];
-        if (f.roll2 === '/') return ['0','1','2','3','4','5','6','7','8','9','X','-','F'];
-        if (f.roll1 === 'X' && f.roll2 === 'X') return ['0','1','2','3','4','5','6','7','8','9','X','-','F'];
+        if (f.roll2 === '/') return ['1','2','3','4','5','6','7','8','9','X','-','F'];
+        if (f.roll1 === 'X' && f.roll2 === 'X') return ['1','2','3','4','5','6','7','8','9','X','-','F'];
         if (f.roll1 === 'X') {
             const v2 = rollVal(f.roll2);
             if (f.roll2 === 'F' || f.roll2 === '-') {
@@ -2597,7 +2648,7 @@ function getValidOptions(frameIndex, rollNum, frames) {
             if (remaining > 0) { opts.push('/'); for (let i = 1; i < remaining; i++) opts.push(String(i)); }
             return opts;
         }
-        return ['0','1','2','3','4','5','6','7','8','9','X','-','F'];
+        return ['1','2','3','4','5','6','7','8','9','X','-','F'];
     }
     return [];
 }
