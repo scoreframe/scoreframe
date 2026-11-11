@@ -65,7 +65,22 @@ nav a[aria-current]{color:var(--ink)}
 footer{border-top:1px solid var(--ln);padding-block:32px;color:var(--mu);font-size:14px}
 footer .wrap{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-between}
 @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
+
+/* Inside the ScoreFrame app (?app=1&theme=dark|light): the app draws its own header,
+   so the page is just the four videos in the app's colours. */
+html.app header, html.app footer, html.app .intro{display:none}
+html.app body{background:var(--paper)}
+html.app .wrap{padding-inline:16px}
+html.app .grid{grid-template-columns:minmax(0,1fr);gap:22px;padding-block:14px 32px}
+html.app .vid{background:var(--card);border:1px solid var(--ln);border-radius:18px;padding:10px 10px 14px;gap:10px}
+html.app .vid video{border-radius:12px;box-shadow:none}
+html.app .meta,html.app .vid p{padding-inline:6px}
+html.app .vid p{font-size:15px}
+html.dark{--paper:#1C1D21;--card:#26282D;--ink:#F5F3EF;--mu:#B4B8C0;--ln:#3D4048;color-scheme:dark}
 </style>
+<script>
+(function(){var q=new URLSearchParams(location.search);if(q.get('app')==='1'){var c=document.documentElement.classList;c.add('app');if(q.get('theme')==='dark')c.add('dark');}})();
+</script>
 </head>
 <body>
 <header>
