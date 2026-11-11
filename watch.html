@@ -9,20 +9,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0D0D0D">
+<meta name="theme-color" content="#F5F5F2">
 <title>ScoreFrame — Watch Game</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-    --bg-deepest: #0D0D0D;
-    --bg-deep: #141414;
-    --bg-surface: #1E1E1E;
-    --bg-elevated: #272727;
+    --bg-deepest: #F5F5F2;
+    --bg-deep: #FFFFFF;
+    --bg-surface: #FFFFFF;
+    --bg-elevated: #E2DFDA;
     --accent: #FF9640;
     --accent-dim: rgba(255, 150, 64, 0.15);
-    --text-primary: #E0E0E0;
-    --text-secondary: #999999;
-    --text-muted: #666666;
+    --text-primary: #1C1B1F;
+    --text-secondary: #5A565F;
+    --text-muted: #7A7680;
     --success: #4CAF50;
     --warning: #FF9800;
     --error: #F44336;
@@ -228,6 +228,14 @@ body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
 }
 .brand { font-size: 14px; font-weight: 700; color: var(--text-muted); }
 .brand span { color: var(--accent); }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* The club look (ui.css, 2026-11-11): light page; video stays on black. Web only. */
+html, body { font-family: Archivo, -apple-system, "Helvetica Neue", Arial, sans-serif !important; }
+.logo { font-weight: 900 !important; color: #E07A1F !important; } .logo span { color: #1C1B1F !important; }
+video, .video-wrap, .player, #videoContainer { background: #000; }
 </style>
 </head>
 <body>
