@@ -1,0 +1,43 @@
+/* The club look on the pages the apps also show: team, game, player, event
+   (2026-11-11). Eric: section labels "don't stand out enough" and there's no
+   "good separation"; the club pages (ui.css) are the look to match.
+
+   These pages theme themselves: light or dark (?theme= from the apps, the OS
+   on the web) and team palettes, through their own tokens (--text-primary,
+   --accent, --bg-*). This layer only changes type, hierarchy and separation,
+   and uses those tokens, so it works in both themes and every palette.
+   Loaded last in <head>. */
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap");
+
+html, body { font-family: Archivo, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }
+/* The page colour reaches the bottom of the window (player.html showed a black band under short pages). */
+body { min-height: 100vh; }
+
+/* ── Section headings: a real heading, not a small orange caption ─────── */
+.section-title, .card > .label, .section-label {
+  font-family: Archivo, -apple-system, sans-serif !important;
+  font-size: 21px !important; line-height: 1.2 !important; font-weight: 900 !important;
+  letter-spacing: -0.01em !important; text-transform: none !important;
+  color: var(--text-primary) !important;
+  margin-bottom: 12px !important;
+}
+/* game.html's "no video" card reuses .label for its message: leave it alone. */
+.no-stream-card > .label { font-size: 14px !important; font-weight: 400 !important; color: var(--text-secondary) !important; letter-spacing: 0 !important; }
+/* Small pills riding in a heading (team "MANAGER") keep their own size. */
+.section-title > *, .card > .label > * { font-size: 11px; vertical-align: middle; }
+
+/* ── Separation between sections ─────────────────────────────────────── */
+/* team.html: stacked .section blocks get the dark rule the club pages use. */
+.section + .section { border-top: 2px solid color-mix(in srgb, var(--text-primary) 82%, transparent); }
+
+/* ── The web top bar (hidden inside the apps): dark, like the club pages ─ */
+body:not(.app) .top-bar, body:not(.app) #accountBar {
+  background: #111215 !important; border-bottom: 0 !important; color: #F1EEE9;
+}
+body:not(.app) .top-bar .brand, body:not(.app) #accountBar > a:first-child { color: #F1EEE9 !important; font-weight: 900 !important; }
+body:not(.app) .top-bar .brand .accent, body:not(.app) #accountBar > a:first-child span { color: #FF9640 !important; }
+body:not(.app) .top-bar .back-link { color: #A9ADB6 !important; }
+body:not(.app) #accountBar .user-info { color: #F1EEE9 !important; }
+
+/* Monospace for small codes and labels, like the club pages' eyebrows. */
+.team-code, .page-version { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace !important; }
