@@ -17,6 +17,7 @@
 .team:hover { border-color: #CFCAC2; box-shadow: 0 6px 18px rgba(28,27,31,.07); }
 .team .top { display: flex; gap: 14px; align-items: center; }
 .team .nm { font-size: 18px; font-weight: 900; line-height: 1.15; }
+.team a.top:hover .nm { color: var(--link); text-decoration: underline; text-underline-offset: 3px; }
 .team .nmw { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
 .team .rec { font-size: 15px; font-weight: 800; }
 .team .lines { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--mu); line-height: 1.4; }
@@ -700,16 +701,18 @@ function teamCard(t) {
           <a class="btn ghost sm" href="/manage.html?team=${encodeURIComponent(t.id)}&tab=people">People${waiting ? ` <span class="badge">${waiting}</span>` : ''}</a>
           ${t.hubCode ? `<button type="button" class="btn ghost sm" onclick="window._inviteFollower('${esc(t.id)}')">Invite</button>` : ''}`;
     } else if (t.role === 'follower') {
-        acts = `<button type="button" class="btn ghost sm" onclick="window._unfollow('${esc(t.id)}')">Unfollow</button>`;
+        acts = `${page ? `<a class="btn primary sm" href="${page}">Team page</a>` : ''}
+          <button type="button" class="btn ghost sm" onclick="window._unfollow('${esc(t.id)}')">Unfollow</button>`;
     } else if (t.role === 'notfollowing') {
         acts = `<button type="button" class="btn primary sm" onclick="window._follow('${esc(t.id)}')">Follow</button>
           <button type="button" class="btn danger sm" onclick="window._removeTeam('${esc(t.hubCode)}')">Remove</button>`;
     } else if (t.role === 'requested') {
         acts = `<span class="muted" style="font-size:13px">Waiting for the team to approve you</span>`;
     }
-    if (page) acts += `<a class="btn link" href="${page}" style="margin-left:auto">Team page ›</a>`;
+    // The crest and name open the team's page.
+    const open = page ? `<a href="${page}" class="top" style="text-decoration:none;color:inherit;flex:1 1 auto;min-width:0">` : '<div class="top" style="flex:1 1 auto;min-width:0">';
     return `<div class="card team">
-      <div class="top">${mark(t, 56)}<div class="nmw"><span class="nm">${esc(t.name)}</span><span class="status ${roleCls}">${roleLabel}</span></div>
+      <div class="top">${open}${mark(t, 56)}<div class="nmw"><span class="nm">${esc(t.name)}</span><span class="status ${roleCls}">${roleLabel}</span></div>${page ? '</a>' : '</div>'}
         ${t.record ? `<span class="rec" title="Record">${esc(t.record)}</span>` : ''}</div>
       <div class="lines">${lines.join('')}</div>
       <div class="acts">${acts}</div></div>`;
