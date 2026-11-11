@@ -426,7 +426,10 @@ async function renderSchedule() {
         <div class="row"><button class="btn primary" type="button" id="sRead">Find the games</button>
           <label class="btn ghost" style="font-size:15px;color:var(--ink);" for="sFile">Upload a file</label>
           <input id="sFile" type="file" accept="image/*,application/pdf" class="hide"></div>
-        <div class="muted" style="font-size:12px;">Read by AI, with the same daily limit as the app's schedule import. Imported games don't send notifications; a game you add by hand does.</div>
+        <label for="sLink">Or a link</label>
+        <div class="row" style="flex-wrap:nowrap;"><input id="sLink" type="url" inputmode="url" autocomplete="off" placeholder="The team's schedule page, a PDF, or a calendar (.ics)" style="flex:1 1 auto;min-width:0;">
+          <button class="btn ghost" type="button" id="sLinkGo" style="font-size:15px;color:var(--ink);">Read it</button></div>
+        <div class="muted" style="font-size:12px;">Read by AI, with the same daily limit as the app's schedule import (calendar links don't count). A page that needs a sign-in can't be read from its link: upload a screenshot instead. Imported games don't send notifications; a game you add by hand does.</div>
       </section>
     </aside></div>`;
   $('gAdd').onclick = () => gameDialog(null);
@@ -445,6 +448,16 @@ async function renderSchedule() {
     importPreview(found, practices);
   };
   $('sRead').onclick = (ev) => busy(ev.currentTarget, async () => { const t = $('sPaste').value.trim(); if (!t) return toast('Paste the schedule first.'); await importWith({ text: t }); });
+  // A link (2026-11-10): the server reads a page, PDF or picture; a calendar comes back as-is and is read here.
+  $('sLinkGo').onclick = (ev) => busy(ev.currentTarget, async () => {
+    let u = $('sLink').value.trim(); if (!u) return toast('Paste the link first.');
+    if (!/^(https?|webcal):\/\//i.test(u)) u = 'https://' + u;
+    const r = await call('labsScheduleImport', { teamId: S.teamId, teamName: S.data.teamName, sport: (S.team && S.team.sport) || '', url: u });
+    const found = r.ics ? icsGames(r.ics, S.data.teamName) : (r.games || []).map(g => ({ ...g, on: true }));
+    const practices = r.ics ? [] : (r.practices || []);
+    if (!found.length && !practices.some(p => p.start)) return toast('No games or practices found on that page. Try a screenshot of it instead.');
+    importPreview(found, practices);
+  });
   $('sFile').onchange = () => busy($('sRead'), async () => {
     const f = $('sFile').files[0]; if (!f) return;
     const b64 = await new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = bad; r.readAsDataURL(f); });
@@ -452,6 +465,37 @@ async function renderSchedule() {
     await importWith(f.type === 'application/pdf' ? { dataBase64: b64, mimeType: 'application/pdf' } : { images: [{ dataBase64: b64 }] });
   });
 }
+/** A calendar's games, read the way the apps read a calendar link (LabsScheduleImport.parseIcs). */
+function icsGames(ics, teamName) {
+  const NOISE = ['practice', 'training', 'conditioning', 'lifting', 'workout', 'film', 'meeting', 'party', 'banquet', 'fundraiser',
+    'picture day', 'photo day', 'tryout', 'camp', 'clinic', 'bye', 'holiday', 'no school', 'birthday'];
+  const pad = n => String(n).padStart(2, '0');
+  const when = (v) => {
+    const m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/.exec(v); if (!m) return null;
+    if (!m[4]) return { date: `${m[1]}-${m[2]}-${m[3]}`, time: null };
+    if (m[7]) { const d = new Date(Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5])); return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}` }; }
+    return { date: `${m[1]}-${m[2]}-${m[3]}`, time: `${m[4]}:${m[5]}` };
+  };
+  const out = []; let ev = null;
+  for (const raw of ics.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '').split(/\r?\n/)) {
+    const line = raw.trim(), val = line.slice(line.indexOf(':') + 1).trim();
+    if (line === 'BEGIN:VEVENT') ev = { s: '', loc: '', start: '' };
+    else if (line === 'END:VEVENT' && ev) {
+      const w = when(ev.start), low = ev.s.toLowerCase();
+      if (w && ev.s && !NOISE.some(n => low.includes(n))) {
+        let opp = ev.s; if (teamName) opp = opp.split(new RegExp(teamName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig')).join(' ');
+        opp = opp.replace(/\b(vs\.?|v\.?|at)\b/ig, ' ').replace(/@/g, ' ').replace(/\s+/g, ' ').replace(/^[\s\-–:,]+|[\s\-–:,]+$/g, '');
+        out.push({ opponent: opp, date: w.date, time: w.time, location: ev.loc.replace(/\\,/g, ',') || null,
+          homeAway: /@| at /.test(low) ? 'away' : (/ vs| v /.test(low) ? 'home' : 'unknown'), notes: null, confidence: 1, on: true });
+      }
+      ev = null;
+    } else if (ev && line.startsWith('SUMMARY')) ev.s = val.replace(/\\,/g, ',');
+    else if (ev && line.startsWith('LOCATION')) ev.loc = val;
+    else if (ev && line.startsWith('DTSTART')) ev.start = val;
+  }
+  return out.sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+}
+
 function importPreview(found, practices = []) {
   const d = $('dlg'); d.className = 'wide';
   const timed = practices.filter(p => p.start);
