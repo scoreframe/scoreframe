@@ -145,6 +145,17 @@ body.store main { max-width: none; padding: 0; gap: 0; }
 .s-live { font: 700 11px "JetBrains Mono", monospace; letter-spacing: .1em; background: #C71A1A; color: #fff; padding: 4px 8px; border-radius: 6px; }
 .s-clubfoot { border-top: 1px solid var(--ln); padding: 12px 20px; font-size: 13px; color: var(--mu); }
 .s-band { background: #fff; border-top: 1px solid var(--ln); border-bottom: 1px solid var(--ln); }
+/* Club videos (2026-11-11): the tour big, the two how-tos beside it. */
+.s-vids { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.s-vid { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.s-vid video { width: 100%; aspect-ratio: 16/9; border-radius: 16px; background: #111215; display: block; box-shadow: 0 10px 30px rgba(28,27,31,.14); }
+.s-vid figcaption { display: flex; flex-direction: column; gap: 4px; }
+.s-vid .vt { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-weight: 900; font-size: 18px; }
+.s-vid .len { font: 700 13px "JetBrains Mono", ui-monospace, monospace; color: var(--mu); font-variant-numeric: tabular-nums; }
+.s-vid p { margin: 0; color: var(--mu); line-height: 1.5; font-size: 15px; }
+.s-vside { display: flex; flex-direction: column; gap: 22px; }
+.s-watch { font-weight: 700; color: var(--link); text-decoration: none; } .s-watch:hover { text-decoration: underline; }
+@media (max-width: 860px) { .s-vids { grid-template-columns: minmax(0, 1fr); } }
 .s-sec { padding-block: 64px; display: flex; flex-direction: column; gap: 28px; }
 .s-head { display: flex; flex-direction: column; gap: 10px; max-width: 680px; }
 .s-sec h2, .s-pcopy h2 { font-size: clamp(30px, 3.6vw, 42px); line-height: 1.02; font-weight: 900; letter-spacing: -.015em; }
@@ -526,7 +537,7 @@ function renderSignIn() {
   $('main').innerHTML = `
   <header class="s-top"><div class="s-wrap s-nav">
     <a class="s-mark" href="/">Score<b>Frame</b> <span>CLUBS</span></a>
-    <nav aria-label="Sections"><a href="#what">What you get</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#faq">Questions</a></nav>
+    <nav aria-label="Sections"><a href="#watch">Videos</a><a href="#what">What you get</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#faq">Questions</a></nav>
     <div class="s-acts"><button class="s-btn line" type="button" data-signin="in">Director sign in</button><button class="s-btn" type="button" data-signin="up">Start a free trial</button></div>
   </div></header>
 
@@ -537,6 +548,7 @@ function renderSignIn() {
       <p class="s-lede">One director sets up the teams and coaches. Every coach on a club team gets ScoreFrame Pro on their phone, and every game goes to the club's own YouTube channel.</p>
       <div class="s-row"><button class="s-btn big" type="button" data-signin="up">Start a ${STORE_PRICE.trialDays}-day trial</button><button class="s-btn big line" type="button" id="demoBtn">See the director console</button></div>
       <div class="s-fine">Trial: up to ${STORE_PRICE.trialTeams} teams for ${STORE_PRICE.trialDays} days. No card. Coaches use the free ScoreFrame app.</div>
+      <a class="s-watch" href="#watch">▶ Watch the club tour (under a minute)</a>
     </div>
     <div class="s-club" aria-label="Example club page">
       <div class="s-clubhead"><div class="s-crest">RV</div><div><div class="s-clubname">Rockets VBC</div><div class="s-clubsub">8 teams · Kansas City</div></div></div>
@@ -547,6 +559,20 @@ function renderSignIn() {
         <div class="s-it">${crest('18E')}<div class="s-tx"><b>18 Elite</b><span>12 player reels from Sunday</span></div></div>
       </div>
       <div class="s-clubfoot">An example club page, the one families see. Each team has its own page too.</div>
+    </div>
+  </section>
+
+  <section id="watch" class="s-wrap s-sec">
+    <div class="s-head"><div class="s-eb">Watch</div><h2>See it working, start to finish.</h2></div>
+    <div class="s-vids">
+      <figure class="s-vid"><video controls playsinline preload="metadata" poster="videos/scoreframe_club_1_overview.jpg"><source src="videos/scoreframe_club_1_overview.mp4" type="video/mp4"></video>
+        <figcaption><div class="vt"><span>ScoreFrame for clubs</span><span class="len">0:52</span></div><p>The director, the coaches and the families, in under a minute.</p></figcaption></figure>
+      <div class="s-vside">
+        <figure class="s-vid"><video controls playsinline preload="none" poster="videos/scoreframe_club_2_set_up_your_club.jpg"><source src="videos/scoreframe_club_2_set_up_your_club.mp4" type="video/mp4"></video>
+        <figcaption><div class="vt"><span>Set up your club</span><span class="len">1:36</span></div><p>The trial, privacy and the Club Terms, your logo, teams, coach invites, rosters, schedules, YouTube and licenses.</p></figcaption></figure>
+        <figure class="s-vid"><video controls playsinline preload="none" poster="videos/scoreframe_club_3_coaches_and_families.jpg"><source src="videos/scoreframe_club_3_coaches_and_families.mp4" type="video/mp4"></video>
+        <figcaption><div class="vt"><span>What coaches and families see</span><span class="len">1:08</span></div><p>The coach's email, accepting in the app, game day, and the club page on a parent's phone.</p></figcaption></figure>
+      </div>
     </div>
   </section>
 
@@ -621,6 +647,9 @@ function renderSignIn() {
   $('calcTeams').oninput = calc; $('calcMonths').oninput = calc; calc();
   $('main').querySelectorAll('[data-signin]').forEach(b => { b.onclick = () => openSignIn(b.dataset.signin); });
   $('demoBtn').onclick = openDemo;
+  // One video at a time: starting one pauses the others.
+  const vids = [...$('main').querySelectorAll('video')];
+  vids.forEach(v => v.addEventListener('play', () => vids.forEach(o => { if (o !== v) o.pause(); })));
   if (location.hash === '#demo') openDemo();   // home page "See the director console"
 }
 

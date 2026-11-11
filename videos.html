@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ScoreFrame How-to Videos</title>
 <link rel="canonical" href="https://scoreframe.app/videos.html">
-<meta name="description" content="Short narrated videos: film and score a game, stream to YouTube, set up your team, and the ScoreFrame features people miss.">
+<meta name="description" content="Short narrated videos: film and score a game, stream to YouTube, set up your team, the ScoreFrame features people miss, and ScoreFrame for clubs.">
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -60,6 +60,13 @@ nav a[aria-current]{color:var(--ink)}
 .len{font:700 13px "JetBrains Mono",ui-monospace,monospace;color:var(--mu);font-variant-numeric:tabular-nums;white-space:nowrap}
 .vid p{color:var(--mu);font-size:16px;max-width:56ch}
 .vid:target video{outline:3px solid var(--orange);outline-offset:4px}
+/* For clubs (2026-11-11): web only. The apps never point to the club purchase, so the section is hidden in them. */
+.clubs{border-top:2px solid var(--ink);padding-top:40px}
+.clubs .intro{padding-block:0 28px}
+.clubs .intro h2{font-size:clamp(30px,3.6vw,42px);line-height:1.02}
+.clubs .lede a{color:#A64F0A;font-weight:700}
+.vid.wide{grid-column:1/-1}
+html.app .clubs{display:none}
 
 .flinks{display:flex;flex-wrap:wrap;gap:8px 18px}.flinks a{text-decoration:none}.flinks a:hover{text-decoration:underline}
 footer{border-top:1px solid var(--ln);padding-block:32px;color:var(--mu);font-size:14px}
@@ -134,6 +141,39 @@ html.dark{--paper:#1C1D21;--card:#26282D;--ink:#F5F3EF;--mu:#B4B8C0;--ln:#3D4048
       <div class="meta"><h2>Did you know?</h2><span class="len">1:17</span></div>
       <p>Celebrations in the video, moving the scoreboard, a logo from any photo, a roster from a photo, and a schedule from a web link.</p>
     </article>
+  </section>
+
+  <section class="clubs" id="clubs">
+    <div class="intro">
+      <span class="eb">For clubs</span>
+      <h2>Running a club?</h2>
+      <p class="lede">One director sets up every team on a computer. Coaches and families use the free app. <a href="club.html">More about ScoreFrame for clubs</a></p>
+    </div>
+    <div class="grid">
+      <article class="vid wide" id="club">
+        <video controls playsinline preload="none" poster="videos/scoreframe_club_1_overview.jpg">
+          <source src="videos/scoreframe_club_1_overview.mp4" type="video/mp4">
+        </video>
+        <div class="meta"><h2>ScoreFrame for clubs</h2><span class="len">0:52</span></div>
+        <p>The director, the coaches and the families, in under a minute.</p>
+      </article>
+
+      <article class="vid" id="club-setup">
+        <video controls playsinline preload="none" poster="videos/scoreframe_club_2_set_up_your_club.jpg">
+          <source src="videos/scoreframe_club_2_set_up_your_club.mp4" type="video/mp4">
+        </video>
+        <div class="meta"><h2>Set up your club</h2><span class="len">1:36</span></div>
+        <p>For directors: the trial, privacy and the Club Terms, your logo, teams, coach invites, rosters, schedules, YouTube and licenses.</p>
+      </article>
+
+      <article class="vid" id="club-coaches">
+        <video controls playsinline preload="none" poster="videos/scoreframe_club_3_coaches_and_families.jpg">
+          <source src="videos/scoreframe_club_3_coaches_and_families.mp4" type="video/mp4">
+        </video>
+        <div class="meta"><h2>What coaches and families see</h2><span class="len">1:08</span></div>
+        <p>The coach's email, accepting in the app, game day, and the club page on a parent's phone.</p>
+      </article>
+    </div>
   </section>
 </main>
 
