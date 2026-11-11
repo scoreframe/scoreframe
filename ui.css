@@ -1,0 +1,132 @@
+/* ScoreFrame desk look (2026-11-11): the club console's design (club.html,
+   manage.html) as one shared stylesheet, so every signed-in web page looks the
+   same. Eric: "a lot of the labels for different sections don't stand out
+   enough and then it doesn't have good separation ... we did a good job on the
+   design of the club pages ... have a consistent look across all website pages".
+   First user: dashboard.html. Light only: these pages never show inside the apps.
+
+   The pieces: a dark top bar; sections with a monospace eyebrow over a big
+   black heading, ruled off from the section above; white cards on paper;
+   orange buttons; status pills; team crests and logos. */
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap");
+
+*, *::before, *::after { box-sizing: border-box; }
+:root {
+  color-scheme: light;
+  --paper: #F5F5F2; --card: #FFFFFF; --ink: #1C1B1F; --mu: #5A565F; --ln: #E2DFDA; --ln2: #EFECE7;
+  --deep: #111215; --deep2: #1B1C21; --deep-tx: #F1EEE9; --deep-mu: #A9ADB6;
+  --orange: #FF9640; --on-orange: #1A1004; --link: #A64F0A; --link-h: #7A3906;
+  --ok-bg: #E3F5EA; --ok: #146B3D; --warn-bg: #FFF1DC; --warn: #8A4B00; --bad-bg: #FFE3E3; --bad: #B3121D;
+  --info-bg: #FFF4EA; --info-ln: #F4CFA9;
+  --live: #C71A1A;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+html, body { margin: 0; background: var(--paper); color: var(--ink);
+  font-family: Archivo, -apple-system, "Helvetica Neue", Arial, sans-serif; font-variant-numeric: tabular-nums; }
+body { min-height: 100vh; }
+a { color: var(--link); } a:hover { color: var(--link-h); }
+button { font: inherit; cursor: pointer; color: inherit; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+input, select, textarea { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid #D6D2CC; border-radius: 10px; background: #fff; color: var(--ink); min-width: 0; }
+label { font-size: 13px; font-weight: 600; color: var(--mu); }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+p { margin: 0; }
+.hide { display: none !important; }
+.muted { color: var(--mu); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* ── Top bar ─────────────────────────────────────────────────────────── */
+header.top { background: var(--deep); color: var(--deep-tx); padding: 12px 24px; padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px; position: sticky; top: 0; z-index: 5; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--deep-tx); }
+.brand .tile { width: 30px; height: 30px; border-radius: 8px; background: var(--orange); color: var(--on-orange); font-weight: 900; display: flex; align-items: center; justify-content: center; }
+.brand .word { font-weight: 900; font-size: 18px; letter-spacing: .4px; } .brand .word b { color: var(--orange); }
+.pill-top { font: 700 11px var(--mono); letter-spacing: 1.4px; color: var(--deep-mu); border: 1px solid #3A3C44; border-radius: 99px; padding: 4px 10px; text-transform: uppercase; }
+.who { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--deep-mu); flex-wrap: wrap; min-width: 0; }
+.who .me { display: flex; align-items: center; gap: 8px; color: var(--deep-tx); font-weight: 600; min-width: 0; }
+.who .me span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+.who img, .who .ini { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
+.who .ini { background: var(--orange); color: var(--on-orange); font-weight: 900; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+.who button, .who a.b { background: none; border: 1px solid #3A3C44; color: var(--deep-mu); border-radius: 8px; padding: 6px 11px; font-size: 13px; text-decoration: none; }
+.who button:hover, .who a.b:hover { color: var(--deep-tx); border-color: #5A5D66; }
+
+/* ── Page and sections ───────────────────────────────────────────────── */
+main.page { max-width: 1180px; margin: 0 auto; padding: 32px 24px 72px; display: flex; flex-direction: column; gap: 40px; }
+/* A section: an eyebrow over a big heading, ruled off from the one above. */
+.sec { display: flex; flex-direction: column; gap: 18px; }
+.sec + .sec { border-top: 2px solid var(--ink); padding-top: 28px; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px; }
+.sec-head .t { display: flex; flex-direction: column; gap: 6px; flex: 1 1 320px; min-width: 0; }
+.eb { font: 700 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--link); }
+.sec h2 { font-size: clamp(26px, 3vw, 34px); line-height: 1.05; font-weight: 900; letter-spacing: -.015em; }
+.sec .lede { font-size: 16px; color: var(--mu); line-height: 1.5; max-width: 62ch; }
+.hello h1 { font-size: clamp(36px, 5vw, 54px); line-height: 1; font-weight: 900; letter-spacing: -.02em; }
+/* A sub-group inside a section (a sport): smaller label with a hairline. */
+.grp { display: flex; flex-direction: column; gap: 12px; }
+.grp + .grp { margin-top: 14px; }
+.grp-head { display: flex; align-items: center; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--ln); }
+.grp-head .nm { font-size: 19px; font-weight: 900; }
+.grp-head .ct { font: 700 12px var(--mono); color: var(--mu); letter-spacing: .08em; }
+.grp-head .emo { font-size: 20px; line-height: 1; }
+
+/* ── Cards, banners, pills, buttons ──────────────────────────────────── */
+.card { background: var(--card); border: 1px solid var(--ln); border-radius: 14px; }
+.pad { padding: 18px 20px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 14px; }
+.banner { border-radius: 14px; padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 15px; line-height: 1.45; }
+.banner .txt { flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.banner .txt b { font-size: 16px; }
+.banner .txt .s { font-size: 13px; color: var(--mu); }
+.b-info { background: var(--info-bg); border: 1px solid var(--info-ln); }
+.b-ok { background: var(--ok-bg); border: 1px solid #B7E2C8; }
+.b-warn { background: var(--warn-bg); border: 1px solid #F0D2A6; }
+.b-bad { background: var(--bad-bg); border: 1px solid #F3B9B9; }
+.b-plain { background: var(--card); border: 1px solid var(--ln); }
+.status { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; display: inline-block; }
+.s-ok { background: var(--ok-bg); color: var(--ok); } .s-warn { background: var(--warn-bg); color: var(--warn); }
+.s-bad { background: var(--bad-bg); color: var(--bad); } .s-mu { background: #ECECE8; color: #4A4650; }
+.s-or { background: var(--orange); color: var(--on-orange); } .s-ink { background: var(--ink); color: #fff; }
+.s-live { background: var(--live); color: #fff; font-family: var(--mono); letter-spacing: .08em; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; padding: 10px 16px; border-radius: 10px; font-weight: 700; font-size: 15px; border: 1px solid transparent; min-height: 44px; }
+.btn.primary { background: var(--orange); color: var(--on-orange); }
+.btn.dark { background: var(--ink); color: #fff; }
+.btn.ghost { background: #fff; color: var(--ink); border-color: #D6D2CC; font-weight: 600; }
+.btn.danger { background: #fff; color: var(--bad); border-color: #F3B9B9; font-weight: 600; }
+.btn.link { background: none; color: var(--link); padding: 6px 4px; min-height: 0; font-weight: 600; }
+.btn.sm { min-height: 36px; padding: 6px 12px; font-size: 14px; }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn .badge { background: var(--orange); color: var(--on-orange); border-radius: 99px; padding: 0 7px; font-size: 12px; font-weight: 800; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips button { padding: 8px 14px; border-radius: 99px; border: 1px solid #D6D2CC; background: #fff; font-weight: 600; font-size: 14px; }
+.chips button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); font-weight: 700; }
+.chips button .n { font-family: var(--mono); font-size: 12px; opacity: .75; margin-left: 4px; }
+
+/* ── Team marks ──────────────────────────────────────────────────────── */
+.crest { border-radius: 14px; color: #fff; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+img.logo { object-fit: contain; background: #fff; border: 1px solid var(--ln); padding: 4px; flex-shrink: 0; border-radius: 14px; }
+
+/* ── Feedback ────────────────────────────────────────────────────────── */
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 14px; z-index: 20; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+.loading { padding: 60px 0; text-align: center; color: var(--mu); }
+.empty { padding: 22px; text-align: center; color: var(--mu); font-size: 15px; line-height: 1.5; }
+
+/* ── Sign in ─────────────────────────────────────────────────────────── */
+.signin { max-width: 440px; margin: 24px auto 0; display: flex; flex-direction: column; gap: 14px; }
+.signin .card { padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+.signin input { width: 100%; }
+.gbtn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 46px; border-radius: 10px; border: 1px solid #D6D2CC; background: #fff; font-weight: 700; font-size: 15px; }
+.or { display: flex; align-items: center; gap: 10px; color: var(--mu); font-size: 13px; }
+.or::before, .or::after { content: ""; flex: 1; border-top: 1px solid var(--ln); }
+
+/* ── Dark band (app links) ───────────────────────────────────────────── */
+.band-dark { background: var(--deep); color: var(--deep-tx); border-radius: 18px; padding: 24px; display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; }
+.band-dark .eb { color: #FFB477; }
+.band-dark .t { flex: 1 1 320px; display: flex; flex-direction: column; gap: 6px; }
+.band-dark h2 { font-size: 26px; font-weight: 900; }
+.band-dark p { color: var(--deep-mu); }
+
+@media (max-width: 560px) {
+  header.top { padding-inline: 16px; }
+  main.page { padding: 24px 16px 56px; gap: 32px; }
+  .who { margin-left: 0; width: 100%; }
+}

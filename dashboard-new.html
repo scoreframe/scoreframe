@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#111215">
+<title>ScoreFrame Dashboard</title>
+<link rel="stylesheet" href="/ui.css">
+<style>
+/* Dashboard (2026-11-11) in the club look (ui.css). Eric: "Teams can show their
+   logos there and maybe we have them separated and sorted by sport". */
+.team { display: flex; flex-direction: column; gap: 12px; padding: 16px; text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .15s; }
+.team:hover { border-color: #CFCAC2; box-shadow: 0 6px 18px rgba(28,27,31,.07); }
+.team .top { display: flex; gap: 14px; align-items: center; }
+.team .nm { font-size: 18px; font-weight: 900; line-height: 1.15; }
+.team .nmw { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
+.team .rec { font-size: 15px; font-weight: 800; }
+.team .lines { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--mu); line-height: 1.4; }
+.team .lines b { color: var(--ink); font-weight: 700; }
+.team .w { color: var(--ok); font-weight: 800; } .team .l { color: var(--bad); font-weight: 800; }
+.team .acts { display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--ln2); padding-top: 12px; }
+.games { display: flex; flex-direction: column; }
+.game { display: flex; align-items: center; gap: 14px; padding: 12px 18px; text-decoration: none; color: inherit; }
+.game + .game { border-top: 1px solid var(--ln2); }
+.game:hover { background: #FAF9F7; }
+.game .day { width: 54px; flex-shrink: 0; text-align: center; border: 1px solid var(--ln); border-radius: 10px; padding: 5px 0; background: #fff; }
+.game .day .d1 { font: 700 11px var(--mono); letter-spacing: .1em; color: var(--link); }
+.game .day .d2 { font-size: 20px; font-weight: 900; line-height: 1.1; }
+.game .tx { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.game .tx b { font-size: 16px; } .game .tx span { font-size: 13px; color: var(--mu); }
+.game .tx b, .game .tx span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.toolbar input { flex: 1 1 220px; max-width: 340px; }
+.find { display: flex; flex-direction: column; gap: 12px; }
+.find input { width: 100%; font-size: 17px; padding: 12px 14px; }
+.hit { display: flex; align-items: center; gap: 12px; padding: 12px 18px; text-decoration: none; color: inherit; }
+.hit + .hit { border-top: 1px solid var(--ln2); }
+.hit:hover { background: #FAF9F7; }
+.hit .tx { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hit .tx span { font-size: 13px; color: var(--mu); }
+.toggle { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; color: var(--ink); cursor: pointer; line-height: 1.45; }
+.toggle input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--orange); flex-shrink: 0; }
+.toggle span span { display: block; font-size: 13px; color: var(--mu); }
+.settings { display: flex; flex-direction: column; gap: 16px; }
+.settings .row { border-top: 1px solid var(--ln2); padding-top: 14px; }
+.counts { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 16px; color: var(--mu); }
+.counts b { color: var(--ink); font-weight: 900; }
+.inv-msg { font-size: 13px; color: var(--mu); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="/"><span class="tile">F</span><span class="word">Score<b>Frame</b></span></a>
+  <span class="pill-top">Dashboard</span>
+  <div class="who" id="authArea"></div>
+</header>
+
+<main class="page" id="content">
+  <div class="loading">Loading…</div>
+</main>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
+import { initializeFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc, collection, query, where, orderBy, limit as fbLimit, arrayUnion, arrayRemove }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult,
+    signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile,
+    setPersistence, browserLocalPersistence, sendPasswordResetEmail }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBhqtlHshe3wEEPkJe7mVUIrZ1IJirullU",
+    authDomain: "scoreframe-deploy.firebaseapp.com",
+    databaseURL: "https://scoreframe-deploy-default-rtdb.firebaseio.com",
+    projectId: "scoreframe-deploy",
+    storageBucket: "scoreframe-deploy.firebasestorage.app",
+    messagingSenderId: "728886280072",
+    appId: "1:728886280072:android:0050478669b89fc76b043d"
+};
+
+const app = initializeApp(firebaseConfig);
+// initializeFirestore, not getFirestore (2026-08-26): in an app WebView the
+// default streaming transport can stall for minutes; autoDetect falls back to
+// long-polling in seconds and keeps the faster transport in desktop browsers.
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence:', e));
+const functions = getFunctions(app);
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// Safari / iOS / in-app browsers block the popup's third-party cookies: redirect there.
+const _ua = navigator.userAgent || '';
+const _useRedirectAuth = /iP(hone|ad|od)|Safari/i.test(_ua) && !/Chrome|CriOS|FxiOS/i.test(_ua);
+getRedirectResult(auth).catch(e => { if (e && e.code !== 'auth/no-auth-event') console.warn('[auth] Redirect result:', e); });
+
+let currentUser = null;
+const $ = id => document.getElementById(id);
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const SPORTS = {
+    VOLLEYBALL: ['Volleyball', '\u{1F3D0}'], BOWLING: ['Bowling', '\u{1F3B3}'], BASKETBALL: ['Basketball', '\u{1F3C0}'],
+    SOCCER: ['Soccer', '⚽'], FOOTBALL: ['Football', '\u{1F3C8}'], BASEBALL: ['Baseball', '⚾'], SOFTBALL: ['Softball', '\u{1F94E}'],
+    TENNIS: ['Tennis', '\u{1F3BE}'], PICKLEBALL: ['Pickleball', '\u{1F3D3}'], HOCKEY: ['Hockey', '\u{1F3D2}'], LACROSSE: ['Lacrosse', '\u{1F94D}'],
+    GENERIC: ['Other sports', '\u{1F3AF}'],
+};
+const sportKey = s => (SPORTS[String(s || '').toUpperCase()] ? String(s).toUpperCase() : 'GENERIC');
+const sportName = s => SPORTS[sportKey(s)][0];
+const sportEmoji = s => SPORTS[sportKey(s)][1];
+
+/** A team colour as #RRGGBB: stored as a hex string, or as an ARGB number by the apps. */
+function hexColor(c, fallback = '#3A3C44') {
+    if (typeof c === 'number' && isFinite(c)) return '#' + ((c >>> 0) & 0xFFFFFF).toString(16).padStart(6, '0');
+    const s = String(c || '').trim();
+    if (/^#[0-9a-f]{6}$/i.test(s)) return s;
+    if (/^#[0-9a-f]{8}$/i.test(s)) return '#' + s.slice(3);
+    if (/^-?\d+$/.test(s)) return hexColor(Number(s), fallback);
+    return fallback;
+}
+const initials = n => String(n || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+/** The team's logo, or a crest in its colour with its initials. */
+function mark(t, size = 56) {
+    if (t.logo) return `<img class="logo" src="${esc(t.logo)}" alt="" width="${size}" height="${size}" style="width:${size}px;height:${size}px" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'crest',textContent:${esc(JSON.stringify(initials(t.name)))},style:'width:${size}px;height:${size}px;background:${t.color};font-size:${Math.round(size * .36)}px'}))">`;
+    return `<div class="crest" style="width:${size}px;height:${size}px;background:${t.color};font-size:${Math.round(size * .36)}px">${esc(initials(t.name))}</div>`;
+}
+const day = (ms, o) => new Date(ms).toLocaleDateString('en-US', o);
+const time = ms => new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+function toast(msg) {
+    const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+    document.body.appendChild(t); setTimeout(() => t.remove(), 3200);
+}
+
+// ── Header (signed in) and the sign-in card (signed out) ──
+
+function renderAuth() {
+    const area = $('authArea');
+    if (currentUser) {
+        const name = currentUser.displayName || currentUser.email || 'You';
+        const face = currentUser.photoURL ? `<img src="${esc(currentUser.photoURL)}" alt="">` : `<span class="ini">${esc(initials(name))}</span>`;
+        area.innerHTML = `<span class="me">${face}<span>${esc(name)}</span></span>
+            <button type="button" onclick="window._signOut()">Sign out</button>`;
+    } else {
+        area.innerHTML = '';
+        $('content').innerHTML = `
+        <div class="signin">
+          <div class="sec-head"><div class="t"><span class="eb">Your dashboard</span>
+            <h1 class="hello" style="font-size:clamp(30px,6vw,40px);font-weight:900;line-height:1.05">Sign in to see your teams</h1>
+            <p class="muted">Your teams, the next games, and anything waiting on you.</p></div></div>
+          <div class="card">
+            <button type="button" class="gbtn" onclick="window._signInGoogle()">
+              <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#34A853" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.0 24.0 0 0 0 0 21.56l7.98-6.19z"/><path fill="#EA4335" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+              Continue with Google</button>
+            <div class="or">or with email</div>
+            <div id="emailForm" style="display:flex;flex-direction:column;gap:10px">
+              <b id="emailFormTitle" style="font-size:17px">Sign in</b>
+              <input type="text" id="nameInput" placeholder="Your name" autocomplete="name" style="display:none">
+              <input type="email" id="emailInput" placeholder="Email" autocomplete="email" inputmode="email">
+              <input type="password" id="passInput" placeholder="Password" autocomplete="current-password">
+              <label id="signUpNoSpoilRow" class="toggle" style="display:none;font-size:13px">
+                <input type="checkbox" id="signUpNoSpoil"><span>No spoilers: hide scores in my emails and on game pages until I choose to see them (for 7 days after each game)</span></label>
+              <button type="button" class="btn primary" id="emailSubmitBtn" onclick="window._signInEmail()">Sign in</button>
+              <div class="row" style="justify-content:space-between">
+                <button type="button" class="btn link" id="forgotPassLink" onclick="window._forgotPassword()">Forgot password?</button>
+                <button type="button" class="btn link" id="emailToggleLink" onclick="window._switchAuthMode()">Create an account</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+}
+
+let isSignUpMode = false;
+window._showSignIn = () => {
+    isSignUpMode = false;
+    $('emailFormTitle').textContent = 'Sign in';
+    $('nameInput').style.display = 'none';
+    $('signUpNoSpoilRow').style.display = 'none';
+    $('emailSubmitBtn').textContent = 'Sign in';
+    $('emailSubmitBtn').onclick = window._signInEmail;
+    $('passInput').autocomplete = 'current-password';
+    $('emailToggleLink').textContent = 'Create an account';
+    $('forgotPassLink').style.display = '';
+};
+window._showSignUp = () => {
+    isSignUpMode = true;
+    $('emailFormTitle').textContent = 'Create your free account';
+    $('nameInput').style.display = '';
+    $('signUpNoSpoilRow').style.display = 'flex';
+    $('emailSubmitBtn').textContent = 'Create account';
+    $('emailSubmitBtn').onclick = window._createEmail;
+    $('passInput').autocomplete = 'new-password';
+    $('emailToggleLink').textContent = 'I already have an account';
+    $('forgotPassLink').style.display = 'none';
+};
+window._switchAuthMode = () => { if (isSignUpMode) window._showSignIn(); else window._showSignUp(); };
+
+// ── No spoilers (2026-09-29): users/{uid}.noSpoilers, merge-written ──
+async function loadNoSpoil() {
+    try {
+        const u = await getDoc(doc(db, 'users', currentUser.uid));
+        const t = $('noSpoilToggle');
+        if (t) t.checked = !!(u.exists() && u.data().noSpoilers === true);
+    } catch (_) {}
+}
+window._setNoSpoil = async (on) => {
+    if (!currentUser) return;
+    try {
+        await setDoc(doc(db, 'users', currentUser.uid), { noSpoilers: !!on }, { merge: true });
+        try { localStorage.setItem('sf_nospoil', on ? '1' : '0'); } catch (_) {}
+        toast(on ? 'No spoilers is on' : 'No spoilers is off');
+    } catch (e) {
+        toast("That didn't save. Try again.");
+        const t = $('noSpoilToggle'); if (t) t.checked = !on;
+    }
+};
+
+window._forgotPassword = async () => {
+    const email = $('emailInput').value.trim();
+    if (!email || !email.includes('@')) { alert('Type your email address first, then tap "Forgot password?"'); return; }
+    try {
+        await sendPasswordResetEmail(auth, email);
+        alert('We sent a password reset email to ' + email + '.');
+    } catch (e) {
+        alert(/user-not-found/.test(e.message || '') ? 'No account uses that email.' : 'Error: ' + e.message);
+    }
+};
+window._changePassword = async () => {
+    if (!currentUser || !currentUser.email) { alert('This account has no email address. If you signed in with Google, Google manages your password.'); return; }
+    const hasPassword = currentUser.providerData.some(p => p.providerId === 'password');
+    if (!hasPassword) { alert('You sign in with Google. To also set a password, sign out, then use "Forgot password?" with your email.'); return; }
+    try {
+        await sendPasswordResetEmail(auth, currentUser.email);
+        alert('We sent an email to ' + currentUser.email + ' with a link to set a new password.');
+    } catch (e) { alert('Error: ' + e.message); }
+};
+window._signInGoogle = async () => {
+    try {
+        if (_useRedirectAuth) { await signInWithRedirect(auth, googleProvider); return; }
+        const result = await signInWithPopup(auth, googleProvider);
+        currentUser = result.user;
+    } catch (e) {
+        console.error('Google sign-in error:', e);
+        if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
+            try { await signInWithRedirect(auth, googleProvider); } catch (_) {}
+        }
+    }
+};
+window._signInEmail = async () => {
+    const email = $('emailInput')?.value, pass = $('passInput')?.value;
+    if (!email || !pass) return;
+    try {
+        currentUser = (await signInWithEmailAndPassword(auth, email, pass)).user;
+    } catch (e) {
+        const msg = e.message || '';
+        if (msg.includes('not found') || msg.includes('no user')) {
+            if (confirm('No account uses this email. Create one?')) {
+                window._showSignUp(); $('emailInput').value = email; $('passInput').value = pass;
+            }
+        } else if (msg.includes('wrong-password') || msg.includes('invalid-credential')) {
+            alert('That password is not right. If you signed up with Google, use "Continue with Google".');
+        } else alert(e.message);
+    }
+};
+window._createEmail = async () => {
+    const email = $('emailInput')?.value, pass = $('passInput')?.value;
+    if (!email || !pass) return;
+    try {
+        const wantsNoSpoil = !!$('signUpNoSpoil')?.checked;
+        currentUser = (await createUserWithEmailAndPassword(auth, email, pass)).user;
+        if (wantsNoSpoil) { try { await setDoc(doc(db, 'users', currentUser.uid), { noSpoilers: true }, { merge: true }); } catch (_) {} }
+        const name = $('nameInput')?.value?.trim();
+        if (name && currentUser) await updateProfile(currentUser, { displayName: name });
+    } catch (e) {
+        if ((e.message || '').includes('email-already-in-use')) {
+            try { currentUser = (await signInWithEmailAndPassword(auth, email, pass)).user; }
+            catch (_) { alert('An account already uses this email. Sign in instead, or use "Continue with Google" if you signed up with Google.'); }
+        } else alert(e.message);
+    }
+};
+window._signOut = async () => { await signOut(auth); currentUser = null; };
+
+// ── Invitations and requests ──
+
+window._acceptInvite = async (invId, teamId, hubCode, role) => {
+    if (!currentUser) return;
+    try {
+        // Accepted on the server (2026-09-28): the rules only let the owner write managers.
+        const r = String(role || '').toLowerCase();
+        if (r === 'manager' || r === 'coach') await httpsCallable(functions, 'acceptStaffInvite')({ invitationId: invId });
+        else await httpsCallable(functions, 'acceptHubInvite')({ teamId });
+        loadDashboard();
+    } catch (e) {
+        console.error('Accept error:', e);
+        alert('Could not accept this invitation. ' + (e && e.message ? e.message : ''));
+    }
+};
+window._declineInvite = async (invId) => {
+    try { await deleteDoc(doc(db, 'invitations', invId)); loadDashboard(); }
+    catch (e) { console.error('Decline error:', e); }
+};
+/** Accept a follow invitation. The server re-checks it against your email. */
+window._acceptFollowInvite = async function(teamId, btn) {
+    if (!currentUser) return;
+    const msg = btn && btn.parentElement && btn.parentElement.querySelector('.inv-msg');
+    if (btn) { btn.disabled = true; btn.textContent = 'Accepting…'; }
+    if (msg) msg.textContent = '';
+    try {
+        await httpsCallable(functions, 'acceptHubInvite')({ teamId });
+        if (msg) msg.textContent = 'Done. Reloading…';
+        // A full reload: the accept changes the follow, the invite and the team list at once.
+        location.reload();
+    } catch (e) {
+        console.error('acceptFollowInvite:', e);
+        if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
+        if (msg) msg.textContent = /no pending invite/i.test(e && e.message || '')
+            ? "This invitation isn't waiting for your account any more." : "That didn't go through. Try again.";
+    }
+};
+/** Decline: removes the pending follow as well as the invitation card. */
+window._declineFollowInvite = async function(teamId, btn) {
+    if (!currentUser || !window.confirm('Decline this invitation? You can be invited again later.')) return;
+    const msg = btn && btn.parentElement && btn.parentElement.querySelector('.inv-msg');
+    if (btn) { btn.disabled = true; btn.textContent = 'Declining…'; }
+    try {
+        await deleteDoc(doc(db, 'users', currentUser.uid, 'pendingFollowInvites', teamId));
+        try { await deleteDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid)); } catch (_) {}
+        location.reload();
+    } catch (e) {
+        console.error('declineFollowInvite:', e);
+        if (btn) { btn.disabled = false; btn.textContent = 'No thanks'; }
+        if (msg) msg.textContent = "That didn't save. Try again.";
+    }
+};
+/** A family match: rules allow exactly pending → confirmed|denied by the owning user. */
+window._decideMatch = async function(reqId, confirmed) {
+    if (!currentUser) return;
+    if (!confirmed && !window.confirm("We won't link them, and the other team won't be told anything. OK?")) return;
+    try {
+        await updateDoc(doc(db, 'users', currentUser.uid, 'playerMatchRequests', reqId), { status: confirmed ? 'confirmed' : 'denied', decidedAt: Date.now() });
+        loadDashboard();
+    } catch (e) { console.error('decideMatch:', e); alert('Could not save that. Try again.'); }
+};
+
+// Follower invitations to this email are accepted on sign-in; manager and coach
+// invites wait for an explicit Accept (they grant privileges).
+async function autoAcceptFollowerInvitations() {
+    if (!currentUser?.email) return;
+    const email = currentUser.email.toLowerCase().trim();
+    try {
+        const snap = await getDocs(query(collection(db, 'invitations'), where('email', '==', email), where('status', '==', 'pending')));
+        for (const inv of snap.docs) {
+            const data = inv.data();
+            if ((data.role || '') !== 'follower' || !data.teamId) continue;
+            try {
+                await setDoc(doc(db, 'teams', data.teamId, 'subscribers', currentUser.uid), {
+                    uid: currentUser.uid, name: currentUser.displayName || email.split('@')[0], email,
+                    status: 'approved', requestedAt: Date.now(), approvedAt: Date.now()
+                }, { merge: true });
+                if (data.hubCode) await setDoc(doc(db, 'users', currentUser.uid), { subscribedHubs: arrayUnion(data.hubCode) }, { merge: true });
+                await updateDoc(doc(db, 'invitations', inv.id), { status: 'accepted' });
+            } catch (e) { console.error('Failed to auto-accept follower invite', inv.id, e); }
+        }
+    } catch (e) { console.error('autoAcceptFollowerInvitations failed:', e); }
+}
+
+onAuthStateChanged(auth, async (user) => {
+    currentUser = user && !user.isAnonymous ? user : null;
+    renderAuth();
+    if (!currentUser) return;
+    try {
+        const { deleteField } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+        await setDoc(doc(db, 'users', currentUser.uid), {
+            displayName: currentUser.displayName || '', email: currentUser.email || '',
+            photoURL: currentUser.photoURL || '', lastSignIn: Date.now(), name: deleteField()
+        }, { merge: true });
+    } catch (e) { console.error('User doc error:', e); }
+    await autoAcceptFollowerInvitations();
+    loadDashboard();
+});
+
+// ── Invitation sent to a different email (2026-10-29) ──
+function showMoveCard(teamId) {
+    const host = $('needsList');
+    if (!host || $('moveCard')) return;
+    $('needsSec')?.classList.remove('hide');
+    host.insertAdjacentHTML('afterbegin', `<div class="banner b-info" id="moveCard" style="flex-direction:column;align-items:stretch">
+        <div class="txt"><span class="eb">Invitation</span><b>No invitation for ${esc(currentUser.email || 'this account')}</b>
+          <span class="s">If the invitation went to another address of yours, the team can move it to this account. Or sign in with the account it was sent to.</span></div>
+        <div class="row">
+          <button id="moveUse" type="button" class="btn primary sm">Use this account</button>
+          <button id="moveSwitch" type="button" class="btn ghost sm">Sign in with a different account</button>
+        </div>
+        <div id="moveForm" style="display:none;flex-direction:column;gap:8px">
+          <label for="moveEmail">The address the invitation went to</label>
+          <input id="moveEmail" type="email" autocomplete="email" inputmode="email" placeholder="name@example.com">
+          <div><button id="moveSend" type="button" class="btn primary sm">Ask the team</button></div>
+        </div>
+        <div id="moveMsg" role="status" class="inv-msg"></div>
+      </div>`);
+    $('moveUse').onclick = () => { $('moveForm').style.display = 'flex'; $('moveUse').style.display = 'none'; $('moveEmail').focus(); };
+    $('moveSwitch').onclick = async () => { const u = location.href; await signOut(auth).catch(() => {}); location.href = u; };
+    $('moveSend').onclick = async () => {
+        const invitedEmail = $('moveEmail').value.trim();
+        const b = $('moveSend'); b.disabled = true; b.textContent = 'Sending…'; $('moveMsg').textContent = '';
+        try {
+            const r = (await httpsCallable(functions, 'requestInviteMove')({ teamId, invitedEmail })).data;
+            $('moveForm').style.display = 'none'; $('moveSwitch').style.display = 'none';
+            $('moveMsg').textContent = `If ${r.teamName} sent an invitation to ${invitedEmail}, we've asked them to confirm it's you. You'll get an email at ${r.toEmail} when they do.`;
+        } catch (e) {
+            b.disabled = false; b.textContent = 'Ask the team';
+            $('moveMsg').textContent = (e && e.message) || "That didn't go through. Try again.";
+        }
+    };
+}
+
+// ── Loading ──
+
+/** [ours, theirs] for THIS team: an away game was read from the home side (2026-09-28). */
+function ourTheir(g, tid) {
+    const away = !!tid && g.awayTeamId === tid && g.homeTeamId !== tid;
+    const h = g.homeScore || 0, a = g.awayScore || 0;
+    return away ? [a, h] : [h, a];
+}
+const finished = g => g.status !== 'scheduled' && g.status !== 'live' && g.status !== 'cancelled';
+function calcRecord(sport, games, tid) {
+    games = (games || []).filter(finished);
+    if (games.length === 0) return '';
+    if (sportKey(sport) === 'BOWLING') {
+        let total = 0, n = 0, high = 0;
+        for (const g of games) {
+            const ps = g.playerScores || '';
+            if (ps) {
+                for (const b of ps.split(';')) {
+                    const scores = ((b.split(':')[1]) || '').split(',').map(Number).filter(x => x > 0);
+                    total += scores.reduce((a, x) => a + x, 0); n += scores.length; high = Math.max(high, ...scores);
+                }
+            } else if (g.homeScore > 0) { total += g.homeScore; n++; high = Math.max(high, g.homeScore); }
+        }
+        return n ? `${n} games · avg ${Math.round(total / n)} · high ${high}` : '';
+    }
+    let w = 0, l = 0, t = 0;
+    for (const g of games) {
+        if (g.countTowardStats === false) continue;
+        const [us, them] = ourTheir(g, tid);
+        if (us > them) w++; else if (them > us) l++; else if (us > 0) t++;
+    }
+    return `${w}–${l}${t ? '–' + t : ''}`;
+}
+/** The last finished game, as "W 25–18 vs Opponent · Nov 9". */
+function lastResult(sport, games, tid) {
+    const now = Date.now();
+    const g = (games || []).filter(x => finished(x) && Number(x.date) > 0 && Number(x.date) <= now).sort((a, b) => b.date - a.date)[0];
+    if (!g) return null;
+    const opp = g.opponent || g.eventName || '';
+    const when = day(g.date, { month: 'short', day: 'numeric' });
+    if (sportKey(sport) === 'BOWLING') return { cls: '', word: '', score: '', opp: opp || 'Bowling', when };
+    const [us, them] = ourTheir(g, tid);
+    const word = us > them ? 'W' : them > us ? 'L' : 'T';
+    return { cls: word === 'W' ? 'w' : word === 'L' ? 'l' : '', word, score: `${us}–${them}`, opp, when };
+}
+
+async function gamesOf(teamId) {
+    let past = [], upcoming = [];
+    try {
+        past = (await getDocs(query(collection(db, 'teams', teamId, 'games'), orderBy('date', 'desc'), fbLimit(50)))).docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (_) {
+        try { past = (await getDocs(collection(db, 'teams', teamId, 'games'))).docs.map(d => ({ id: d.id, ...d.data() })); } catch (_) {}
+    }
+    const now = Date.now();
+    try {
+        upcoming = (await getDocs(query(collection(db, 'teams', teamId, 'games'), where('status', 'in', ['scheduled', 'live']), orderBy('date'), fbLimit(6))))
+            .docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (_) {
+        upcoming = past.filter(g => g.status === 'scheduled' || g.status === 'live');
+    }
+    // A live game counts whatever its date; a scheduled one only if it's still ahead (with a 3-hour grace).
+    upcoming = upcoming.filter(g => g.status === 'live' || Number(g.date) >= now - 3 * 3600e3).sort((a, b) => a.date - b.date);
+    return { past, upcoming };
+}
+
+/** Which role this account has on the team: owner, manager, coach, or none. */
+async function staffRole(teamId, data, uid, email, inMyTeams) {
+    if (data.ownerUid && data.ownerUid === uid) return 'owner';
+    try { if ((await getDoc(doc(db, 'teams', teamId, 'managers', uid))).exists()) return 'manager'; } catch (_) {}
+    if (email) {
+        try { if (!(await getDocs(query(collection(db, 'teams', teamId, 'managers'), where('email', '==', email), fbLimit(1)))).empty) return 'manager'; } catch (_) {}
+    }
+    try { if ((await getDoc(doc(db, 'teams', teamId, 'coaches', uid))).exists()) return 'coach'; } catch (_) {}
+    // myTeams holds teams the account owns or runs.
+    return inMyTeams ? (data.ownerUid ? 'manager' : 'owner') : '';
+}
+
+async function loadTeam(teamId, hubCode, uid, email, inMyTeams, requested) {
+    try {
+        const snap = await getDoc(doc(db, 'teams', teamId));
+        if (!snap.exists()) return null;
+        const data = snap.data();
+        const [role, games] = await Promise.all([staffRole(teamId, data, uid, email, inMyTeams), gamesOf(teamId)]);
+        let following = !!role;
+        if (!role) {
+            try { const s = await getDoc(doc(db, 'teams', teamId, 'subscribers', uid)); following = s.exists() && s.data().status === 'approved'; } catch (_) {}
+        }
+        const sport = data.sport || data.hub?.sport || '';
+        const lastActivity = Math.max(
+            ...games.past.filter(g => Number(g.date) > 0 && g.date <= Date.now()).map(g => g.date), Number(data.updatedAt) || 0, 0);
+        return {
+            id: teamId, hubCode: data.hub?.hubCode || hubCode || '', name: data.name || data.hub?.teamName || 'Team', sport,
+            color: hexColor(data.color ?? data.hub?.color, '#3A3C44'),
+            logo: data.logoUrl || data.logoCloudUrl || data.hub?.logoUrl || '',
+            role: role || (requested ? 'requested' : following ? 'follower' : 'notfollowing'),
+            record: calcRecord(sport, games.past, teamId), last: lastResult(sport, games.past, teamId),
+            upcoming: games.upcoming, lastActivity,
+        };
+    } catch (e) { console.error('Error loading team', teamId, e); return null; }
+}
+
+let TEAMS = [], WAITING = {}, FILTER = 'all', SEARCH = '';
+
+async function loadDashboard() {
+    const content = $('content');
+    content.innerHTML = '<div class="loading">Loading your teams…</div>';
+    const uid = currentUser.uid, email = (currentUser.email || '').toLowerCase().trim();
+    try {
+        const userDoc = await getDoc(doc(db, 'users', uid));
+        const u = userDoc.exists() ? userDoc.data() : {};
+        const myTeamIds = u.myTeams || [], subscribedHubs = u.subscribedHubs || [], pendingHubs = u.pendingHubRequests || [];
+
+        const [invitations, followInvites, matchRequests, actions, hubIds] = await Promise.all([
+            // Staff (and older follower) invitations to this email.
+            (async () => {
+                try { return (await getDocs(query(collection(db, 'invitations'), where('email', '==', email), where('status', '==', 'pending')))).docs.map(d => ({ id: d.id, ...d.data() })); }
+                catch (_) {
+                    try { return (await getDocs(query(collection(db, 'invitations'), where('email', '==', email)))).docs.map(d => ({ id: d.id, ...d.data() })).filter(i => i.status === 'pending'); }
+                    catch (_) { return []; }
+                }
+            })(),
+            getDocs(collection(db, 'users', uid, 'pendingFollowInvites')).then(s => s.docs.map(d => ({ id: d.id, ...d.data() })).filter(v => v.status !== 'declined')).catch(() => []),
+            getDocs(collection(db, 'users', uid, 'playerMatchRequests')).then(s => s.docs.map(d => ({ id: d.id, ...d.data() })).filter(m => m.status === 'pending')).catch(() => []),
+            // Follow requests and player links waiting on teams this account runs (server-kept, functions/actions.js).
+            getDocs(collection(db, 'users', uid, 'actions')).then(s => s.docs.map(d => ({ id: d.id, ...d.data() }))).catch(() => []),
+            // Hub codes → team ids, for followed and requested teams.
+            Promise.all([...new Set([...subscribedHubs, ...pendingHubs])].map(async h => {
+                try { const x = await getDoc(doc(db, 'hubIndex', h)); return x.exists() ? [h, x.data().teamId] : null; } catch (_) { return null; }
+            })),
+        ]);
+
+        const wanted = new Map();
+        for (const id of myTeamIds) wanted.set(id, { hub: '', mine: true, requested: false });
+        for (const pair of hubIds) {
+            if (!pair || !pair[1] || wanted.has(pair[1])) continue;
+            wanted.set(pair[1], { hub: pair[0], mine: false, requested: pendingHubs.includes(pair[0]) && !subscribedHubs.includes(pair[0]) });
+        }
+        TEAMS = (await Promise.all([...wanted].map(([id, w]) => loadTeam(id, w.hub, uid, email, w.mine, w.requested)))).filter(Boolean);
+
+        WAITING = {};
+        for (const a of actions) if (a.teamId) WAITING[a.teamId] = (WAITING[a.teamId] || 0) + 1;
+
+        render(invitations, followInvites, matchRequests, actions);
+
+        // A coach or manager invitation link with nothing for this account (2026-10-29, functions/invite_move.js).
+        const qp = new URLSearchParams(location.search);
+        const invTeam = qp.get('team');
+        if (qp.get('invite') === '1' && invTeam && !invitations.some(i => i.teamId === invTeam) && !myTeamIds.includes(invTeam)) showMoveCard(invTeam);
+    } catch (e) {
+        console.error('Dashboard error:', e);
+        content.innerHTML = `<div class="banner b-bad"><div class="txt"><b>Couldn't load your dashboard</b><span class="s">${esc(e.message)}. Refresh the page to try again.</span></div></div>`;
+    }
+}
+
+// ── Rendering ──
+
+const runs = t => t.role === 'owner' || t.role === 'manager' || t.role === 'coach';
+const ROLE = { owner: ['Owner', 's-or'], manager: ['Manager', 's-ink'], coach: ['Coach', 's-ink'], follower: ['Following', 's-mu'],
+    requested: ['Requested', 's-warn'], notfollowing: ['Not following', 's-mu'] };
+
+function render(invitations, followInvites, matchRequests, actions) {
+    const name = (currentUser.displayName || '').split(' ')[0];
+    const nRun = TEAMS.filter(runs).length, nFollow = TEAMS.length - nRun;
+    const today = day(Date.now(), { weekday: 'long', month: 'short', day: 'numeric' });
+
+    let h = `<section class="sec hello">
+      <div class="sec-head"><div class="t"><span class="eb">${esc(today)}</span><h1>${name ? 'Hi, ' + esc(name) : 'Your dashboard'}</h1>
+        <div class="counts"><span><b>${nRun}</b> team${nRun === 1 ? '' : 's'} you run</span><span><b>${nFollow}</b> you follow</span>${actions.length ? `<span><b>${actions.length}</b> waiting on you</span>` : ''}</div></div>
+        <div class="row"><a class="btn ghost" href="#find">Find a team</a></div></div>
+    </section>`;
+
+    // Needs you: requests on teams you run, then invitations and family links for you.
+    const needs = [];
+    for (const a of actions.sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0))) {
+        const label = a.type === 'player_claim' ? 'Family link request' : 'Follow request';
+        needs.push(`<div class="banner b-info"><div class="txt"><span class="eb">${esc(label)} · ${esc(a.teamName || '')}</span>
+            <b>${esc(a.message || a.title || '')}</b></div>
+            <a class="btn primary sm" href="/manage.html?team=${encodeURIComponent(a.teamId)}&tab=people">Review</a></div>`);
+    }
+    for (const inv of followInvites) {
+        const tid = esc(inv.teamId || inv.id);
+        needs.push(`<div class="banner b-info"><div class="txt"><span class="eb">Invitation · ${sportEmoji(inv.sport)} ${esc(sportName(inv.sport))}</span>
+            <b>You're invited to follow ${esc(inv.teamName || 'a team')}</b>
+            <span class="s">Nothing is shared with you until you accept, and you can stop following at any time.</span></div>
+            <div class="row"><button type="button" class="btn primary sm" onclick="window._acceptFollowInvite('${tid}', this)">Accept</button>
+            <button type="button" class="btn ghost sm" onclick="window._declineFollowInvite('${tid}', this)">No thanks</button><span class="inv-msg"></span></div></div>`);
+    }
+    for (const inv of invitations) {
+        const verb = ({ manager: 'manage', coach: 'coach' })[String(inv.role || '').toLowerCase()] || 'follow';
+        needs.push(`<div class="banner b-info"><div class="txt"><span class="eb">Invitation</span>
+            <b>${esc(inv.inviterName || 'Someone')} invited you to ${verb} ${esc(inv.teamName || 'a team')}</b></div>
+            <div class="row"><button type="button" class="btn primary sm" onclick="window._acceptInvite('${esc(inv.id)}','${esc(inv.teamId)}','${esc(inv.hubCode)}','${esc(inv.role || '')}')">Accept</button>
+            <button type="button" class="btn ghost sm" onclick="window._declineInvite('${esc(inv.id)}')">Decline</button></div></div>`);
+    }
+    for (const m of matchRequests) {
+        needs.push(`<div class="banner b-info" style="flex-direction:column;align-items:stretch"><div class="txt"><span class="eb">Is this your player?</span>
+            <b>A player named ${esc(m.playerName || 'this player')} was added to ${esc(m.candidateTeamName || 'another team')}</b>
+            <span class="s">Is that the same person as your player? Yes links their stats and videos across both teams. It doesn't give you access to that team or tell them who you are. If you say no, or ignore this, they're told nothing.</span></div>
+            <div class="row"><button type="button" class="btn primary sm" onclick="window._decideMatch('${esc(m.id)}', true)">Yes, same player</button>
+            <button type="button" class="btn ghost sm" onclick="window._decideMatch('${esc(m.id)}', false)">No / not sure</button></div></div>`);
+    }
+    h += `<section class="sec${needs.length ? '' : ' hide'}" id="needsSec">
+      <div class="sec-head"><div class="t"><span class="eb">Needs you</span><h2>Waiting on you</h2></div></div>
+      <div class="grp" id="needsList">${needs.join('')}</div></section>`;
+
+    // Coming up: the next games across every team, live first.
+    const now = Date.now(), horizon = now + 21 * 864e5;
+    const next = TEAMS.flatMap(t => t.upcoming.map(g => ({ t, g })))
+        .filter(x => x.g.status === 'live' || (x.g.date >= now - 3 * 3600e3 && x.g.date <= horizon))
+        .sort((a, b) => (b.g.status === 'live') - (a.g.status === 'live') || a.g.date - b.g.date).slice(0, 8);
+    h += `<section class="sec"><div class="sec-head"><div class="t"><span class="eb">Coming up</span><h2>Next games</h2></div></div>
+      ${next.length ? `<div class="card games">${next.map(({ t, g }) => {
+        const href = t.hubCode ? `/game.html?team=${encodeURIComponent(t.hubCode)}&game=${encodeURIComponent(g.id)}` : '#';
+        const opp = g.opponent || g.eventName || 'Game';
+        const where = [g.status === 'live' ? '' : time(g.date), g.location].filter(Boolean).join(' · ');
+        return `<a class="game" href="${href}">
+          <div class="day"><div class="d1">${esc(day(g.date, { weekday: 'short' }).toUpperCase())}</div><div class="d2">${esc(day(g.date, { day: 'numeric' }))}</div></div>
+          ${mark(t, 36)}
+          <div class="tx"><b>${esc(t.name)} vs ${esc(opp)}</b><span>${esc(day(g.date, { month: 'short', day: 'numeric' }))}${where ? ' · ' + esc(where) : ''}</span></div>
+          ${g.status === 'live' ? '<span class="status s-live">LIVE</span>' : ''}</a>`;
+      }).join('')}</div>` : `<div class="card empty">No games on the schedule in the next three weeks.</div>`}</section>`;
+
+    // Teams, by sport.
+    h += `<section class="sec" id="teamsSec"><div class="sec-head"><div class="t"><span class="eb">Your teams</span><h2>Teams by sport</h2></div>
+        <div class="toolbar"><div class="chips" role="group" aria-label="Show">
+          <button type="button" data-f="all" aria-pressed="${FILTER === 'all'}">All<span class="n">${TEAMS.length}</span></button>
+          <button type="button" data-f="run" aria-pressed="${FILTER === 'run'}">I run<span class="n">${nRun}</span></button>
+          <button type="button" data-f="follow" aria-pressed="${FILTER === 'follow'}">I follow<span class="n">${nFollow}</span></button></div>
+          <input type="search" id="teamFilter" placeholder="Filter by name" aria-label="Filter teams by name" value="${esc(SEARCH)}"></div></div>
+      <div id="teamGroups"></div></section>`;
+
+    // Find a team.
+    h += `<section class="sec" id="find"><div class="sec-head"><div class="t"><span class="eb">Find a team</span><h2>Follow another team</h2>
+        <p class="lede">Type the team's name, school or city. Some teams are shared only by their link or code; ask the coach or a parent for it.</p></div></div>
+      <div class="find"><input type="search" id="findInput" placeholder="Team name, school or city" aria-label="Find a team" autocomplete="off">
+        <div id="findOut"></div></div></section>`;
+
+    // Account.
+    h += `<section class="sec"><div class="sec-head"><div class="t"><span class="eb">Account</span><h2>Your settings</h2></div></div>
+      <div class="card pad settings">
+        <label class="toggle"><input type="checkbox" id="noSpoilToggle" onchange="window._setNoSpoil(this.checked)">
+          <span><b>No spoilers</b><span>Hide scores in game emails and on game pages until I tap the eye, for 7 days after each game.</span></span></label>
+        <div class="row"><span class="muted" style="flex:1 1 240px">Signed in as <b style="color:var(--ink)">${esc(currentUser.email || currentUser.displayName || '')}</b></span>
+          <button type="button" class="btn ghost sm" onclick="window._changePassword()">Change password</button>
+          <button type="button" class="btn ghost sm" onclick="window._signOut()">Sign out</button>
+          <a class="btn link" href="/delete-account.html">Delete account</a></div>
+      </div></section>`;
+
+    h += `<section class="band-dark"><div class="t"><span class="eb">The app</span><h2>Film, score and stream from your phone</h2>
+        <p>Live scoreboards on the video, game alerts and highlights.</p></div>
+      <div class="row"><a class="btn primary" href="https://apps.apple.com/us/app/scoreframe/id6762281454" target="_blank" rel="noopener">App Store</a>
+        <a class="btn ghost" href="https://play.google.com/store/apps/details?id=com.scoreframe.android" target="_blank" rel="noopener">Google Play</a></div></section>`;
+
+    $('content').innerHTML = h;
+    renderTeams();
+    loadNoSpoil();
+    document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
+        FILTER = b.dataset.f; document.querySelectorAll('[data-f]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderTeams();
+    });
+    $('teamFilter').oninput = e => { SEARCH = e.target.value; renderTeams(); };
+    let pending = null;
+    $('findInput').oninput = e => { clearTimeout(pending); const q = e.target.value.trim(); pending = setTimeout(() => findTeams(q), 250); };
+}
+
+function teamCard(t) {
+    const [roleLabel, roleCls] = ROLE[t.role] || ROLE.follower;
+    const page = t.hubCode ? `/team.html?code=${encodeURIComponent(t.hubCode)}` : '';
+    const nx = t.upcoming[0];
+    const lines = [];
+    if (nx) lines.push(`<span>${nx.status === 'live' ? '<span class="status s-live">LIVE</span> ' : '<b>Next</b> '}${esc(day(nx.date, { weekday: 'short', month: 'short', day: 'numeric' }))}${nx.status === 'live' ? '' : ' · ' + esc(time(nx.date))} vs ${esc(nx.opponent || nx.eventName || 'TBA')}</span>`);
+    if (t.last) lines.push(`<span><b>Last</b> ${t.last.word ? `<span class="${t.last.cls}">${t.last.word} ${esc(t.last.score)}</span> ` : ''}${t.last.opp ? 'vs ' + esc(t.last.opp) + ' · ' : ''}${esc(t.last.when)}</span>`);
+    if (!nx && !t.last) lines.push('<span>No games yet</span>');
+    const waiting = WAITING[t.id] || 0;
+    let acts = '';
+    if (runs(t)) {
+        acts = `<a class="btn primary sm" href="/manage.html?team=${encodeURIComponent(t.id)}&tab=team">Edit team</a>
+          <a class="btn ghost sm" href="/manage.html?team=${encodeURIComponent(t.id)}&tab=people">People${waiting ? ` <span class="badge">${waiting}</span>` : ''}</a>
+          ${t.hubCode ? `<button type="button" class="btn ghost sm" onclick="window._inviteFollower('${esc(t.id)}')">Invite</button>` : ''}`;
+    } else if (t.role === 'follower') {
+        acts = `<button type="button" class="btn ghost sm" onclick="window._unfollow('${esc(t.id)}')">Unfollow</button>`;
+    } else if (t.role === 'notfollowing') {
+        acts = `<button type="button" class="btn primary sm" onclick="window._follow('${esc(t.id)}')">Follow</button>
+          <button type="button" class="btn danger sm" onclick="window._removeTeam('${esc(t.hubCode)}')">Remove</button>`;
+    } else if (t.role === 'requested') {
+        acts = `<span class="muted" style="font-size:13px">Waiting for the team to approve you</span>`;
+    }
+    if (page) acts += `<a class="btn link" href="${page}" style="margin-left:auto">Team page ›</a>`;
+    return `<div class="card team">
+      <div class="top">${mark(t, 56)}<div class="nmw"><span class="nm">${esc(t.name)}</span><span class="status ${roleCls}">${roleLabel}</span></div>
+        ${t.record ? `<span class="rec" title="Record">${esc(t.record)}</span>` : ''}</div>
+      <div class="lines">${lines.join('')}</div>
+      <div class="acts">${acts}</div></div>`;
+}
+
+function renderTeams() {
+    const host = $('teamGroups'); if (!host) return;
+    const q = SEARCH.trim().toLowerCase();
+    const shown = TEAMS.filter(t => (FILTER === 'all' || (FILTER === 'run' ? runs(t) : !runs(t))) && (!q || t.name.toLowerCase().includes(q)));
+    if (!TEAMS.length) {
+        host.innerHTML = `<div class="card empty">No teams yet. <a href="#find">Find a team to follow</a>, or create one in the ScoreFrame app.</div>`;
+        return;
+    }
+    if (!shown.length) { host.innerHTML = `<div class="card empty">No teams match.</div>`; return; }
+    const groups = new Map();
+    for (const t of shown) { const k = sportKey(t.sport); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); }
+    // Sports with the most teams first; inside a sport, teams you run, then the most recently active.
+    const rank = t => (runs(t) ? 0 : t.role === 'requested' ? 1 : 2);
+    const order = [...groups].sort((a, b) => (a[0] === 'GENERIC') - (b[0] === 'GENERIC') || b[1].length - a[1].length || sportName(a[0]).localeCompare(sportName(b[0])));
+    host.innerHTML = order.map(([k, list]) => `<div class="grp">
+        <div class="grp-head"><span class="emo">${sportEmoji(k)}</span><span class="nm">${esc(sportName(k))}</span><span class="ct">${list.length} TEAM${list.length === 1 ? '' : 'S'}</span></div>
+        <div class="grid">${list.sort((a, b) => rank(a) - rank(b) || b.lastActivity - a.lastActivity || a.name.localeCompare(b.name)).map(teamCard).join('')}</div></div>`).join('');
+}
+
+// ── Find a team (teamSearchIndex: listed public and invite-only teams; signed in only) ──
+async function findTeams(q) {
+    const out = $('findOut'); if (!out) return;
+    if (q.length < 2) { out.innerHTML = ''; return; }
+    out.innerHTML = '<div class="muted" style="font-size:14px">Searching…</div>';
+    const col = collection(db, 'teamSearchIndex'), lower = q.toLowerCase();
+    const by = async f => { try { return (await getDocs(query(col, orderBy(f), where(f, '>=', lower), where(f, '<=', lower + ''), fbLimit(12)))).docs.map(d => d.data()); } catch (_) { return []; } };
+    let rows = await by('nameLower');
+    if (!rows.length) rows = await by('cityLower');
+    if (($('findInput')?.value || '').trim() !== q) return;
+    if (!rows.length) { out.innerHTML = `<div class="card empty">No listed team matches "${esc(q)}". Some teams are shared only by their link or code.</div>`; return; }
+    const known = new Map(TEAMS.map(t => [t.hubCode, t]));
+    out.innerHTML = `<div class="card">${rows.filter(r => r.hubCode).map(r => {
+        const mine = known.get(r.hubCode);
+        const where = [sportName(r.sport), [r.city, r.region].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
+        return `<a class="hit" href="/team.html?code=${encodeURIComponent(r.hubCode)}">
+          <span class="emo" style="font-size:22px">${sportEmoji(r.sport)}</span>
+          <div class="tx"><b>${esc(r.name || 'Team ' + r.hubCode)}</b><span>${esc(where)}</span></div>
+          ${mine ? `<span class="status ${(ROLE[mine.role] || ROLE.follower)[1]}">${(ROLE[mine.role] || ROLE.follower)[0]}</span>` : '<span class="btn ghost sm">Open ›</span>'}</a>`;
+    }).join('')}</div>`;
+}
+
+// ── Team actions ──
+window._follow = async (teamId) => {
+    if (!currentUser) return;
+    try {
+        await setDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid), {
+            uid: currentUser.uid, displayName: currentUser.displayName || 'User', email: currentUser.email || '', status: 'approved', subscribedAt: Date.now()
+        });
+        loadDashboard();
+    } catch (e) { console.error('Follow error:', e); toast("Couldn't follow. Open the team page to ask to follow."); }
+};
+window._unfollow = async (teamId) => {
+    if (!currentUser || !confirm('Stop following this team?')) return;
+    try { await deleteDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid)); loadDashboard(); }
+    catch (e) { console.error('Unfollow error:', e); toast("That didn't go through. Try again."); }
+};
+window._removeTeam = async (hubCode) => {
+    if (!currentUser || !confirm('Remove this team from your dashboard?')) return;
+    try { await setDoc(doc(db, 'users', currentUser.uid), { subscribedHubs: arrayRemove(hubCode) }, { merge: true }); loadDashboard(); }
+    catch (e) { console.error('Remove error:', e); }
+};
+window._inviteFollower = async (teamId) => {
+    if (!currentUser) return;
+    const recipientEmail = (prompt("The follower's email address:") || '').trim().toLowerCase();
+    if (!recipientEmail) return;
+    if (!recipientEmail.includes('@') || !recipientEmail.includes('.')) { alert('That email address looks incomplete.'); return; }
+    try {
+        const teamDoc = await getDoc(doc(db, 'teams', teamId));
+        if (!teamDoc.exists()) { alert('Team not found.'); return; }
+        const data = teamDoc.data();
+        const hubCode = data.hub?.hubCode || '';
+        if (!hubCode) { alert("This team isn't shared yet. Turn on sharing in the app first."); return; }
+        await httpsCallable(functions, 'sendHubInvite')({ teamId, teamName: data.name || '', hubCode, sport: data.sport || '', recipientEmail, senderName: currentUser.displayName || '' });
+        toast(`Invitation sent to ${recipientEmail}`);
+    } catch (e) { console.error('Invite error:', e); alert("The invitation didn't send: " + (e.message || e)); }
+};
+</script>
+</body>
+</html>
