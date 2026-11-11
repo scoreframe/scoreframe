@@ -89,3 +89,60 @@ footer { background: transparent !important; border-top: 1px solid #E2DFDA !impo
 /* Comfortable reading width and spacing on text pages */
 main, .content, .container { line-height: 1.6; }
 p, li { max-width: 72ch; }
+
+/* ── The club look (2026-11-11, see ui.css) ─────────────────────────────
+   Eric: "a lot of the labels for different sections don't stand out enough
+   and then it doesn't have good separation ... have a consistent look across
+   all website pages". The same dark top bar as the club console and the
+   dashboard; section labels as monospace eyebrows; a dark rule between
+   sections; headings big and black. */
+
+/* What's New and Find Teams named their colours --surface/--text-mute; left
+   dark, entries rendered as black cards with dark (invisible) text. */
+:root, :root[data-theme] {
+  --surface: #FFFFFF;
+  --surface-2: #ECECE8;
+  --text-mute: #5A565F;
+  --text-dim: #7A7680;
+}
+
+/* Top bar: dark, like the club pages. */
+body > nav, body > header {
+  background: #111215 !important;
+  border-bottom: 0 !important;
+  backdrop-filter: none;
+  color: #F1EEE9;
+}
+body > nav a, body > header a, body > nav .nav-links a { color: #A9ADB6 !important; }
+body > nav a:hover, body > header a:hover { color: #F1EEE9 !important; }
+body > nav .nav-logo, body > nav .brand, body > header .logo, body > nav a.nav-logo, body > header a.logo {
+  color: #F1EEE9 !important; font-weight: 900 !important;
+}
+body > nav .nav-logo span, body > nav .brand-orange, body > nav .brand span, body > header .logo span { color: #FF9640 !important; }
+body > header, body > header * { --text: #F1EEE9; --text2: #A9ADB6; }
+
+/* Page titles: big and black. */
+main h1, .wrap h1, .container h1, header.hero h1 {
+  font-size: clamp(34px, 5vw, 50px) !important; line-height: 1.02 !important; letter-spacing: -0.02em !important;
+}
+
+/* Section labels: monospace eyebrows in the link colour, not tinted pills. */
+.card > section > .badge:first-child, .month-label {
+  display: block; background: none !important; padding: 0 !important; border-radius: 0 !important;
+  font: 700 12px "JetBrains Mono", ui-monospace, Menlo, monospace !important;
+  letter-spacing: .14em !important; text-transform: uppercase; color: #A64F0A !important; margin-bottom: 6px !important;
+}
+
+/* Sections inside a long page card (privacy, terms, delete account): a dark
+   rule between them and a bold heading. */
+.card > section + section { border-top: 2px solid #1C1B1F; padding-top: 26px; margin-top: 30px; }
+.card > section h2, .card > h2 {
+  font-size: clamp(21px, 2.4vw, 26px) !important; line-height: 1.2 !important; color: #1C1B1F !important; margin-bottom: 10px !important;
+}
+.card > h2:not(:first-child) { border-top: 2px solid #1C1B1F; padding-top: 24px; margin-top: 30px !important; }
+
+/* What's New months: a dark rule like every other section break. */
+.month { margin-top: 40px !important; }
+.month-label { border-bottom: 2px solid #1C1B1F !important; padding-bottom: 10px !important; margin-bottom: 18px !important; }
+.entry { background: #FFFFFF !important; border: 1px solid #E2DFDA !important; color: #1C1B1F; }
+.entry-title { font-weight: 900 !important; font-size: 17px !important; }
