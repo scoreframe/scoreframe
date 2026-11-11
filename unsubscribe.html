@@ -3,92 +3,82 @@
 <head>
     <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#111215">
     <title>ScoreFrame — Email Preferences</title>
     <link rel="canonical" href="https://scoreframe.app/unsubscribe.html">
+    <link rel="stylesheet" href="/ui.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0D0D0D; color: #F2F2F2; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
-        .card { background: #1E1E1E; border-radius: 16px; padding: 30px; max-width: 460px; width: 100%; }
-        .logo { font-size: 26px; font-weight: 800; margin-bottom: 20px; }
-        .logo .a { color: #F2F2F2; } .logo .b { color: #FF9640; }
-        h1 { font-size: 21px; margin-bottom: 6px; }
-        p.sub { color: #999; font-size: 14px; margin-bottom: 22px; line-height: 1.5; }
-        .section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: #FF9640; margin: 22px 0 10px; text-transform: uppercase; }
-        .row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #262626; border-radius: 10px; margin-bottom: 8px; }
-        .row label { flex: 1; font-size: 15px; cursor: pointer; }
-        .row .hint { color: #888; font-size: 12px; }
-        input[type=checkbox] { width: 20px; height: 20px; accent-color: #FF9640; cursor: pointer; flex-shrink: 0; }
-        button { width: 100%; padding: 13px; border: none; border-radius: 9px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 14px; }
-        .btn-primary { background: #FF9640; color: #1A1A1A; }
-        .btn-primary:hover { background: #FFa860; }
-        .btn-primary:disabled { background: #555; color: #999; cursor: default; }
-        .unsub-all { background: transparent; color: #FF6B6B; text-decoration: underline; font-weight: 600; font-size: 13px; margin-top: 16px; padding: 6px; }
-        .spinner { border: 3px solid #333; border-top: 3px solid #FF9640; border-radius: 50%; width: 30px; height: 30px; animation: spin .8s linear infinite; margin: 10px auto; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .hidden { display: none; }
-        .emoji { font-size: 38px; text-align: center; margin-bottom: 10px; }
-        .center { text-align: center; }
-        a.home { color: #999; text-decoration: none; font-size: 13px; display: inline-block; margin-top: 16px; }
-        .empty { color: #888; font-size: 14px; padding: 10px 2px; }
+        /* The club look (ui.css, 2026-11-11). */
+        .one { max-width: 560px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 28px; }
+        .one h1 { font-size: clamp(30px, 6vw, 40px); font-weight: 900; line-height: 1.05; }
+        .opts { display: flex; flex-direction: column; }
+        .opt { display: flex; align-items: flex-start; gap: 14px; padding: 14px 18px; }
+        .opt + .opt { border-top: 1px solid var(--ln2); }
+        .opt label { flex: 1; font-size: 16px; font-weight: 700; color: var(--ink); cursor: pointer; line-height: 1.35; }
+        .opt .hint { color: var(--mu); font-size: 13px; font-weight: 400; margin-top: 3px; line-height: 1.45; }
+        .opt input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--orange); cursor: pointer; flex-shrink: 0; margin-top: 2px; }
+        .sub-h { font-size: 20px; font-weight: 900; }
+        .hidden { display: none !important; }
+        .empty { padding: 16px 18px; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div class="logo"><span class="a">Score</span><span class="b">Frame</span></div>
+    <header class="top">
+        <a class="brand" href="/"><span class="tile">F</span><span class="word">Score<b>Frame</b></span></a>
+        <span class="pill-top">Email</span>
+    </header>
+    <main class="page"><div class="one">
 
-        <div id="loading"><div class="spinner"></div><p class="sub center">Loading your preferences…</p></div>
+        <div id="loading" class="loading">Loading your preferences…</div>
 
-        <div id="prefs" class="hidden">
-            <h1>Email preferences</h1>
-            <p class="sub">Choose what you'd like to hear about. Changes save when you tap the button.</p>
+        <div id="prefs" class="hidden" style="display:flex;flex-direction:column;gap:28px">
+            <div style="display:flex;flex-direction:column;gap:8px"><span class="eb">Email preferences</span>
+                <h1>What we send you</h1>
+                <p class="lede">Choose what you'd like to hear about. Changes save when you tap Save.</p></div>
 
-            <div id="marketingBlock" class="hidden">
-                <div class="section-title">Product updates</div>
-                <div class="row">
+            <section class="sec" id="marketingBlock" style="display:none">
+                <span class="eb">Product updates</span>
+                <div class="card opts"><div class="opt">
                     <input type="checkbox" id="marketingChk">
-                    <label for="marketingChk">ScoreFrame news, tips &amp; new features<div class="hint">1–2 emails a month</div></label>
-                </div>
-            </div>
+                    <label for="marketingChk">ScoreFrame news, tips and new features<div class="hint">1–2 emails a month</div></label>
+                </div></div>
+            </section>
 
-            <div id="spoilerBlock">
-                <div class="section-title">No spoilers</div>
-                <div class="row">
+            <section class="sec" id="spoilerBlock">
+                <span class="eb">No spoilers</span>
+                <div class="card opts"><div class="opt">
                     <input type="checkbox" id="noSpoilChk">
                     <label for="noSpoilChk">Hide scores and results<div class="hint">Game emails won't show the score, and game pages keep results hidden until you tap the eye. Scores stay hidden for 7 days after each game.</div></label>
-                </div>
+                </div></div>
+            </section>
+
+            <section class="sec" id="teamsBlock">
+                <span class="eb">Teams you follow</span>
+                <div class="card opts" id="teamsList"></div>
+            </section>
+
+            <div class="row">
+                <button type="button" class="btn primary" id="saveBtn" onclick="save()">Save changes</button>
+                <button type="button" class="btn link" style="color:var(--bad)" onclick="unsubAll()">Unsubscribe from everything</button>
             </div>
-
-            <div id="teamsBlock">
-                <div class="section-title">Teams you follow</div>
-                <div id="teamsList"></div>
-            </div>
-
-            <button class="btn-primary" id="saveBtn" onclick="save()">Save changes</button>
-            <div class="center"><button class="unsub-all" onclick="unsubAll()">Unsubscribe from everything</button></div>
         </div>
 
-        <div id="doneMsg" class="hidden center">
-            <div class="emoji">&#x2705;</div>
-            <h1>Saved</h1>
-            <p class="sub">Your email preferences are updated.</p>
-            <a class="home" href="https://scoreframe.app">Back to ScoreFrame</a>
+        <div id="doneMsg" class="hidden" style="display:flex;flex-direction:column;gap:14px">
+            <div class="banner b-ok"><div class="txt"><b>Saved</b><span class="s">Your email preferences are updated.</span></div></div>
+            <div><a class="btn ghost" href="https://scoreframe.app">Back to ScoreFrame</a></div>
         </div>
 
-        <div id="allDoneMsg" class="hidden center">
-            <div class="emoji">&#x1F44B;</div>
-            <h1>You're all unsubscribed</h1>
-            <p class="sub">You won't receive any more ScoreFrame emails. You can always re-follow a team later.</p>
-            <a class="home" href="https://scoreframe.app">Back to ScoreFrame</a>
+        <div id="allDoneMsg" class="hidden" style="display:flex;flex-direction:column;gap:14px">
+            <div class="banner b-ok"><div class="txt"><b>You're unsubscribed from everything</b><span class="s">You won't get any more ScoreFrame emails. You can follow a team again any time.</span></div></div>
+            <div><a class="btn ghost" href="https://scoreframe.app">Back to ScoreFrame</a></div>
         </div>
 
-        <div id="errorMsg" class="hidden center">
-            <div class="emoji">&#x26A0;&#xFE0F;</div>
-            <h1>Something went wrong</h1>
-            <p class="sub" id="errorText">This link is invalid or has expired. If you keep getting emails you don't want, reply to any of them and we'll take care of it.</p>
-            <a class="home" href="https://scoreframe.app">Back to ScoreFrame</a>
+        <div id="errorMsg" class="hidden" style="display:flex;flex-direction:column;gap:14px">
+            <div class="banner b-bad"><div class="txt"><b>This link doesn't work</b><span class="s" id="errorText">It's invalid or has expired. If you keep getting emails you don't want, reply to any of them and we'll take care of it.</span></div></div>
+            <div><a class="btn ghost" href="https://scoreframe.app">Back to ScoreFrame</a></div>
         </div>
-    </div>
+    </div></main>
 
     <script>
         const ENDPOINT = "https://us-central1-scoreframe-deploy.cloudfunctions.net/preferences";
@@ -117,7 +107,7 @@
 
         function render() {
             if (state.kind === "account") {
-                document.getElementById("marketingBlock").classList.remove("hidden");
+                document.getElementById("marketingBlock").style.display = "";
                 document.getElementById("marketingChk").checked = !!state.marketingOptedIn;
             }
             document.getElementById("noSpoilChk").checked = !!state.noSpoilers;
@@ -128,7 +118,7 @@
             } else {
                 state.teams.forEach(function (t) {
                     const row = document.createElement("div");
-                    row.className = "row";
+                    row.className = "opt";
                     row.innerHTML = '<input type="checkbox" checked data-id="' + t.id + '">' +
                         '<label>' + escapeHtml(t.name) + '<div class="hint">Following</div></label>';
                     list.appendChild(row);

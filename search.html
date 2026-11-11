@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#F5F5F2">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#111215">
 <title>Find Teams — ScoreFrame</title>
 <link rel="canonical" href="https://scoreframe.app/search.html" />
 <meta name="description" content="Find a team on ScoreFrame to follow." />
@@ -11,230 +11,80 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
 <link rel="icon" href="favicon.ico">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/ui.css">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-/* Light, like the rest of the public site (2026-10-23). Not shown in the app. */
-:root {
-  color-scheme: light;
-  --bg: #F5F5F2;
-  --surface: #FFFFFF;
-  --surface-2: #ECECE8;
-  --accent: #E07A1F;
-  --accent-dim: rgba(224,122,31,0.12);
-  --text: #1C1B1F;
-  --text-mute: #5A565F;
-  --text-dim: #7A7680;
-  --border: #E2DFDA;
-  --green: #2EA644;
-  --red: #D92E2E;
-}
-html, body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  line-height: 1.5;
-}
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-
-.nav {
-  border-bottom: 1px solid var(--border);
-  padding: 14px 20px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.brand { font-weight: 800; font-size: 17px; letter-spacing: -0.01em; }
-.brand-orange { color: var(--accent); }
-.nav-links { display: flex; gap: 18px; font-size: 13px; color: var(--text-mute); }
-.nav-links a { color: var(--text-mute); }
-.nav-links a:hover { color: var(--text); text-decoration: none; }
-
-.wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
-
-h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
-h1 .accent { color: var(--accent); }
-.subtitle { color: var(--text-mute); font-size: 14px; margin-bottom: 24px; }
-
-.search-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 24px;
-}
-.search-card input, .search-card select {
-  width: 100%;
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 14px;
-  font-size: 14px;
-  font-family: inherit;
-}
-.search-card input:focus, .search-card select:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-.search-card label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text-mute);
-  text-transform: uppercase;
-  margin-bottom: 6px;
-  margin-top: 12px;
-}
-.search-card label:first-child { margin-top: 0; }
-.filter-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.results { min-height: 60px; }
-.result {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.result-icon { font-size: 24px; line-height: 1; width: 32px; text-align: center; }
-.result-body { flex: 1; min-width: 0; }
-.result-name { font-weight: 700; font-size: 15px; }
-.result-meta {
-  display: flex; gap: 8px; flex-wrap: wrap;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--text-mute);
-}
-.result-meta .pill {
-  background: var(--surface-2);
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-.result-meta .pill.public { background: rgba(46,166,68,0.15); color: var(--green); }
-.result-meta .pill.invite { background: rgba(255,150,64,0.15); color: var(--accent); }
-.result-actions { display: flex; gap: 8px; }
-.btn {
-  background: var(--accent);
-  color: #0D0D0D;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-  font-family: inherit;
-}
-.btn:hover { filter: brightness(1.1); }
-.btn-outline {
-  background: transparent;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-}
-
-.empty, .hint {
-  text-align: center;
-  color: var(--text-mute);
-  font-size: 13px;
-  padding: 24px 12px;
-}
-.hint { font-size: 12px; color: var(--text-dim); }
-
-footer {
-  margin-top: 60px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
-  font-size: 12px;
-  color: var(--text-dim);
-  text-align: center;
-}
-footer a { color: var(--text-mute); }
-
-@media (max-width: 520px) {
-  .wrap { padding: 24px 16px 60px; }
-  h1 { font-size: 26px; }
-  .filter-row { grid-template-columns: 1fr; }
-  .result { flex-wrap: wrap; }
-  .result-actions { width: 100%; padding-left: 44px; }
-}
+/* Find Teams in the club look (ui.css, 2026-11-11). Not shown in the apps. */
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field input, .field select { width: 100%; }
+#q { font-size: 18px; padding: 13px 14px; }
+.hit { display: flex; align-items: center; gap: 14px; padding: 14px 18px; flex-wrap: wrap; }
+.hit + .hit { border-top: 1px solid var(--ln2); }
+.hit .emo { font-size: 26px; width: 34px; text-align: center; flex-shrink: 0; }
+.hit .tx { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.hit .tx b { font-size: 17px; }
+.hit .meta { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 13px; color: var(--mu); }
+.hit .acts { display: flex; gap: 8px; }
+.hint { padding: 22px; text-align: center; color: var(--mu); font-size: 15px; }
+@media (max-width: 560px) { .fields { grid-template-columns: 1fr; } .hit .acts { width: 100%; padding-left: 48px; } }
 </style>
 </head>
 <body>
-<nav class="nav">
-  <a href="/" class="brand">Score<span class="brand-orange">Frame</span></a>
-  <div class="nav-links">
-    <a href="/">Home</a>
-    <a href="/dashboard.html">Dashboard</a>
-  </div>
-</nav>
+<header class="top">
+  <a class="brand" href="/"><span class="tile">F</span><span class="word">Score<b>Frame</b></span></a>
+  <span class="pill-top">Find teams</span>
+  <div class="who"><a class="b" href="/dashboard.html">Dashboard</a></div>
+</header>
 
-<div class="wrap">
-  <h1>Find <span class="accent">Teams</span></h1>
-  <p class="subtitle">Search by name. Use city or sport to narrow it down when there are matches.</p>
+<main class="page">
+  <section class="sec">
+    <div class="sec-head"><div class="t"><span class="eb">Find a team</span>
+      <h2 style="font-size:clamp(34px,5vw,48px)">Find teams</h2>
+      <p class="lede">Search by name. Add a city or sport to narrow it down. Some teams are shared only by their link or code; ask the coach or a parent for it.</p></div></div>
 
-  <!-- Signed-out gate. Search is for signed-in users only — keeps the
-       teamSearchIndex from being trivially scraped while still letting
-       direct team-page links (team.html?code=XXXX) work for anyone. -->
-  <section class="search-card" id="signInPanel" style="display:none;">
-    <label style="font-size:13px; letter-spacing:0; text-transform:none; color:var(--text); font-weight:600; margin-bottom:8px;">Sign in to find teams</label>
-    <p style="font-size:13px; color:var(--text-mute); margin-bottom:14px; line-height:1.5;">
-      A free account keeps Find Teams out of scrapers' reach and unlocks notifications, invitations, and cross-device sync.
-      You can still open a team's public page directly if you have the share link.
-    </p>
-    <button id="signInBtn" style="background:var(--accent); color:#0D0D0D; border:0; border-radius:8px; padding:10px 18px; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit;">
-      Sign in with Google
-    </button>
-  </section>
+    <!-- Signed-out gate: search is for signed-in users only, which keeps the
+         teamSearchIndex from being scraped; team-page links work for anyone. -->
+    <div class="card pad" id="signInPanel" style="display:none;flex-direction:column;gap:12px;align-items:flex-start">
+      <b style="font-size:18px">Sign in to find teams</b>
+      <p class="muted" style="line-height:1.5">A free account keeps Find Teams away from scrapers and gets you game alerts and invitations. You can still open a team's page directly with its link.</p>
+      <button id="signInBtn" type="button" class="btn primary">Sign in with Google</button>
+    </div>
 
-  <section class="search-card" id="searchPanel" style="display:none;">
-    <label for="q">Team name</label>
-    <input id="q" type="search" placeholder="e.g. Wildcats" autocomplete="off" />
-    <div class="filter-row">
-      <div>
-        <label for="city">City (optional)</label>
-        <input id="city" type="search" placeholder="Topeka" autocomplete="off" />
-      </div>
-      <div>
-        <label for="sport">Sport (optional)</label>
-        <select id="sport">
-          <option value="">Any sport</option>
-          <option value="BASKETBALL">🏀 Basketball</option>
-          <option value="FOOTBALL">🏈 Football</option>
-          <option value="BOWLING">🎳 Bowling</option>
-          <option value="SOCCER">⚽ Soccer</option>
-          <option value="VOLLEYBALL">🏐 Volleyball</option>
-          <option value="BASEBALL">⚾ Baseball</option>
-          <option value="SOFTBALL">🥎 Softball</option>
-          <option value="TENNIS">🎾 Tennis</option>
-          <option value="PICKLEBALL">🏓 Pickleball</option>
-          <option value="HOCKEY">🏒 Hockey</option>
-          <option value="LACROSSE">🥍 Lacrosse</option>
-          <option value="GENERIC">🎯 Other</option>
-        </select>
+    <div class="card pad" id="searchPanel" style="display:none;flex-direction:column;gap:14px">
+      <div class="field"><label for="q">Team name</label>
+        <input id="q" type="search" placeholder="e.g. Wildcats" autocomplete="off"></div>
+      <div class="fields">
+        <div class="field"><label for="city">City (optional)</label>
+          <input id="city" type="search" placeholder="Topeka" autocomplete="off"></div>
+        <div class="field"><label for="sport">Sport (optional)</label>
+          <select id="sport">
+            <option value="">Any sport</option>
+            <option value="BASKETBALL">🏀 Basketball</option>
+            <option value="FOOTBALL">🏈 Football</option>
+            <option value="BOWLING">🎳 Bowling</option>
+            <option value="SOCCER">⚽ Soccer</option>
+            <option value="VOLLEYBALL">🏐 Volleyball</option>
+            <option value="BASEBALL">⚾ Baseball</option>
+            <option value="SOFTBALL">🥎 Softball</option>
+            <option value="TENNIS">🎾 Tennis</option>
+            <option value="PICKLEBALL">🏓 Pickleball</option>
+            <option value="HOCKEY">🏒 Hockey</option>
+            <option value="LACROSSE">🥍 Lacrosse</option>
+            <option value="GENERIC">🎯 Other</option>
+          </select></div>
       </div>
     </div>
   </section>
 
-  <div id="results" class="results" style="display:none;">
-    <div class="hint">Start typing a team name to search.</div>
-  </div>
+  <section class="sec" id="resultsSec" style="display:none">
+    <div class="sec-head"><div class="t"><span class="eb">Results</span><h2>Teams</h2></div></div>
+    <div id="results" class="card"><div class="hint">Start typing a team name to search.</div></div>
+  </section>
 
-  <footer>
-    <p>Don't see your team? Ask the coach to enable sharing on their team — privacy stays in their control.</p>
-    <p style="margin-top:8px;"><a href="mailto:support@scoreframe.app">support@scoreframe.app</a></p>
-  </footer>
-</div>
+  <section class="banner b-plain">
+    <div class="txt"><b>Don't see your team?</b><span class="s">Ask the coach to turn on sharing for the team. Who can see it stays up to them. Questions: <a href="mailto:support@scoreframe.app">support@scoreframe.app</a></span></div>
+  </section>
+</main>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -279,13 +129,13 @@ $signInBtn.onclick = async () => {
 onAuthStateChanged(auth, (user) => {
   if (user) {
     $signInPanel.style.display = 'none';
-    $searchPanel.style.display = '';
-    document.getElementById('results').style.display = '';
+    $searchPanel.style.display = 'flex';
+    document.getElementById('resultsSec').style.display = '';
     setTimeout(() => document.getElementById('q')?.focus(), 50);
   } else {
-    $signInPanel.style.display = '';
+    $signInPanel.style.display = 'flex';
     $searchPanel.style.display = 'none';
-    document.getElementById('results').style.display = 'none';
+    document.getElementById('resultsSec').style.display = 'none';
   }
 });
 
@@ -374,41 +224,34 @@ async function doSearch(name, city, sport) {
     }
 
     if (rows.length === 0) {
-      $results.innerHTML = '<div class="empty">No teams match. Try a shorter name or check the spelling.</div>';
+      $results.innerHTML = '<div class="hint">No teams match. Try a shorter name or check the spelling.</div>';
       return;
     }
 
     $results.innerHTML = rows.map(r => {
       const emoji = SPORT_EMOJI[r.sport] || '🏷';
-      const visClass = r.visibility === 'public' ? 'public' : 'invite';
-      const visLabel = r.visibility === 'public' ? 'PUBLIC' : 'INVITE ONLY';
       const meta = [
-        `<span class="pill ${visClass}">${visLabel}</span>`,
-        r.sport ? `<span class="pill">${escapeHtml(r.sport)}</span>` : '',
+        r.visibility === 'public' ? '<span class="status s-ok">Public</span>' : '<span class="status s-warn">Invite only</span>',
         r.city ? `<span>📍 ${escapeHtml(r.city)}${r.region ? ', ' + escapeHtml(r.region) : ''}</span>` : '',
         // The coach when one is named, else the owner.
-        r.coachNameInitial ? `<span>👤 Coach ${escapeHtml(r.coachNameInitial)}</span>`
-          : (r.ownerNameInitial ? `<span>👤 ${escapeHtml(r.ownerNameInitial)}</span>` : ''),
-      ].filter(Boolean).join(' ');
-      const followLabel = r.visibility === 'public' ? 'Follow' : 'Request to follow';
+        r.coachNameInitial ? `<span>Coach ${escapeHtml(r.coachNameInitial)}</span>`
+          : (r.ownerNameInitial ? `<span>${escapeHtml(r.ownerNameInitial)}</span>` : ''),
+      ].filter(Boolean).join('');
       const viewUrl = `team.html?code=${encodeURIComponent(r.hubCode)}`;
       return `
-        <div class="result">
-          <div class="result-icon">${emoji}</div>
-          <div class="result-body">
-            <div class="result-name">${escapeHtml(r.name)}</div>
-            <div class="result-meta">${meta}</div>
-          </div>
-          <div class="result-actions">
-            <a class="btn-outline btn" href="${viewUrl}">View</a>
-            <a class="btn" href="${viewUrl}#follow">${followLabel}</a>
+        <div class="hit">
+          <span class="emo">${emoji}</span>
+          <div class="tx"><b>${escapeHtml(r.name)}</b><div class="meta">${meta}</div></div>
+          <div class="acts">
+            <a class="btn ghost sm" href="${viewUrl}">View</a>
+            <a class="btn primary sm" href="${viewUrl}#follow">Ask to follow</a>
           </div>
         </div>
       `;
     }).join('');
   } catch (e) {
     console.warn('search failed:', e);
-    $results.innerHTML = `<div class="empty" style="color:var(--red)">Search failed: ${escapeHtml(e.message || String(e))}</div>`;
+    $results.innerHTML = `<div class="hint" style="color:var(--bad)">Search didn't work: ${escapeHtml(e.message || String(e))}. Try again.</div>`;
   }
 }
 
