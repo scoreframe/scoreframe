@@ -2662,8 +2662,10 @@ function rollVal(r) {
 // Bowling scorer (JS port of BowlingScorer.kt)
 function calculateBowlingScores(frames) {
     const f = frames.map(x => ({...x}));
+    // The running total stops at the first frame that can't be scored yet (the apps' rule).
+    let stopped = false;
     for (let i = 0; i < 10; i++) {
-        if (!canScoreFrame(i, f)) continue;
+        if (stopped || !canScoreFrame(i, f)) { stopped = true; f[i].score = 0; continue; }
         let frameScore;
         if (i < 9) frameScore = calcRegularFrame(i, f);
         else frameScore = calcTenthFrame(f[9]);
