@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ScoreFrame How-to Videos</title>
+<link rel="canonical" href="https://scoreframe.app/videos.html">
+<meta name="description" content="Short narrated videos: film and score a game, stream to YouTube, set up your team, and the ScoreFrame features people miss.">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=JetBrains+Mono:wght@700&display=swap">
+<style>
+:root{
+  --paper:#F5F5F2; --card:#FFFFFF; --ink:#1C1B1F; --mu:#5A565F; --ln:#E2DFDA;
+  --orange:#FF9640; --on-orange:#1A1004; --deep:#111215;
+  color-scheme: light;
+}
+/* Same single light theme as the home page. */
+*{box-sizing:border-box}
+html,body{margin:0;overflow-x:hidden}
+body{background:var(--paper);color:var(--ink);font-family:Archivo,-apple-system,"Helvetica Neue",Arial,sans-serif;line-height:1.5}
+a{color:inherit}
+a:focus-visible,.btn:focus-visible{outline:3px solid #E07A1F;outline-offset:3px;border-radius:8px}
+.wrap{max-width:1160px;margin:0 auto;padding-inline:24px}
+.eb{font:700 12px "JetBrains Mono",ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:#B5651D}
+h1,h2{margin:0;font-weight:900;letter-spacing:-.015em;text-wrap:balance}
+h1{font-size:clamp(36px,5vw,60px);line-height:1}
+h2{font-size:22px;line-height:1.15}
+p{margin:0}
+.lede{font-size:clamp(17px,1.6vw,20px);color:var(--mu);max-width:52ch}
+.mark{font-weight:900;font-size:22px;letter-spacing:-.01em}
+.mark b{color:var(--orange)}
+
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--ln)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px}
+nav{display:flex;gap:22px;font-size:15px;font-weight:700;color:var(--mu)}
+nav a{text-decoration:none}
+nav a[aria-current]{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:8px;height:48px;padding:0 22px;border-radius:14px;font-weight:900;font-size:16px;text-decoration:none;border:2px solid transparent}
+.btn.primary{background:var(--orange);color:var(--on-orange)}
+.btn.small{height:40px;padding:0 16px;font-size:14px;border-radius:12px}
+.menu-btn{display:none;width:44px;height:44px;border-radius:12px;border:1px solid var(--ln);background:var(--card);font-size:20px;color:var(--ink);cursor:pointer}
+.bar-right{display:flex;align-items:center;gap:10px}
+@media (max-width:860px){
+  .menu-btn{display:inline-flex;align-items:center;justify-content:center}
+  nav{display:none;position:absolute;left:0;right:0;top:64px;flex-direction:column;gap:0;background:var(--paper);border-bottom:1px solid var(--ln);padding:6px 24px 14px}
+  nav a{padding:12px 0;border-bottom:1px solid var(--ln);font-size:17px;color:var(--ink)}
+  nav a:last-child{border-bottom:none}
+  header.open nav{display:flex}
+}
+
+.intro{padding-block:48px 28px;display:flex;flex-direction:column;gap:14px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px;padding-bottom:56px}
+@media (max-width:820px){ .grid{grid-template-columns:minmax(0,1fr)} }
+.vid{display:flex;flex-direction:column;gap:12px;scroll-margin-top:84px}
+.vid video{width:100%;aspect-ratio:16/9;border-radius:16px;background:var(--deep);display:block;box-shadow:0 10px 30px rgba(28,27,31,.14)}
+.meta{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.len{font:700 13px "JetBrains Mono",ui-monospace,monospace;color:var(--mu);font-variant-numeric:tabular-nums;white-space:nowrap}
+.vid p{color:var(--mu);font-size:16px;max-width:56ch}
+.vid:target video{outline:3px solid var(--orange);outline-offset:4px}
+
+.flinks{display:flex;flex-wrap:wrap;gap:8px 18px}.flinks a{text-decoration:none}.flinks a:hover{text-decoration:underline}
+footer{border-top:1px solid var(--ln);padding-block:32px;color:var(--mu);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-between}
+@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap bar">
+    <a class="mark" href="/" style="text-decoration:none">Score<b>Frame</b></a>
+    <nav onclick="if(event.target.tagName==='A'){const h=this.closest('header');h.classList.remove('open');const b=h.querySelector('.menu-btn');b.textContent='☰';b.setAttribute('aria-expanded','false')}"><a href="index.html#film">Film</a><a href="index.html#two">Two phones</a><a href="index.html#families">Families</a><a href="club.html">Clubs</a><a href="features.html">Features</a><a href="videos.html" aria-current="page">Videos</a><a href="score.html">Score a game</a><a href="support.html">Support</a></nav>
+    <span class="bar-right">
+      <a class="btn primary small" href="index.html#get-app">Get the app</a>
+      <button class="menu-btn" type="button" aria-label="Menu" aria-expanded="false"
+        onclick="const h=this.closest('header');const o=h.classList.toggle('open');this.setAttribute('aria-expanded',o);this.textContent=o?'✕':'☰'">☰</button>
+    </span>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <span class="eb">How-to videos</span>
+    <h1>See ScoreFrame in a minute or two</h1>
+    <p class="lede">Each one is the real app on a phone, start to finish. Watch the first two before your first game.</p>
+  </section>
+
+  <section class="grid">
+    <article class="vid" id="film">
+      <video controls playsinline preload="none" poster="videos/scoreframe_1_film_and_score.jpg">
+        <source src="videos/scoreframe_1_film_and_score.mp4" type="video/mp4">
+      </video>
+      <div class="meta"><h2>Film and score a game</h2><span class="len">0:55</span></div>
+      <p>Tap GO, pick your team and who you're playing, then record and tap the score. The scoreboard is in the video, highlights are one tap, and End game keeps it all together.</p>
+    </article>
+
+    <article class="vid" id="stream">
+      <video controls playsinline preload="none" poster="videos/scoreframe_2_stream_to_youtube.jpg">
+        <source src="videos/scoreframe_2_stream_to_youtube.mp4" type="video/mp4">
+      </video>
+      <div class="meta"><h2>Stream to YouTube</h2><span class="len">1:02</span></div>
+      <p>Go live from the game, turn on live streaming a day early, and see what family watches on the team page. Nobody needs a YouTube account to watch.</p>
+    </article>
+
+    <article class="vid" id="team">
+      <video controls playsinline preload="none" poster="videos/scoreframe_3_set_up_your_team.jpg">
+        <source src="videos/scoreframe_3_set_up_your_team.mp4" type="video/mp4">
+      </video>
+      <div class="meta"><h2>Set up your team</h2><span class="len">1:35</span></div>
+      <p>Players, a game with its stream made ahead, a whole season from one screenshot, the team link and QR code, invites, and what families see.</p>
+    </article>
+
+    <article class="vid" id="tips">
+      <video controls playsinline preload="none" poster="videos/scoreframe_4_did_you_know.jpg">
+        <source src="videos/scoreframe_4_did_you_know.mp4" type="video/mp4">
+      </video>
+      <div class="meta"><h2>Did you know?</h2><span class="len">1:17</span></div>
+      <p>Celebrations in the video, moving the scoreboard, a logo from any photo, a roster from a photo, and a schedule from a web link.</p>
+    </article>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><span class="mark" style="font-size:18px">Score<b>Frame</b></span> · © 2026 Glavin Labs LLC</span>
+    <span class="flinks"><a href="support.html">Support</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="delete-account.html">Delete account</a><a href="https://www.reddit.com/r/ScoreFrame/" target="_blank" rel="noopener">r/ScoreFrame</a></span>
+  </div>
+</footer>
+<script>
+// One video at a time: starting one pauses the others.
+document.querySelectorAll('video').forEach(v => v.addEventListener('play', () => {
+  document.querySelectorAll('video').forEach(o => { if (o !== v) o.pause(); });
+}));
+</script>
+</body>
+</html>
