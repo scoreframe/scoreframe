@@ -393,6 +393,17 @@ async function joinStream() {
     }
 }
 
+// The phones percent-encode . # $ [ ] / and % in keys (RTDB forbids the first six;
+// a roster player typed in by name is keyed by that name, e.g. a middle initial "Z.").
+function decodeRelayKeys(v) {
+    if (Array.isArray(v)) return v.map(decodeRelayKeys);
+    if (v && typeof v === 'object') {
+        const o = {};
+        for (const [k, x] of Object.entries(v)) o[k.indexOf('%') < 0 ? k : k.replace(/%([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))] = decodeRelayKeys(x);
+        return o;
+    }
+    return v;
+}
 function listenForUpdates(code) {
     // State listener — score updates
     stateListener = onValue(ref(db, `streams/${code}/state`), (snap) => {
@@ -400,7 +411,7 @@ function listenForUpdates(code) {
         const data = snap.val();
         if (data.sport) currentSport = data.sport;
         if (data.stateJson) {
-            currentState = typeof data.stateJson === 'string' ? JSON.parse(data.stateJson) : data.stateJson;
+            currentState = decodeRelayKeys(typeof data.stateJson === 'string' ? JSON.parse(data.stateJson) : data.stateJson);
         }
         if (data.isRecording) {
             $('liveLabel').style.display = 'inline';

@@ -998,7 +998,7 @@ function sendCommand(updatedState) {
         seq: lastSeq,
         sentAt: Date.now()
     };
-    push(ref(db, `sessions/${currentCode}/commands`), cmd);
+    pushCommand(cmd);
 }
 
 // 2026-08-28 — The wire carries STATE, not INTENT. FULL_STATE_SYNC brings the
@@ -1015,7 +1015,7 @@ function sendCommand(updatedState) {
 // authoritative; applying them twice would double-count.
 function sendPlayerStatIntent(side, statName, playerId, clockLabel) {
     if (!currentCode || !currentSport || !playerId) return;
-    push(ref(db, `sessions/${currentCode}/commands`), {
+    pushCommand({
         type: 'PLAYER_STAT',
         sport: currentSport,
         side: side,
@@ -1066,7 +1066,7 @@ window.answerSetPrompt = (confirm) => {
     // The answer's result (the next set, or the point undone) must apply even
     // though it can match a score we sent a moment ago.
     sentRing = [];
-    push(ref(db, `sessions/${currentCode}/commands`), { type: 'SET_PROMPT', confirm: !!confirm, sentAt: Date.now() });
+    pushCommand({ type: 'SET_PROMPT', confirm: !!confirm, sentAt: Date.now() });
     const card = document.querySelector('#setPromptScrim .modal-card');
     if (card) card.innerHTML = '<div class="modal-title">Sending to the camera…</div>';
 };
@@ -1231,7 +1231,7 @@ function listenForState(code) {
         // The camera's teams with rosters: the soccer/hockey player picker.
         if (Array.isArray(data.teams)) relayTeams = data.teams;
         if (data.stateJson) {
-            const st = typeof data.stateJson === 'string' ? JSON.parse(data.stateJson) : data.stateJson;
+            const st = decodeRelayKeys(typeof data.stateJson === 'string' ? JSON.parse(data.stateJson) : data.stateJson);
             if (!isStaleEcho(st)) currentState = st;
             if (data.seq) lastSeq = Math.max(lastSeq, data.seq);
         }
@@ -1457,7 +1457,7 @@ window.recCommand = function(action, secondsBack) {
     if (action === 'CAPTURE_HIGHLIGHT') {
         cmd.secondsBack = (secondsBack && secondsBack > 0) ? secondsBack : 10;
     }
-    push(ref(db, `sessions/${currentCode}/commands`), cmd);
+    pushCommand(cmd);
     vibrate();
 };
 
@@ -2157,6 +2157,31 @@ function buildVbStatSection(side, s, color) {
 // Roster entries from the camera are stored as plain strings — they
 // can be either "#12 Audrey" / "12 Audrey" / just "Audrey". Split out
 // the leading number (if any) so the chip can show a styled #N badge.
+// The phones percent-encode . # $ [ ] / and % in keys (RTDB forbids the first six;
+// a roster player typed in by name is keyed by that name, e.g. a middle initial "Z.").
+function decodeRelayKeys(v) {
+    if (Array.isArray(v)) return v.map(decodeRelayKeys);
+    if (v && typeof v === 'object') {
+        const o = {};
+        for (const [k, x] of Object.entries(v)) o[k.indexOf('%') < 0 ? k : k.replace(/%([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))] = decodeRelayKeys(x);
+        return o;
+    }
+    return v;
+}
+function encodeRelayKeys(v) {
+    if (Array.isArray(v)) return v.map(encodeRelayKeys);
+    if (v && typeof v === 'object') {
+        const o = {};
+        for (const [k, x] of Object.entries(v)) o[k.replace(/[%.#$\[\]\/\x00-\x1f\x7f]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'))] = encodeRelayKeys(x);
+        return o;
+    }
+    return v;
+}
+// Every command goes up with encoded keys: a FULL_STATE_SYNC carries the rosters and
+// per-player stats, keyed by name for players typed into a roster without a saved player.
+function pushCommand(cmd) {
+    return push(ref(db, `sessions/${currentCode}/commands`), encodeRelayKeys(cmd));
+}
 function splitRosterEntry(display) {
     const m = String(display).match(/^#?\s*(\d{1,3})\s+(.+)$/);
     if (m) return { num: m[1], name: m[2].trim() };
