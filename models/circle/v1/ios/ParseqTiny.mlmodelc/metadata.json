@@ -1,0 +1,84 @@
+[
+  {
+    "metadataOutputVersion" : "3.0",
+    "storagePrecision" : "Float16",
+    "outputSchema" : [
+      {
+        "hasShapeFlexibility" : "0",
+        "isOptional" : "0",
+        "dataType" : "Float16",
+        "formattedType" : "MultiArray (Float16 1 × 4 × 95)",
+        "shortDescription" : "",
+        "shape" : "[1, 4, 95]",
+        "name" : "softmax_10",
+        "type" : "MultiArray"
+      }
+    ],
+    "modelParameters" : [
+
+    ],
+    "specificationVersion" : 8,
+    "mlProgramOperationTypeHistogram" : {
+      "Ios17.reduceArgmax" : 4,
+      "Ios17.greater" : 1,
+      "Ios17.equal" : 1,
+      "Ios17.reshape" : 64,
+      "Ios16.softmax" : 22,
+      "Ios17.matmul" : 42,
+      "Ios17.transpose" : 72,
+      "Split" : 12,
+      "Select" : 5,
+      "Ios17.expandDims" : 5,
+      "Ios17.add" : 49,
+      "Tile" : 1,
+      "Ios17.sliceByIndex" : 17,
+      "Ios17.squeeze" : 41,
+      "Ios17.gather" : 4,
+      "Ios17.layerNorm" : 43,
+      "Ios17.conv" : 1,
+      "Ios16.gelu" : 17,
+      "Ios17.cast" : 14,
+      "Ios17.linear" : 81,
+      "Ios17.concat" : 9,
+      "Ios17.greaterEqual" : 4,
+      "Ios16.cumsum" : 1,
+      "Ios17.mul" : 20
+    },
+    "computePrecision" : "Mixed (Float16, Int16, Int32)",
+    "isUpdatable" : "0",
+    "stateSchema" : [
+
+    ],
+    "availability" : {
+      "macOS" : "14.0",
+      "tvOS" : "17.0",
+      "visionOS" : "1.0",
+      "watchOS" : "10.0",
+      "iOS" : "17.0",
+      "macCatalyst" : "17.0"
+    },
+    "modelType" : {
+      "name" : "MLModelType_mlProgram"
+    },
+    "userDefinedMetadata" : {
+      "com.github.apple.coremltools.conversion_date" : "2026-11-15",
+      "com.github.apple.coremltools.source" : "torch==2.7.0",
+      "com.github.apple.coremltools.version" : "9.0",
+      "com.github.apple.coremltools.source_dialect" : "TorchExport::ATEN"
+    },
+    "inputSchema" : [
+      {
+        "hasShapeFlexibility" : "0",
+        "isOptional" : "0",
+        "dataType" : "Float32",
+        "formattedType" : "MultiArray (Float32 1 × 3 × 32 × 128)",
+        "shortDescription" : "",
+        "shape" : "[1, 3, 32, 128]",
+        "name" : "images",
+        "type" : "MultiArray"
+      }
+    ],
+    "generatedClassName" : "ParseqTiny",
+    "method" : "predict"
+  }
+]

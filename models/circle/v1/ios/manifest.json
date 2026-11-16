@@ -1,0 +1,24 @@
+{
+ "files": [
+  {
+   "path": "ParseqTiny.mlmodelc/analytics/coremldata.bin",
+   "bytes": 243
+  },
+  {
+   "path": "ParseqTiny.mlmodelc/coremldata.bin",
+   "bytes": 383
+  },
+  {
+   "path": "ParseqTiny.mlmodelc/metadata.json",
+   "bytes": 2225
+  },
+  {
+   "path": "ParseqTiny.mlmodelc/model.mil",
+   "bytes": 249139
+  },
+  {
+   "path": "ParseqTiny.mlmodelc/weights/weight.bin",
+   "bytes": 11972480
+  }
+ ]
+}
