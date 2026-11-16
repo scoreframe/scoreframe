@@ -344,40 +344,47 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">9 Nov 2026 · Sharing and the team ladder · Android 1.1.1889 · iOS 1.2.408</span>
+    <span class="stamp">16 Nov 2026 · Recording checks to the stores · Circle my player (testers) · Android 1.1.1929 · iOS 1.2.413</span>
   </div>
   <p class="lede">
-    New today: the <strong>Sharing screen</strong> and the team ladder (owner, managers, coaches, followers), and the <strong>live game</strong> for volleyball (Game radio, the game page and Today from one feed).
-    Android <strong>1.1.1889</strong> on testers; iOS <strong>1.2.408 (903)</strong> on TestFlight with Game radio and the live game; the iPhone Sharing screen goes in tomorrow's upload.
-    Android <strong>1.1.1884</strong> and the first <strong>Wear OS watch app</strong> are in Google's production review; iOS <strong>1.2.406</strong> is live.
+    New today: the <strong>recording checks</strong> and the other <strong>silent failures</strong> are counted on the server and shown in the daily summary, and both apps went to the stores with them.
+    Android <strong>1.1.1929</strong> is in Google's production review; iOS <strong>1.2.413 (908)</strong> is in App Store review (releases when approved) and on TestFlight.
+    <strong>Circle my player in highlights</strong> is in Labs on tester builds of both apps.
   </p>
 
   <h2>Where the code is</h2>
   <div class="channels">
     <div class="ch live">
       <span class="ch-name">Play production</span>
-      <span class="ch-ver">1.1.1884</span>
-      <span class="ch-note">in Google review with Wear OS 1.0.1, replaces 1877</span>
+      <span class="ch-ver">1.1.1929</span>
+      <span class="ch-note">in Google review (replaces 1921); recording checks + silent-failure stats</span>
     </div>
     <div class="ch live">
       <span class="ch-name">App Store</span>
-      <span class="ch-ver">1.2.406</span>
-      <span class="ch-note">live</span>
+      <span class="ch-ver">1.2.413</span>
+      <span class="ch-note">in review, releases when approved (1.2.410 live)</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1889</span>
-      <span class="ch-note">Sharing + ladder · Live game + Game radio</span>
+      <span class="ch-ver">1.1.1929</span>
+      <span class="ch-note">Labs: Circle my player · Media Manager notice fix</span>
     </div>
     <div class="ch">
       <span class="ch-name">iOS TestFlight</span>
-      <span class="ch-ver">1.2.408 (903)</span>
-      <span class="ch-note">Live game + Game radio · Apple Watch app</span>
+      <span class="ch-ver">1.2.413 (908)</span>
+      <span class="ch-note">recording checks; Circle my player in tomorrow's upload</span>
     </div>
   </div>
 
   <h2>Needs you</h2>
   <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Try Circle my player (Labs)</span>
+        <span class="chip">Android 1.1.1928+ · iPhone direct install</span>
+      </div>
+      <p class="item-body">Labs › Circle my player in highlights (downloads the player-finding files once). Then end a game with tagged plays and build reels: each play should show an orange circle at the player's feet while her number is visible. Android also has the switch on the reel picker. Tested on the public test clip on the emulator, the A51 (~35 s a play) and the iPhone SE (circle shorter there; tuning next).</p>
+    </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">Try the new Sharing screen (1.1.1889)</span>
@@ -424,6 +431,20 @@ onAuthStateChanged(auth, async (user) => {
 
   <h2>Built the last few days</h2>
   <div class="items">
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Silent failures, counted (16 Nov)</span>
+        <span class="chip">Play 1.1.1929 · App Store 1.2.413</span>
+      </div>
+      <p class="item-body">Every finished recording is opened like a player would: one that won't play or has no sound is flagged right away. Choppy video warns once. End Game puts back a clip missing from the game (the iPhone lost a recording's link when you stopped twice before End Game). Failed highlights and reels try once more. Stream stalls and reconnects, refused remote-scoring writes and scores that didn't reach the cloud are counted. All show in the daily summary under "Other silent failures". Also: the Media Manager no longer leaves "Building highlight reel" up after a reel is done.</p>
+    </div>
+    <div class="item">
+      <div class="item-head">
+        <span class="item-title">Circle my player in highlights (16 Nov)</span>
+        <span class="chip">Labs · tester builds</span>
+      </div>
+      <p class="item-body">After the game, the phone finds the player in each play by her jersey number and draws an orange circle at her feet, open at the back. Nothing is uploaded and no faces are used. Plays where her number never shows get no circle. Store builds carry it switched off until it's been tried more.</p>
+    </div>
     <div class="item">
       <div class="item-head">
         <span class="item-title">Sharing and the team ladder (9 Nov)</span>
