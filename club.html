@@ -1705,6 +1705,8 @@ function reviewPurchase() {
   const what = q.kind === 'addon' ? `${q.teams} more team license${q.teams === 1 ? '' : 's'}` : `${q.teams} team license${q.teams === 1 ? '' : 's'} for ${q.months} month${q.months === 1 ? '' : 's'}`;
   const data = B.kind === 'addon' ? { clubId: S.clubId, kind: 'addon', teams: B.teams } : { clubId: S.clubId, teams: B.teams, months: B.months, startDate: B.start };
   let working = false;
+  // Club plans are US only for now (Eric 2026-11-17); asked once, then remembered on the club.
+  const usClub = S.club.billing && S.club.billing.country === 'US';
   const ln = (a, b, strong) => `<div class="ln" style="display:flex;justify-content:space-between;gap:12px;${strong ? 'font-weight:800;font-size:17px;' : ''}"><span>${a}</span><span>${b}</span></div>`;
   d.innerHTML = `<form method="dialog" style="width:auto;">
     <h2 style="font-size:21px;font-weight:900;">Review your purchase</h2>
@@ -1723,6 +1725,8 @@ function reviewPurchase() {
       : `<li>The teams can be used as soon as the payment goes through.</li><li>A receipt goes to ${esc(email || 'your billing email')}.</li>`}
       <li>No automatic renewal: we remind you before it ends.</li>
     </ul>
+    <div class="field"><label for="rvCountry">Where is your club?</label><select id="rvCountry"><option value="">Choose…</option><option value="US"${usClub ? ' selected' : ''}>United States</option><option value="XX">Another country</option></select></div>
+    <p id="rvAbroad" hidden style="margin:0;line-height:1.5;font-size:14px;color:#B42318;font-weight:600;">ScoreFrame club plans are only available to clubs in the United States for now. Email <a href="mailto:support@scoreframe.app">support@scoreframe.app</a> and we'll let you know when that changes.</p>
     <label style="display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--ink);font-weight:500;line-height:1.45;"><input type="checkbox" id="rvOk" style="margin-top:3px;"> <span>I'm buying these licenses for ${esc(S.club.name)} under the <a href="/club-terms.html" target="_blank" rel="noopener">Club Terms</a>.</span></label>
     <div class="row"><button class="btn primary" value="ok" id="rvGo">${inv ? 'Buy and email the invoice' : 'Buy and pay now'}</button><button class="btn ghost" value="cancel" id="rvBack" formnovalidate>Back</button></div>
     <div id="rvMsg" style="font-size:14px;line-height:1.5;" role="status" aria-live="polite"></div>
@@ -1731,10 +1735,18 @@ function reviewPurchase() {
   d.addEventListener('close', () => { d.style.width = ''; }, { once: true });
   d.oncancel = (e) => { if (working) e.preventDefault(); };
   d.showModal();
+  $('rvCountry').onchange = () => {
+    const abroad = $('rvCountry').value === 'XX';
+    $('rvAbroad').hidden = !abroad; $('rvGo').disabled = abroad; $('rvMsg').textContent = '';
+  };
   $('rvGo').onclick = async (ev) => {
     ev.preventDefault();
     const msg = $('rvMsg'), go = $('rvGo');
+    const country = $('rvCountry').value;
+    if (!country) { msg.textContent = 'Choose where your club is.'; return; }
+    if (country !== 'US') return;
     if (!$('rvOk').checked) { msg.textContent = 'Tick the box to confirm the purchase.'; return; }
+    data.country = country;
     working = true; go.disabled = true; $('rvBack').disabled = true;
     go.textContent = inv ? 'Creating your invoice…' : 'Opening Stripe…';
     msg.textContent = inv ? 'Creating the invoice and emailing it. This takes a few seconds; keep this page open.' : 'Taking you to Stripe\'s secure payment page.';
