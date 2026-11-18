@@ -4730,8 +4730,9 @@ async function loadPastGames() {
                         const calcSeries = scores.reduce((a, b) => a + b, 0);
                         const series = calcSeries > 0 ? calcSeries : (parseInt(storedSeries) || 0);
                         const high = Math.max(...scores, 0);
-                        const prefix = ps.includes(';') && name ? name + ': ' : '';
-                        return `${prefix}${series} series · High: ${high} · ${scores.length} game${scores.length !== 1 ? 's' : ''}<br><span style="font-size:11px;color:var(--text-secondary);">${scores.join(' · ')}</span>`;
+                        // Bowler name in bold ink, numbers in plain text: orange is for things you tap (2026-11-17).
+                        const prefix = ps.includes(';') && name ? `<span style="font-weight:800;">${escapeHtml(name)}</span> · ` : '';
+                        return `${prefix}${series} series · High ${high} · ${scores.length} game${scores.length !== 1 ? 's' : ''}<br><span style="font-size:11px;font-weight:600;color:var(--text-secondary);">${scores.join(' · ')}</span>`;
                     }).join('<br>');
                 } else {
                     scoreLine = g.homeScore > 0 ? `${g.homeScore}` : '';
@@ -4771,7 +4772,7 @@ async function loadPastGames() {
                     <div class="${isBowling ? '' : 'teams'}">
                         <div class="game-date">${formatDate(g.date)}</div>
                         <div class="game-opponent">${titleLine}</div>
-                        ${isBowling && scoreLine ? `<div style="margin-top:6px;color:var(--accent);font-weight:700;font-size:13px;">${scoreLine}</div>` : ''}
+                        ${isBowling && scoreLine ? `<div style="margin-top:6px;color:var(--text-primary);font-weight:600;font-size:13px;line-height:1.45;">${scoreLine}</div>` : ''}
                         ${hasYouTube ? `<div style="margin-top:6px;display:flex;align-items:center;gap:5px;color:var(--text-secondary);font-size:11px;font-weight:600;"><svg width="18" height="13" viewBox="0 0 24 17" aria-label="Has video"><path fill="#FF0033" d="M23.5 2.5A3 3 0 0 0 21.4.4C19.5 0 12 0 12 0S4.5 0 2.6.4A3 3 0 0 0 .5 2.5 31 31 0 0 0 0 8.5a31 31 0 0 0 .5 6A3 3 0 0 0 2.6 16.6C4.5 17 12 17 12 17s7.5 0 9.4-.4a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-6 31 31 0 0 0-.5-6z"/><path fill="#FFF" d="M9.6 12.2l6.3-3.7-6.3-3.7z"/></svg>Video</div>` : ''}
                     </div>
                     ${!isBowling ? `<div class="score">${scoreLine}</div>` : ''}
