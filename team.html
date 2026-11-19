@@ -1037,6 +1037,431 @@ html, body { font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe U
 })();
 </script>
 <link rel="stylesheet" href="/ui-pages.css?v=1">
+<style>
+/* ══════════════════════════════════════════════════════════════════════
+   2026-11-19 — TEAM COLOURS. Eric: "give team pages a little bit more variety
+   and customized feel. Various font sizes, colors, sections sticking out
+   better". Approved mockup: claude.ai/artifact/RpnnnH4gm5SFCAJjJUGBdw.
+   The team's own colours drive the page: `color` paints the hero, `color2` is
+   the accent when it is a real colour (else `color`, else the page accent).
+   teamColours() sets the --tc-* values from the team doc, with text colours
+   picked by contrast; the defaults below hold until it runs.
+   After ui-pages.css on purpose, so these win over its section headings.
+   ══════════════════════════════════════════════════════════════════════ */
+:root {
+    --tc-hero: #1565C0; --tc-on-hero: #FFFFFF; --tc-hero-sub: rgba(255,255,255,0.78);
+    --tc-hero-line: rgba(255,255,255,0.40); --tc-hero-chip: rgba(255,255,255,0.14);
+    --tc-hero-accent: var(--accent); --tc-on-hero-accent: #141414;
+    --tc-accent: var(--accent); --tc-on-accent: #141414; --tc-on-accent-line: rgba(20,20,20,0.25);
+    --tc-accent-text: var(--accent); --tc-accent-on-dark: var(--accent);
+    --tc-stripe: 6px solid var(--accent); --tc-logo-edge: none;
+    --tc-wash: var(--accent-dim); --tc-wash-line: var(--bg-elevated); --tc-wash-text: var(--accent);
+    --tc-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --tc-gut: 18px;
+    /* Dark first, like the page's own tokens. */
+    --tc-ink2: #B4B8C0; --tc-muted: #9499A2;
+    --tc-line: rgba(255,255,255,0.10); --tc-line-strong: rgba(255,255,255,0.22); --tc-dash: rgba(255,255,255,0.30);
+    --tc-spot: #0F1013; --tc-spot-edge: 2px solid var(--tc-accent);
+    --tc-win: #237A3C; --tc-loss: #FF6B5E;
+}
+:root[data-theme="light"] {
+    --tc-ink2: #4F535A; --tc-muted: #666A72;
+    --tc-line: rgba(0,0,0,0.10); --tc-line-strong: rgba(0,0,0,0.20); --tc-dash: rgba(0,0,0,0.28);
+    --tc-spot: #17181B; --tc-spot-edge: 0 solid transparent;
+    --tc-win: #1B7F3B; --tc-loss: #B3261E;
+}
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+        --tc-ink2: #4F535A; --tc-muted: #666A72;
+        --tc-line: rgba(0,0,0,0.10); --tc-line-strong: rgba(0,0,0,0.20); --tc-dash: rgba(0,0,0,0.28);
+        --tc-spot: #17181B; --tc-spot-edge: 0 solid transparent;
+        --tc-win: #1B7F3B; --tc-loss: #B3261E;
+    }
+}
+
+/* ── Hero: the team colour, condensed caps name, the record in big numbers ── */
+.team-header {
+    --text-primary: var(--tc-on-hero); --text-secondary: var(--tc-hero-sub);
+    --text-muted: var(--tc-hero-sub); --bg-surface: var(--tc-hero-chip);
+    --bg-elevated: var(--tc-hero-line);
+    background: var(--tc-hero); color: var(--tc-on-hero);
+    border-bottom: var(--tc-stripe);
+    display: flex; flex-direction: column; align-items: stretch; gap: 18px;
+    padding: 22px 18px 20px; text-align: left;
+}
+.tp-id { display: flex; gap: 16px; align-items: center; }
+.tp-id-text { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.team-header #teamLogo {
+    flex: none; height: 76px !important; width: auto; max-width: 112px !important;
+    margin: 0 !important; padding: 8px; background: #FFFFFF; border-radius: 18px;
+    box-shadow: var(--tc-logo-edge);
+}
+.team-header .team-emoji {
+    flex: none; width: 76px; height: 76px; margin: 0; border-radius: 18px;
+    background: none; border: 2px solid var(--tc-hero-line);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 900; font-stretch: 68%; letter-spacing: 0.02em;
+}
+.team-header .team-sport {
+    margin: 0; font-family: var(--tc-mono); font-size: 11px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--tc-hero-sub);
+}
+.team-header .team-name {
+    margin: 0; font-size: clamp(30px, 10vw, 64px); line-height: 0.92; font-weight: 900;
+    font-stretch: 68%; text-transform: uppercase; letter-spacing: 0.005em;
+    text-wrap: balance; overflow-wrap: break-word;
+}
+.team-header #teamClub { margin: 0 !important; color: var(--tc-hero-sub) !important; }
+.team-header #teamClub a { color: var(--tc-on-hero) !important; text-decoration: underline !important; }
+.team-header #archivedBanner { align-self: flex-start; margin: 0 !important; }
+.team-header #teamRecord { display: none !important; }
+.team-header #liveBadge { align-self: flex-start; margin: 0; }
+.tp-record { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.tp-record:empty { display: none; }
+.tp-record .cells { display: flex; gap: 16px; align-items: flex-end; }
+.tp-record .cell { display: flex; flex-direction: column; gap: 4px; }
+.tp-record .n {
+    font-size: 60px; line-height: 0.82; font-weight: 900; font-stretch: 62%;
+    font-variant-numeric: tabular-nums;
+}
+.tp-record .k {
+    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; line-height: 1.5;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--tc-hero-sub);
+}
+.tp-form { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.tp-form .sq { display: flex; gap: 3px; }
+.tp-form .sq span {
+    width: 17px; height: 20px; border-radius: 4px; display: flex; align-items: center;
+    justify-content: center; font-size: 10px; font-weight: 900;
+    border: 1.5px solid var(--tc-hero-line); color: var(--tc-hero-sub);
+}
+.tp-form .sq .w { background: var(--tc-hero-accent); border-color: var(--tc-hero-accent); color: var(--tc-on-hero-accent); }
+.tp-form .sq .t { background: var(--tc-hero-chip); color: var(--tc-on-hero); }
+.team-header #followArea { margin: 0 !important; }
+.team-header #followArea:empty { display: none; }
+.team-header #followArea .follow-btn {
+    min-height: 46px; padding: 0 22px; border-radius: 12px; font-size: 15px; font-weight: 850;
+    background: var(--tc-hero-accent); color: var(--tc-on-hero-accent); border: 0;
+}
+.team-header #emailFollowWrap { background: var(--tc-hero-chip) !important; margin-top: 0 !important; }
+.team-header #emailFollowInput {
+    background: var(--bg-deep) !important; color: var(--text-primary) !important;
+    border-color: var(--tc-hero-line) !important;
+}
+.team-header #emailFollowWrap .follow-btn { min-height: 40px; }
+.team-header .follow-status { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.team-header .follow-status:empty { display: none; }
+.tp-role {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px;
+    border-radius: 999px; background: var(--tc-hero-chip); color: var(--tc-on-hero);
+    font-size: 13px; font-weight: 700;
+}
+.tp-role svg { flex: none; }
+
+/* ── Jump chips: the section on screen is filled with the team accent ── */
+.tp-chips { gap: 8px; padding: 12px var(--tc-gut); border-bottom: 1px solid var(--tc-line); }
+.tp-chips a {
+    height: auto; padding: 8px 15px; border-radius: 999px; font-size: 14px; font-weight: 700;
+    background: var(--bg-surface); border: 1px solid var(--tc-line); color: var(--text-primary);
+}
+.tp-chips a:hover, .tp-chips a:focus-visible { border-color: var(--tc-accent); color: var(--text-primary); }
+.tp-chips a.on { background: var(--tc-accent); border-color: var(--tc-accent); color: var(--tc-on-accent); }
+
+/* ── Layout and section heads ── */
+#teamContent { gap: 40px; padding: 18px 0 44px; }
+#teamContent .section, #tpNow .section { padding: 0 var(--tc-gut); }
+#teamContent .section + .section { border-top: 0; }
+.tp-stage { padding: 0 var(--tc-gut); }
+.tp-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+.tp-eb {
+    font-family: var(--tc-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--tc-accent-text);
+}
+.tp-eb:empty { display: none; }
+.tp-h2 {
+    margin: 0; font-size: 32px; line-height: 0.95; font-weight: 900; font-stretch: 72%;
+    text-transform: uppercase; letter-spacing: 0.005em; color: var(--text-primary);
+}
+.tp-h3 { margin: 0 0 8px; font-size: 18px; line-height: 1.2; font-weight: 800; color: var(--text-primary); }
+#managerBadge { display: none !important; }
+.tp-btn {
+    height: 46px; border-radius: 12px; border: 1px solid var(--tc-line-strong);
+    background: transparent; color: var(--text-primary); font-family: inherit;
+    font-size: 14px; font-weight: 800; cursor: pointer;
+}
+.tp-btn:hover, .tp-btn:focus-visible { border-color: var(--tc-accent); }
+.tp-plain { display: block; text-decoration: none; color: inherit; }
+.tp-chev { flex: none; color: var(--tc-muted); }
+
+/* ── Now: the last game as a scoreboard, or the next one as a countdown ── */
+.tp-final {
+    background: var(--tc-spot); color: #F5F3EF; border: var(--tc-spot-edge); border-radius: 20px;
+    padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 14px;
+}
+.tp-final .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.tp-final .eb, .tp-next .eb {
+    font-family: var(--tc-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.tp-final .eb { color: var(--tc-accent-on-dark); }
+.tp-final .tag { padding: 4px 10px; border-radius: 999px; color: #FFFFFF; font-size: 12px; font-weight: 800; }
+.tp-final .tag.w { background: #1B7F3B; }
+.tp-final .tag.l { background: #B3261E; }
+.tp-final .tag.t { background: #4F535A; }
+.tp-final .rows { display: flex; flex-direction: column; gap: 4px; }
+.tp-final .row { display: flex; align-items: center; gap: 12px; }
+.tp-final .row.lost { opacity: 0.55; }
+.tp-final .nm {
+    flex: 1; min-width: 0; font-size: 23px; font-weight: 900; font-stretch: 70%;
+    text-transform: uppercase; letter-spacing: 0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tp-final .sc { font-size: 48px; line-height: 0.95; font-weight: 900; font-stretch: 62%; font-variant-numeric: tabular-nums; }
+.tp-final .foot { font-size: 13px; color: #B4B8C0; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 12px; }
+.tp-next {
+    background: var(--tc-accent); color: var(--tc-on-accent); border-radius: 20px; padding: 18px;
+    display: flex; flex-direction: column; gap: 10px;
+}
+.tp-next .ti {
+    font-size: 31px; line-height: 0.95; font-weight: 900; font-stretch: 68%;
+    text-transform: uppercase; text-wrap: balance; overflow-wrap: anywhere;
+}
+.tp-next .pl { font-size: 14px; font-weight: 600; }
+.tp-next .tp-count {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+    border-top: 1.5px solid var(--tc-on-accent-line); padding-top: 12px; margin-top: 4px;
+}
+.tp-next .tp-count .seg { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.tp-next .tp-count .num {
+    font-size: 46px; line-height: 0.85; font-weight: 900; font-stretch: 62%;
+    color: inherit; font-variant-numeric: tabular-nums;
+}
+.tp-next .tp-count .unit {
+    margin: 0; font-family: var(--tc-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase; color: inherit;
+}
+
+/* ── Schedule: calendar tiles ── */
+#scheduleRailSection .tp-head { padding: 0 var(--tc-gut); }
+.tp-rail { gap: 10px; padding: 0 var(--tc-gut) 4px; }
+.tp-scard {
+    width: 134px; padding: 0; border-radius: 16px; overflow: hidden;
+    display: flex; flex-direction: column;
+    background: var(--bg-surface); border: 1px solid var(--tc-line);
+}
+.tp-scard.next { border: 2px solid var(--tc-accent); }
+.tp-scard .strip {
+    display: flex; justify-content: space-between; gap: 6px; padding: 6px 10px;
+    background: var(--bg-elevated); color: var(--tc-ink2);
+    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.tp-scard.next .strip { background: var(--tc-accent); color: var(--tc-on-accent); }
+.tp-scard .strip .live { color: #CC2222; }
+.tp-scard .bd { padding: 8px 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.tp-scard .day { font-size: 46px; line-height: 0.85; font-weight: 900; font-stretch: 62%; font-variant-numeric: tabular-nums; }
+.tp-scard .ti {
+    font-size: 14px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.tp-scard .pl { font-size: 12px; line-height: 1.3; color: var(--tc-muted); }
+
+/* ── Practices: a full-width band in the team colour, for the team only ── */
+#practicesSection.tp-practices {
+    margin: 0; gap: 14px; padding: 22px var(--tc-gut) 24px;
+    background: var(--tc-wash); border-top: 1px solid var(--tc-wash-line); border-bottom: 1px solid var(--tc-wash-line);
+}
+#practicesSection .tp-head { margin: 0; }
+.tp-practices .lock {
+    display: inline-flex; align-items: center; gap: 6px; color: var(--tc-wash-text);
+    font-family: var(--tc-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+}
+.tp-practices .list { background: var(--bg-surface); border: 1px solid var(--tc-line); border-radius: 16px; }
+.tp-practice { border-top: 1px solid var(--tc-line); }
+.tp-practice > button { display: flex; gap: 14px; padding: 12px 14px; }
+.tp-practice.off > button { opacity: 0.62; }
+.tp-practice .date { flex: none; width: 40px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.tp-practice .date .dw, .tp-practice .date .mo {
+    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--tc-muted);
+}
+.tp-practice .date .dn { font-size: 30px; line-height: 0.95; font-weight: 900; font-stretch: 62%; }
+.tp-practice .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; justify-content: center; }
+.tp-practice .when { font-size: 15px; font-weight: 800; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-start; }
+.tp-practice.off .when .tm { text-decoration: line-through; }
+.tp-practice .lbl { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: var(--tc-accent); color: var(--tc-on-accent); }
+.tp-practice .off-tag {
+    font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 6px;
+    border: 1.5px solid var(--tc-loss); color: var(--tc-loss);
+}
+.tp-practice .where { font-size: 13px; color: var(--tc-ink2); margin: 0; }
+.tp-practice .who { font-size: 12px; font-weight: 700; color: var(--tc-ink2); }
+
+/* ── Results: one list, a W/L block per game, tournaments grouped ── */
+.tp-list { background: var(--bg-surface); border: 1px solid var(--tc-line); border-radius: 16px; overflow: hidden; }
+.tp-list > * + * { border-top: 1px solid var(--tc-line); }
+.tp-list.short > :nth-child(n+7) { display: none; }
+.tp-res { display: flex; gap: 12px; align-items: center; padding: 12px 14px; text-decoration: none; color: inherit; }
+.tp-res:hover .op, .tp-res-evhead:hover .ti { text-decoration: underline; }
+.tp-wl {
+    flex: none; width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center;
+    justify-content: center; font-size: 15px; font-weight: 900;
+    background: var(--bg-elevated); color: var(--tc-ink2); border: 1.5px solid var(--bg-elevated);
+}
+.tp-wl.w { background: var(--tc-win); border-color: var(--tc-win); color: #FFFFFF; }
+.tp-wl.l { background: transparent; border-color: var(--tc-loss); color: var(--tc-loss); }
+.tp-wl.sm { width: 24px; height: 24px; border-radius: 6px; font-size: 11px; }
+.tp-res .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tp-res .op { font-size: 16px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tp-res .meta { font-size: 12.5px; color: var(--tc-muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tp-res .bw { font-size: 13px; line-height: 1.45; margin-top: 4px; }
+.tp-res .bw small { font-size: 11px; font-weight: 600; color: var(--tc-ink2); }
+.tp-res .sc { font-size: 28px; line-height: 1; font-weight: 900; font-stretch: 62%; font-variant-numeric: tabular-nums; }
+.tp-res-ev { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.tp-res-evhead { display: flex; gap: 12px; align-items: center; text-decoration: none; color: inherit; }
+.tp-res-evhead .ic {
+    flex: none; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; background: var(--tc-accent); color: var(--tc-on-accent);
+}
+.tp-res-evhead .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tp-res-evhead .eb {
+    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--tc-accent-text);
+}
+.tp-res-evhead .ti { font-size: 16px; font-weight: 800; line-height: 1.25; }
+.tp-res-kids { display: flex; flex-direction: column; gap: 8px; padding-left: 48px; }
+.tp-res-kid { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--tc-ink2); }
+.tp-res-kid .kt { flex: 1; min-width: 0; font-size: 14px; }
+.tp-res-kid .kt b { color: var(--text-primary); }
+.tp-res-kid .ks { font-size: 22px; line-height: 1; font-weight: 900; font-stretch: 62%; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.tp-more { width: 100%; margin-top: 14px; }
+#resultsSection.tp-empty {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    margin: 0 var(--tc-gut); padding: 12px 0 0; border-top: 2px solid var(--text-primary);
+}
+#resultsSection.tp-empty .tp-head { margin: 0; }
+#resultsSection.tp-empty .tp-eb { display: none; }
+#resultsSection.tp-empty .tp-h2 { font-size: 20px; line-height: 1; }
+#resultsSection.tp-empty #pastGames .empty { padding: 0; text-align: right; font-size: 14px; color: var(--tc-ink2); }
+
+/* ── Roster: jersey tiles, your player filled with the team accent ── */
+.tp-roster { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tp-pt {
+    position: relative; min-height: 116px; padding: 10px 10px 11px; border-radius: 14px;
+    display: flex; flex-direction: column; gap: 4px;
+    background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--tc-line);
+}
+.tp-pt.mine { background: var(--tc-accent); color: var(--tc-on-accent); border-color: var(--tc-accent); }
+.tp-pt a { display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: inherit; }
+.tp-pt a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.tp-pt a:focus-visible { outline: none; }
+.tp-pt:focus-within { outline: 2px solid var(--tc-accent-text); outline-offset: 2px; }
+.tp-pt .num { font-size: 40px; line-height: 0.88; font-weight: 900; font-stretch: 62%; color: var(--tc-accent-text); }
+.tp-pt.mine .num { color: inherit; }
+.tp-pt .nm { font-size: 14px; font-weight: 800; line-height: 1.15; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
+.tp-pt .ps, .tp-pt .st { font-size: 11.5px; font-weight: 600; color: var(--tc-ink2); }
+.tp-pt.mine .ps, .tp-pt.mine .st { color: inherit; opacity: 0.85; }
+.tp-tag {
+    position: relative; z-index: 1; align-self: flex-start; margin-top: auto; padding: 0;
+    background: none; border: 0; font: inherit; font-size: 12px; font-weight: 800;
+    color: var(--tc-accent-text); text-align: left; cursor: pointer;
+}
+.tp-pt.mine .tp-tag, .tp-solo.mine .tp-tag { color: inherit; }
+span.tp-tag { cursor: default; color: var(--tc-ink2); }
+.tp-solo {
+    position: relative; border-radius: 18px; padding: 16px; display: flex; gap: 16px; align-items: center;
+    background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--tc-line);
+}
+.tp-solo.mine { background: var(--tc-accent); color: var(--tc-on-accent); border-color: var(--tc-accent); }
+.tp-solo > a { position: absolute; inset: 0; border-radius: inherit; }
+.tp-solo .tp-chev { color: inherit; }
+.tp-solo .num { flex: none; font-size: 68px; line-height: 0.82; font-weight: 900; font-stretch: 62%; color: var(--tc-accent-text); }
+.tp-solo.mine .num { color: inherit; }
+.tp-solo .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.tp-solo .nm { font-size: 19px; font-weight: 900; line-height: 1.15; }
+.tp-solo .tp-tag, .tp-solo .who {
+    margin: 2px 0 0; font-family: var(--tc-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase;
+}
+.tp-solo .stats { display: flex; gap: 16px; flex-wrap: wrap; }
+.tp-solo .stats span { display: flex; flex-direction: column; gap: 2px; }
+.tp-solo .stats b { font-size: 24px; line-height: 0.9; font-weight: 900; font-stretch: 62%; }
+.tp-solo .stats i { font-style: normal; font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; }
+
+/* ── Coaches & managers ── */
+.tp-staff { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--tc-line); }
+.tp-staff .av {
+    flex: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 13px; font-weight: 800;
+    background: var(--tc-hero); color: var(--tc-on-hero); border: 1px solid var(--tc-line-strong);
+}
+.tp-staff .nm { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; }
+.tp-staff .rl {
+    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--tc-ink2); text-align: right;
+}
+
+/* ── Followers: staff only, folded to a count until asked for ── */
+.tp-fol {
+    margin: 0 var(--tc-gut); padding: 16px; border: 1.5px dashed var(--tc-dash); border-radius: 18px;
+    display: flex; flex-direction: column; gap: 12px;
+}
+.tp-fol .eb {
+    display: inline-flex; align-items: center; gap: 6px; color: var(--tc-ink2);
+    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+}
+.tp-fol .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tp-fol .top h2 { margin: 0; font-size: 18px; line-height: 1.2; font-weight: 800; }
+.tp-fol .top h2 span { color: var(--tc-accent-text); }
+.tp-fol .sub { font-size: 13px; color: var(--tc-ink2); }
+.tp-fol .sub.wait { color: var(--tc-accent-text); font-weight: 800; }
+.tp-stack { display: flex; }
+.tp-stack span {
+    width: 34px; height: 34px; margin-left: -9px; border-radius: 50%; border: 2px solid var(--bg-deepest);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800;
+    background: var(--bg-elevated); color: var(--text-primary);
+}
+.tp-stack span:first-child { margin-left: 0; }
+.tp-stack span.more { background: var(--tc-accent); color: var(--tc-on-accent); }
+.tp-fol .tp-btn { height: 44px; background: var(--bg-surface); }
+
+/* ── Share: a ticket with the team code ── */
+.tp-ticket {
+    margin: 0 var(--tc-gut); display: flex; border-radius: 18px; overflow: hidden;
+    border: 1px solid var(--tc-line); background: var(--bg-surface);
+}
+.tp-ticket .stub {
+    flex: 1; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 4px;
+    background: var(--tc-hero); color: var(--tc-on-hero); border-right: 3px dotted var(--bg-surface);
+}
+.tp-ticket .k {
+    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--tc-hero-sub);
+}
+.tp-ticket .team-code { font-size: 22px; font-weight: 700; letter-spacing: 0.08em; color: inherit; overflow-wrap: anywhere; }
+.tp-ticket .s { font-size: 12px; color: var(--tc-hero-sub); }
+.tp-ticket .acts { flex: none; width: 124px; padding: 12px; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+.tp-ticket .acts button {
+    height: 40px; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer;
+    border: 1px solid var(--tc-line-strong); background: transparent; color: var(--text-primary);
+}
+.tp-ticket .acts button.go { border: 0; background: var(--tc-accent); color: var(--tc-on-accent); }
+#unfollowArea { margin: 0 var(--tc-gut) !important; }
+
+@media (min-width: 600px) {
+    .tp-roster { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+@media (min-width: 1000px) {
+    .team-header { padding: 40px max(24px, calc((100% - 1180px) / 2)) 30px; }
+    .team-header #teamLogo { height: 110px !important; max-width: 160px !important; }
+    .team-header .team-emoji { width: 110px; height: 110px; font-size: 40px; }
+    .tp-chips { padding: 12px max(24px, calc((100% - 1180px) / 2)); }
+    #teamContent { --tc-gut: 0px; gap: 32px; padding: 24px 0 60px; }
+    .tp-col { gap: 32px; }
+    #practicesSection.tp-practices { padding: 20px; border: 1px solid var(--tc-wash-line); border-radius: 20px; }
+    .tp-side .tp-rail { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; padding: 0; }
+    .tp-side .tp-scard { width: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .live-badge { animation: none; } }
+</style>
 </head>
 <body>
 <script>
@@ -1126,27 +1551,28 @@ window.sfClubOffline = function (t) {
              logo sat hard against the left edge while every other line in the
              header was centred. Eric: "it needs to be top and center."
              Do not reduce this back to a one-sided margin. -->
-        <img id="teamLogo" alt="" style="display:none; height:96px; width:auto; max-width:72%; object-fit:contain; margin:0 auto 10px;" />
-        <div class="team-emoji" id="teamEmoji"></div>
-        <div class="team-name" id="teamName"></div>
-        <div class="team-sport" id="teamSport"></div>
-        <!-- A club team: the club that runs it and the club's page of every team (Eric 2026-10-30). -->
-        <div id="teamClub" style="display:none; font-size:13px; color:var(--text-secondary); margin:2px 0 4px;"></div>
-        <!-- 2026-06-01 — Active season pill, shown right under the
-             sport line so the current season is always visible —
-             not buried in the season switcher that only appears for
-             2+ seasons. Hidden when the team has no active season. -->
-        <div id="teamSeason" style="display:none; font-size:12px; font-weight:700; color:var(--accent); margin: 4px 0;"></div>
-        <div id="teamRecord" style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:8px;"></div>
-        <!-- 2026-08-02 — Record as a scoreline, mirroring the game page's
-             final-score treatment. Populated by renderScoreline() from the
-             same games loadPastGames() already counts, so the two can never
-             disagree. Falls back to the plain #teamRecord text above when
-             there's nothing to summarise. -->
+        <!-- 2026-11-19 — team colours: logo (or the team's initials), the sport
+             and season as an eyebrow, then the name. The active season moved
+             into the eyebrow ("VOLLEYBALL · 2026-27"), set by heroEyebrow(). -->
+        <div class="tp-id">
+            <img id="teamLogo" alt="" style="display:none; height:96px; width:auto; max-width:72%; object-fit:contain; margin:0 auto 10px;" />
+            <div class="team-emoji" id="teamEmoji" aria-hidden="true"></div>
+            <div class="tp-id-text">
+                <div class="team-sport" id="teamSport"></div>
+                <h1 class="team-name" id="teamName"></h1>
+                <!-- A club team: the club that runs it and the club's page of every team (Eric 2026-10-30). -->
+                <div id="teamClub" style="display:none; font-size:13px; color:var(--text-secondary); margin:2px 0 4px;"></div>
+            </div>
+        </div>
+        <div id="teamRecord"></div>
+        <!-- The record in big numbers with the last ten results, or how many
+             games are on the schedule before any are played. renderScoreline()
+             fills it from the same games loadPastGames() counts. -->
+        <div id="teamScoreline" class="tp-record"></div>
         <div id="liveBadge" style="display:none;" class="live-badge">● LIVE NOW</div>
 
-        <!-- Follow button (under team info) -->
-        <div id="followArea" style="margin-top:12px;"></div>
+        <!-- Follow button, then who you are on this team (Team manager, Parent of …). -->
+        <div id="followArea"></div>
         <div class="follow-status" id="followStatus"></div>
     </div>
 
@@ -1156,6 +1582,7 @@ window.sfClubOffline = function (t) {
         <a href="#tpNow" data-target="tpNow">Now</a>
         <a href="#seasonBlock" data-target="seasonBlock">Season</a>
         <a href="#scheduleRailSection" data-target="scheduleRailSection">Schedule</a>
+        <a href="#practicesSection" data-target="practicesSection">Practices</a>
         <a href="#resultsSection" data-target="resultsSection">Results</a>
         <a href="#rosterSection" data-target="rosterSection">Roster</a>
         <a href="#staffSection" data-target="staffSection">People</a>
@@ -1198,17 +1625,24 @@ window.sfClubOffline = function (t) {
         <div class="tp-stage" id="teamStage" style="display:none;"></div>
         </div>
         <div class="section" id="resultsSection">
-            <div class="section-title">Results <span id="managerBadge" style="display:none;" class="manager-badge">MANAGER</span></div>
+            <div class="tp-head"><span class="tp-eb" id="resultsEyebrow"></span><h2 class="tp-h2">Results <span id="managerBadge" style="display:none;" class="manager-badge">MANAGER</span></h2></div>
             <div id="pastGames"></div>
         </div>
         <div class="section" id="rosterSection" style="display:none;">
-            <div class="section-title">Roster</div>
+            <div class="tp-head"><span class="tp-eb" id="rosterEyebrow"></span><h2 class="tp-h2">Roster</h2></div>
             <div id="rosterList"></div>
         </div>
-        <div class="section" id="pendingRequestsSection" style="display:none;">
-            <div class="section-title">Followers</div>
-            <div id="pendingRequestsList"></div>
-        </div>
+        <!-- Followers, for staff only: a count and faces until "Manage followers"
+             opens the list. Opens by itself when someone is waiting on a decision. -->
+        <section class="tp-fol" id="pendingRequestsSection" style="display:none;" aria-label="Followers">
+            <span class="eb"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Only coaches and managers see this</span>
+            <div class="top">
+                <div><h2>Followers <span id="followerCount"></span></h2><div class="sub" id="followerSub"></div></div>
+                <div class="tp-stack" id="followerStack" aria-hidden="true"></div>
+            </div>
+            <button type="button" class="tp-btn" id="followerToggle" aria-expanded="false" aria-controls="pendingRequestsList">Manage followers</button>
+            <div id="pendingRequestsList" hidden></div>
+        </section>
         <div id="unfollowArea" style="display:none; text-align:center; margin-top:28px; padding-top:18px; border-top:1px solid var(--border, rgba(128,128,128,0.25));">
             <button class="follow-btn unfollow-btn" onclick="confirmUnfollow()"
                 style="background:transparent; color:var(--text-secondary); border:1px solid var(--text-secondary); font-size:13px; padding:7px 18px;">Unfollow this team</button>
@@ -1220,26 +1654,35 @@ window.sfClubOffline = function (t) {
             <div class="section-title">Season</div>
             <div id="seasonSwitcher" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;"></div>
         </div>
-        <div id="seasonStatsCard" class="tp-season-card" style="display:none;"></div>
+        <!-- 2026-11-19 — the season box (won/lost/played/scheduled) is gone: the
+             record is in the hero, games played heads Results and the count
+             still to play heads Schedule. renderSeasonStats() finds no box
+             and returns. -->
         </div>
         <div id="scheduleRailSection" style="display:none;">
-            <div class="tp-railhead"><span class="l" id="scheduleRailLabel">Schedule</span></div>
+            <div class="tp-head"><span class="tp-eb" id="scheduleRailLabel"></span><h2 class="tp-h2">Schedule</h2></div>
             <div class="tp-rail" id="scheduleRail"></div>
         </div>
         <section id="practicesSection" class="tp-practices" style="display:none;" aria-label="Practices">
-            <div class="head"><h2>Practices</h2><span class="lock">Team only</span></div>
+            <div class="tp-head">
+                <span class="lock"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Team only</span>
+                <h2 class="tp-h2">Practices</h2>
+            </div>
             <div class="list" id="practicesList"></div>
         </section>
         <div class="section" id="staffSection" style="display:none;">
-            <div class="section-title">Coaches &amp; managers</div>
+            <h2 class="tp-h3">Coaches &amp; managers</h2>
             <div id="staffList"></div>
         </div>
-        <div class="team-share-card" id="teamShareCard" style="display:none;">
-            <div class="team-share-label">Share this team</div>
-            <div class="tp-share-code"><span class="k">Team code</span><span class="team-code" id="teamCode"></span></div>
-            <div class="team-share-grid">
-                <button class="team-share-btn" type="button" id="teamCopyBtn">Copy link</button>
-                <button class="team-share-btn" type="button" id="teamShareBtn">Share</button>
+        <div class="tp-ticket" id="teamShareCard" style="display:none;" aria-label="Share this team">
+            <div class="stub">
+                <span class="k">Team code</span>
+                <span class="team-code" id="teamCode"></span>
+                <span class="s">Anyone with the code can find this team</span>
+            </div>
+            <div class="acts">
+                <button class="go" type="button" id="teamCopyBtn">Copy link</button>
+                <button type="button" id="teamShareBtn">Share</button>
             </div>
         </div>
         </div>
@@ -2133,6 +2576,12 @@ async function acceptInvite() {
 // staff and approved followers, on any team. firestore.rules enforces the same.
 const practiceTime = (ms) => new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 const practiceDay = (ms) => new Date(ms).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+/** "5:00–7:00 PM": the AM/PM once when both ends share it. */
+const practiceRange = (a, b) => {
+    const s = practiceTime(a), e = practiceTime(b);
+    const ms = s.match(/\s?(AM|PM)$/), me = e.match(/\s?(AM|PM)$/);
+    return (ms && me && ms[1] === me[1] ? s.slice(0, -ms[0].length) : s) + '–' + e;
+};
 async function loadPractices() {
     const box = $('practicesSection');
     if (!box) return;
@@ -2145,7 +2594,7 @@ async function loadPractices() {
     } catch (_) { return; }
     if (!list.length) return;
     // One-time dates (picture day, a banquet; kind "other") live with the practices (Eric 2026-11-05).
-    const head = box.querySelector('.head h2');
+    const head = box.querySelector('.tp-h2');
     if (head) head.textContent = list.some((x) => x.kind === 'other') ? 'Practices & more' : 'Practices';
     // Who's in and out: staff only, and the rule enforces it.
     const names = {};
@@ -2162,23 +2611,30 @@ async function loadPractices() {
         row.className = 'tp-practice' + (off ? ' off' : '');
         const b = document.createElement('button');
         b.type = 'button'; b.setAttribute('aria-expanded', 'false');
-        const when = document.createElement('div'); when.className = 'when';
-        const line = document.createElement('span');
+        // 2026-11-19 — a date block (SUN / 22 / NOV), the time, the practice's
+        // name as a chip in the team accent, then where and who's out.
+        const el = (tag, cls, text) => { const x = document.createElement(tag); x.className = cls; if (text != null) x.textContent = text; return x; };
+        const d = new Date(p.dateMs);
+        const date = el('span', 'date');
+        date.append(el('span', 'dw', d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()),
+            el('span', 'dn', String(d.getDate())),
+            el('span', 'mo', d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()));
+        date.setAttribute('aria-label', practiceDay(p.dateMs));
+        const info = el('span', 'info');
+        const when = el('span', 'when');
+        when.append(el('span', 'tm', practiceRange(p.dateMs, p.endMs)));
         const other = p.kind === 'other';
-        line.textContent = `${other ? '\u{1F4C5} ' + (p.label || 'Team date') + ' · ' : ''}${practiceDay(p.dateMs)} · ${practiceTime(p.dateMs)}\u2013${practiceTime(p.endMs)}`;
-        when.append(line);
-        if (off) { const t = document.createElement('span'); t.className = 'off-tag'; t.textContent = 'Cancelled'; when.append(t); }
-        b.append(when);
-        const sub = [other ? '' : p.label, p.location].filter(Boolean).join(' · ');
-        if (sub) { const w = document.createElement('div'); w.className = 'where'; w.textContent = sub; b.append(w); }
+        const name = other ? (p.label || 'Team date') : p.label;
+        if (name) when.append(el('span', 'lbl', name));
+        if (off) when.append(el('span', 'off-tag', 'Cancelled'));
+        info.append(when);
+        if (p.location) info.append(el('span', 'where', p.location));
         const n = names['practice_' + p.id];
-        if (n && !off && ((n.out || []).length || (n.in || []).length)) {
-            const w = document.createElement('div'); w.className = 'tp-pills';
-            for (const [list2, cls] of [[n.out || [], 'out'], [n.in || [], 'in']]) for (const name of list2) {
-                const s = document.createElement('span'); s.className = cls; s.textContent = name; w.append(s);
-            }
-            b.append(w);
+        if (n && !off) {
+            if ((n.out || []).length) info.append(el('span', 'who', 'Can’t make it: ' + n.out.join(', ')));
+            if ((n.in || []).length) info.append(el('span', 'who', 'Will be there: ' + n.in.join(', ')));
         }
+        b.append(date, info);
         row.append(b);
         b.onclick = () => togglePractice(row, b, p);
         return row;
@@ -2387,44 +2843,149 @@ function updateUserBar() {
         <a href="dashboard.html" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none;">My Dashboard</a>
         <button class="sign-out-btn" onclick="doSignOut()">Sign out</button>`;
 
-    // Follow area — under team info
+    // Follow area — under team info. 2026-11-19: who you are on this team is
+    // a row of chips (Team manager, Following, Parent of …), the mockup's look.
     let followBtn = '';
-    let statusText = '';
+    const roles = [];
 
     if (isManager) {
-        statusText = '👑 Team Manager';
+        roles.push(['shield', 'Team manager']);
     } else if (isSubscriber) {
-        // 2026-06-01 — "✓ Following" is status only, never an action: the
+        // 2026-06-01 — "Following" is status only, never an action: the
         // single toggle it replaced was one tap from a silent unfollow.
         // 2026-08-17 — the Unfollow button that used to sit right here moved to
         // #unfollowArea at the very bottom of the page (Eric: too easy to click).
-        followBtn = `
-            <span class="follow-btn following" style="cursor:default;pointer-events:none;">✓ Following</span>
-        `;
+        roles.push(['check', 'Following']);
         const ua = $('unfollowArea');
         if (ua) ua.style.display = 'block';
     } else if (subStatus === 'pending' && (subSource === 'owner_invite' || subSource === 'hub_invite')) {
         // An invitation waiting on THIS person: accept it here (2026-10-24 —
         // it showed "Request to Follow" / "request pending" instead).
         followBtn = `<button class="follow-btn" id="acceptInviteBtn" onclick="acceptInvite()">Accept invitation</button>`;
-        statusText = 'The team invited you to follow';
+        roles.push(['mail', 'The team invited you to follow']);
     } else if (subStatus === 'pending') {
-        statusText = '⏳ Follow request pending';
+        roles.push(['clock', 'Follow request pending']);
     } else if (subStatus === 'blocked') {
         // Don't show anything
     } else if (isPublic) {
         followBtn = `<button class="follow-btn" onclick="doFollow()">${['link_only', 'signed_in'].includes(hubProfile && hubProfile.visibility) ? 'Follow Team' : 'Request to Follow'}</button>`;
     }
+    if (isCoach && !isManager) roles.unshift(['whistle', 'Coach']);
 
     if (followArea) followArea.innerHTML = followBtn;
-    $('followStatus').textContent = statusText;
+    heroRoles = roles;
+    renderRoles();
+}
+
+// Role chips in the hero. Family links ("Parent of Audrey B.") join once the
+// claims and the roster names have loaded (loadRoster calls this again).
+let heroRoles = [];
+const ROLE_ICONS = {
+    shield: '<path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    whistle: '<circle cx="9" cy="14" r="5"/><path d="M12.5 10.5L21 6v4l-6 2"/>',
+    person: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+};
+function renderRoles() {
+    const el = $('followStatus');
+    if (!el) return;
+    const chips = currentUser ? heroRoles.slice() : [];
+    if (currentUser) for (const [pid, c] of Object.entries(myClaims || {})) {
+        if (!c || c.status !== 'approved' || !rosterNames[pid]) continue;
+        const rel = String(c.relationship || 'family').toLowerCase();
+        chips.push(['person', rel === 'self' ? `${rosterNames[pid]} (you)` : relationshipLabel(rel, rosterNames[pid])]);
+    }
+    el.innerHTML = chips.map(([icon, text]) =>
+        `<span class="tp-role"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ROLE_ICONS[icon] || ''}</svg>${escapeHtml(text)}</span>`
+    ).join('');
+}
+
+// ── Team colours (2026-11-19) ─────────────────────────────────────────────
+// The team's two colours drive the page (mockup claude.ai/artifact/
+// RpnnnH4gm5SFCAJjJUGBdw). Hero = `color`. Accent = `color2` when it is a real
+// colour, else `color`, else the page's own accent (orange, or the in-app
+// palette), so a black-and-white team still gets one. Every text colour is
+// picked by contrast, never assumed, because teams choose anything.
+function hexRgb(c) {
+    let h = typeof c === 'number' ? (c >>> 0).toString(16).padStart(8, '0') : String(c || '').trim().replace('#', '');
+    if (h.length === 8) h = h.slice(2);                 // Android ARGB
+    if (h.length === 3) h = h.split('').map(x => x + x).join('');
+    if (!/^[0-9a-f]{6}$/i.test(h)) return null;
+    return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16));
+}
+function teamColours(p) {
+    const toHex = (c) => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+    const lum = (c) => c.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); })
+        .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+    const neutral = (c) => !c || Math.max(...c) - Math.min(...c) < 40;
+    // Pushes a colour toward black or white until it reads on `bg`.
+    const readable = (c, bg, min) => {
+        const to = lum(bg) > 0.4 ? [0, 0, 0] : [255, 255, 255];
+        let t = 0, out = c;
+        while (contrast(out, bg) < min && t < 1) { t += 0.05; out = mix(c, to, t); }
+        return out;
+    };
+    const INK = [20, 20, 20], WHITE = [255, 255, 255];
+    const on = (c) => contrast(WHITE, c) >= contrast(INK, c) ? WHITE : INK;
+    const theme = document.documentElement.getAttribute('data-theme');
+    const dark = theme ? theme === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches;
+    const bg = dark ? [0x1C, 0x1D, 0x21] : [0xF5, 0xF5, 0xF2];
+    const surface = dark ? [0x26, 0x28, 0x2D] : [0xFF, 0xFF, 0xFF];
+    const spot = dark ? [0x0F, 0x10, 0x13] : [0x17, 0x18, 0x1B];
+
+    const c1 = hexRgb(p.color), c2 = hexRgb(p.color2);
+    const page = hexRgb(getComputedStyle(document.body).getPropertyValue('--accent')) || [0xFF, 0x96, 0x40];
+    const hero = c1 || [0x15, 0x65, 0xC0];
+    const accent = !neutral(c2) ? c2 : !neutral(c1) ? c1 : page;
+    const onHero = on(hero), heroWhite = onHero === WHITE;
+    const heroAccent = contrast(accent, hero) >= 2 ? accent : onHero;
+    const onAccent = on(accent);
+    const wash = mix(bg, accent, dark ? 0.14 : 0.12);
+    const set = {
+        '--team-color': toHex(hero),
+        '--tc-hero': toHex(hero), '--tc-on-hero': toHex(onHero),
+        '--tc-hero-sub': heroWhite ? 'rgba(255,255,255,0.78)' : 'rgba(20,20,20,0.74)',
+        '--tc-hero-line': heroWhite ? 'rgba(255,255,255,0.40)' : 'rgba(20,20,20,0.35)',
+        '--tc-hero-chip': heroWhite ? 'rgba(255,255,255,0.14)' : 'rgba(20,20,20,0.10)',
+        '--tc-hero-accent': toHex(heroAccent), '--tc-on-hero-accent': toHex(on(heroAccent)),
+        '--tc-accent': toHex(accent), '--tc-on-accent': toHex(onAccent),
+        '--tc-on-accent-line': onAccent === WHITE ? 'rgba(255,255,255,0.35)' : 'rgba(20,20,20,0.25)',
+        '--tc-accent-text': toHex(readable(readable(accent, bg, 4.6), surface, 4.6)),
+        '--tc-accent-on-dark': toHex(readable(accent, spot, 4.6)),
+        // The stripe under the hero only when it can be told apart from it.
+        '--tc-stripe': contrast(accent, hero) >= 1.5 ? `6px solid ${toHex(accent)}` : 'none',
+        // A white logo tile on a near-white hero needs an edge.
+        '--tc-logo-edge': lum(hero) > 0.75 ? '0 0 0 1px rgba(0,0,0,0.14)' : 'none',
+        '--tc-wash': toHex(wash), '--tc-wash-line': toHex(mix(bg, accent, 0.35)),
+        '--tc-wash-text': toHex(readable(accent, wash, 4.6)),
+    };
+    for (const k in set) document.documentElement.style.setProperty(k, set[k]);
+}
+
+/** "PVA 14-1 Pink" → PVA, "CT Bulldogs" → CT, "Lakeside Hawks" → LH. */
+function teamInitials(name) {
+    const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return '';
+    if (/^[A-Z]{2,4}$/.test(words[0])) return words[0].slice(0, 3);
+    const letters = words.filter(w => /^\p{L}/u.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    return letters || words[0].slice(0, 2).toUpperCase();
+}
+
+let activeSeasonName = '';   // set by loadSeasons()
+/** "VOLLEYBALL · 2026-27": the sport, and the active season when there is one. */
+function heroEyebrow() {
+    const el = $('teamSport');
+    if (el && hubProfile) el.textContent = [sportName(hubProfile.sport), activeSeasonName].filter(Boolean).join(' · ');
 }
 
 function renderHeader() {
     const p = hubProfile;
     $('colorBar').style.background = `linear-gradient(90deg, ${p.color || '#1565C0'}, ${p.color2 || '#FFFFFF'})`;
-    // 2026-10-16 — the redesigned hero is painted in the team's colour.
-    document.documentElement.style.setProperty('--team-color', p.color || '#1565C0');
+    try { teamColours(p); } catch (e) { console.error('team colours failed:', e); }
     // v1.1.643 — Team logo. `logoUrl` is the Firebase Storage public download
     // URL; only render when it actually starts with http(s) since pre-v643
     // docs may still carry phone-local paths.
@@ -2442,14 +3003,18 @@ function renderHeader() {
     // showing, stacking a generic volleyball under it reads as two badges
     // fighting — and the sport is already named on the line below. Keep the
     // emoji as the fallback it was always meant to be.
-    $('teamEmoji').textContent = hasLogo ? '' : sportEmoji(p.sport);
+    // 2026-11-19 — no logo: the team's initials in an outlined tile, as in
+    // the approved mockup (the sport is already named in the eyebrow).
+    $('teamEmoji').textContent = hasLogo ? '' : (teamInitials(p.teamName) || sportEmoji(p.sport));
     $('teamEmoji').style.display = hasLogo ? 'none' : '';
-    $('teamName').textContent = p.teamName || 'Team';
+    // Hyphenated parts ("14-1") stay on one line; the name wraps between words.
+    $('teamName').innerHTML = escapeHtml(p.teamName || 'Team').split(' ')
+        .map(w => w.includes('-') ? `<span style="white-space:nowrap">${w}</span>` : w).join(' ');
     // Name the team in the get-the-app bar — "Follow PVA 14-1 Select in the
     // app" is a reason to tap; "Follow this team" is furniture.
     const appCtaTitle = $('appCtaTitle');
     if (appCtaTitle && p.teamName) appCtaTitle.textContent = `Follow ${p.teamName} in the app`;
-    $('teamSport').textContent = sportName(p.sport);
+    heroEyebrow();
     const clubLine = $('teamClub');
     if (clubLine) {
         const c = p.club || {};
@@ -2475,8 +3040,8 @@ function renderHeader() {
         if (copyBtn) copyBtn.onclick = async () => {
             try {
                 await navigator.clipboard.writeText(url);
-                copyBtn.innerHTML = '&#9989; Copied';
-                setTimeout(() => { copyBtn.innerHTML = '&#128279; Copy Link'; }, 1800);
+                copyBtn.textContent = 'Copied';
+                setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 1800);
             } catch (_) {
                 window.prompt('Copy this link:', url);   // clipboard blocked
             }
@@ -2489,11 +3054,9 @@ function renderHeader() {
                 };
             } else {
                 shareBtn.style.display = 'none';
-                const grid = shareBtn.parentElement;
-                if (grid) grid.style.gridTemplateColumns = '1fr';
             }
         }
-        shareCard.style.display = 'block';
+        shareCard.style.display = 'flex';
     }
     document.title = `${p.teamName} — ScoreFrame`;
 
@@ -2998,16 +3561,9 @@ async function loadSeasons() {
         // unconditionally so it's visible even when the switcher is
         // hidden (single-season teams). Cleared/hidden when there's
         // no active season — don't fake a label.
-        const seasonEl = $('teamSeason');
-        if (seasonEl) {
-            if (activeSeason && activeSeason.name) {
-                seasonEl.textContent = `📅 ${activeSeason.name}`;
-                seasonEl.style.display = 'block';
-            } else {
-                seasonEl.textContent = '';
-                seasonEl.style.display = 'none';
-            }
-        }
+        // 2026-11-19 — it now rides in the hero's eyebrow: "VOLLEYBALL · 2026-27".
+        activeSeasonName = (activeSeason && activeSeason.name) || '';
+        heroEyebrow();
         renderSeasonSwitcher();
     } catch (e) {
         console.warn('loadSeasons failed:', e);
@@ -3042,9 +3598,9 @@ function renderSeasonSwitcher() {
         const isSelected = sid === selectedSeasonId;
         btn.style.cssText = `
             padding: 8px 14px; border-radius: 16px; font-size: 12px; font-weight: 700;
-            white-space: nowrap; cursor: pointer; border: 1px solid var(--accent);
-            background: ${isSelected ? 'var(--accent)' : 'transparent'};
-            color: ${isSelected ? '#1A1A1A' : 'var(--accent)'};
+            white-space: nowrap; cursor: pointer; border: 1px solid var(--tc-accent-text);
+            background: ${isSelected ? 'var(--tc-accent)' : 'transparent'};
+            color: ${isSelected ? 'var(--tc-on-accent)' : 'var(--tc-accent-text)'};
         `;
         btn.onclick = () => {
             selectedSeasonId = sid;
@@ -3068,6 +3624,7 @@ function matchesSelectedSeason(game) {
 // "New follow request" email (sent by the notifyOwnerOfFollowRequest CF)
 // can approve / block right from the web page without opening the app.
 // Only renders for the team's owner / managers.
+let followersOpen = false;
 async function loadPendingRequests() {
     // ONE followers surface (Eric, 2026-08-17).
     //
@@ -3127,9 +3684,33 @@ async function loadPendingRequests() {
         followers.sort((a, b) => weight(a) - weight(b) ||
             String(a.name || '').localeCompare(String(b.name || '')));
 
-        $('pendingRequestsSection').style.display = 'block';
+        $('pendingRequestsSection').style.display = 'flex';
         const list = $('pendingRequestsList');
         list.innerHTML = '';
+
+        // 2026-11-19 — folded to a count, faces and "Manage followers". It
+        // opens by itself when someone is waiting on a decision, and stays
+        // open across the reloads an approve or remove does.
+        const waiting = followers.filter((f) =>
+            (f.status === 'pending' && !['owner_invite', 'hub_invite'].includes(String(f.source || '')))
+            || (f.links || []).some((l) => l.status === 'pending')).length;
+        $('followerCount').textContent = String(followers.length);
+        const fsub = $('followerSub');
+        fsub.textContent = waiting ? `${waiting} request${waiting === 1 ? '' : 's'} waiting` : 'No requests waiting';
+        fsub.classList.toggle('wait', waiting > 0);
+        const ini = (n) => String(n || '?').split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+        const faces = followers.slice(0, 3).map((f) => `<span>${escapeHtml(ini(f.name))}</span>`);
+        if (followers.length > 3) faces.push(`<span class="more">+${followers.length - 3}</span>`);
+        $('followerStack').innerHTML = faces.join('');
+        const toggle = $('followerToggle');
+        const setOpen = (open) => {
+            list.hidden = !open;
+            toggle.setAttribute('aria-expanded', String(open));
+            toggle.textContent = open ? 'Hide followers' : 'Manage followers';
+        };
+        if (waiting > 0) followersOpen = true;
+        setOpen(followersOpen);
+        toggle.onclick = () => { followersOpen = list.hidden; setOpen(followersOpen); };
 
         for (const f of followers) {
             const card = document.createElement('div');
@@ -3159,7 +3740,7 @@ async function loadPendingRequests() {
             else if (f.status === 'approved') sub.push(invited ? 'accepted your invitation' : 'following');
             const meta = document.createElement('div');
             meta.textContent = sub.join('  ·  ');
-            meta.style.cssText = 'font-size:12px; color:#8b8b8b; overflow:hidden; text-overflow:ellipsis;';
+            meta.style.cssText = 'font-size:12px; color:var(--tc-ink2); overflow:hidden; text-overflow:ellipsis;';
             info.appendChild(meta);
 
             const when = f.requestedAt || f.since;
@@ -3169,7 +3750,7 @@ async function loadPendingRequests() {
                         ? (invited ? 'Invited ' : 'Requested ')
                         : 'Since ') +
                     new Date(when).toLocaleDateString();
-                w.style.cssText = 'font-size:11px; color:#777; margin-top:2px;';
+                w.style.cssText = 'font-size:11px; color:var(--tc-muted); margin-top:2px;';
                 info.appendChild(w);
             }
             head.appendChild(info);
@@ -3233,7 +3814,7 @@ async function loadPendingRequests() {
             // Family links — the part that had nowhere to live.
             for (const l of (f.links || [])) {
                 const row = document.createElement('div');
-                row.style.cssText = 'margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:8px; flex-wrap:wrap;';
+                row.style.cssText = 'margin-top:8px; padding-top:8px; border-top:1px solid var(--tc-line); display:flex; align-items:center; gap:8px; flex-wrap:wrap;';
                 const label = document.createElement('div');
                 const rel = String(l.relationship || 'family');
                 const isSelf = rel.toLowerCase() === 'self';
@@ -3289,7 +3870,7 @@ async function loadPendingRequests() {
         // so say that rather than leaving a manager wondering where it went.
         if (hubProfile && hubProfile.visibility === 'public') {
             const note = document.createElement('div');
-            note.style.cssText = 'font-size:12px; color:#8b8b8b; margin-top:6px;';
+            note.style.cssText = 'font-size:12px; color:var(--tc-ink2); margin-top:6px;';
             note.textContent = 'Family links are off while this team is public, because anyone can follow a public team. Switch to private or invite-only to let parents and guardians link themselves to a player.';
             list.appendChild(note);
         }
@@ -3429,7 +4010,8 @@ function stageVenue(g) {
 
 function stageOpponent(g) {
     const childCount = Array.isArray(g.gameIds) ? g.gameIds.length : 0;
-    if (g.multiGame === true || childCount > 1) return g.eventName || 'Tournament';
+    // Tournaments imported from a schedule photo keep their name in `opponent`.
+    if (g.multiGame === true || childCount > 1) return g.eventName || g.opponent || 'Tournament';
     return g.opponent || g.eventName || 'Game';
 }
 
@@ -3449,39 +4031,76 @@ function renderScheduleRail() {
     if (!section || !rail) return;
     // Archived teams stop advertising a schedule, same as the list below.
     const playable = (hubProfile?.status === 'archived') ? [] : scheduleUpcoming;
-    if (!playable.length) { section.style.display = 'none'; return; }
+    if (!playable.length) {
+        section.style.display = 'none';
+        try { renderScoreline(); } catch (e) { console.error('record render failed:', e); }
+        return;
+    }
 
     section.style.display = 'block';
     const label = $('scheduleRailLabel');
-    if (label) label.textContent = `Schedule · ${playable.length} upcoming`;
+    if (label) label.textContent = `${playable.length} upcoming`;
 
+    // 2026-11-19 — calendar tiles: a strip with the weekday and month, the day
+    // in big numbers, then what and where. No time when none was set (it read
+    // "12:00 AM").
     rail.innerHTML = playable.map((g, i) => {
         const d = (typeof g.date === 'number') ? new Date(g.date) : null;
-        const dt = d
-            ? d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+        const strip = d
+            ? `${d.toLocaleDateString(undefined, { weekday: 'short' })} ${d.toLocaleDateString(undefined, { month: 'short' })}`
             : 'TBD';
-        const tm = d ? d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : '';
-        const venue = stageVenue(g);
+        let day = d ? String(d.getDate()) : '–';
+        const end = (d && typeof g.endDate === 'number' && g.endDate > g.date) ? new Date(g.endDate) : null;
+        if (end && end.getMonth() === d.getMonth() && end.getDate() !== d.getDate()) day += '–' + end.getDate();
         const isLive = g.status === 'live';
         const isPostponed = g.status === 'postponed';
-        // "NEXT" marks the soonest entry that is actually going to happen.
-        const isNext = i === 0 && !isPostponed;
-        let pill = '';
-        if (isLive) pill = '<span class="pill" style="background:rgba(204,34,34,0.16);color:#CC2222;">● LIVE</span>';
-        else if (isPostponed) pill = '<span class="pill" style="background:var(--bg-elevated);color:var(--text-muted);">POSTPONED</span>';
+        // "Next" marks the soonest entry that is actually going to happen.
+        const isNext = i === 0 && !isPostponed && !isLive;
+        const flag = isLive ? '<span class="live">● Live</span>' : isPostponed ? '<span>Postponed</span>' : isNext ? '<span>Next</span>' : '';
+        const place = [gameTime(g), venueWord(g), placeName(g)].filter(Boolean).join(' · ');
         const href = stageHref(g);
         const inner = `
-            ${isNext ? '<span class="nx">NEXT</span>' : ''}
-            <div class="dt">${escapeHtml(dt)}</div>
-            <div class="op">${escapeHtml(stageOpponent(g))}</div>
-            ${venue ? `<div class="ha">${venue}</div>` : ''}
-            ${tm ? `<div class="tm">${escapeHtml(tm)}</div>` : ''}
-            ${pill}`;
+            <span class="strip"><span>${escapeHtml(strip)}</span>${flag}</span>
+            <span class="bd">
+                <span class="day">${escapeHtml(day)}</span>
+                <span class="ti">${escapeHtml(stageOpponent(g))}</span>
+                ${place ? `<span class="pl">${escapeHtml(place)}</span>` : ''}
+            </span>`;
         return href
-            ? `<a class="tp-scard${isNext ? ' next' : ''}" href="${href}">${inner}</a>`
+            ? `<a class="tp-scard${isNext ? ' next' : ''}" href="${href}" style="text-decoration:none;color:inherit;">${inner}</a>`
             : `<div class="tp-scard${isNext ? ' next' : ''}">${inner}</div>`;
     }).join('');
+    try { renderScoreline(); } catch (e) { console.error('record render failed:', e); }
 }
+
+/** "6:00 PM", or '' when the game has no time set (stored as midnight). */
+function gameTime(g) {
+    if (typeof g.date !== 'number' || g.timeSet === false) return '';
+    const d = new Date(g.date);
+    if (d.getHours() === 0 && d.getMinutes() === 0) return '';
+    return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+/** A location, with the "TBD" placeholder written out. */
+function placeName(g) {
+    const l = String(g.location || '').trim();
+    return /^(tbd|tba)$/i.test(l) ? 'Place to be announced' : l;
+}
+/** stageVenue() without the emoji. */
+function venueWord(g) {
+    return g.isHome === true ? 'Home' : g.isHome === false ? 'Away' : '';
+}
+/** The other team in a played game, "vs X" or "at X", from this team's side. */
+function opponentLine(g) {
+    const away = !!teamId && g.awayTeamId === teamId && g.homeTeamId !== teamId;
+    const name = String((away ? g.homeTeam : g.awayTeam) || g.opponent || '').trim();
+    if (!name || name === 'Home' || name === 'Away') return 'Opponent not entered';
+    return (away ? 'at ' : 'vs ') + name;
+}
+function opponentName(g) {
+    return opponentLine(g).replace(/^(vs|at) /, '');
+}
+const shortDay = (ms) => new Date(ms).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+const CHEVRON = '<svg class="tp-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 
 /** The stage. Priority: live (defer to #liveSection) → next game countdown
  *  → most recent completed game → plain empty line. */
@@ -3501,24 +4120,18 @@ function renderStage() {
         g.status !== 'postponed' && typeof g.date === 'number' && g.date > Date.now());
 
     if (next) {
-        const d = new Date(next.date);
-        const when = d.toLocaleString(undefined, {
-            weekday: 'short', month: 'short', day: 'numeric',
-            hour: 'numeric', minute: '2-digit',
-        });
-        const venue = stageVenue(next);
-        const loc = next.location ? ` · ${escapeHtml(next.location)}` : '';
+        // 2026-11-19 — the next game fills a card in the team accent.
+        const when = [shortDay(next.date), gameTime(next)].filter(Boolean).join(' · ');
+        const place = [venueWord(next), placeName(next)].filter(Boolean).join(' · ');
         const href = stageHref(next);
         const body = `
-            <div class="tp-stage-card">
-                <div class="label-top">📅 Next game</div>
-                <div class="matchup">${escapeHtml(stageOpponent(next))}</div>
-                <div class="when">${escapeHtml(when)}${venue ? ` · ${venue}` : ''}${loc}</div>
+            <div class="tp-next">
+                <span class="eb">Next game · ${escapeHtml(when)}</span>
+                <div class="ti">${escapeHtml(stageOpponent(next))}</div>
+                ${place ? `<div class="pl">${escapeHtml(place)}</div>` : ''}
                 <div class="tp-count" id="stageCount"></div>
             </div>`;
-        stage.innerHTML = href
-            ? `<a href="${href}" style="text-decoration:none;color:inherit;display:block;">${body}</a>`
-            : body;
+        stage.innerHTML = href ? `<a class="tp-plain" href="${href}">${body}</a>` : body;
         stage.style.display = 'block';
 
         // Same tick shape as game.html's countdown so both pages agree.
@@ -3551,26 +4164,33 @@ function renderStage() {
 
     // Nothing scheduled — show the last game that was actually played.
     if (stageLastCompleted) {
+        // 2026-11-19 — the last game as a scoreboard: both teams, the winner
+        // bright, the loser dimmed, a Win/Loss/Tie tag.
         const g = stageLastCompleted;
-        const d = (typeof g.date === 'number') ? new Date(g.date) : null;
-        const when = d ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
         const [hs, as_] = ourTheir(g, teamId);
-        const outcome = hs > as_ ? 'W' : as_ > hs ? 'L' : 'T';
         const href = stageHref(g);
         const isBowling = (hubProfile?.sport || '').toUpperCase() === 'BOWLING';
-        // Bowling has no opponent score to show, so lead with the series total.
-        const scoreLine = isBowling
-            ? `<div class="matchup">${escapeHtml(String(hs))}</div>`
-            : `<div class="matchup">${hs} – ${as_} <span style="color:var(--text-muted);font-size:14px;">${outcome}</span></div>`;
+        const what = g.phaseLabel || g.eventName || '';
+        const foot = [typeof g.date === 'number' ? shortDay(g.date) : '', g.phaseLabel ? g.eventName : '', g.location]
+            .filter((x, i, all) => x && String(x).toLowerCase() !== what.toLowerCase() && all.indexOf(x) === i).join(' · ');
+        const ours = hubProfile?.teamName || 'Us';
+        const theirs = opponentLine(g) === 'Opponent not entered' ? 'Opponent' : opponentName(g);
+        const row = (name, score, lost) =>
+            `<div class="row${lost ? ' lost' : ''}"><span class="nm">${escapeHtml(name)}</span><span class="sc">${escapeHtml(String(score))}</span></div>`;
+        // Bowling has no opponent score to show, so the series total stands alone.
+        const outcome = hs > as_ ? ['w', 'Win'] : as_ > hs ? ['l', 'Loss'] : ['t', 'Tie'];
         const body = `
-            <div class="tp-stage-card">
-                <div class="label-top">Most recent</div>
-                ${scoreLine}
-                <div class="when" style="margin-bottom:0;">${escapeHtml(stageOpponent(g))}${when ? ` · ${escapeHtml(when)}` : ''}</div>
+            <div class="tp-final">
+                <div class="top">
+                    <span class="eb">${isBowling ? 'Last session' : 'Last game'}${what ? ' · ' + escapeHtml(what) : ''}</span>
+                    ${isBowling ? '' : `<span class="tag ${outcome[0]}">${outcome[1]}</span>`}
+                </div>
+                <div class="rows">
+                    ${isBowling ? row(ours, hs, false) : row(ours, hs, as_ > hs) + row(theirs, as_, hs > as_)}
+                </div>
+                ${foot ? `<div class="foot">${escapeHtml(foot)}</div>` : ''}
             </div>`;
-        stage.innerHTML = href
-            ? `<a href="${href}" style="text-decoration:none;color:inherit;display:block;">${body}</a>`
-            : body;
+        stage.innerHTML = href ? `<a class="tp-plain" href="${href}">${body}</a>` : body;
         stage.style.display = 'block';
         return;
     }
@@ -3642,38 +4262,32 @@ function renderSeasonStats(stats) {
     el.style.display = 'block';
 }
 
+// 2026-11-19 — the hero's record: big Won/Lost(/Tied) numbers and the last ten
+// results (oldest left, newest right), or for bowling the average and high
+// game. Before any game is played it says how many are on the schedule.
+// Called with no argument from the schedule rail, which reuses the last stats.
+let lastScoreline = null;
 function renderScoreline(stats) {
+    if (stats !== undefined) lastScoreline = stats;
+    stats = lastScoreline;
     const el = $('teamScoreline');
-    const textEl = $('teamRecord');
     if (!el) return;
+    const cell = (v, k) => `<div class="cell"><span class="n">${escapeHtml(String(v))}</span><span class="k">${k}</span></div>`;
     if (!stats) {
-        // Restore the plain text line too — switching to a season with no
-        // games must not leave both the scoreline AND the text hidden.
-        el.style.display = 'none';
-        if (textEl) textEl.style.display = '';
+        const n = (hubProfile?.status === 'archived') ? 0
+            : (scheduleUpcoming || []).filter(g => g.status !== 'postponed').length;
+        el.innerHTML = n ? `<div class="cells">${cell(n, `Game${n === 1 ? '' : 's'} on the<br>schedule`)}</div>` : '';
         return;
     }
-
     const cells = stats.bowling
-        ? [
-            { v: stats.avg, k: 'Average', win: true },
-            { v: stats.high, k: 'High game' },
-            { v: stats.games, k: 'Games' },
-            { v: stats.sessions, k: 'Sessions' },
-          ]
-        : [
-            { v: stats.w, k: 'Won', win: true },
-            { v: stats.l, k: 'Lost' },
-            ...(stats.t > 0 ? [{ v: stats.t, k: 'Tied' }] : []),
-            { v: stats.pct, k: 'Win %' },
-          ];
-
-    el.innerHTML = cells.map(c =>
-        `<div class="tp-sl${c.win ? ' win' : ''}"><div class="v">${escapeHtml(String(c.v))}</div><div class="k">${c.k}</div></div>`
-    ).join('');
-    el.style.display = 'flex';
-    // The scoreline replaces the old text line rather than repeating it.
-    if (textEl) textEl.style.display = 'none';
+        ? [cell(stats.avg, 'Average'), cell(stats.high, 'High game')]
+        : [cell(stats.w, 'Won'), cell(stats.l, 'Lost'), ...(stats.t > 0 ? [cell(stats.t, 'Tied')] : [])];
+    const form = (stats.form || '').split('').filter(Boolean);
+    el.innerHTML = `<div class="cells">${cells.join('')}</div>` + (form.length ? `
+        <div class="tp-form" role="img" aria-label="Last ${form.length} results, newest last: ${form.join(' ')}">
+            <span class="k">Last ${form.length}</span>
+            <span class="sq">${form.map(l => `<span class="${l.toLowerCase()}">${l}</span>`).join('')}</span>
+        </div>` : '');
 }
 
 async function loadSchedule() {
@@ -3877,11 +4491,10 @@ async function loadSchedule() {
 // (teams/{teamId}/players/{id}) and renders them as compact value
 // + label chips. Returns '' when the player hasn't played a game
 // yet so untracked / brand-new entries stay clean.
-function buildPlayerStatChips(p, sport) {
-    if (!(p.gamesPlayed > 0)) return '';
-    const chip = (label, value) =>
-        `<div class="player-stat-chip"><div class="pv">${value}</div><div class="pl">${label}</div></div>`;
+function playerStatPairs(p, sport) {
+    if (!(p.gamesPlayed > 0)) return [];
     const chips = [];
+    const chip = (label, value) => [label, value];
     const s = String(sport || '').toUpperCase();
     const games = p.gamesPlayed || 0;
     if (s === 'BOWLING') {
@@ -3922,8 +4535,7 @@ function buildPlayerStatChips(p, sport) {
         }
         chips.push(chip('G', games));
     }
-    if (chips.length === 0) return '';
-    return `<div class="player-stats-grid">${chips.join('')}</div>`;
+    return chips;
 }
 
 
@@ -4063,10 +4675,13 @@ async function loadStaff() {
         const real = rows.filter(r => r.name);
         if (!real.length) { section.style.display = 'none'; return; }
         section.style.display = 'block';
+        // 2026-11-19 — initials in the team colour, the role in small caps.
+        const ini = (n) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
         list.innerHTML = real.map(r => `
-            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-                <span style="font-size:14px;font-weight:600;flex:1;">${escapeHtml(r.name)}</span>
-                <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);">${escapeHtml(r.role)}</span>
+            <div class="tp-staff">
+                <span class="av" aria-hidden="true">${escapeHtml(ini(r.name))}</span>
+                <span class="nm">${escapeHtml(r.name)}</span>
+                <span class="rl">${escapeHtml(r.role)}</span>
             </div>`).join('');
     } catch (e) {
         console.debug('loadStaff:', e && e.code);
@@ -4090,7 +4705,6 @@ async function loadRoster() {
         section.style.display = 'block';
 
         const sport = hubProfile.sport || '';
-        let html = '';
 
         // ORDER THE ROSTER THE WAY THE COACH ORDERED IT (Eric, 2026-08-17).
         //
@@ -4120,6 +4734,13 @@ async function loadRoster() {
             return String(A.name || '').localeCompare(String(B.name || ''));
         });
 
+        // 2026-11-19 — jersey tiles three across, your player filled with the
+        // team accent; a one-player roster gets one wide tile with the stats.
+        const solo = ordered.length === 1;
+        const tiles = [];
+        rosterNames = {};
+        const rosterEb = $('rosterEyebrow');
+        if (rosterEb) rosterEb.textContent = `${ordered.length} player${ordered.length === 1 ? '' : 's'}`;
         ordered.forEach(d => {
             const p = d.data();
             // The doc's own `name` is already short; this only adds back a
@@ -4128,7 +4749,7 @@ async function loadRoster() {
             // slipped through before the trigger existed.
             p.name = resolvePlayerName(d.id, p.name);
             const num = p.number || '';
-            const pos = p.position ? `<div class="player-position">${p.position}</div>` : '';
+            const pos = p.position || '';
 
             // 2026-06-02 — Multi-chip career snapshot per roster row.
             // Replaces the previous one-line summary. Per-sport stat
@@ -4136,7 +4757,7 @@ async function loadRoster() {
             // basketball (PPG/3P%/REB/GAMES), baseball (AVG/HR/RBI/H),
             // volleyball (K/A/AST/GAMES), tennis/pickleball (W-L/GAMES),
             // fallback (W-L/GAMES).
-            const statHtml = buildPlayerStatChips(p, sport);
+            const stats = playerStatPairs(p, sport);
 
             // 2026-06-02 — "Stats" pill links to player.html scoped to
             // this team. Use the doc ID (which IS the playerId) so the
@@ -4151,6 +4772,7 @@ async function loadRoster() {
             // page, so one implementation covers web, iOS and Android.
             const claim = myClaims[d.id];
             let familyHtml = '';
+            const mine = !!(claim && claim.status === 'approved');
             // NOT ON PUBLIC TEAMS (Eric, 2026-08-16). On a public hub anyone can
             // follow and approval is automatic, so a passer-by could file a
             // family claim on a child. The team has to be private or invite-only
@@ -4185,9 +4807,9 @@ async function loadRoster() {
             // on the record, which is the thing the whole feature is for.
             if (currentUser && claimsAllowed) {
                 if (!claim) {
-                    familyHtml = `<button class="player-family-pill" data-claim-player="${escapeAttr(d.id)}" data-claim-name="${escapeAttr(p.name || 'Player')}">Follow</button>`;
+                    familyHtml = `<button type="button" class="tp-tag" data-claim-player="${escapeAttr(d.id)}" data-claim-name="${escapeAttr(p.name || 'Player')}">+ Follow</button>`;
                 } else if (claim.status === 'pending') {
-                    familyHtml = `<span class="player-family-pill pending" title="Waiting for a team manager to approve">⏳ Pending</span>`;
+                    familyHtml = `<span class="tp-tag" title="Waiting for a team manager to approve">Pending</span>`;
                 } else if (claim.status === 'approved') {
                     // Eric 2026-08-17: this read "✓ Your grandparent", which says
                     // the PLAYER is your grandparent — backwards, and it's the
@@ -4197,22 +4819,38 @@ async function loadRoster() {
                     // 'grandparent'" — and it's a button so they can change it
                     // or stop following without asking anyone.
                     const rel = String(claim.relationship || 'family');
-                    familyHtml = `<button class="player-family-pill approved" data-manage-player="${escapeAttr(d.id)}" data-manage-name="${escapeAttr(p.name || 'Player')}" data-manage-rel="${escapeAttr(rel)}" title="Change your relationship, or stop following">✓ ${escapeHtml(relationshipPill(rel))} ⚙</button>`;
+                    // 2026-11-19 — the tile reads "Your player"; the relationship
+                    // is in the hero ("Parent of Audrey B.") and in the dialog.
+                    familyHtml = `<button type="button" class="tp-tag" data-manage-player="${escapeAttr(d.id)}" data-manage-name="${escapeAttr(p.name || 'Player')}" data-manage-rel="${escapeAttr(rel)}" title="${escapeAttr(relationshipPill(rel))}: change your relationship, or stop following">${rel.toLowerCase() === 'self' ? 'This is you' : 'Your player'}</button>`;
                 } else if (claim.status === 'denied') {
-                    familyHtml = `<span class="player-family-pill denied" title="A team manager declined this request">Declined</span>`;
+                    familyHtml = `<span class="tp-tag" title="A team manager declined this request">Declined</span>`;
                 }
             }
-            html += `<div class="player-card">
-                <div class="player-number">${num || '–'}</div>
-                <div class="player-info">
-                    <div class="player-name">${escapeHtml(displayPlayerName(p.name))}</div>
-                    ${pos}${statHtml}
-                </div>
-                ${familyHtml}
-                <a class="player-stats-pill" href="${playerHref}">Stats</a>
-            </div>`;
+            const shown = displayPlayerName(p.name);
+            rosterNames[d.id] = shown;
+            if (solo) {
+                tiles.push(`<div class="tp-solo${mine ? ' mine' : ''}">
+                    <a href="${playerHref}" aria-label="${escapeAttr(shown)}: stats"></a>
+                    <span class="num">${escapeHtml(num || '–')}</span>
+                    <span class="txt">
+                        <span><span class="nm" style="display:block;">${escapeHtml(shown)}</span>${familyHtml || `<span class="who">${escapeHtml(pos || 'Player')}</span>`}</span>
+                        ${stats.length ? `<span class="stats">${stats.map(([l, v]) => `<span><b>${escapeHtml(String(v))}</b><i>${escapeHtml(l)}</i></span>`).join('')}</span>` : ''}
+                    </span>
+                    ${CHEVRON}
+                </div>`);
+            } else {
+                // Two stats at most on a tile; the player's page has the rest.
+                const line = stats.filter(([l]) => l !== 'G').slice(0, 2).map(([l, v]) => `${v} ${l}`).join(' · ');
+                tiles.push(`<div class="tp-pt${mine ? ' mine' : ''}">
+                    <a href="${playerHref}"><span class="num">${escapeHtml(num || '–')}</span><span class="nm">${escapeHtml(shown)}</span></a>
+                    ${pos ? `<span class="ps">${escapeHtml(pos)}</span>` : ''}
+                    ${line ? `<span class="st">${escapeHtml(line)}</span>` : ''}
+                    ${familyHtml}
+                </div>`);
+            }
         });
-        container.innerHTML = html;
+        container.innerHTML = solo ? tiles[0] : `<div class="tp-roster">${tiles.join('')}</div>`;
+        renderRoles();
         container.querySelectorAll('[data-claim-player]').forEach(btn => {
             btn.addEventListener('click', () => openFamilyLinkDialog(
                 btn.getAttribute('data-claim-player'),
@@ -4339,6 +4977,7 @@ window.openManageLinkDialog = function(playerId, playerName, currentRel) {
 
 /** This visitor's own claims on this team, keyed by playerId. */
 let myClaims = {};
+let rosterNames = {};   // playerId → the name this viewer sees; for the hero's "Parent of …" chips
 /** Every claim on the team — managers only, drives the approval list. */
 
 // 2026-08-17 — "This is me" added. A player old enough to have their own
@@ -4622,23 +5261,28 @@ async function loadPastGames() {
             );
         }
         const container = $('pastGames');
+        // 2026-11-19 — no games: one slim line, "Results · No games played yet".
+        const resultsSection = $('resultsSection');
+        const showEmpty = (msg) => {
+            if (resultsSection) resultsSection.classList.add('tp-empty');
+            container.innerHTML = `<div class="empty">${msg}</div>`;
+            const eb = $('resultsEyebrow'); if (eb) eb.textContent = '';
+        };
 
         if (snap.empty) {
-            container.innerHTML = '<div class="empty">No past games yet</div>';
+            showEmpty('No games played yet');
             $('teamRecord').textContent = '';
             return;
         }
+        if (resultsSection) resultsSection.classList.remove('tp-empty');
 
         pastGamesCache = [];
         let renderedCount = 0;
-        let html = '';
-        // v14 — Recent Games (past 7 days) — pinned above the schedule on
-        // the in-app Team viewer; same on web here. We build the recent
-        // strip out of the same card markup used for the full archive so
-        // duplicates with Past Games are intentional and visually identical.
-        const weekAgoMs = Date.now() - 7 * 24 * 3600 * 1000;
-        let recentHtml = '';
-        let recentCount = 0;
+        // 2026-11-19 — one list: a W/L block, the opponent, the score from this
+        // team's side. A tournament is one row with its games nested under it.
+        // Six show; "Show all" opens the rest. (The 7-day Recent strip that was
+        // built here went 2026-09-02.)
+        const rows = [];
         // Tournament containers in this window that will render as an event
         // card. A child game is hidden only when ITS card is on the page. One
         // whose container was deleted (or is still live/scheduled) shows as a
@@ -4661,6 +5305,22 @@ async function loadPastGames() {
                 && (!['scheduled', 'live', 'cancelled', 'postponed'].includes(x.status) || tournamentOver(x))
                 && matchesSelectedSeason(x)) renderedEventIds.add(d.id);
         });
+        // The games under each tournament on the page, for its nested rows.
+        const kidsByEvent = new Map();
+        snap.forEach(d => {
+            const x = { id: d.id, ...d.data() };
+            const ev = renderedEventIds.has(x.parentEventId) ? x.parentEventId
+                : renderedEventIds.has(x.eventId) ? x.eventId : null;
+            const n = Array.isArray(x.gameIds) ? x.gameIds.length : 0;
+            if (!ev || x.multiGame === true || n > 1
+                || ['scheduled', 'live', 'cancelled', 'postponed'].includes(x.status)) return;
+            if (!kidsByEvent.has(ev)) kidsByEvent.set(ev, []);
+            kidsByEvent.get(ev).push(x);
+        });
+        const gameHrefOf = (g) => `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}`;
+        const wlOf = (g) => { const [o, t] = ourTheir(g, teamId); return o > t ? 'W' : o < t ? 'L' : 'T'; };
+        const scoreOf = (g) => { const [o, t] = ourTheir(g, teamId); return `${o}\u2013${t}`; };
+        const TROPHY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M9 21h6M10 17h4"/></svg>';
         snap.forEach(d => {
             if (renderedCount >= 20) return;
             const g = { id: d.id, ...d.data() };
@@ -4679,50 +5339,45 @@ async function loadPastGames() {
             if (g.eventId && renderedEventIds.has(g.eventId)) return;
             // v13 — Season switcher filter.
             if (!matchesSelectedSeason(g)) return;
-            // Completed tournament container → render an event card that opens
-            // event.html (its child games are hidden above via parentEventId).
-            // Without this branch the container renders as a blank 0-0 game
-            // card. Not pushed to pastGamesCache so it stays out of the flat
-            // W/L record — the games are summarized on the event page.
+            // Completed tournament container → one row that opens event.html,
+            // with its games nested under it. Not pushed to pastGamesCache: the
+            // games themselves count toward the record further down.
             const _childCount = Array.isArray(g.gameIds) ? g.gameIds.length : 0;
             if (g.multiGame === true || _childCount > 1) {
                 renderedCount++;
                 const evHref = `/event.html?team=${encodeURIComponent(hubCode)}&event=${encodeURIComponent(g.id)}`;
-                const evName = g.eventName || 'Tournament';
-                const evDate = (typeof g.endDate === 'number' && g.endDate > (g.date || 0))
-                    ? formatDateRange(g.date, g.endDate) : formatDate(g.date);
-                const evCard = `<a class="game-card linkable" href="${evHref}" style="text-decoration:none;color:inherit;display:block;">
-                    <div class="open-chevron">Open ›</div>
-                    <div class="event-type-badge tournament">🏆 TOURNAMENT${_childCount > 0 ? ` · ${_childCount} game${_childCount === 1 ? '' : 's'}` : ''}</div>
-                    <div class="game-date">${evDate}</div>
-                    <div class="game-opponent">${evName}</div>
-                </a>`;
-                html += evCard;
-                if ((g.date || 0) >= weekAgoMs) { recentHtml += evCard; recentCount++; }
+                const evDate = (typeof g.endDate === 'number' && g.endDate > (g.date || 0)
+                        && new Date(g.endDate).toDateString() !== new Date(g.date || 0).toDateString())
+                    ? `${shortDay(g.date)} \u2013 ${shortDay(g.endDate)}` : (g.date ? shortDay(g.date) : '');
+                const kids = (kidsByEvent.get(g.id) || []).sort((a, b) => (b.date || 0) - (a.date || 0));
+                rows.push(`<div class="tp-res-ev">
+                    <a class="tp-res-evhead" href="${evHref}">
+                        <span class="ic">${TROPHY}</span>
+                        <span class="mid"><span class="eb">Tournament${evDate ? ' · ' + escapeHtml(evDate) : ''}</span><span class="ti">${escapeHtml(g.eventName || g.opponent || 'Tournament')}</span></span>
+                        ${CHEVRON}
+                    </a>
+                    ${kids.length ? `<div class="tp-res-kids">${kids.map(k => {
+                        const wl = wlOf(k);
+                        return `<a class="tp-res-kid" href="${gameHrefOf(k)}"><span class="tp-wl sm ${wl.toLowerCase()}">${wl}</span><span class="kt">${k.phaseLabel ? `<b>${escapeHtml(k.phaseLabel)}</b> ` : ''}${escapeHtml(opponentLine(k))}</span><span class="ks">${scoreOf(k)}</span></a>`;
+                    }).join('')}</div>` : ''}
+                </div>`);
                 return;
             }
             renderedCount++;
             pastGamesCache.push(g);
-            // Recent strip eligibility — captured here so the card HTML
-            // built below can be appended to both buffers without re-
-            // building it.
-            const isRecent = (g.date || 0) >= weekAgoMs;
+            // 2026-08-03 (Eric) — one quiet "Video" mark instead of a button per
+            // stream: tapping the row opens the game page, which lists them all.
             const streams = g.streams || [];
-            // 2026-08-03 (Eric) — the card used to list EVERY stream as its own
-            // red "YouTube" button, so a game with eight reels drew eight
-            // buttons and swamped the score. One quiet indicator instead: does
-            // this game have video at all? Tapping the card already opens the
-            // game page, which lists them properly grouped by player.
-            // NOTHING is removed from the game — this is display only.
             const hasYouTube = streams.some(x => x && x.url && (
                     x.platform === 'youtube' ||
                     x.url.includes('youtube.com') || x.url.includes('youtu.be')))
                 || !!(g.youtubeVideoUrl || g.youtubeHighlightsUrl);
             const isBowling = (g.sport || '').toUpperCase() === 'BOWLING';
-            const ps = g.playerScores || '';
-            let titleLine, scoreLine;
+            const date = typeof g.date === 'number' ? shortDay(g.date) : '';
+            const video = hasYouTube ? '<span aria-hidden="true">·</span><span style="display:inline-flex;align-items:center;gap:4px;"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>Video</span>' : '';
             if (isBowling) {
-                titleLine = g.eventName || 'Bowling';
+                const ps = g.playerScores || '';
+                let scoreLine = '';
                 if (ps) {
                     scoreLine = ps.split(';').map(b => {
                         const [name, games, storedSeries] = b.split(':');
@@ -4731,83 +5386,30 @@ async function loadPastGames() {
                         const series = calcSeries > 0 ? calcSeries : (parseInt(storedSeries) || 0);
                         const high = Math.max(...scores, 0);
                         // Bowler name in bold ink, numbers in plain text: orange is for things you tap (2026-11-17).
-                        const prefix = ps.includes(';') && name ? `<span style="font-weight:800;">${escapeHtml(name)}</span> · ` : '';
-                        return `${prefix}${series} series · High ${high} · ${scores.length} game${scores.length !== 1 ? 's' : ''}<br><span style="font-size:11px;font-weight:600;color:var(--text-secondary);">${scores.join(' · ')}</span>`;
+                        const prefix = ps.includes(';') && name ? `<b>${escapeHtml(name)}</b> · ` : '';
+                        return `${prefix}${series} series · High ${high} · ${scores.length} game${scores.length !== 1 ? 's' : ''}<br><small>${scores.join(' · ')}</small>`;
                     }).join('<br>');
-                } else {
-                    scoreLine = g.homeScore > 0 ? `${g.homeScore}` : '';
+                } else if (g.homeScore > 0) {
+                    scoreLine = `${g.homeScore}`;
                 }
+                rows.push(`<a class="tp-res" href="${gameHrefOf(g)}">
+                    <span class="mid"><span class="op">${escapeHtml(g.eventName || 'Bowling')}</span>
+                        <span class="meta">${escapeHtml(date)}${video}</span>
+                        ${scoreLine ? `<span class="bw">${scoreLine}</span>` : ''}</span>
+                    ${CHEVRON}
+                </a>`);
             } else {
-                titleLine = `${g.homeTeam || 'Home'} vs ${g.awayTeam || 'Away'}`;
-                // v13 — Color score green/red/grey for W/L/T, matching the
-                // in-app event page. Inline override since the .score class
-                // defaults to var(--accent).
-                // Colour from THIS team's side; the numbers stay in home–away
-                // order to match the "Home vs Away" title above them.
-                const [_o, _t] = ourTheir(g, teamId);
-                const _wl = _o > _t ? 'var(--win-green)' : _o < _t ? 'var(--loss-red)' : 'var(--tie-grey)';
-                scoreLine = `<span style="color:${_wl};">${g.homeScore || 0} - ${g.awayScore || 0}</span>`;
-            }
-
-            // 2026-06-16 — Web is now view-only for the schedule. Edit,
-            // Stream re-attach, and Delete moved exclusively to the
-            // native dialogs (Android / iOS). Eliminates field drift
-            // between four schedule-edit surfaces (memory:
-            // feedback_unified_edit_event_dialog.md).
-            const actions = "";
-
-            // The whole card navigates to /game.html for the dedicated big-
-            // embed view. Stream icons inside still link out to native
-            // platforms — they stop propagation so a "watch on YouTube"
-            // tap doesn't double-fire and navigate to game.html. Manager
-            // action buttons stop propagation for the same reason.
-            const gameHref = `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}`;
-
-            const cardHtml = `<div class="game-card linkable" id="game-${g.id}"
-                role="link" tabindex="0"
-                onclick="window.location.href='${gameHref}'"
-                onkeydown="if(event.key==='Enter'||event.key===' '){window.location.href='${gameHref}';}">
-                <div class="open-chevron">Open ›</div>
-                <div class="${isBowling ? '' : 'past-game'}">
-                    <div class="${isBowling ? '' : 'teams'}">
-                        <div class="game-date">${formatDate(g.date)}</div>
-                        <div class="game-opponent">${titleLine}</div>
-                        ${isBowling && scoreLine ? `<div style="margin-top:6px;color:var(--text-primary);font-weight:600;font-size:13px;line-height:1.45;">${scoreLine}</div>` : ''}
-                        ${hasYouTube ? `<div style="margin-top:6px;display:flex;align-items:center;gap:5px;color:var(--text-secondary);font-size:11px;font-weight:600;"><svg width="18" height="13" viewBox="0 0 24 17" aria-label="Has video"><path fill="#FF0033" d="M23.5 2.5A3 3 0 0 0 21.4.4C19.5 0 12 0 12 0S4.5 0 2.6.4A3 3 0 0 0 .5 2.5 31 31 0 0 0 0 8.5a31 31 0 0 0 .5 6A3 3 0 0 0 2.6 16.6C4.5 17 12 17 12 17s7.5 0 9.4-.4a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-6 31 31 0 0 0-.5-6z"/><path fill="#FFF" d="M9.6 12.2l6.3-3.7-6.3-3.7z"/></svg>Video</div>` : ''}
-                    </div>
-                    ${!isBowling ? `<div class="score">${scoreLine}</div>` : ''}
-                </div>
-                ${actions}
-            </div>`;
-            html += cardHtml;
-            if (isRecent) {
-                // De-dupe id collision across the two strips so JS can't
-                // accidentally lookup both — recent cards get a `-recent`
-                // suffix on the DOM id. Same hrefs / handlers; visually
-                // identical.
-                recentHtml += cardHtml.replace(`id="game-${g.id}"`, `id="game-${g.id}-recent"`);
-                recentCount++;
+                const wl = wlOf(g);
+                rows.push(`<a class="tp-res" href="${gameHrefOf(g)}">
+                    <span class="tp-wl ${wl.toLowerCase()}">${wl}</span>
+                    <span class="mid"><span class="op">${escapeHtml(opponentLine(g))}</span><span class="meta">${escapeHtml(date)}${video}</span></span>
+                    <span class="sc">${scoreOf(g)}</span>
+                    ${CHEVRON}
+                </a>`);
             }
         });
-        // Write recent strip first so it renders before the user has scrolled
-        // past the section header.
-        // Recent Games was removed 2026-09-02 (duplicate of Past Games). Both
-        // lookups now return null and this whole block no-ops; recentHtml is
-        // still built above and simply goes unused, which costs nothing and
-        // keeps the card-building loop in one piece.
-        const recentSection = $('recentGamesSection');
-        const recentContainer = $('recentGames');
-        if (recentContainer) {
-            if (recentCount > 0) {
-                recentContainer.innerHTML = recentHtml;
-                if (recentSection) recentSection.style.display = '';
-            } else {
-                recentContainer.innerHTML = '';
-                if (recentSection) recentSection.style.display = 'none';
-            }
-        }
         if (renderedCount === 0) {
-            container.innerHTML = '<div class="empty">No past games yet</div>';
+            showEmpty('No games played yet');
             $('teamRecord').textContent = '';
             // 2026-08-02 — Clear the scoreline too, or switching to a season
             // with no games leaves the previous season's record on screen.
@@ -4815,7 +5417,11 @@ async function loadPastGames() {
             catch (e) { console.error('stage render failed:', e); }
             return;
         }
-        container.innerHTML = html;
+        const SHOWN = 6;
+        container.innerHTML = `<div class="tp-list${rows.length > SHOWN ? ' short' : ''}">${rows.join('')}</div>` +
+            (rows.length > SHOWN ? `<button type="button" class="tp-btn tp-more">Show all ${rows.length} results</button>` : '');
+        const moreBtn = container.querySelector('.tp-more');
+        if (moreBtn) moreBtn.onclick = () => { container.querySelector('.tp-list').classList.remove('short'); moreBtn.remove(); };
 
         // v18 — Team record now INCLUDES tournament games (event children),
         // not just standalone games. The display list above hides children
@@ -4835,6 +5441,7 @@ async function loadPastGames() {
         // Nothing real to summarize (e.g. only empty tournament shells).
         if (recordGames.length === 0) {
             $('teamRecord').textContent = '';
+            const eb = $('resultsEyebrow'); if (eb) eb.textContent = '';
             // 2026-08-02 — No completed games, so the stage has no replay to
             // fall back to. Re-render in case the schedule already resolved.
             try { stageLastCompleted = null; renderScoreline(null); renderSeasonStats(null); renderStage(); }
@@ -4874,6 +5481,8 @@ async function loadPastGames() {
                     bowling: true, avg, high: highGame,
                     games: totalGames, sessions: recordGames.length,
                 };
+                const eb = $('resultsEyebrow');
+                if (eb) eb.textContent = `${recordGames.length} session${recordGames.length !== 1 ? 's' : ''} · ${totalGames} games`;
                 renderScoreline(seasonStats);
                 renderSeasonStats(seasonStats);
             } catch (e) { console.error('scoreline render failed:', e); }
@@ -4895,7 +5504,16 @@ async function loadPastGames() {
                 ? ((w + t / 2) / decided).toFixed(3).replace(/^0/, '')
                 : '—';
             try {
-                const seasonStats = { bowling: false, w, l, t, pct, played: recordGames.length };
+                // The hero's "Last 10": oldest left, newest right, unplayed 0-0s left out.
+                const form = recordGames
+                    .filter(g => g.countTowardStats !== false && typeof g.date === 'number')
+                    .map(g => [g.date, ...ourTheir(g, teamId)])
+                    .filter(([, o, x]) => o > 0 || x > 0)
+                    .sort((a, b) => a[0] - b[0]).slice(-10)
+                    .map(([, o, x]) => o > x ? 'W' : o < x ? 'L' : 'T').join('');
+                const seasonStats = { bowling: false, w, l, t, pct, played: recordGames.length, form };
+                const eb = $('resultsEyebrow');
+                if (eb) eb.textContent = `${counted} game${counted !== 1 ? 's' : ''} · ${w}\u2013${l}${t > 0 ? '\u2013' + t : ''}`;
                 renderScoreline(seasonStats);
                 renderSeasonStats(seasonStats);
             }
@@ -4911,6 +5529,7 @@ async function loadPastGames() {
         $('pastGames').innerHTML = publicShell
             ? '<div class="empty">Results are visible to team members.</div>'
             : '<div class="empty">Unable to load past games</div>';
+        const rs = $('resultsSection'); if (rs) rs.classList.add('tp-empty');
     }
 }
 
@@ -5126,8 +5745,30 @@ function tpSyncChips(){
     var shown=!!el && el.style.display!=='none' && el.offsetParent!==null;
     a.style.display=shown?'':'none';
   });
+  tpSpy();
+}
+/* 2026-11-19 — the chip of the section on screen is filled in the team accent. */
+function tpSpy(){
+  var nav=document.getElementById('tpChips');
+  if(!nav||nav.style.display==='none') return;
+  var links=[].filter.call(nav.querySelectorAll('a[data-target]'),function(a){return a.style.display!=='none';});
+  if(!links.length) return;
+  // The lowest section whose top has passed under the chips; on a tie (desktop
+  // starts both columns at one height) the earlier chip keeps it.
+  var line=nav.getBoundingClientRect().bottom+24, on=links[0], best=-Infinity;
+  links.forEach(function(a){
+    var el=document.getElementById(a.getAttribute('data-target'));
+    var t=el?el.getBoundingClientRect().top:Infinity;
+    if(t<=line&&t>best+1){ best=t; on=a; }
+  });
+  links.forEach(function(a){a.classList.toggle('on',a===on);});
+  if(on.classList.contains('on')&&nav.scrollWidth>nav.clientWidth){
+    var l=on.offsetLeft-nav.offsetLeft, r=l+on.offsetWidth;
+    if(l<nav.scrollLeft||r>nav.scrollLeft+nav.clientWidth) nav.scrollLeft=l-16;
+  }
 }
 setInterval(tpSyncChips,1200); document.addEventListener('DOMContentLoaded',tpSyncChips);
+window.addEventListener('scroll',function(){ if(!tpSpy.q){ tpSpy.q=requestAnimationFrame(function(){ tpSpy.q=0; tpSpy(); }); } },{passive:true});
 </script>
 </body>
 </html>
