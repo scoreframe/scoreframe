@@ -1042,6 +1042,13 @@ html, body { font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe U
    2026-11-19 — TEAM COLOURS. Eric: "give team pages a little bit more variety
    and customized feel. Various font sizes, colors, sections sticking out
    better". Approved mockup: claude.ai/artifact/RpnnnH4gm5SFCAJjJUGBdw.
+   2026-11-19 (later) — CALM. Eric, after using it in the app: "they seem a
+   little busy. Could we simplify but still keep the important information?"
+   He picked direction A of claude.ai/artifact/Fjuqc1eRXH84kGJ5EUuNcf ("I want
+   A because I want the sections still separated"): the same sections, one
+   loud thing (the hero), plain bold section titles, every list in one white
+   card style, the next game leading the Games list instead of a countdown
+   card, and the staff-only bits folded into one Team card.
    The team's own colours drive the page: `color` paints the hero, `color2` is
    the accent when it is a real colour (else `color`, else the page accent).
    teamColours() sets the --tc-* values from the team doc, with text colours
@@ -1054,89 +1061,75 @@ html, body { font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe U
     --tc-hero-accent: var(--accent); --tc-on-hero-accent: #141414;
     --tc-accent: var(--accent); --tc-on-accent: #141414; --tc-on-accent-line: rgba(20,20,20,0.25);
     --tc-accent-text: var(--accent); --tc-accent-on-dark: var(--accent);
-    --tc-stripe: 6px solid var(--accent); --tc-logo-edge: none;
+    --tc-stripe: 4px solid var(--accent); --tc-logo-edge: none;
     --tc-wash: var(--accent-dim); --tc-wash-line: var(--bg-elevated); --tc-wash-text: var(--accent);
     --tc-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
     --tc-gut: 18px;
     /* Dark first, like the page's own tokens. */
     --tc-ink2: #B4B8C0; --tc-muted: #9499A2;
-    --tc-line: rgba(255,255,255,0.10); --tc-line-strong: rgba(255,255,255,0.22); --tc-dash: rgba(255,255,255,0.30);
-    --tc-spot: #0F1013; --tc-spot-edge: 2px solid var(--tc-accent);
+    --tc-line: rgba(255,255,255,0.10); --tc-line-strong: rgba(255,255,255,0.22);
     --tc-win: #237A3C; --tc-loss: #FF6B5E;
 }
 :root[data-theme="light"] {
     --tc-ink2: #4F535A; --tc-muted: #666A72;
-    --tc-line: rgba(0,0,0,0.10); --tc-line-strong: rgba(0,0,0,0.20); --tc-dash: rgba(0,0,0,0.28);
-    --tc-spot: #17181B; --tc-spot-edge: 0 solid transparent;
+    --tc-line: rgba(0,0,0,0.10); --tc-line-strong: rgba(0,0,0,0.20);
     --tc-win: #1B7F3B; --tc-loss: #B3261E;
 }
 @media (prefers-color-scheme: light) {
     :root:not([data-theme="dark"]) {
         --tc-ink2: #4F535A; --tc-muted: #666A72;
-        --tc-line: rgba(0,0,0,0.10); --tc-line-strong: rgba(0,0,0,0.20); --tc-dash: rgba(0,0,0,0.28);
-        --tc-spot: #17181B; --tc-spot-edge: 0 solid transparent;
+        --tc-line: rgba(0,0,0,0.10); --tc-line-strong: rgba(0,0,0,0.20);
         --tc-win: #1B7F3B; --tc-loss: #B3261E;
     }
 }
 
-/* ── Hero: the team colour, condensed caps name, the record in big numbers ── */
+/* ── Hero: logo, name, sport and season, the record on one line, one role ── */
 .team-header {
     --text-primary: var(--tc-on-hero); --text-secondary: var(--tc-hero-sub);
     --text-muted: var(--tc-hero-sub); --bg-surface: var(--tc-hero-chip);
     --bg-elevated: var(--tc-hero-line);
     background: var(--tc-hero); color: var(--tc-on-hero);
     border-bottom: var(--tc-stripe);
-    display: flex; flex-direction: column; align-items: stretch; gap: 18px;
-    padding: 22px 18px 20px; text-align: left;
+    display: flex; flex-direction: column; align-items: stretch; gap: 14px;
+    padding: 18px 18px 16px; text-align: left;
 }
-.tp-id { display: flex; gap: 16px; align-items: center; }
-.tp-id-text { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.tp-id { display: flex; gap: 14px; align-items: center; }
+.tp-id-text { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .team-header #teamLogo {
-    flex: none; height: 76px !important; width: auto; max-width: 112px !important;
-    margin: 0 !important; padding: 8px; background: #FFFFFF; border-radius: 18px;
+    flex: none; box-sizing: border-box; height: 56px !important; width: auto; max-width: 112px !important;
+    margin: 0 !important; padding: 7px; background: #FFFFFF; border-radius: 14px;
     box-shadow: var(--tc-logo-edge);
 }
 .team-header .team-emoji {
-    flex: none; width: 76px; height: 76px; margin: 0; border-radius: 18px;
+    flex: none; box-sizing: border-box; width: 56px; height: 56px; margin: 0; border-radius: 14px;
     background: none; border: 2px solid var(--tc-hero-line);
     display: flex; align-items: center; justify-content: center;
-    font-size: 28px; font-weight: 900; font-stretch: 68%; letter-spacing: 0.02em;
-}
-.team-header .team-sport {
-    margin: 0; font-family: var(--tc-mono); font-size: 11px; font-weight: 700;
-    letter-spacing: 0.14em; text-transform: uppercase; color: var(--tc-hero-sub);
+    font-size: 21px; font-weight: 900; font-stretch: 68%; letter-spacing: 0.02em;
 }
 .team-header .team-name {
-    margin: 0; font-size: clamp(30px, 10vw, 64px); line-height: 0.92; font-weight: 900;
+    margin: 0; font-size: clamp(28px, 7.6vw, 44px); line-height: 0.95; font-weight: 900;
     font-stretch: 68%; text-transform: uppercase; letter-spacing: 0.005em;
     text-wrap: balance; overflow-wrap: break-word;
 }
+.team-header .team-sport { margin: 0; font-size: 13px; font-weight: 500; color: var(--tc-hero-sub); }
+.team-header .team-sport:empty { display: none; }
 .team-header #teamClub { margin: 0 !important; color: var(--tc-hero-sub) !important; }
 .team-header #teamClub a { color: var(--tc-on-hero) !important; text-decoration: underline !important; }
 .team-header #archivedBanner { align-self: flex-start; margin: 0 !important; }
 .team-header #teamRecord { display: none !important; }
 .team-header #liveBadge { align-self: flex-start; margin: 0; }
-.tp-record { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.tp-record { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .tp-record:empty { display: none; }
-.tp-record .cells { display: flex; gap: 16px; align-items: flex-end; }
-.tp-record .cell { display: flex; flex-direction: column; gap: 4px; }
-.tp-record .n {
-    font-size: 60px; line-height: 0.82; font-weight: 900; font-stretch: 62%;
-    font-variant-numeric: tabular-nums;
-}
-.tp-record .k {
-    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; line-height: 1.5;
-    letter-spacing: 0.14em; text-transform: uppercase; color: var(--tc-hero-sub);
-}
-.tp-form { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
-.tp-form .sq { display: flex; gap: 3px; }
-.tp-form .sq span {
-    width: 17px; height: 20px; border-radius: 4px; display: flex; align-items: center;
-    justify-content: center; font-size: 10px; font-weight: 900;
+.tp-record .n { font-size: 30px; line-height: 1; font-weight: 900; font-stretch: 62%; font-variant-numeric: tabular-nums; }
+.tp-record .k { font-size: 13px; color: var(--tc-hero-sub); }
+.tp-form { display: flex; gap: 3px; }
+.tp-form span {
+    width: 15px; height: 18px; box-sizing: border-box; border-radius: 4px; display: flex; align-items: center;
+    justify-content: center; font-size: 9px; font-weight: 900;
     border: 1.5px solid var(--tc-hero-line); color: var(--tc-hero-sub);
 }
-.tp-form .sq .w { background: var(--tc-hero-accent); border-color: var(--tc-hero-accent); color: var(--tc-on-hero-accent); }
-.tp-form .sq .t { background: var(--tc-hero-chip); color: var(--tc-on-hero); }
+.tp-form .w { background: var(--tc-hero-accent); border-color: var(--tc-hero-accent); color: var(--tc-on-hero-accent); }
+.tp-form .t { background: var(--tc-hero-chip); color: var(--tc-on-hero); }
 .team-header #followArea { margin: 0 !important; }
 .team-header #followArea:empty { display: none; }
 .team-header #followArea .follow-btn {
@@ -1152,315 +1145,213 @@ html, body { font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe U
 .team-header .follow-status { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .team-header .follow-status:empty { display: none; }
 .tp-role {
-    display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px;
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
     border-radius: 999px; background: var(--tc-hero-chip); color: var(--tc-on-hero);
     font-size: 13px; font-weight: 700;
 }
 .tp-role svg { flex: none; }
 
 /* ── Jump chips: the section on screen is filled with the team accent ── */
-.tp-chips { gap: 8px; padding: 12px var(--tc-gut); border-bottom: 1px solid var(--tc-line); }
+.tp-chips { gap: 6px; padding: 10px var(--tc-gut); border-bottom: 1px solid var(--tc-line); }
 .tp-chips a {
-    height: auto; padding: 8px 15px; border-radius: 999px; font-size: 14px; font-weight: 700;
+    height: auto; padding: 7px 13px; border-radius: 999px; font-size: 13px; font-weight: 700;
     background: var(--bg-surface); border: 1px solid var(--tc-line); color: var(--text-primary);
 }
 .tp-chips a:hover, .tp-chips a:focus-visible { border-color: var(--tc-accent); color: var(--text-primary); }
 .tp-chips a.on { background: var(--tc-accent); border-color: var(--tc-accent); color: var(--tc-on-accent); }
 
-/* ── Layout and section heads ── */
-#teamContent { gap: 40px; padding: 18px 0 44px; }
-#teamContent .section, #tpNow .section { padding: 0 var(--tc-gut); }
+/* ── Layout and section heads: a plain bold title, a count on the right ── */
+#teamContent { gap: 30px; padding: 20px 0 40px; }
+#teamContent .section, #tpNow .section, #scheduleRailSection, #teamSection,
+#practicesSection.tp-practices { padding: 0 var(--tc-gut); }
 #teamContent .section + .section { border-top: 0; }
 .tp-stage { padding: 0 var(--tc-gut); }
-.tp-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
-.tp-eb {
-    font-family: var(--tc-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
-    text-transform: uppercase; color: var(--tc-accent-text);
+#tpNow { order: 1; } #seasonBlock { order: 2; } #scheduleRailSection { order: 3; } #practicesSection { order: 4; }
+#resultsSection { order: 5; } #rosterSection { order: 6; } #teamSection { order: 7; } #unfollowArea { order: 8; }
+.tp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 10px; }
+.tp-h2, #practicesSection .tp-h2 {
+    flex: none; margin: 0; font-size: 19px; line-height: 1.25; font-weight: 800; font-stretch: 100%;
+    text-transform: none; letter-spacing: 0; color: var(--text-primary);
 }
+.tp-eb, .tp-head .lock { font-size: 13px; color: var(--tc-muted); text-align: right; }
 .tp-eb:empty { display: none; }
-.tp-h2 {
-    margin: 0; font-size: 32px; line-height: 0.95; font-weight: 900; font-stretch: 72%;
-    text-transform: uppercase; letter-spacing: 0.005em; color: var(--text-primary);
-}
-.tp-h3 { margin: 0 0 8px; font-size: 18px; line-height: 1.2; font-weight: 800; color: var(--text-primary); }
+.tp-head .lock { display: inline-flex; align-items: center; gap: 5px; }
 #managerBadge { display: none !important; }
-.tp-btn {
-    height: 46px; border-radius: 12px; border: 1px solid var(--tc-line-strong);
-    background: transparent; color: var(--text-primary); font-family: inherit;
-    font-size: 14px; font-weight: 800; cursor: pointer;
-}
-.tp-btn:hover, .tp-btn:focus-visible { border-color: var(--tc-accent); }
 .tp-plain { display: block; text-decoration: none; color: inherit; }
 .tp-chev { flex: none; color: var(--tc-muted); }
 
-/* ── Now: the last game as a scoreboard, or the next one as a countdown ── */
-.tp-final {
-    background: var(--tc-spot); color: #F5F3EF; border: var(--tc-spot-edge); border-radius: 20px;
-    padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 14px;
+/* ── One card style for every list. Rows sit 1px apart on the line colour,
+      so a hidden row leaves no stray divider. ── */
+.tp-card, .tp-list {
+    display: flex; flex-direction: column; gap: 1px;
+    background: var(--tc-line); border: 1px solid var(--tc-line); border-radius: 16px; overflow: hidden;
 }
-.tp-final .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.tp-final .eb, .tp-next .eb {
-    font-family: var(--tc-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
-    text-transform: uppercase;
+.tp-card > *, .tp-list > * { background: var(--bg-surface); }
+.tp-card.short > .more-row, .tp-list.short > .more-row { display: none; }
+.tp-all {
+    display: block; width: 100%; padding: 13px 16px; border: 0; font-family: inherit;
+    font-size: 14px; font-weight: 700; color: var(--tc-accent-text); text-align: center; cursor: pointer;
 }
-.tp-final .eb { color: var(--tc-accent-on-dark); }
-.tp-final .tag { padding: 4px 10px; border-radius: 999px; color: #FFFFFF; font-size: 12px; font-weight: 800; }
-.tp-final .tag.w { background: #1B7F3B; }
-.tp-final .tag.l { background: #B3261E; }
-.tp-final .tag.t { background: #4F535A; }
-.tp-final .rows { display: flex; flex-direction: column; gap: 4px; }
-.tp-final .row { display: flex; align-items: center; gap: 12px; }
-.tp-final .row.lost { opacity: 0.55; }
-.tp-final .nm {
-    flex: 1; min-width: 0; font-size: 23px; font-weight: 900; font-stretch: 70%;
-    text-transform: uppercase; letter-spacing: 0.01em;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.tp-final .sc { font-size: 48px; line-height: 0.95; font-weight: 900; font-stretch: 62%; font-variant-numeric: tabular-nums; }
-.tp-final .foot { font-size: 13px; color: #B4B8C0; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 12px; }
-.tp-next {
-    background: var(--tc-accent); color: var(--tc-on-accent); border-radius: 20px; padding: 18px;
-    display: flex; flex-direction: column; gap: 10px;
-}
-.tp-next .ti {
-    font-size: 31px; line-height: 0.95; font-weight: 900; font-stretch: 68%;
-    text-transform: uppercase; text-wrap: balance; overflow-wrap: anywhere;
-}
-.tp-next .pl { font-size: 14px; font-weight: 600; }
-.tp-next .tp-count {
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
-    border-top: 1.5px solid var(--tc-on-accent-line); padding-top: 12px; margin-top: 4px;
-}
-.tp-next .tp-count .seg { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.tp-next .tp-count .num {
-    font-size: 46px; line-height: 0.85; font-weight: 900; font-stretch: 62%;
-    color: inherit; font-variant-numeric: tabular-nums;
-}
-.tp-next .tp-count .unit {
-    margin: 0; font-family: var(--tc-mono); font-size: 10px; font-weight: 700;
-    letter-spacing: 0.14em; text-transform: uppercase; color: inherit;
-}
+.tp-all:hover, .tp-all:focus-visible { text-decoration: underline; }
+.tp-date { flex: none; width: 46px; display: flex; flex-direction: column; align-items: center; }
+.tp-date .cap { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tc-muted); }
+.tp-date .sm { font-size: 11px; color: var(--tc-muted); }
+.tp-date .dn { font-size: 22px; line-height: 1; font-weight: 900; font-stretch: 62%; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* ── Schedule: calendar tiles ── */
-#scheduleRailSection .tp-head { padding: 0 var(--tc-gut); }
-.tp-rail { gap: 10px; padding: 0 var(--tc-gut) 4px; }
-.tp-scard {
-    width: 134px; padding: 0; border-radius: 16px; overflow: hidden;
-    display: flex; flex-direction: column;
-    background: var(--bg-surface); border: 1px solid var(--tc-line);
+/* ── Games: the next one leads, bigger, with when it is ── */
+.tp-g { display: flex; gap: 14px; align-items: center; padding: 12px 16px; text-decoration: none; color: inherit; }
+.tp-g .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; align-items: flex-start; }
+.tp-g .ti { font-size: 15px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.tp-g .pl { font-size: 13px; color: var(--tc-muted); }
+a.tp-g:hover .ti { text-decoration: underline; }
+.tp-g.lead { padding: 16px; }
+.tp-g.lead .dn { font-size: 32px; line-height: 0.95; }
+.tp-g.lead .cap { color: var(--tc-accent-text); }
+.tp-g.lead .ti { font-size: 16px; font-weight: 800; line-height: 1.25; }
+.tp-g.lead .pl { color: var(--tc-ink2); }
+.tp-pill {
+    margin-top: 4px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 800;
+    background: var(--tc-accent); color: var(--tc-on-accent);
 }
-.tp-scard.next { border: 2px solid var(--tc-accent); }
-.tp-scard .strip {
-    display: flex; justify-content: space-between; gap: 6px; padding: 6px 10px;
-    background: var(--bg-elevated); color: var(--tc-ink2);
-    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-}
-.tp-scard.next .strip { background: var(--tc-accent); color: var(--tc-on-accent); }
-.tp-scard .strip .live { color: #CC2222; }
-.tp-scard .bd { padding: 8px 10px 12px; display: flex; flex-direction: column; gap: 6px; }
-.tp-scard .day { font-size: 46px; line-height: 0.85; font-weight: 900; font-stretch: 62%; font-variant-numeric: tabular-nums; }
-.tp-scard .ti {
-    font-size: 14px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere;
-    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-}
-.tp-scard .pl { font-size: 12px; line-height: 1.3; color: var(--tc-muted); }
+.tp-pill.live { background: #CC2222; color: #FFFFFF; }
+.tp-pill.off { background: var(--bg-elevated); color: var(--tc-ink2); }
 
-/* ── Practices: a full-width band in the team colour, for the team only ── */
-#practicesSection.tp-practices {
-    margin: 0; gap: 14px; padding: 22px var(--tc-gut) 24px;
-    background: var(--tc-wash); border-top: 1px solid var(--tc-wash-line); border-bottom: 1px solid var(--tc-wash-line);
+/* ── Practices: the same card, for the team only ── */
+#practicesSection.tp-practices { margin: 0; display: block; background: none; border: 0; }
+.tp-practice, .tp-practice:first-child { border-top: 0; }
+.tp-practice > button {
+    display: flex; gap: 14px; align-items: flex-start; width: 100%; padding: 12px 16px;
+    background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer;
 }
-#practicesSection .tp-head { margin: 0; }
-.tp-practices .lock {
-    display: inline-flex; align-items: center; gap: 6px; color: var(--tc-wash-text);
-    font-family: var(--tc-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
-}
-.tp-practices .list { background: var(--bg-surface); border: 1px solid var(--tc-line); border-radius: 16px; }
-.tp-practice { border-top: 1px solid var(--tc-line); }
-.tp-practice > button { display: flex; gap: 14px; padding: 12px 14px; }
-.tp-practice.off > button { opacity: 0.62; }
-.tp-practice .date { flex: none; width: 40px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
-.tp-practice .date .dw, .tp-practice .date .mo {
-    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--tc-muted);
-}
-.tp-practice .date .dn { font-size: 30px; line-height: 0.95; font-weight: 900; font-stretch: 62%; }
-.tp-practice .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; justify-content: center; }
-.tp-practice .when { font-size: 15px; font-weight: 800; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-start; }
-.tp-practice.off .when .tm { text-decoration: line-through; }
-.tp-practice .lbl { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: var(--tc-accent); color: var(--tc-on-accent); }
-.tp-practice .off-tag {
-    font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 6px;
-    border: 1.5px solid var(--tc-loss); color: var(--tc-loss);
-}
+.tp-practice.off > button { opacity: 0.6; }
+.tp-practice .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tp-practice .when { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; justify-content: flex-start; font-size: 15px; font-weight: 700; }
+.tp-practice.off .when .tm { color: inherit; text-decoration: line-through; }
+.tp-practice .lbl { font-size: 13px; font-weight: 700; color: var(--tc-ink2); }
+.tp-practice .off-tag { font-size: 13px; font-weight: 800; color: var(--tc-loss); }
 .tp-practice .where { font-size: 13px; color: var(--tc-ink2); margin: 0; }
-.tp-practice .who { font-size: 12px; font-weight: 700; color: var(--tc-ink2); }
+.tp-practice .who { font-size: 13px; color: var(--tc-muted); }
+.tp-practice .more { padding: 0 16px 12px 76px; }
 
-/* ── Results: one list, a W/L block per game, tournaments grouped ── */
-.tp-list { background: var(--bg-surface); border: 1px solid var(--tc-line); border-radius: 16px; overflow: hidden; }
-.tp-list > * + * { border-top: 1px solid var(--tc-line); }
-.tp-list.short > :nth-child(n+7) { display: none; }
-.tp-res { display: flex; gap: 12px; align-items: center; padding: 12px 14px; text-decoration: none; color: inherit; }
+/* ── Results: a W/L block, the opponent, the score; tournaments grouped ── */
+.tp-res { display: flex; gap: 12px; align-items: center; padding: 12px 16px; text-decoration: none; color: inherit; }
 .tp-res:hover .op, .tp-res-evhead:hover .ti { text-decoration: underline; }
 .tp-wl {
-    flex: none; width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center;
-    justify-content: center; font-size: 15px; font-weight: 900;
+    flex: none; width: 26px; height: 26px; box-sizing: border-box; border-radius: 7px; display: flex; align-items: center;
+    justify-content: center; font-size: 12px; font-weight: 900;
     background: var(--bg-elevated); color: var(--tc-ink2); border: 1.5px solid var(--bg-elevated);
 }
 .tp-wl.w { background: var(--tc-win); border-color: var(--tc-win); color: #FFFFFF; }
 .tp-wl.l { background: transparent; border-color: var(--tc-loss); color: var(--tc-loss); }
-.tp-wl.sm { width: 24px; height: 24px; border-radius: 6px; font-size: 11px; }
-.tp-res .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.tp-res .op { font-size: 16px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tp-res .meta { font-size: 12.5px; color: var(--tc-muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tp-wl.sm { width: 22px; height: 22px; border-radius: 6px; font-size: 11px; }
+.tp-res .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tp-res .op { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tp-res .meta { font-size: 13px; color: var(--tc-muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .tp-res .bw { font-size: 13px; line-height: 1.45; margin-top: 4px; }
 .tp-res .bw small { font-size: 11px; font-weight: 600; color: var(--tc-ink2); }
-.tp-res .sc { font-size: 28px; line-height: 1; font-weight: 900; font-stretch: 62%; font-variant-numeric: tabular-nums; }
-.tp-res-ev { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-.tp-res-evhead { display: flex; gap: 12px; align-items: center; text-decoration: none; color: inherit; }
-.tp-res-evhead .ic {
-    flex: none; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center;
-    justify-content: center; background: var(--tc-accent); color: var(--tc-on-accent);
-}
-.tp-res-evhead .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.tp-res-evhead .eb {
-    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--tc-accent-text);
-}
-.tp-res-evhead .ti { font-size: 16px; font-weight: 800; line-height: 1.25; }
-.tp-res-kids { display: flex; flex-direction: column; gap: 8px; padding-left: 48px; }
+.tp-res .sc { font-size: 21px; line-height: 1; font-weight: 900; font-stretch: 62%; font-variant-numeric: tabular-nums; }
+.tp-res-ev { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+.tp-res-evhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; text-decoration: none; color: inherit; }
+.tp-res-evhead .ti { font-size: 15px; font-weight: 700; line-height: 1.3; }
+.tp-res-evhead .dt { font-size: 13px; color: var(--tc-muted); white-space: nowrap; }
+.tp-res-kids { display: flex; flex-direction: column; gap: 8px; }
 .tp-res-kid { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--tc-ink2); }
 .tp-res-kid .kt { flex: 1; min-width: 0; font-size: 14px; }
-.tp-res-kid .kt b { color: var(--text-primary); }
-.tp-res-kid .ks { font-size: 22px; line-height: 1; font-weight: 900; font-stretch: 62%; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.tp-more { width: 100%; margin-top: 14px; }
-#resultsSection.tp-empty {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-    margin: 0 var(--tc-gut); padding: 12px 0 0; border-top: 2px solid var(--text-primary);
-}
-#resultsSection.tp-empty .tp-head { margin: 0; }
-#resultsSection.tp-empty .tp-eb { display: none; }
-#resultsSection.tp-empty .tp-h2 { font-size: 20px; line-height: 1; }
-#resultsSection.tp-empty #pastGames .empty { padding: 0; text-align: right; font-size: 14px; color: var(--tc-ink2); }
+.tp-res-kid .ks { font-size: 18px; line-height: 1; font-weight: 900; font-stretch: 62%; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+#resultsSection.tp-empty #pastGames .empty { padding: 0; text-align: left; font-size: 14px; color: var(--tc-ink2); }
 
-/* ── Roster: jersey tiles, your player filled with the team accent ── */
-.tp-roster { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+/* ── Roster: number and name, two across; your player filled ── */
+.tp-roster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tp-roster.solo { grid-template-columns: minmax(0, 1fr); }
 .tp-pt {
-    position: relative; min-height: 116px; padding: 10px 10px 11px; border-radius: 14px;
-    display: flex; flex-direction: column; gap: 4px;
-    background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--tc-line);
+    position: relative; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border-radius: 12px; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--tc-line);
 }
 .tp-pt.mine { background: var(--tc-accent); color: var(--tc-on-accent); border-color: var(--tc-accent); }
-.tp-pt a { display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: inherit; }
+.tp-pt a { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
 .tp-pt a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
 .tp-pt a:focus-visible { outline: none; }
 .tp-pt:focus-within { outline: 2px solid var(--tc-accent-text); outline-offset: 2px; }
-.tp-pt .num { font-size: 40px; line-height: 0.88; font-weight: 900; font-stretch: 62%; color: var(--tc-accent-text); }
+.tp-pt .num { flex: none; min-width: 24px; font-size: 20px; line-height: 1; font-weight: 900; font-stretch: 62%; color: var(--tc-accent-text); }
 .tp-pt.mine .num { color: inherit; }
-.tp-pt .nm { font-size: 14px; font-weight: 800; line-height: 1.15; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
-.tp-pt .ps, .tp-pt .st { font-size: 11.5px; font-weight: 600; color: var(--tc-ink2); }
-.tp-pt.mine .ps, .tp-pt.mine .st { color: inherit; opacity: 0.85; }
-.tp-tag {
-    position: relative; z-index: 1; align-self: flex-start; margin-top: auto; padding: 0;
-    background: none; border: 0; font: inherit; font-size: 12px; font-weight: 800;
-    color: var(--tc-accent-text); text-align: left; cursor: pointer;
+.tp-pt .nm {
+    flex: 1; min-width: 0; font-size: 14px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
+.tp-tag {
+    position: relative; z-index: 1; flex: none; padding: 0; background: none; border: 0;
+    font: inherit; font-size: 11px; font-weight: 800; color: var(--tc-accent-text); cursor: pointer;
+}
+/* On a two-across tile the tag sits under the name, so a long surname isn't cut. */
+.tp-pt { flex-wrap: wrap; row-gap: 2px; }
+.tp-pt .tp-tag { flex-basis: 100%; padding-left: 34px; text-align: left; }
 .tp-pt.mine .tp-tag, .tp-solo.mine .tp-tag { color: inherit; }
 span.tp-tag { cursor: default; color: var(--tc-ink2); }
+/* "+ Follow" on every tile was the busiest thing on the page: it waits behind
+   "Link your player" under the roster. */
+.tp-roster:not(.pick) [data-claim-player] { display: none; }
+.tp-rhint { margin-top: 10px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--tc-muted); }
+.tp-rhint button {
+    padding: 0; background: none; border: 0; font: inherit; font-weight: 800;
+    color: var(--tc-accent-text); cursor: pointer;
+}
 .tp-solo {
-    position: relative; border-radius: 18px; padding: 16px; display: flex; gap: 16px; align-items: center;
+    position: relative; border-radius: 16px; padding: 14px 16px; display: flex; gap: 16px; align-items: center;
     background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--tc-line);
 }
 .tp-solo.mine { background: var(--tc-accent); color: var(--tc-on-accent); border-color: var(--tc-accent); }
 .tp-solo > a { position: absolute; inset: 0; border-radius: inherit; }
-.tp-solo .tp-chev { color: inherit; }
-.tp-solo .num { flex: none; font-size: 68px; line-height: 0.82; font-weight: 900; font-stretch: 62%; color: var(--tc-accent-text); }
+.tp-solo .num { flex: none; font-size: 44px; line-height: 0.9; font-weight: 900; font-stretch: 62%; color: var(--tc-accent-text); }
 .tp-solo.mine .num { color: inherit; }
-.tp-solo .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
-.tp-solo .nm { font-size: 19px; font-weight: 900; line-height: 1.15; }
-.tp-solo .tp-tag, .tp-solo .who {
-    margin: 2px 0 0; font-family: var(--tc-mono); font-size: 10px; font-weight: 700;
-    letter-spacing: 0.14em; text-transform: uppercase;
-}
-.tp-solo .stats { display: flex; gap: 16px; flex-wrap: wrap; }
-.tp-solo .stats span { display: flex; flex-direction: column; gap: 2px; }
-.tp-solo .stats b { font-size: 24px; line-height: 0.9; font-weight: 900; font-stretch: 62%; }
-.tp-solo .stats i { font-style: normal; font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; }
+.tp-solo .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tp-solo .nm { font-size: 17px; font-weight: 800; line-height: 1.2; }
+.tp-solo .st { font-size: 13px; font-weight: 600; }
+.tp-solo .who { font-size: 13px; color: var(--tc-ink2); }
+.tp-solo.mine .who { color: inherit; opacity: 0.85; }
 
-/* ── Coaches & managers ── */
-.tp-staff { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--tc-line); }
-.tp-staff .av {
-    flex: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center;
-    justify-content: center; font-size: 13px; font-weight: 800;
-    background: var(--tc-hero); color: var(--tc-on-hero); border: 1px solid var(--tc-line-strong);
-}
-.tp-staff .nm { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; }
-.tp-staff .rl {
-    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--tc-ink2); text-align: right;
-}
-
-/* ── Followers: staff only, folded to a count until asked for ── */
-.tp-fol {
-    margin: 0 var(--tc-gut); padding: 16px; border: 1.5px dashed var(--tc-dash); border-radius: 18px;
-    display: flex; flex-direction: column; gap: 12px;
-}
-.tp-fol .eb {
-    display: inline-flex; align-items: center; gap: 6px; color: var(--tc-ink2);
-    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
-}
-.tp-fol .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.tp-fol .top h2 { margin: 0; font-size: 18px; line-height: 1.2; font-weight: 800; }
-.tp-fol .top h2 span { color: var(--tc-accent-text); }
-.tp-fol .sub { font-size: 13px; color: var(--tc-ink2); }
-.tp-fol .sub.wait { color: var(--tc-accent-text); font-weight: 800; }
-.tp-stack { display: flex; }
-.tp-stack span {
-    width: 34px; height: 34px; margin-left: -9px; border-radius: 50%; border: 2px solid var(--bg-deepest);
+/* ── Team: coaches, followers (staff only) and the team code in one card ── */
+.tp-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.tp-row .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tp-row .t { font-size: 14px; font-weight: 700; }
+.tp-row .sub, .tp-row .k { font-size: 12px; color: var(--tc-muted); }
+.tp-row .sub.wait { color: var(--tc-accent-text); font-weight: 800; }
+.tp-avs { flex: none; display: flex; }
+.tp-avs span {
+    width: 32px; height: 32px; margin-left: -8px; box-sizing: border-box; border-radius: 50%;
+    border: 2px solid var(--bg-surface); background: var(--bg-elevated); color: var(--text-primary);
     display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800;
-    background: var(--bg-elevated); color: var(--text-primary);
 }
-.tp-stack span:first-child { margin-left: 0; }
-.tp-stack span.more { background: var(--tc-accent); color: var(--tc-on-accent); }
-.tp-fol .tp-btn { height: 44px; background: var(--bg-surface); }
-
-/* ── Share: a ticket with the team code ── */
-.tp-ticket {
-    margin: 0 var(--tc-gut); display: flex; border-radius: 18px; overflow: hidden;
-    border: 1px solid var(--tc-line); background: var(--bg-surface);
+.tp-avs span:first-child { margin-left: 0; }
+.tp-fol { display: flex; flex-direction: column; }
+.tp-fol-row { width: 100%; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.tp-fol-row .ic { flex: none; width: 32px; display: flex; justify-content: center; color: var(--tc-ink2); }
+.tp-fol-row .tp-chev { transition: transform 0.15s; }
+.tp-fol-row[aria-expanded="true"] .tp-chev { transform: rotate(90deg); }
+#pendingRequestsList { padding: 0 16px 8px; }
+.tp-code .team-code {
+    font-family: var(--tc-mono); font-size: 17px; font-weight: 700; letter-spacing: 0.08em;
+    color: var(--text-primary); overflow-wrap: anywhere;
 }
-.tp-ticket .stub {
-    flex: 1; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 4px;
-    background: var(--tc-hero); color: var(--tc-on-hero); border-right: 3px dotted var(--bg-surface);
+.tp-code button {
+    flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 11px 16px; border: 0;
+    border-radius: 10px; background: var(--tc-accent); color: var(--tc-on-accent);
+    font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer;
 }
-.tp-ticket .k {
-    font-family: var(--tc-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
-    text-transform: uppercase; color: var(--tc-hero-sub);
-}
-.tp-ticket .team-code { font-size: 22px; font-weight: 700; letter-spacing: 0.08em; color: inherit; overflow-wrap: anywhere; }
-.tp-ticket .s { font-size: 12px; color: var(--tc-hero-sub); }
-.tp-ticket .acts { flex: none; width: 124px; padding: 12px; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
-.tp-ticket .acts button {
-    height: 40px; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer;
-    border: 1px solid var(--tc-line-strong); background: transparent; color: var(--text-primary);
-}
-.tp-ticket .acts button.go { border: 0; background: var(--tc-accent); color: var(--tc-on-accent); }
 #unfollowArea { margin: 0 var(--tc-gut) !important; }
 
 @media (min-width: 600px) {
-    .tp-roster { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .tp-roster:not(.solo) { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
 }
 @media (min-width: 1000px) {
-    .team-header { padding: 40px max(24px, calc((100% - 1180px) / 2)) 30px; }
-    .team-header #teamLogo { height: 110px !important; max-width: 160px !important; }
-    .team-header .team-emoji { width: 110px; height: 110px; font-size: 40px; }
-    .tp-chips { padding: 12px max(24px, calc((100% - 1180px) / 2)); }
-    #teamContent { --tc-gut: 0px; gap: 32px; padding: 24px 0 60px; }
-    .tp-col { gap: 32px; }
-    #practicesSection.tp-practices { padding: 20px; border: 1px solid var(--tc-wash-line); border-radius: 20px; }
-    .tp-side .tp-rail { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; padding: 0; }
-    .tp-side .tp-scard { width: auto; }
+    .team-header { padding: 28px max(24px, calc((100% - 1180px) / 2)) 22px; }
+    .team-header #teamLogo { height: 72px !important; max-width: 150px !important; }
+    .team-header .team-emoji { width: 72px; height: 72px; font-size: 26px; }
+    .tp-chips { padding: 10px max(24px, calc((100% - 1180px) / 2)); }
+    #teamContent { --tc-gut: 0px; gap: 30px; padding: 24px 0 60px; }
+    .tp-col { gap: 30px; }
+    .tp-side { position: static; }
 }
-@media (prefers-reduced-motion: reduce) { .live-badge { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .live-badge { animation: none; } .tp-fol-row .tp-chev { transition: none; } }
 </style>
 </head>
 <body>
@@ -1558,8 +1449,8 @@ window.sfClubOffline = function (t) {
             <img id="teamLogo" alt="" style="display:none; height:96px; width:auto; max-width:72%; object-fit:contain; margin:0 auto 10px;" />
             <div class="team-emoji" id="teamEmoji" aria-hidden="true"></div>
             <div class="tp-id-text">
-                <div class="team-sport" id="teamSport"></div>
                 <h1 class="team-name" id="teamName"></h1>
+                <div class="team-sport" id="teamSport"></div>
                 <!-- A club team: the club that runs it and the club's page of every team (Eric 2026-10-30). -->
                 <div id="teamClub" style="display:none; font-size:13px; color:var(--text-secondary); margin:2px 0 4px;"></div>
             </div>
@@ -1579,13 +1470,12 @@ window.sfClubOffline = function (t) {
     <!-- 2026-10-16 — Jump chips. One scrolling page still; these only jump.
          A chip hides itself when its section is hidden (see tpSyncChips). -->
     <nav class="tp-chips" id="tpChips" aria-label="Sections" style="display:none;">
-        <a href="#tpNow" data-target="tpNow">Now</a>
-        <a href="#seasonBlock" data-target="seasonBlock">Season</a>
-        <a href="#scheduleRailSection" data-target="scheduleRailSection">Schedule</a>
+        <a href="#liveSection" data-target="liveSection">Live</a>
+        <a href="#scheduleRailSection" data-target="scheduleRailSection">Games</a>
         <a href="#practicesSection" data-target="practicesSection">Practices</a>
         <a href="#resultsSection" data-target="resultsSection">Results</a>
         <a href="#rosterSection" data-target="rosterSection">Roster</a>
-        <a href="#staffSection" data-target="staffSection">People</a>
+        <a href="#teamSection" data-target="teamSection">Team</a>
     </nav>
     <!-- Access Gate (private/invite-only hubs — requires sign-in) -->
     <div id="accessGate" style="display:none;" class="access-section">
@@ -1625,24 +1515,13 @@ window.sfClubOffline = function (t) {
         <div class="tp-stage" id="teamStage" style="display:none;"></div>
         </div>
         <div class="section" id="resultsSection">
-            <div class="tp-head"><span class="tp-eb" id="resultsEyebrow"></span><h2 class="tp-h2">Results <span id="managerBadge" style="display:none;" class="manager-badge">MANAGER</span></h2></div>
+            <div class="tp-head"><h2 class="tp-h2">Results <span id="managerBadge" style="display:none;" class="manager-badge">MANAGER</span></h2><span class="tp-eb" id="resultsEyebrow"></span></div>
             <div id="pastGames"></div>
         </div>
         <div class="section" id="rosterSection" style="display:none;">
-            <div class="tp-head"><span class="tp-eb" id="rosterEyebrow"></span><h2 class="tp-h2">Roster</h2></div>
+            <div class="tp-head"><h2 class="tp-h2">Roster</h2><span class="tp-eb" id="rosterEyebrow"></span></div>
             <div id="rosterList"></div>
         </div>
-        <!-- Followers, for staff only: a count and faces until "Manage followers"
-             opens the list. Opens by itself when someone is waiting on a decision. -->
-        <section class="tp-fol" id="pendingRequestsSection" style="display:none;" aria-label="Followers">
-            <span class="eb"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Only coaches and managers see this</span>
-            <div class="top">
-                <div><h2>Followers <span id="followerCount"></span></h2><div class="sub" id="followerSub"></div></div>
-                <div class="tp-stack" id="followerStack" aria-hidden="true"></div>
-            </div>
-            <button type="button" class="tp-btn" id="followerToggle" aria-expanded="false" aria-controls="pendingRequestsList">Manage followers</button>
-            <div id="pendingRequestsList" hidden></div>
-        </section>
         <div id="unfollowArea" style="display:none; text-align:center; margin-top:28px; padding-top:18px; border-top:1px solid var(--border, rgba(128,128,128,0.25));">
             <button class="follow-btn unfollow-btn" onclick="confirmUnfollow()"
                 style="background:transparent; color:var(--text-secondary); border:1px solid var(--text-secondary); font-size:13px; padding:7px 18px;">Unfollow this team</button>
@@ -1659,32 +1538,43 @@ window.sfClubOffline = function (t) {
              still to play heads Schedule. renderSeasonStats() finds no box
              and returns. -->
         </div>
+        <!-- 2026-11-19 (calm) — the schedule is a list: the next game leads it,
+             bigger, with "Next · in 44 days"; the countdown card is gone. -->
         <div id="scheduleRailSection" style="display:none;">
-            <div class="tp-head"><span class="tp-eb" id="scheduleRailLabel"></span><h2 class="tp-h2">Schedule</h2></div>
-            <div class="tp-rail" id="scheduleRail"></div>
+            <div class="tp-head"><h2 class="tp-h2">Games</h2><span class="tp-eb" id="scheduleRailLabel"></span></div>
+            <div class="tp-card" id="scheduleRail"></div>
         </div>
         <section id="practicesSection" class="tp-practices" style="display:none;" aria-label="Practices">
             <div class="tp-head">
-                <span class="lock"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Team only</span>
                 <h2 class="tp-h2">Practices</h2>
+                <span class="lock"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Team only</span>
             </div>
-            <div class="list" id="practicesList"></div>
+            <div class="tp-card" id="practicesList"></div>
         </section>
-        <div class="section" id="staffSection" style="display:none;">
-            <h2 class="tp-h3">Coaches &amp; managers</h2>
-            <div id="staffList"></div>
-        </div>
-        <div class="tp-ticket" id="teamShareCard" style="display:none;" aria-label="Share this team">
-            <div class="stub">
-                <span class="k">Team code</span>
-                <span class="team-code" id="teamCode"></span>
-                <span class="s">Anyone with the code can find this team</span>
+        <!-- 2026-11-19 (calm) — one Team card: who runs the team, the followers
+             (coaches and managers only, folded to a row that opens the list, and
+             opens by itself when someone is waiting), and the team code. Each row
+             keeps the id the scripts already show and hide; the section hides when
+             no row is showing (tpSyncChips). -->
+        <section id="teamSection" aria-labelledby="teamSectionTitle">
+            <div class="tp-head"><h2 class="tp-h2" id="teamSectionTitle">Team</h2></div>
+            <div class="tp-card" id="tpTeamCard">
+                <div id="staffSection" style="display:none;"><div class="tp-row" id="staffList"></div></div>
+                <div class="tp-fol" id="pendingRequestsSection" style="display:none;">
+                    <button type="button" class="tp-row tp-fol-row" id="followerToggle" aria-expanded="false" aria-controls="pendingRequestsList">
+                        <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.6-5.5 6.5-5.5s5.5 2 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.8c1.8.7 3 2.5 3.5 5.2"/></svg></span>
+                        <span class="mid"><span class="t" id="followerCount"></span><span class="sub" id="followerSub"></span></span>
+                        <svg class="tp-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+                    </button>
+                    <div id="pendingRequestsList" hidden></div>
+                </div>
+                <div class="tp-row tp-code" id="teamShareCard" style="display:none;">
+                    <span class="mid"><span class="k">Team code</span><span class="team-code" id="teamCode"></span></span>
+                    <button type="button" id="teamShareBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Share</button>
+                    <button type="button" id="teamCopyBtn">Copy link</button>
+                </div>
             </div>
-            <div class="acts">
-                <button class="go" type="button" id="teamCopyBtn">Copy link</button>
-                <button type="button" id="teamShareBtn">Share</button>
-            </div>
-        </div>
+        </section>
         </div>
     </div>
 </div>
@@ -2605,20 +2495,21 @@ async function loadPractices() {
         } catch (_) { /* no pills */ }
     }
     const host = $('practicesList');
-    host.replaceChildren(...list.map((p) => {
+    const SHOWN = 3;
+    const rows = list.map((p, i) => {
         const off = p.status === 'cancelled';
         const row = document.createElement('div');
-        row.className = 'tp-practice' + (off ? ' off' : '');
+        row.className = 'tp-practice' + (off ? ' off' : '') + (i >= SHOWN ? ' more-row' : '');
         const b = document.createElement('button');
         b.type = 'button'; b.setAttribute('aria-expanded', 'false');
-        // 2026-11-19 — a date block (SUN / 22 / NOV), the time, the practice's
-        // name as a chip in the team accent, then where and who's out.
+        // 2026-11-19 (calm) — the weekday and day, the time with the practice's
+        // name beside it in plain text, then where (street and town) and who's
+        // in or out. Three show; "Show all" opens the rest.
         const el = (tag, cls, text) => { const x = document.createElement(tag); x.className = cls; if (text != null) x.textContent = text; return x; };
         const d = new Date(p.dateMs);
-        const date = el('span', 'date');
-        date.append(el('span', 'dw', d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()),
-            el('span', 'dn', String(d.getDate())),
-            el('span', 'mo', d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()));
+        const date = el('span', 'tp-date');
+        date.append(el('span', 'cap', d.toLocaleDateString('en-US', { weekday: 'short' })),
+            el('span', 'dn', String(d.getDate())));
         date.setAttribute('aria-label', practiceDay(p.dateMs));
         const info = el('span', 'info');
         const when = el('span', 'when');
@@ -2628,17 +2519,28 @@ async function loadPractices() {
         if (name) when.append(el('span', 'lbl', name));
         if (off) when.append(el('span', 'off-tag', 'Cancelled'));
         info.append(when);
-        if (p.location) info.append(el('span', 'where', p.location));
+        if (p.location) info.append(el('span', 'where', shortPlace(p.location)));
         const n = names['practice_' + p.id];
         if (n && !off) {
             if ((n.out || []).length) info.append(el('span', 'who', 'Can’t make it: ' + n.out.join(', ')));
-            if ((n.in || []).length) info.append(el('span', 'who', 'Will be there: ' + n.in.join(', ')));
+            if ((n.in || []).length) info.append(el('span', 'who', 'Going: ' + n.in.join(', ')));
         }
         b.append(date, info);
         row.append(b);
         b.onclick = () => togglePractice(row, b, p);
         return row;
-    }));
+    });
+    const more = list.length > SHOWN;
+    host.classList.toggle('short', more);
+    if (more) {
+        const all = document.createElement('button');
+        all.type = 'button'; all.className = 'tp-all';
+        // "N more", not "all N": the query stops at six.
+        all.textContent = `Show ${list.length - SHOWN} more`;
+        all.onclick = () => { host.classList.remove('short'); all.remove(); };
+        rows.push(all);
+    }
+    host.replaceChildren(...rows);
     box.style.display = '';
 }
 function togglePractice(row, b, p) {
@@ -2891,12 +2793,19 @@ const ROLE_ICONS = {
 function renderRoles() {
     const el = $('followStatus');
     if (!el) return;
-    const chips = currentUser ? heroRoles.slice() : [];
+    const family = [];
     if (currentUser) for (const [pid, c] of Object.entries(myClaims || {})) {
         if (!c || c.status !== 'approved' || !rosterNames[pid]) continue;
         const rel = String(c.relationship || 'family').toLowerCase();
-        chips.push(['person', rel === 'self' ? `${rosterNames[pid]} (you)` : relationshipLabel(rel, rosterNames[pid])]);
+        family.push(['person', rel === 'self' ? `${rosterNames[pid]} (you)` : relationshipLabel(rel, rosterNames[pid])]);
     }
+    // 2026-11-19 (calm) — one chip, the strongest thing you are here: manager
+    // or coach, else the family link, else following / invited / pending. Your
+    // own player still shows on the roster ("Yours").
+    const roles = currentUser ? heroRoles : [];
+    const staff = roles.find(([icon]) => icon === 'shield' || icon === 'whistle');
+    const top = staff || family[0] || roles[0];
+    const chips = top ? [top] : [];
     el.innerHTML = chips.map(([icon, text]) =>
         `<span class="tp-role"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ROLE_ICONS[icon] || ''}</svg>${escapeHtml(text)}</span>`
     ).join('');
@@ -3033,6 +2942,8 @@ function renderHeader() {
     // Share row. navigator.share is absent in a plain desktop browser and in
     // some WebViews, so Copy Link is always the reliable path and Share is
     // hidden when unsupported rather than failing on tap.
+    // 2026-11-19 (calm) — one button on the team code row: Share where the
+    // device can, Copy link where it can't.
     const shareCard = $('teamShareCard');
     if (shareCard) {
         const url = `https://scoreframe.app/team.html?code=${encodeURIComponent(hubCode)}`;
@@ -3052,6 +2963,7 @@ function renderHeader() {
                 shareBtn.onclick = () => {
                     navigator.share({ title: p.teamName || 'Team', url }).catch(() => {});
                 };
+                if (copyBtn) copyBtn.style.display = 'none';
             } else {
                 shareBtn.style.display = 'none';
             }
@@ -3688,25 +3600,21 @@ async function loadPendingRequests() {
         const list = $('pendingRequestsList');
         list.innerHTML = '';
 
-        // 2026-11-19 — folded to a count, faces and "Manage followers". It
-        // opens by itself when someone is waiting on a decision, and stays
-        // open across the reloads an approve or remove does.
+        // 2026-11-19 — folded to one row in the Team card ("13 followers · No
+        // requests waiting"); tapping it opens the list. It opens by itself
+        // when someone is waiting on a decision, and stays open across the
+        // reloads an approve or remove does.
         const waiting = followers.filter((f) =>
             (f.status === 'pending' && !['owner_invite', 'hub_invite'].includes(String(f.source || '')))
             || (f.links || []).some((l) => l.status === 'pending')).length;
-        $('followerCount').textContent = String(followers.length);
+        $('followerCount').textContent = `${followers.length} follower${followers.length === 1 ? '' : 's'}`;
         const fsub = $('followerSub');
-        fsub.textContent = waiting ? `${waiting} request${waiting === 1 ? '' : 's'} waiting` : 'No requests waiting';
+        fsub.textContent = waiting ? `${waiting} request${waiting === 1 ? '' : 's'} waiting` : 'No requests waiting · only staff see this';
         fsub.classList.toggle('wait', waiting > 0);
-        const ini = (n) => String(n || '?').split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
-        const faces = followers.slice(0, 3).map((f) => `<span>${escapeHtml(ini(f.name))}</span>`);
-        if (followers.length > 3) faces.push(`<span class="more">+${followers.length - 3}</span>`);
-        $('followerStack').innerHTML = faces.join('');
         const toggle = $('followerToggle');
         const setOpen = (open) => {
             list.hidden = !open;
             toggle.setAttribute('aria-expanded', String(open));
-            toggle.textContent = open ? 'Hide followers' : 'Manage followers';
         };
         if (waiting > 0) followersOpen = true;
         setOpen(followersOpen);
@@ -3997,6 +3905,7 @@ let stageLastCompleted = null; // newest completed game, set by loadPastGames()
 // past-games section died with "Unable to load past games".
 let pastGamesCache = [];
 let stageHasLive = false;    // set by listenForLive()
+let pastGamesLoaded = false; // set once loadPastGames() has an answer, for the stage's empty line
 let stageTimer = null;       // countdown interval; cleared before each re-render
 
 /** Home/away from the team's perspective. Schedule docs carry `isHome` on
@@ -4039,38 +3948,62 @@ function renderScheduleRail() {
 
     section.style.display = 'block';
     const label = $('scheduleRailLabel');
-    if (label) label.textContent = `${playable.length} upcoming`;
+    if (label) label.textContent = `${playable.length} coming up`;
 
-    // 2026-11-19 — calendar tiles: a strip with the weekday and month, the day
-    // in big numbers, then what and where. No time when none was set (it read
-    // "12:00 AM").
-    rail.innerHTML = playable.map((g, i) => {
+    // 2026-11-19 (calm) — one list. The first entry leads, bigger, with the
+    // weekday and "Next · in 44 days" (or Live / Postponed); four show, "Show
+    // all" opens the rest. No time when none was set (it read "12:00 AM").
+    const SHOWN = 4;
+    const rows = playable.map((g, i) => {
         const d = (typeof g.date === 'number') ? new Date(g.date) : null;
-        const strip = d
-            ? `${d.toLocaleDateString(undefined, { weekday: 'short' })} ${d.toLocaleDateString(undefined, { month: 'short' })}`
-            : 'TBD';
         let day = d ? String(d.getDate()) : '–';
         const end = (d && typeof g.endDate === 'number' && g.endDate > g.date) ? new Date(g.endDate) : null;
         if (end && end.getMonth() === d.getMonth() && end.getDate() !== d.getDate()) day += '–' + end.getDate();
-        const isLive = g.status === 'live';
-        const isPostponed = g.status === 'postponed';
-        // "Next" marks the soonest entry that is actually going to happen.
-        const isNext = i === 0 && !isPostponed && !isLive;
-        const flag = isLive ? '<span class="live">● Live</span>' : isPostponed ? '<span>Postponed</span>' : isNext ? '<span>Next</span>' : '';
-        const place = [gameTime(g), venueWord(g), placeName(g)].filter(Boolean).join(' · ');
-        const href = stageHref(g);
+        const mon = d ? d.toLocaleDateString(undefined, { month: 'short' }) : 'TBD';
+        const lead = i === 0;
+        const pill = g.status === 'live' ? '<span class="tp-pill live">● Live now</span>'
+            : g.status === 'postponed' ? '<span class="tp-pill off">Postponed</span>'
+            : lead && d ? `<span class="tp-pill">Next · ${escapeHtml(soonText(g.date))}</span>` : '';
+        const place = [gameTime(g), venueWord(g), shortPlace(placeName(g))].filter(Boolean).join(' · ');
+        const cls = `tp-g${lead ? ' lead' : ''}${i >= SHOWN ? ' more-row' : ''}`;
         const inner = `
-            <span class="strip"><span>${escapeHtml(strip)}</span>${flag}</span>
-            <span class="bd">
-                <span class="day">${escapeHtml(day)}</span>
+            <span class="tp-date"${d ? ` aria-label="${escapeAttr(shortDay(g.date))}"` : ''}>
+                <span class="cap">${escapeHtml(mon)}</span>
+                <span class="dn">${escapeHtml(day)}</span>
+                ${lead && d ? `<span class="sm">${escapeHtml(d.toLocaleDateString(undefined, { weekday: 'short' }))}</span>` : ''}
+            </span>
+            <span class="mid">
                 <span class="ti">${escapeHtml(stageOpponent(g))}</span>
                 ${place ? `<span class="pl">${escapeHtml(place)}</span>` : ''}
-            </span>`;
-        return href
-            ? `<a class="tp-scard${isNext ? ' next' : ''}" href="${href}" style="text-decoration:none;color:inherit;">${inner}</a>`
-            : `<div class="tp-scard${isNext ? ' next' : ''}">${inner}</div>`;
-    }).join('');
+                ${pill}
+            </span>
+            ${CHEVRON}`;
+        const href = stageHref(g);
+        return href ? `<a class="${cls}" href="${href}">${inner}</a>` : `<div class="${cls}">${inner}</div>`;
+    });
+    const more = playable.length > SHOWN;
+    rail.classList.toggle('short', more);
+    rail.innerHTML = rows.join('') +
+        (more ? `<button type="button" class="tp-all">Show all ${playable.length} games</button>` : '');
+    const allBtn = rail.querySelector('.tp-all');
+    if (allBtn) allBtn.onclick = () => { rail.classList.remove('short'); allBtn.remove(); };
     try { renderScoreline(); } catch (e) { console.error('record render failed:', e); }
+}
+
+/** "today", "tomorrow", "in 44 days": calendar days from now to `ms`. */
+function soonText(ms) {
+    const a = new Date(); a.setHours(0, 0, 0, 0);
+    const b = new Date(ms); b.setHours(0, 0, 0, 0);
+    const days = Math.round((b - a) / 86400000);
+    return days <= 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
+}
+/** "2115 E Kansas City Rd, Olathe, KS 66061, USA" → "2115 E Kansas City Rd, Olathe".
+ *  The country, then a "KS 66061" state-and-zip part, come off the end. */
+function shortPlace(s) {
+    const parts = String(s || '').split(',').map(x => x.trim()).filter(Boolean);
+    if (parts.length > 1 && /^(usa|us|united states( of america)?|canada)$/i.test(parts[parts.length - 1])) parts.pop();
+    if (parts.length > 1 && /^[A-Z]{2}(\s+[\dA-Z]{3,5}(-\d{4})?(\s?[\dA-Z]{3})?)?$/.test(parts[parts.length - 1])) parts.pop();
+    return parts.join(', ');
 }
 
 /** "6:00 PM", or '' when the game has no time set (stored as midnight). */
@@ -4102,96 +4035,21 @@ function opponentName(g) {
 const shortDay = (ms) => new Date(ms).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 const CHEVRON = '<svg class="tp-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 
-/** The stage. Priority: live (defer to #liveSection) → next game countdown
- *  → most recent completed game → plain empty line. */
+/** The stage: since 2026-11-19 (calm) only the plain empty line for a team
+ *  with no games at all. A live game has #liveSection; the next game leads the
+ *  Games list and the last one tops Results. */
 function renderStage() {
     const stage = $('teamStage');
     if (!stage) return;
     if (stageTimer) { clearInterval(stageTimer); stageTimer = null; }
 
     // A live game already owns the top of the page; don't compete with it.
-    if (stageHasLive || hubProfile?.status === 'archived') {
+    // 2026-11-19 (calm) — and the next game now leads the Games list, the last
+    // one tops Results, so the stage only speaks when there is neither (and
+    // only once the results have loaded, so it doesn't flash "No games yet").
+    if (stageHasLive || hubProfile?.status === 'archived'
+        || (scheduleUpcoming || []).length || stageLastCompleted || !pastGamesLoaded) {
         stage.style.display = 'none';
-        return;
-    }
-
-    // Next genuinely-upcoming game (a postponed one has no date to count to).
-    const next = scheduleUpcoming.find(g =>
-        g.status !== 'postponed' && typeof g.date === 'number' && g.date > Date.now());
-
-    if (next) {
-        // 2026-11-19 — the next game fills a card in the team accent.
-        const when = [shortDay(next.date), gameTime(next)].filter(Boolean).join(' · ');
-        const place = [venueWord(next), placeName(next)].filter(Boolean).join(' · ');
-        const href = stageHref(next);
-        const body = `
-            <div class="tp-next">
-                <span class="eb">Next game · ${escapeHtml(when)}</span>
-                <div class="ti">${escapeHtml(stageOpponent(next))}</div>
-                ${place ? `<div class="pl">${escapeHtml(place)}</div>` : ''}
-                <div class="tp-count" id="stageCount"></div>
-            </div>`;
-        stage.innerHTML = href ? `<a class="tp-plain" href="${href}">${body}</a>` : body;
-        stage.style.display = 'block';
-
-        // Same tick shape as game.html's countdown so both pages agree.
-        const tick = () => {
-            const ms = next.date - Date.now();
-            const el = document.getElementById('stageCount');
-            if (!el) { if (stageTimer) { clearInterval(stageTimer); stageTimer = null; } return; }
-            if (ms <= 0) {
-                // Start time passed — the game is probably live or scored now.
-                if (stageTimer) { clearInterval(stageTimer); stageTimer = null; }
-                el.innerHTML = '<div class="seg"><div class="num">—</div><div class="unit">Starting</div></div>';
-                return;
-            }
-            const total = Math.floor(ms / 1000);
-            const days = Math.floor(total / 86400);
-            const hours = Math.floor((total % 86400) / 3600);
-            const mins = Math.floor((total % 3600) / 60);
-            const secs = total % 60;
-            const segs = days > 0
-                ? [['Days', days], ['Hrs', hours], ['Min', mins], ['Sec', secs]]
-                : [['Hrs', hours], ['Min', mins], ['Sec', secs]];
-            el.innerHTML = segs.map(([u, n]) =>
-                `<div class="seg"><div class="num">${String(n).padStart(2, '0')}</div><div class="unit">${u}</div></div>`
-            ).join('');
-        };
-        tick();
-        stageTimer = setInterval(tick, 1000);
-        return;
-    }
-
-    // Nothing scheduled — show the last game that was actually played.
-    if (stageLastCompleted) {
-        // 2026-11-19 — the last game as a scoreboard: both teams, the winner
-        // bright, the loser dimmed, a Win/Loss/Tie tag.
-        const g = stageLastCompleted;
-        const [hs, as_] = ourTheir(g, teamId);
-        const href = stageHref(g);
-        const isBowling = (hubProfile?.sport || '').toUpperCase() === 'BOWLING';
-        const what = g.phaseLabel || g.eventName || '';
-        const foot = [typeof g.date === 'number' ? shortDay(g.date) : '', g.phaseLabel ? g.eventName : '', g.location]
-            .filter((x, i, all) => x && String(x).toLowerCase() !== what.toLowerCase() && all.indexOf(x) === i).join(' · ');
-        const ours = hubProfile?.teamName || 'Us';
-        const theirs = opponentLine(g) === 'Opponent not entered' ? 'Opponent' : opponentName(g);
-        const row = (name, score, lost) =>
-            `<div class="row${lost ? ' lost' : ''}"><span class="nm">${escapeHtml(name)}</span><span class="sc">${escapeHtml(String(score))}</span></div>`;
-        // Bowling has no opponent score to show, so the series total stands alone.
-        const outcome = hs > as_ ? ['w', 'Win'] : as_ > hs ? ['l', 'Loss'] : ['t', 'Tie'];
-        const body = `
-            <div class="tp-final">
-                <div class="top">
-                    <span class="eb">${isBowling ? 'Last session' : 'Last game'}${what ? ' · ' + escapeHtml(what) : ''}</span>
-                    ${isBowling ? '' : `<span class="tag ${outcome[0]}">${outcome[1]}</span>`}
-                </div>
-                <div class="rows">
-                    ${isBowling ? row(ours, hs, false) : row(ours, hs, as_ > hs) + row(theirs, as_, hs > as_)}
-                </div>
-                ${foot ? `<div class="foot">${escapeHtml(foot)}</div>` : ''}
-            </div>`;
-        stage.innerHTML = href ? `<a class="tp-plain" href="${href}">${body}</a>` : body;
-        stage.style.display = 'block';
         return;
     }
 
@@ -4262,9 +4120,10 @@ function renderSeasonStats(stats) {
     el.style.display = 'block';
 }
 
-// 2026-11-19 — the hero's record: big Won/Lost(/Tied) numbers and the last ten
-// results (oldest left, newest right), or for bowling the average and high
-// game. Before any game is played it says how many are on the schedule.
+// 2026-11-19 — the hero's record. Since the calm pass (same day) it is one
+// line: "4–7" and the last ten results (oldest left, newest right), or for
+// bowling the average and high game. Nothing before a game is played: the
+// Games list already says how many are coming up.
 // Called with no argument from the schedule rail, which reuses the last stats.
 let lastScoreline = null;
 function renderScoreline(stats) {
@@ -4272,22 +4131,16 @@ function renderScoreline(stats) {
     stats = lastScoreline;
     const el = $('teamScoreline');
     if (!el) return;
-    const cell = (v, k) => `<div class="cell"><span class="n">${escapeHtml(String(v))}</span><span class="k">${k}</span></div>`;
-    if (!stats) {
-        const n = (hubProfile?.status === 'archived') ? 0
-            : (scheduleUpcoming || []).filter(g => g.status !== 'postponed').length;
-        el.innerHTML = n ? `<div class="cells">${cell(n, `Game${n === 1 ? '' : 's'} on the<br>schedule`)}</div>` : '';
+    if (!stats) { el.innerHTML = ''; return; }
+    if (stats.bowling) {
+        el.innerHTML = `<span class="n">${escapeHtml(String(stats.avg))}</span><span class="k">Average · High game ${escapeHtml(String(stats.high))}</span>`;
         return;
     }
-    const cells = stats.bowling
-        ? [cell(stats.avg, 'Average'), cell(stats.high, 'High game')]
-        : [cell(stats.w, 'Won'), cell(stats.l, 'Lost'), ...(stats.t > 0 ? [cell(stats.t, 'Tied')] : [])];
+    const rec = [stats.w, stats.l, ...(stats.t > 0 ? [stats.t] : [])].join('–');
+    const words = `${stats.w} won, ${stats.l} lost${stats.t > 0 ? `, ${stats.t} tied` : ''}`;
     const form = (stats.form || '').split('').filter(Boolean);
-    el.innerHTML = `<div class="cells">${cells.join('')}</div>` + (form.length ? `
-        <div class="tp-form" role="img" aria-label="Last ${form.length} results, newest last: ${form.join(' ')}">
-            <span class="k">Last ${form.length}</span>
-            <span class="sq">${form.map(l => `<span class="${l.toLowerCase()}">${l}</span>`).join('')}</span>
-        </div>` : '');
+    el.innerHTML = `<span class="n" aria-label="${words}">${rec}</span>` + (form.length ? `
+        <span class="tp-form" role="img" aria-label="Last ${form.length} results, newest last: ${form.join(' ')}">${form.map(l => `<span class="${l.toLowerCase()}">${l}</span>`).join('')}</span>` : '');
 }
 
 async function loadSchedule() {
@@ -4675,14 +4528,15 @@ async function loadStaff() {
         const real = rows.filter(r => r.name);
         if (!real.length) { section.style.display = 'none'; return; }
         section.style.display = 'block';
-        // 2026-11-19 — initials in the team colour, the role in small caps.
+        // 2026-11-19 (calm) — one row in the Team card: their initials, then
+        // the names. Each person's roles are in the name's tooltip.
         const ini = (n) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
-        list.innerHTML = real.map(r => `
-            <div class="tp-staff">
-                <span class="av" aria-hidden="true">${escapeHtml(ini(r.name))}</span>
-                <span class="nm">${escapeHtml(r.name)}</span>
-                <span class="rl">${escapeHtml(r.role)}</span>
-            </div>`).join('');
+        list.innerHTML = `
+            <span class="tp-avs" aria-hidden="true">${real.slice(0, 3).map(r => `<span>${escapeHtml(ini(r.name))}</span>`).join('')}</span>
+            <span class="mid">
+                <span class="t">${real.map(r => `<span title="${escapeAttr(r.role)}">${escapeHtml(r.name)}</span>`).join(', ')}</span>
+                <span class="sub">Coaches &amp; managers</span>
+            </span>`;
     } catch (e) {
         console.debug('loadStaff:', e && e.code);
         section.style.display = 'none';
@@ -4734,8 +4588,9 @@ async function loadRoster() {
             return String(A.name || '').localeCompare(String(B.name || ''));
         });
 
-        // 2026-11-19 — jersey tiles three across, your player filled with the
-        // team accent; a one-player roster gets one wide tile with the stats.
+        // 2026-11-19 — number-and-name tiles two across (calm pass), your player
+        // filled with the team accent; a one-player roster gets one wide tile
+        // with the stats.
         const solo = ordered.length === 1;
         const tiles = [];
         rosterNames = {};
@@ -4819,9 +4674,10 @@ async function loadRoster() {
                     // 'grandparent'" — and it's a button so they can change it
                     // or stop following without asking anyone.
                     const rel = String(claim.relationship || 'family');
-                    // 2026-11-19 — the tile reads "Your player"; the relationship
-                    // is in the hero ("Parent of Audrey B.") and in the dialog.
-                    familyHtml = `<button type="button" class="tp-tag" data-manage-player="${escapeAttr(d.id)}" data-manage-name="${escapeAttr(p.name || 'Player')}" data-manage-rel="${escapeAttr(rel)}" title="${escapeAttr(relationshipPill(rel))}: change your relationship, or stop following">${rel.toLowerCase() === 'self' ? 'This is you' : 'Your player'}</button>`;
+                    // 2026-11-19 — the tile reads "Yours" (calm pass; was "Your
+                    // player"); the relationship is in the hero ("Parent of
+                    // Audrey B.") and in the dialog.
+                    familyHtml = `<button type="button" class="tp-tag" data-manage-player="${escapeAttr(d.id)}" data-manage-name="${escapeAttr(p.name || 'Player')}" data-manage-rel="${escapeAttr(rel)}" title="${escapeAttr(relationshipPill(rel))}: change your relationship, or stop following">${rel.toLowerCase() === 'self' ? 'You' : 'Yours'}</button>`;
                 } else if (claim.status === 'denied') {
                     familyHtml = `<span class="tp-tag" title="A team manager declined this request">Declined</span>`;
                 }
@@ -4829,27 +4685,42 @@ async function loadRoster() {
             const shown = displayPlayerName(p.name);
             rosterNames[d.id] = shown;
             if (solo) {
+                // One player: a wide tile with the stats on one line.
+                const line = stats.filter(([l]) => l !== 'G').map(([l, v]) => `${v} ${l}`).join(' · ');
                 tiles.push(`<div class="tp-solo${mine ? ' mine' : ''}">
                     <a href="${playerHref}" aria-label="${escapeAttr(shown)}: stats"></a>
                     <span class="num">${escapeHtml(num || '–')}</span>
                     <span class="txt">
-                        <span><span class="nm" style="display:block;">${escapeHtml(shown)}</span>${familyHtml || `<span class="who">${escapeHtml(pos || 'Player')}</span>`}</span>
-                        ${stats.length ? `<span class="stats">${stats.map(([l, v]) => `<span><b>${escapeHtml(String(v))}</b><i>${escapeHtml(l)}</i></span>`).join('')}</span>` : ''}
+                        <span class="nm">${escapeHtml(shown)}</span>
+                        ${line ? `<span class="st">${escapeHtml(line)}</span>` : `<span class="who">${escapeHtml(pos || 'Player')}</span>`}
                     </span>
-                    ${CHEVRON}
+                    ${familyHtml}
                 </div>`);
             } else {
-                // Two stats at most on a tile; the player's page has the rest.
-                const line = stats.filter(([l]) => l !== 'G').slice(0, 2).map(([l, v]) => `${v} ${l}`).join(' · ');
+                // 2026-11-19 (calm) — number and name only; position and stats
+                // are one tap away on the player's page.
                 tiles.push(`<div class="tp-pt${mine ? ' mine' : ''}">
-                    <a href="${playerHref}"><span class="num">${escapeHtml(num || '–')}</span><span class="nm">${escapeHtml(shown)}</span></a>
-                    ${pos ? `<span class="ps">${escapeHtml(pos)}</span>` : ''}
-                    ${line ? `<span class="st">${escapeHtml(line)}</span>` : ''}
+                    <a href="${playerHref}" title="${escapeAttr(pos)}"><span class="num">${escapeHtml(num || '–')}</span><span class="nm">${escapeHtml(shown)}</span></a>
                     ${familyHtml}
                 </div>`);
             }
         });
-        container.innerHTML = solo ? tiles[0] : `<div class="tp-roster">${tiles.join('')}</div>`;
+        // "+ Follow" waits behind one "Link your player" under the roster, so
+        // the tiles stay quiet. Only offered where a family link is (see above).
+        const canLink = container && currentUser && hubProfile && hubProfile.visibility !== 'public'
+            && (isSubscriber || isManager || isCoach) && ordered.some(d => !myClaims[d.id]);
+        const hasMine = ordered.some(d => myClaims[d.id] && myClaims[d.id].status === 'approved');
+        const ask = hasMine ? 'Another player in the family?' : solo ? 'Is this player yours?' : 'Is one of these players yours?';
+        container.innerHTML = `<div class="tp-roster${solo ? ' solo' : ''}">${tiles.join('')}</div>` + (canLink ? `
+            <div class="tp-rhint"><span>${ask}</span><button type="button" aria-pressed="false">Link your player</button></div>` : '');
+        const linkBtn = container.querySelector('.tp-rhint button');
+        if (linkBtn) linkBtn.onclick = () => {
+            const grid = container.querySelector('.tp-roster');
+            const on = grid.classList.toggle('pick');
+            linkBtn.setAttribute('aria-pressed', String(on));
+            linkBtn.textContent = on ? 'Done' : 'Link your player';
+            linkBtn.previousElementSibling.textContent = on ? 'Tap + Follow on your player.' : ask;
+        };
         renderRoles();
         container.querySelectorAll('[data-claim-player]').forEach(btn => {
             btn.addEventListener('click', () => openFamilyLinkDialog(
@@ -5261,10 +5132,12 @@ async function loadPastGames() {
             );
         }
         const container = $('pastGames');
-        // 2026-11-19 — no games: one slim line, "Results · No games played yet".
+        pastGamesLoaded = true;
+        // 2026-11-19 (calm) — no games played: the section hides (its chip
+        // goes with it) and comes back when a season with games is picked.
         const resultsSection = $('resultsSection');
         const showEmpty = (msg) => {
-            if (resultsSection) resultsSection.classList.add('tp-empty');
+            if (resultsSection) { resultsSection.classList.add('tp-empty'); resultsSection.style.display = 'none'; }
             container.innerHTML = `<div class="empty">${msg}</div>`;
             const eb = $('resultsEyebrow'); if (eb) eb.textContent = '';
         };
@@ -5272,15 +5145,16 @@ async function loadPastGames() {
         if (snap.empty) {
             showEmpty('No games played yet');
             $('teamRecord').textContent = '';
+            try { renderStage(); } catch (e) { console.error('stage render failed:', e); }
             return;
         }
-        if (resultsSection) resultsSection.classList.remove('tp-empty');
+        if (resultsSection) { resultsSection.classList.remove('tp-empty'); resultsSection.style.display = ''; }
 
         pastGamesCache = [];
         let renderedCount = 0;
         // 2026-11-19 — one list: a W/L block, the opponent, the score from this
         // team's side. A tournament is one row with its games nested under it.
-        // Six show; "Show all" opens the rest. (The 7-day Recent strip that was
+        // Five show (calm pass); "Show all" opens the rest. (The 7-day Recent strip that was
         // built here went 2026-09-02.)
         const rows = [];
         // Tournament containers in this window that will render as an event
@@ -5320,7 +5194,8 @@ async function loadPastGames() {
         const gameHrefOf = (g) => `/game.html?team=${encodeURIComponent(hubCode)}&game=${encodeURIComponent(g.id)}`;
         const wlOf = (g) => { const [o, t] = ourTheir(g, teamId); return o > t ? 'W' : o < t ? 'L' : 'T'; };
         const scoreOf = (g) => { const [o, t] = ourTheir(g, teamId); return `${o}\u2013${t}`; };
-        const TROPHY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M9 21h6M10 17h4"/></svg>';
+        const SHOWN = 5;
+        const more = () => rows.length >= SHOWN ? ' more-row' : '';
         snap.forEach(d => {
             if (renderedCount >= 20) return;
             const g = { id: d.id, ...d.data() };
@@ -5350,15 +5225,16 @@ async function loadPastGames() {
                         && new Date(g.endDate).toDateString() !== new Date(g.date || 0).toDateString())
                     ? `${shortDay(g.date)} \u2013 ${shortDay(g.endDate)}` : (g.date ? shortDay(g.date) : '');
                 const kids = (kidsByEvent.get(g.id) || []).sort((a, b) => (b.date || 0) - (a.date || 0));
-                rows.push(`<div class="tp-res-ev">
+                // 2026-11-19 (calm) — the tournament's name and dates on one line,
+                // its games under it: "Silver Final vs IT Cougars  1–2".
+                rows.push(`<div class="tp-res-ev${more()}">
                     <a class="tp-res-evhead" href="${evHref}">
-                        <span class="ic">${TROPHY}</span>
-                        <span class="mid"><span class="eb">Tournament${evDate ? ' · ' + escapeHtml(evDate) : ''}</span><span class="ti">${escapeHtml(g.eventName || g.opponent || 'Tournament')}</span></span>
-                        ${CHEVRON}
+                        <span class="ti">${escapeHtml(g.eventName || g.opponent || 'Tournament')}</span>
+                        ${evDate ? `<span class="dt">${escapeHtml(evDate)}</span>` : ''}
                     </a>
                     ${kids.length ? `<div class="tp-res-kids">${kids.map(k => {
                         const wl = wlOf(k);
-                        return `<a class="tp-res-kid" href="${gameHrefOf(k)}"><span class="tp-wl sm ${wl.toLowerCase()}">${wl}</span><span class="kt">${k.phaseLabel ? `<b>${escapeHtml(k.phaseLabel)}</b> ` : ''}${escapeHtml(opponentLine(k))}</span><span class="ks">${scoreOf(k)}</span></a>`;
+                        return `<a class="tp-res-kid" href="${gameHrefOf(k)}"><span class="tp-wl sm ${wl.toLowerCase()}">${wl}</span><span class="kt">${k.phaseLabel ? escapeHtml(k.phaseLabel) + ' ' : ''}${escapeHtml(opponentLine(k))}</span><span class="ks">${scoreOf(k)}</span></a>`;
                     }).join('')}</div>` : ''}
                 </div>`);
                 return;
@@ -5392,19 +5268,17 @@ async function loadPastGames() {
                 } else if (g.homeScore > 0) {
                     scoreLine = `${g.homeScore}`;
                 }
-                rows.push(`<a class="tp-res" href="${gameHrefOf(g)}">
+                rows.push(`<a class="tp-res${more()}" href="${gameHrefOf(g)}">
                     <span class="mid"><span class="op">${escapeHtml(g.eventName || 'Bowling')}</span>
                         <span class="meta">${escapeHtml(date)}${video}</span>
                         ${scoreLine ? `<span class="bw">${scoreLine}</span>` : ''}</span>
-                    ${CHEVRON}
                 </a>`);
             } else {
                 const wl = wlOf(g);
-                rows.push(`<a class="tp-res" href="${gameHrefOf(g)}">
+                rows.push(`<a class="tp-res${more()}" href="${gameHrefOf(g)}">
                     <span class="tp-wl ${wl.toLowerCase()}">${wl}</span>
                     <span class="mid"><span class="op">${escapeHtml(opponentLine(g))}</span><span class="meta">${escapeHtml(date)}${video}</span></span>
                     <span class="sc">${scoreOf(g)}</span>
-                    ${CHEVRON}
                 </a>`);
             }
         });
@@ -5417,10 +5291,9 @@ async function loadPastGames() {
             catch (e) { console.error('stage render failed:', e); }
             return;
         }
-        const SHOWN = 6;
-        container.innerHTML = `<div class="tp-list${rows.length > SHOWN ? ' short' : ''}">${rows.join('')}</div>` +
-            (rows.length > SHOWN ? `<button type="button" class="tp-btn tp-more">Show all ${rows.length} results</button>` : '');
-        const moreBtn = container.querySelector('.tp-more');
+        container.innerHTML = `<div class="tp-list${rows.length > SHOWN ? ' short' : ''}">${rows.join('')}` +
+            (rows.length > SHOWN ? `<button type="button" class="tp-all">Show all ${rows.length} results</button>` : '') + `</div>`;
+        const moreBtn = container.querySelector('.tp-all');
         if (moreBtn) moreBtn.onclick = () => { container.querySelector('.tp-list').classList.remove('short'); moreBtn.remove(); };
 
         // v18 — Team record now INCLUDES tournament games (event children),
@@ -5482,7 +5355,7 @@ async function loadPastGames() {
                     games: totalGames, sessions: recordGames.length,
                 };
                 const eb = $('resultsEyebrow');
-                if (eb) eb.textContent = `${recordGames.length} session${recordGames.length !== 1 ? 's' : ''} · ${totalGames} games`;
+                if (eb) eb.textContent = `${recordGames.length} session${recordGames.length !== 1 ? 's' : ''}`;
                 renderScoreline(seasonStats);
                 renderSeasonStats(seasonStats);
             } catch (e) { console.error('scoreline render failed:', e); }
@@ -5513,7 +5386,8 @@ async function loadPastGames() {
                     .map(([, o, x]) => o > x ? 'W' : o < x ? 'L' : 'T').join('');
                 const seasonStats = { bowling: false, w, l, t, pct, played: recordGames.length, form };
                 const eb = $('resultsEyebrow');
-                if (eb) eb.textContent = `${counted} game${counted !== 1 ? 's' : ''} · ${w}\u2013${l}${t > 0 ? '\u2013' + t : ''}`;
+                // The record itself is in the hero (calm pass).
+                if (eb) eb.textContent = `${counted} game${counted !== 1 ? 's' : ''}`;
                 renderScoreline(seasonStats);
                 renderSeasonStats(seasonStats);
             }
@@ -5529,7 +5403,8 @@ async function loadPastGames() {
         $('pastGames').innerHTML = publicShell
             ? '<div class="empty">Results are visible to team members.</div>'
             : '<div class="empty">Unable to load past games</div>';
-        const rs = $('resultsSection'); if (rs) rs.classList.add('tp-empty');
+        const rs = $('resultsSection'); if (rs) { rs.classList.add('tp-empty'); rs.style.display = ''; }
+        pastGamesLoaded = true;
     }
 }
 
@@ -5740,6 +5615,9 @@ function tpSyncChips(){
     var any=[].some.call(b.children,function(c){return c.style.display!=='none';});
     b.style.display=any?'':'none';
   });
+  // The Team card's rows show and hide themselves; no row, no section.
+  var card=document.getElementById('tpTeamCard'), sec=document.getElementById('teamSection');
+  if(card&&sec) sec.style.display=[].some.call(card.children,function(c){return c.style.display!=='none';})?'':'none';
   nav.querySelectorAll('a[data-target]').forEach(function(a){
     var el=document.getElementById(a.getAttribute('data-target'));
     var shown=!!el && el.style.display!=='none' && el.offsetParent!==null;
