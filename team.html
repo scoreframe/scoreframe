@@ -2441,23 +2441,47 @@ window.acceptInvite = () => acceptInvite();
 async function acceptInvite() {
     // The follow-area button on a public team, or the access gate's on a private one.
     const btn = $('acceptInviteBtn') || $('requestBtn');
+    const note = $('acceptInviteBtn') ? $('followStatus') : $('accessStatus');
+    const say = (t) => { if (note) note.textContent = t; };
     btn.disabled = true;
     btn.textContent = 'Accepting…';
-    try {
-        const { getFunctions, httpsCallable } =
-            await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
-        await httpsCallable(getFunctions(app), 'acceptFollowInvite')({ teamId });
+    say('');
+    // Eric 2026-11-24: his mom's tap sat on "Accepting…" with no other sign of
+    // life while a cold server took 6 s, then the reload added more; she
+    // pulled to refresh. Say it's still going, and say when it worked.
+    const slow = setTimeout(() => say('Still working, a few more seconds…'), 3000);
+    const joined = () => {
+        clearTimeout(slow);
         subStatus = 'approved';
         isSubscriber = true;
+        btn.textContent = "You're in ✓";
+        say('Opening the team…');
         const next = new URL(location.href);
         next.searchParams.set('joined', '1');   // → "Are you here for a player?"
         location.replace(next.toString());
+    };
+    // A lost or very slow answer doesn't mean it failed: the approval itself
+    // is on their subscriber doc, which they can read.
+    const approvedNow = async () => {
+        try {
+            const { getDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+            const d = await getDoc(doc(db, 'teams', teamId, 'subscribers', currentUser.uid));
+            return d.exists() && d.data().status === 'approved';
+        } catch (_) { return false; }
+    };
+    try {
+        const { getFunctions, httpsCallable } =
+            await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js');
+        const call = httpsCallable(getFunctions(app), 'acceptFollowInvite')({ teamId });
+        await Promise.race([call, new Promise((_, no) => setTimeout(() => no(new Error('slow')), 15000))]);
+        joined();
     } catch (e) {
+        if (await approvedNow()) { joined(); return; }
         console.error('[team.html] acceptFollowInvite failed:', e);
+        clearTimeout(slow);
         btn.disabled = false;
         btn.textContent = 'Accept invitation';
-        $('accessStatus').textContent =
-            'Could not accept just now — please try again.';
+        say('Could not accept just now. Please try again.');
     }
 }
 
