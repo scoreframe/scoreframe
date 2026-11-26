@@ -143,8 +143,14 @@ function toast(m, ms = 3500) { const t = $('toast'); t.textContent = m; t.classL
 const errText = (e) => String((e && e.message) || e || 'Something went wrong').replace(/^.*?:\s*(?=[A-Z])/, '');
 
 let ME = null;   // adminMe
+// Every admin call goes through one server function, adminApi, so one warm
+// server answers the whole console instead of ~28 that each started cold
+// (2026-11-26). Pinged on load so it's warm by the time sign-in finishes.
+const adminApi = httpsCallable(fns, 'adminApi');
+const api = (name, data = {}) => (/^admin[A-Z]/.test(name) ? adminApi({ op: name, data }) : httpsCallable(fns, name)(data)).then((x) => x.data);
+adminApi({ op: 'ping' }).catch(() => {});
 async function call(name, data = {}) {
-  try { return (await httpsCallable(fns, name)(data)).data; }
+  try { return await api(name, data); }
   catch (e) {
     if (e && e.code === 'functions/unauthenticated' && /MFA_REQUIRED/.test(e.message || '')) { codeGate(); throw new Error('Enter your Google Authenticator code to continue.'); }
     throw e;
@@ -234,7 +240,7 @@ function codeGate() {
 async function verify(code, enrolling) {
   const btn = $('gGo'); btn.disabled = true;
   try {
-    const r = await httpsCallable(fns, 'adminMfaVerify')({ code: String(code || '').trim() }).then((x) => x.data);
+    const r = await api('adminMfaVerify', { code: String(code || '').trim() });
     await auth.currentUser.getIdToken(true);
     ME = await call('adminMe');
     if (r.backupCodes) {
@@ -279,9 +285,9 @@ async function bioUnlock(b) {
   const btn = $('gBio'); if (btn) btn.disabled = true;
   const uid = auth.currentUser.uid;
   try {
-    const { challenge } = await httpsCallable(fns, 'adminDeviceChallenge')({ deviceId: b.deviceId }).then((x) => x.data);
+    const { challenge } = await api('adminDeviceChallenge', { deviceId: b.deviceId });
     const signature = await bioCall(() => APP.biometricSign(uid, challenge), 'sfAdminBioSigned');
-    await httpsCallable(fns, 'adminDeviceVerify')({ deviceId: b.deviceId, signature });
+    await api('adminDeviceVerify', { deviceId: b.deviceId, signature });
     await auth.currentUser.getIdToken(true);
     ME = await call('adminMe');
     shell();
