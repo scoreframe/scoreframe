@@ -344,12 +344,12 @@ onAuthStateChanged(auth, async (user) => {
   <div class="masthead">
     <h1>ScoreFrame — Dev Status</h1>
     <span class="rule"></span>
-    <span class="stamp">16 Nov 2026 · Recording checks to the stores · Circle my player (testers) · Android 1.1.1929 · iOS 1.2.413</span>
+    <span class="stamp">27 Nov 2026 · iOS 1.2.418 (914) to review · Android 1.1.1955 (testers) · App Store 1.2.417</span>
   </div>
   <p class="lede">
-    New today: the <strong>recording checks</strong> and the other <strong>silent failures</strong> are counted on the server and shown in the daily summary, and both apps went to the stores with them.
-    Android <strong>1.1.1929</strong> is in Google's production review; iOS <strong>1.2.413 (908)</strong> is in App Store review (releases when approved) and on TestFlight.
-    <strong>Circle my player in highlights</strong> is in Labs on tester builds of both apps.
+    New 27 Nov: iOS <strong>1.2.418 (913)</strong> was pulled from review and replaced by <strong>914</strong>, which adds the overnight stream/recording diagnostics and the Team tab changes.
+    App Store <strong>1.2.417</strong> is live, with Terry's "Recording stopped" fix. Android <strong>1.1.1955</strong> (no ad over a recording that restarts itself, diagnostics, stream merge) is on App Distribution and waits for your A51 test.
+    The shrink guard's stream repairs are explained: End Game dropped a stream entry's end time and game, which the new merge keeps.
   </p>
 
   <h2>Where the code is</h2>
@@ -361,18 +361,18 @@ onAuthStateChanged(auth, async (user) => {
     </div>
     <div class="ch live">
       <span class="ch-name">App Store</span>
-      <span class="ch-ver">1.2.413</span>
-      <span class="ch-note">live; recording checks + silent-failure stats</span>
+      <span class="ch-ver">1.2.417</span>
+      <span class="ch-note">live (Terry's fix included); 1.2.418 (914) going to review 27 Nov</span>
     </div>
     <div class="ch">
       <span class="ch-name">Android testers</span>
-      <span class="ch-ver">1.1.1941</span>
-      <span class="ch-note">"Recording stopped" + Record again after the app leaves the screen (Terry H., 21 Nov); sport-named first chapter</span>
+      <span class="ch-ver">1.1.1955</span>
+      <span class="ch-note">no ad over a self-restarted recording; stream/not-saving diagnostics; stream merge keeps every field; pinned team chip clear of Get Pro (27 Nov)</span>
     </div>
     <div class="ch">
       <span class="ch-name">iOS TestFlight</span>
-      <span class="ch-ver">1.2.416 (911)</span>
-      <span class="ch-note">"Recording stopped" + Record again, edge swipe needs a second swipe while recording (Terry H., 21 Nov); reminder taps; 909 must not be submitted</span>
+      <span class="ch-ver">1.2.418 (914)</span>
+      <span class="ch-note">keeps recording in a new clip when the writer dies; diagnostics; Team tab with club teams (27 Nov)</span>
     </div>
   </div>
 
